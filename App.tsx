@@ -94,6 +94,7 @@ const App: React.FC = () => {
     }
     return 'dashboard';
   });
+  const [settingsSubTab, setSettingsSubTab] = useState<'notifications' | 'general' | 'billing'>('billing');
   const [simulatedNotify, setSimulatedNotify] = useState<{
     id: string;
     title: string;
@@ -1035,6 +1036,7 @@ const App: React.FC = () => {
             diaryEntries={diaryEntries}
             bcLogs={bcLogs}
             tempLogs={tempLogs}
+            initialSubTab={settingsSubTab}
           />
         );
       default:
@@ -1090,6 +1092,20 @@ const App: React.FC = () => {
         </div>
         
         <div className="flex items-center gap-4">
+          <button 
+            onClick={() => {
+              setSettingsSubTab('billing');
+              setActiveTab('settings');
+            }}
+            className={`text-[9px] font-black tracking-widest uppercase px-3.5 py-2 rounded-full transition-all flex items-center gap-1 cursor-pointer hover:scale-105 ${
+              user.isPremium 
+                ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-sm shadow-emerald-100 hover:opacity-95' 
+                : 'bg-gradient-to-r from-pink-500 to-rose-400 text-white shadow-md shadow-pink-100 animate-pulse'
+            }`}
+          >
+            {user.isPremium ? '👑 Premium' : '💎 Try Premium'}
+          </button>
+
           {!user.isPartner && (
             <button 
               onClick={togglePregnancy}
@@ -1119,7 +1135,13 @@ const App: React.FC = () => {
             />
           </div>
 
-          <button onClick={() => setActiveTab('settings')} className="p-2 text-gray-400 hover:text-pink-400 transition-colors">
+          <button 
+            onClick={() => {
+              setSettingsSubTab('notifications');
+              setActiveTab('settings');
+            }} 
+            className="p-2 text-gray-400 hover:text-pink-400 transition-colors"
+          >
             ⚙️
           </button>
         </div>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, NotificationSettings, Symptom, DiaryEntry, BirthControlLog, TemperatureLog, SharingSettings } from '../types';
+import { User, NotificationSettings, Symptom, DiaryEntry, BirthControlLog, TemperatureLog, SharingSettings, BillingItem } from '../types';
 import { 
   Bell, 
   Sparkles, 
@@ -22,7 +22,9 @@ import {
   User as UserIcon,
   Calendar,
   Layers,
-  Download
+  Download,
+  CreditCard,
+  ShieldCheck
 } from 'lucide-react';
 import { 
   getCyclePredictions, 
@@ -35,6 +37,15 @@ import {
   generatePostpartumNotificationText
 } from '../services/notificationService';
 import { syncUser, disconnectPartner } from '../services/firebaseService';
+import { 
+  PAYSTACK_PLANS, 
+  startPaystackTrialCheckout, 
+  syncStartSubscriptionTrial, 
+  syncCancelSubscription, 
+  syncChangeSubscriptionPlan, 
+  syncSimulateBillingFailure, 
+  updatePaystackPaymentMethod 
+} from '../services/paystackService';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 
@@ -46,6 +57,7 @@ interface SettingsProps {
   diaryEntries?: DiaryEntry[];
   bcLogs?: BirthControlLog[];
   tempLogs?: TemperatureLog[];
+  initialSubTab?: 'notifications' | 'general' | 'billing';
 }
 
 const Settings: React.FC<SettingsProps> = ({ 
@@ -55,9 +67,19 @@ const Settings: React.FC<SettingsProps> = ({
   symptoms = [],
   diaryEntries = [],
   bcLogs = [],
-  tempLogs = []
+  tempLogs = [],
+  initialSubTab = 'notifications'
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'notifications' | 'general'>('notifications');
+  const [activeSubTab, setActiveSubTab] = useState<'notifications' | 'general' | 'billing'>(initialSubTab);
+
+  React.useEffect(() => {
+    setActiveSubTab(initialSubTab);
+  }, [initialSubTab]);
+  const [selectedPlanId, setSelectedPlanId] = useState<'monthly' | '6month'>('monthly');
+  const [selectedCurrency, setSelectedCurrency] = useState<'USD' | 'NGN' | 'GHS' | 'ZAR'>('USD');
+  const [billingProgress, setBillingProgress] = useState<string | null>(null);
+  const [billingError, setBillingError] = useState<string | null>(null);
+  const [billingSuccess, setBillingSuccess] = useState<string | null>(null);
 
   const handleExportData = () => {
     const backupData = {
@@ -138,6 +160,150 @@ const Settings: React.FC<SettingsProps> = ({
     } catch (err) {
       console.error(err);
       setCloudFeedback({ type: 'error', text: 'Could not communicate with cloud. Local offline database retained.' });
+    }
+  };
+
+  // --- PAYSTACK PREMIUM BILLING HANDLERS ---
+  const handleStartTrial = async () => {
+    setBillingError(null);
+    setBillingSuccess(null);
+    setBillingProgress("Initializing Paystack Checkout secure window...");
+
+    const targetPlan = PAYSTACK_PLANS.find(p => p.id === selectedPlanId);
+    if (!targetPlan) {
+      setBillingError("Invalid plan selected");
+      setBillingProgress(null);
+      return;
+    }
+
+    try {
+      await startPaystackTrialCheckout({
+        user,
+        plan: targetPlan,
+        currency: selectedCurrency,
+        onSuccess: async (ref) => {
+          setBillingProgress("Validating payment authorization token...");
+          try {
+            await syncStartSubscriptionTrial(
+              user,
+              targetPlan,
+              selectedCurrency,
+              ref,
+              setUser
+            );
+            setBillingSuccess(`Congratulations! Your 7-day free trial has been initiated. Monthly recurring charges of ${selectedCurrency === 'USD' ? '$' + targetPlan.priceUSD : '₦' + targetPlan.priceNGN} will only begin after 7 days.`);
+          } catch (syncErr: any) {
+            setBillingError(`Sandbox payment authorized, but sync failed: ${syncErr?.message || syncErr}`);
+          } finally {
+            setBillingProgress(null);
+          }
+        },
+        onCancel: () => {
+          setBillingProgress(null);
+          setBillingError("Checkout closed by user. No authorized changes made.");
+        },
+        onError: (errMessage) => {
+          setBillingProgress(null);
+          setBillingError(errMessage);
+        }
+      });
+    } catch (checkoutErr: any) {
+      setBillingProgress(null);
+      setBillingError(checkoutErr?.message || "Failed to boot Paystack checkout tunnel.");
+    }
+  };
+
+  const handleCancelSubscriptionAction = async () => {
+    setBillingProgress("Processing subscription lock cancellation...");
+    try {
+      await syncCancelSubscription(user, setUser);
+      setBillingSuccess("Your future recurring payments have been successfully suspended. Premium features remain active until your calculated billing cycle expiration.");
+    } catch (err: any) {
+      setBillingError(`Cancellation failed: ${err?.message || err}`);
+    } finally {
+      setBillingProgress(null);
+    }
+  };
+
+  const handleUpdatePaymentCard = async () => {
+    setBillingProgress("Opening Paystack payment token updater...");
+    setBillingError(null);
+    setBillingSuccess(null);
+
+    try {
+      await updatePaystackPaymentMethod({
+        user,
+        currency: selectedCurrency,
+        onSuccess: async (ref) => {
+          setBillingProgress("Updating security card token registers...");
+          const newCharge: BillingItem = {
+            id: `card_up_${Date.now()}`,
+            date: new Date().toISOString(),
+            amount: 0,
+            currency: selectedCurrency,
+            planName: "Verified & Updated Payment Card Source",
+            status: "paid",
+            reference: ref
+          };
+
+          const updatedUser: User = {
+            ...user,
+            billingHistory: [...(user.billingHistory || []), newCharge]
+          };
+
+          setUser(updatedUser);
+          await syncUser(updatedUser);
+          setBillingSuccess("Your payment method has been successfully updated and secured through Paystack.");
+          setBillingProgress(null);
+        },
+        onCancel: () => {
+          setBillingProgress(null);
+        },
+        onError: (err) => {
+          setBillingProgress(null);
+          setBillingError(err);
+        }
+      });
+    } catch (err: any) {
+      setBillingProgress(null);
+      setBillingError(err?.message || "Failed to set up payment method updater.");
+    }
+  };
+
+  const handleSimulatePaymentFailure = async () => {
+    setBillingProgress("Simulating renewal payment rejection...");
+    setBillingError(null);
+    setBillingSuccess(null);
+
+    try {
+      await syncSimulateBillingFailure(user, setUser);
+      setBillingError("Renewal Charge Declined: Paystack failed to authorize the periodic subscription fee. Premium access has been suspended. Please update/verify your payment card.");
+    } catch (err: any) {
+      setBillingError(`Failure simulation broke: ${err?.message || err}`);
+    } finally {
+      setBillingProgress(null);
+    }
+  };
+
+  const handleReactivatePlan = async (planId: 'monthly' | '6month') => {
+    setBillingProgress("Reactivating premium subscription...");
+    const targetPlan = PAYSTACK_PLANS.find(p => p.id === planId);
+    if (!targetPlan) return;
+
+    try {
+      const updatedUser: User = {
+        ...user,
+        isPremium: true,
+        subscriptionStatus: 'active',
+        subscriptionPlan: planId
+      };
+      setUser(updatedUser);
+      await syncUser(updatedUser);
+      setBillingSuccess(`Lumina Premium has been reactivated successfully for the ${targetPlan.name}!`);
+    } catch (err: any) {
+      setBillingError(err?.message || "Reactivation sync failed");
+    } finally {
+      setBillingProgress(null);
     }
   };
 
@@ -444,28 +610,39 @@ const Settings: React.FC<SettingsProps> = ({
       </header>
 
       {/* Tabs */}
-      <div className="flex bg-rose-50/50 p-1 rounded-2xl w-full border border-rose-100 max-w-md mx-auto">
+      <div className="flex bg-rose-50/50 p-1 rounded-2xl w-full border border-rose-100 max-w-lg mx-auto">
         <button 
           onClick={() => setActiveSubTab('notifications')}
-          className={`flex-1 py-3 text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 ${
+          className={`flex-1 py-3 text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-1.5 ${
             activeSubTab === 'notifications' 
               ? 'bg-gradient-to-r from-pink-500 to-rose-400 text-white shadow-md shadow-pink-100' 
               : 'text-pink-400 hover:text-pink-600'
           }`}
         >
           <Bell size={13} />
-          Smart Notifications
+          Notifications
+        </button>
+        <button 
+          onClick={() => setActiveSubTab('billing')}
+          className={`flex-1 py-3 text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+            activeSubTab === 'billing' 
+              ? 'bg-gradient-to-r from-pink-500 to-rose-400 text-white shadow-md shadow-pink-100' 
+              : 'text-pink-400 hover:text-pink-600'
+          }`}
+        >
+          <CreditCard size={13} />
+          Premium & Billing
         </button>
         <button 
           onClick={() => setActiveSubTab('general')}
-          className={`flex-1 py-3 text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 ${
+          className={`flex-1 py-3 text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-1.5 ${
             activeSubTab === 'general' 
               ? 'bg-gradient-to-r from-pink-500 to-rose-400 text-white shadow-md shadow-pink-100' 
               : 'text-pink-400 hover:text-pink-600'
           }`}
         >
           <Smartphone size={13} />
-          General & Publishing
+          General
         </button>
       </div>
 
@@ -1462,6 +1639,331 @@ const Settings: React.FC<SettingsProps> = ({
               </div>
             </div>
           )}
+        </div>
+      ) : activeSubTab === 'billing' ? (
+        <div className="space-y-8 animate-fadeIn">
+          {/* Progress / Error / Success Alerts */}
+          {billingProgress && (
+            <div className="p-4 bg-teal-50 border border-teal-100 rounded-2xl text-xs text-teal-700 italic font-serif flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-teal-400 animate-pulse shrink-0"></span>
+              {billingProgress}
+            </div>
+          )}
+
+          {billingError && (
+            <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl text-xs text-rose-600 font-serif flex flex-col gap-1">
+              <span className="font-bold flex items-center gap-1.5 text-rose-700">⚠️ Billing Issue</span>
+              <p>{billingError}</p>
+            </div>
+          )}
+
+          {billingSuccess && (
+            <div className="p-4 bg-teal-50 border border-teal-100 rounded-2xl text-xs text-teal-800 font-serif flex flex-col gap-1">
+              <span className="font-bold flex items-center gap-1.5 text-teal-900">✨ Success</span>
+              <p>{billingSuccess}</p>
+            </div>
+          )}
+
+          {/* ACTIVE PREMIUM WORKSPACE HEADER / CONTROLLER */}
+          {user.isPremium ? (
+            <div className="space-y-6">
+              {/* Premium Status Banner */}
+              <div className="bg-gradient-to-r from-emerald-500 via-teal-600 to-indigo-600 p-[2px] rounded-[2.5rem] shadow-lg shadow-teal-100">
+                <div className="bg-white p-8 rounded-[2.4rem] space-y-6">
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-2xl">⚡</span>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600 flex items-center gap-1 justify-center md:justify-start">
+                          <ShieldCheck size={12} /> Active Premium Member
+                        </p>
+                      </div>
+                      <h3 className="text-2xl font-serif italic text-indigo-950">Lumina Premium Sanctuary</h3>
+                      <p className="text-xs text-neutral-500">
+                        Thank you for supporting Lumina. Enjoy zero limits and full divine connectivity.
+                      </p>
+                    </div>
+                    <div className="py-2 px-4 bg-emerald-50 text-emerald-700 rounded-full font-bold uppercase text-[9px] tracking-widest border border-emerald-100 shrink-0 self-start md:self-auto">
+                      Active
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t border-rose-50/50">
+                    <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100 space-y-1">
+                      <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-wider">Current Plan</p>
+                      <p className="text-sm font-serif italic text-neutral-700 font-bold capitalize">
+                        {user.subscriptionPlan === 'monthly' ? 'Premium Monthly ($10.97)' : user.subscriptionPlan === '6month' ? 'Premium 6-Month ($49.99)' : '7-Day Free Trial'}
+                      </p>
+                    </div>
+                    <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100 space-y-1">
+                      <p className="text-[9px] font-bold text-indigo-950 uppercase tracking-wider">Payments Status</p>
+                      <p className="text-sm font-serif italic text-indigo-950 font-bold capitalize">
+                        {user.subscriptionStatus || 'trialing'}
+                      </p>
+                    </div>
+                    <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100 space-y-1">
+                      <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-wider">Next Renewal / Expiry</p>
+                      <p className="text-sm font-serif italic text-neutral-700 font-bold">
+                        {user.subscriptionEnd ? new Date(user.subscriptionEnd).toLocaleDateString() : 'N/A'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Actions Row */}
+                  <div className="pt-4 flex flex-wrap gap-3">
+                    <button
+                      type="button"
+                      onClick={handleUpdatePaymentCard}
+                      className="py-3 px-5 bg-gradient-to-r from-teal-500 to-emerald-400 text-white font-bold text-[10px] uppercase tracking-wider rounded-2xl hover:opacity-90 active:scale-95 transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
+                    >
+                      💳 Update Payment Card
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleCancelSubscriptionAction}
+                      disabled={user.subscriptionStatus === 'cancelled'}
+                      className={`py-3 px-5 border rounded-2xl font-bold text-[10px] uppercase tracking-wider transition-all cursor-pointer ${
+                        user.subscriptionStatus === 'cancelled'
+                          ? 'border-neutral-200 text-neutral-400 cursor-not-allowed'
+                          : 'border-rose-200 text-rose-600 hover:bg-rose-50/30'
+                      }`}
+                    >
+                      🚫 Cancel Auto-Billing
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleSimulatePaymentFailure}
+                      className="py-3 px-5 border border-indigo-200 text-indigo-600 font-bold text-[10px] uppercase tracking-wider rounded-2xl hover:bg-indigo-50/40 active:scale-95 transition-all cursor-pointer"
+                    >
+                      🚨 (Demo) Force Renewal Failure
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Plans Switcher Options for Existing Members */}
+              <div className="bg-white p-8 rounded-[2.5rem] border border-pink-50 space-y-6">
+                <header>
+                  <h4 className="text-lg font-serif italic text-indigo-950">Switch / Select Active Plan</h4>
+                  <p className="text-xs text-neutral-400 leading-relaxed font-sans mt-0.5">
+                    Toggle your premium membership plan code. Your choices will sync automatically and apply starting your next Paystack charge date.
+                  </p>
+                </header>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {PAYSTACK_PLANS.map((p) => {
+                    const isSelected = user.subscriptionPlan === p.id;
+                    return (
+                      <div 
+                        key={p.id}
+                        className={`p-6 rounded-3xl border transition-all flex flex-col justify-between gap-4 ${
+                          isSelected 
+                            ? 'border-indigo-500 bg-indigo-50/10 shadow-sm' 
+                            : 'border-neutral-100 hover:border-indigo-200'
+                        }`}
+                      >
+                        <div className="space-y-1">
+                          <span className="text-[10px] font-black tracking-widest uppercase text-indigo-500">{p.interval}</span>
+                          <p className="text-base font-serif italic text-indigo-950">{p.name}</p>
+                          <p className="text-xs text-neutral-400 leading-normal">{p.description}</p>
+                        </div>
+                        <div className="flex justify-between items-center pt-3 border-t border-indigo-50/20">
+                          <span className="text-xl font-bold text-indigo-950">${p.priceUSD.toFixed(2)}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleReactivatePlan(p.id)}
+                            disabled={isSelected}
+                            className={`py-2 px-4 rounded-xl font-bold text-[9px] uppercase tracking-wider transition-all cursor-pointer ${
+                              isSelected
+                                ? 'bg-indigo-100 text-indigo-600 cursor-default'
+                                : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                            }`}
+                          >
+                            {isSelected ? 'Activated' : 'Switch Plan'}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-8">
+              {/* Premium Checkout Prompt Card */}
+              <div className="bg-gradient-to-br from-pink-500 via-rose-500 to-indigo-600 p-[2px] rounded-[2.5rem] shadow-xl shadow-rose-100/40">
+                <div className="bg-white p-8 md:p-12 rounded-[2.4rem] space-y-8 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-8 leading-none pointer-events-none opacity-[0.03]">
+                    <Sparkles size={250} />
+                  </div>
+
+                  <div className="space-y-2 text-center max-w-xl mx-auto">
+                    <span className="inline-flex py-1.5 px-3 bg-rose-50 text-rose-600 rounded-full font-black text-[9px] uppercase tracking-widest border border-rose-100">
+                      💎 Premium Access Waitlist
+                    </span>
+                    <h3 className="text-3xl font-serif text-indigo-950 italic">Experience Unrestricted Sanctuary</h3>
+                    <p className="text-xs text-neutral-500 leading-relaxed font-sans">
+                      Start your 7-day complete free trial today. Connect partners, customize alerts, and unlock deep insights. Cancel anytime before day 7; your card won't be charged.
+                    </p>
+                  </div>
+
+                  {/* Feature Checklist */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto pt-4 border-t border-rose-50/40">
+                    {[
+                      { icon: '🌺', title: '7-Day Full Premium Free Trial', desc: 'Secure preview with zero risks. Cancel anytime.' },
+                      { icon: '🤰', title: 'Co-Parenting / Partner Sync Tools', desc: 'Share your syncs, mood warnings, and events.' },
+                      { icon: '📊', title: 'Deep Cycle Botanical Health Trends', desc: 'Access advanced endocrine logs and cycle analysis.' },
+                      { icon: '🔒', title: 'Cloud Integration & Restore Hub', desc: 'Never lose your historic datasets across devices.' }
+                    ].map((feat, idx) => (
+                      <div key={idx} className="flex gap-3 p-4 bg-rose-50/15 border border-rose-50/30 rounded-2xl hover:bg-rose-55/10 transition-all">
+                        <span className="text-2xl mt-0.5">{feat.icon}</span>
+                        <div className="space-y-0.5 text-left">
+                          <p className="text-xs font-bold text-neutral-800 leading-tight">{feat.title}</p>
+                          <p className="text-[10px] text-neutral-400 font-sans leading-normal">{feat.desc}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Pricing Plans Box */}
+                  <div className="max-w-2xl mx-auto space-y-6 pt-4">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="font-bold text-neutral-500 uppercase tracking-widest text-[10px]">Select Trial Plan</span>
+                      <div className="flex gap-1 bg-rose-50 p-1 border border-rose-100 rounded-xl">
+                        {(['USD', 'NGN', 'GHS', 'ZAR'] as const).map((curr) => (
+                          <button
+                            key={curr}
+                            type="button"
+                            onClick={() => setSelectedCurrency(curr)}
+                            className={`py-1 px-2.5 rounded text-[10px] uppercase font-bold transition-all cursor-pointer ${
+                              selectedCurrency === curr ? 'bg-white text-rose-600 shadow-sm' : 'text-neutral-400 hover:text-rose-500'
+                            }`}
+                          >
+                            {curr}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {PAYSTACK_PLANS.map((p) => {
+                        const isChosen = selectedPlanId === p.id;
+                        const isUSD = selectedCurrency === 'USD';
+                        const priceByCurr = isUSD 
+                          ? `$${p.priceUSD.toFixed(2)}` 
+                          : selectedCurrency === 'NGN' 
+                            ? `₦${p.priceNGN.toLocaleString()}`
+                            : selectedCurrency === 'GHS'
+                              ? `${(p.priceUSD * 14.5).toFixed(2)} GHS`
+                              : `${(p.priceUSD * 18.2).toFixed(2)} ZAR`;
+
+                        return (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => setSelectedPlanId(p.id)}
+                            className={`p-6 rounded-3xl border text-left flex flex-col justify-between gap-4 transition-all cursor-pointer ${
+                              isChosen 
+                                ? 'border-pink-500 bg-pink-50/15 ring-2 ring-pink-400/20 shadow-md' 
+                                : 'border-neutral-100 hover:border-neutral-200'
+                            }`}
+                          >
+                            <div className="space-y-1 w-full">
+                              <p className="text-[9px] font-black uppercase tracking-widest text-pink-500">{p.interval}</p>
+                              <p className="text-base font-serif italic text-indigo-950">{p.name}</p>
+                            </div>
+                            <div className="w-full pt-3 border-t border-rose-100/30 flex justify-between items-end">
+                              <p className="text-[10px] text-neutral-400 capitalize font-medium">{p.id === 'monthly' ? 'Cancel anytime' : 'Best Deal'}</p>
+                              <p className="text-2xl font-serif text-indigo-950 italic font-bold leading-none">{priceByCurr}</p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleStartTrial}
+                      className="w-full py-4.5 bg-gradient-to-r from-pink-500 via-rose-500 to-indigo-600 hover:scale-[1.01] active:scale-[0.98] text-white font-black text-xs uppercase tracking-widest rounded-3xl shadow-xl shadow-rose-100/40 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      🚀 Start 7-Day Free Trial Now
+                    </button>
+                    
+                    <p className="text-[9px] text-neutral-400 text-center font-serif italic">
+                      All payment calculations operate securely through Paystack. Trial authorizations are refunded instantly on connection token verification.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Billing Transaction Record History */}
+          <div className="bg-white p-8 rounded-[2.5rem] border border-pink-50 space-y-6">
+            <header>
+              <h4 className="text-lg font-serif italic text-indigo-950 flex items-center gap-1.5">
+                📜 Secure Transactions & Billing Invoices
+              </h4>
+              <p className="text-xs text-neutral-400 font-sans leading-relaxed">
+                Review historic tokens, subscription validation checks, and automatic renewal invoice histories.
+              </p>
+            </header>
+
+            {user.billingHistory && user.billingHistory.length > 0 ? (
+              <div className="overflow-x-auto rounded-2xl border border-rose-50">
+                <table className="w-full text-left text-xs text-neutral-600">
+                  <thead className="bg-rose-50/10 text-[9px] font-bold uppercase tracking-widest text-neutral-400 border-b border-rose-50/50">
+                    <tr>
+                      <th className="py-3.5 px-4 font-bold">Date</th>
+                      <th className="py-3.5 px-4 font-bold">Description</th>
+                      <th className="py-3.5 px-4 font-bold">Ref Code</th>
+                      <th className="py-3.5 px-4 font-bold">Amount</th>
+                      <th className="py-3.5 px-4 font-bold text-center font-sans">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-rose-50/20">
+                    {user.billingHistory.map((bill) => (
+                      <tr key={bill.id} className="hover:bg-rose-50/[0.05]">
+                        <td className="py-3.5 px-4 text-[11px] font-medium text-neutral-500">
+                          {new Date(bill.date).toLocaleDateString()}
+                        </td>
+                        <td className="py-3.5 px-4 font-serif italic text-[11px] leading-snug">
+                          {bill.planName}
+                        </td>
+                        <td className="py-3.5 px-4 font-mono text-[9px] text-neutral-400">
+                          {bill.reference}
+                        </td>
+                        <td className="py-3.5 px-4 text-[11px] font-bold text-neutral-700">
+                          {bill.currency === 'USD' ? '$' : bill.currency === 'NGN' ? '₦' : ''}{bill.amount.toFixed(2)} {bill.currency}
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          <span className={`inline-flex py-1 px-2.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                            bill.status === 'paid'
+                              ? 'bg-emerald-50 text-emerald-600'
+                              : bill.status === 'failed'
+                                ? 'bg-rose-50 text-rose-505'
+                                : 'bg-gray-50 text-neutral-400'
+                          }`}>
+                            {bill.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="p-12 text-center text-neutral-400 bg-neutral-50/40 rounded-3xl border border-dashed border-rose-100/50 space-y-2">
+                <span className="text-3xl">☕</span>
+                <p className="text-xs font-semibold uppercase tracking-wider text-rose-400">Ready to activate</p>
+                <p className="text-[10px] text-neutral-400 max-w-xs mx-auto leading-normal">
+                  No previous Paystack transaction codes registered on this profile yet. Start a trial above!
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       ) : (
         <div className="space-y-8 animate-fadeIn">

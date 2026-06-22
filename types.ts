@@ -97,6 +97,22 @@ export interface User {
   pregnancyAppointments?: { id: string; date: string; title: string; notes?: string }[];
   pregnancySupplements?: string[];
   pregnancyNotes?: string;
+  isPremium?: boolean;
+  subscriptionPlan?: 'free' | 'monthly' | '6month';
+  subscriptionStatus?: 'active' | 'cancelled' | 'trialing' | 'failed' | 'none';
+  subscriptionTrialEnd?: string;
+  subscriptionEnd?: string;
+  billingHistory?: BillingItem[];
+}
+
+export interface BillingItem {
+  id: string;
+  date: string;
+  amount: number;
+  currency: string;
+  planName: string;
+  status: 'paid' | 'failed' | 'refunded';
+  reference: string;
 }
 
 export interface NotificationSettings {
