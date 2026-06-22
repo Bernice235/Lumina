@@ -1,0 +1,75 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with cycle tracking and partner connection data.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "isPartner": { "type": "boolean" },
+        "partnerId": { "type": "string" },
+        "partnerName": { "type": "string" },
+        "partnerCode": { "type": "string" },
+        "isPartnerLinked": { "type": "boolean" },
+        "sharingSettings": {
+          "type": "object",
+          "properties": {
+            "shareCycleInfo": { "type": "boolean" },
+            "shareSymptoms": { "type": "boolean" },
+            "shareMood": { "type": "boolean" },
+            "shareNotes": { "type": "boolean" }
+          }
+        },
+        "cycleLength": { "type": "number" },
+        "periodLength": { "type": "number" },
+        "lastPeriodStart": { "type": "string" },
+        "theme": { "type": "string" },
+        "waterGoal": { "type": "number" }
+      },
+      "required": ["id", "name", "email"]
+    },
+    "Invite": {
+      "title": "Invite",
+      "description": "Maps a secure code to a user who generated it.",
+      "type": "object",
+      "properties": {
+        "code": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["code", "senderId"]
+    },
+    "Gift": {
+      "title": "Gift",
+      "description": "Virtual gift or comfort item sent to a partner.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["hug", "tea", "flower", "chocolate", "sparkle"] },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "receiverId": { "type": "string" },
+        "message": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "type", "senderId", "receiverId"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "Individual user profiles."
+    },
+    "invites/{code}": {
+      "schema": "Invite",
+      "description": "Active invitation codes for linking partners."
+    },
+    "users/{userId}/gifts/{giftId}": {
+      "schema": "Gift",
+      "description": "Gifts received by a specific user."
+    }
+  }
+}

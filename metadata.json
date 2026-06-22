@@ -1,0 +1,12 @@
+{
+  "name": "Lumina: Bloom & Balance",
+  "description": "A super girly, elegant period tracker and wellness sanctuary. Track your cycle, water intake, symptoms, and self-care. Features a dedicated Partner Mode for gift reminders, AI-powered affirmations, yoga tutorials, a private diary, and soothing audio experiences including a personalized welcome voice.",
+  "requestFramePermissions": [
+    "microphone",
+    "camera",
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

@@ -1,0 +1,89 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+  
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function getUserData(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data;
+    }
+
+    function isPartnerOf(userId) {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData(request.auth.uid).partnerId == userId;
+    }
+
+    // --- Validation Helpers ---
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['id', 'name', 'email']) &&
+             data.id == request.auth.uid &&
+             data.name is string && data.name.size() <= 100 &&
+             data.email is string && data.email.size() <= 100 &&
+             (!('partnerId' in data) || data.partnerId is string || data.partnerId == null) &&
+             (!('cycleLength' in data) || data.cycleLength is number) &&
+             (!('periodLength' in data) || data.periodLength is number);
+    }
+
+    function isValidInvite(data) {
+      return data.keys().hasAll(['code', 'senderId', 'senderName', 'createdAt']) &&
+             data.keys().size() == 4 &&
+             data.senderId == request.auth.uid &&
+             data.code is string && data.code.size() == 6 &&
+             data.senderName is string && data.senderName.size() <= 100;
+    }
+
+    function isValidGift(data) {
+      return data.keys().hasAll(['id', 'type', 'senderId', 'senderName', 'timestamp']) &&
+             data.keys().size() == 5 &&
+             data.senderId == request.auth.uid &&
+             data.type in ['hug', 'tea', 'flower', 'chocolate', 'sparkle'] &&
+             data.senderName is string && data.senderName.size() <= 100;
+    }
+
+    // --- Match Blocks ---
+
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isPartnerOf(userId);
+      allow list: if false;
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow update: if (isOwner(userId) && isValidUser(incoming())) || 
+                     (isSignedIn() && isPartnerOf(userId) && incoming().diff(existing()).affectedKeys().hasOnly(['partnerId', 'partnerName', 'isPartnerLinked']));
+      
+      match /gifts/{giftId} {
+        allow read: if isOwner(userId);
+        allow create: if isSignedIn() && (isPartnerOf(userId) || isOwner(userId)) && isValidGift(incoming());
+        allow delete: if isOwner(userId);
+      }
+    }
+
+    match /invites/{code} {
+      allow get: if isSignedIn();
+      allow create: if isSignedIn() && isValidInvite(incoming());
+      allow delete: if isSignedIn(); 
+    }
+  }
+}
