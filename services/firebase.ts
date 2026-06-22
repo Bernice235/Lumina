@@ -58,9 +58,16 @@ async function testConnection() {
   try {
     await getDocFromServer(doc(db, 'test', 'connection'));
     console.log("Firebase Connection Healthy");
-  } catch (error) {
-    if(error instanceof Error && error.message.includes('the client is offline')) {
-      console.error("Please check your Firebase configuration.");
+  } catch (error: any) {
+    const errCode = error?.code;
+    const errMsg = error instanceof Error ? error.message : String(error);
+    
+    if (errCode === 'permission-denied' || errMsg.includes('permission-denied') || errMsg.includes('insufficient permissions')) {
+      console.log("Firebase Connection Healthy (Security Rules Active and Active)");
+    } else if (errMsg.includes('the client is offline') || errCode === 'unavailable') {
+      console.warn("Firebase is operating in offline or retry mode. This is normal on initial load or if the sandbox environment is starting up.");
+    } else {
+      console.error("Firebase connection test details:", error);
     }
   }
 }

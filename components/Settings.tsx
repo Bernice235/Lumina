@@ -44,7 +44,9 @@ import {
   syncCancelSubscription, 
   syncChangeSubscriptionPlan, 
   syncSimulateBillingFailure, 
-  updatePaystackPaymentMethod 
+  updatePaystackPaymentMethod,
+  getPaystackEnvironmentDetails,
+  getPaystackPublicKey
 } from '../services/paystackService';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -1826,6 +1828,28 @@ const Settings: React.FC<SettingsProps> = ({
                       </div>
                     ))}
                   </div>
+
+                  {/* Paystack Connection Status Indicator */}
+                  {(() => {
+                    const details = getPaystackEnvironmentDetails();
+                    return (
+                      <div className="max-w-2xl mx-auto p-4 bg-neutral-50/50 border border-neutral-100 rounded-3xl flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                        <div className="space-y-0.5 text-left">
+                          <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Paystack Integration Mode</p>
+                          <p className="text-xs text-neutral-500 leading-normal font-sans mt-0.5">
+                            {details.message}
+                          </p>
+                        </div>
+                        <span className={`inline-flex shrink-0 py-1 px-3 rounded-full text-[9px] font-black uppercase tracking-wider border ${
+                          details.status === 'live' 
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200/50' 
+                            : 'bg-amber-50 text-amber-700 border-amber-200/50'
+                        }`}>
+                          {details.status === 'live' ? '🟢 Live Production' : '⚠️ Test Sandbox'}
+                        </span>
+                      </div>
+                    );
+                  })()}
 
                   {/* Pricing Plans Box */}
                   <div className="max-w-2xl mx-auto space-y-6 pt-4">

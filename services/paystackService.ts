@@ -31,9 +31,33 @@ export const PAYSTACK_PLANS: PaystackPlan[] = [
 ];
 
 // Load Paystack Public key or fall back to standard sandbox public key
-const getPaystackPublicKey = (): string => {
+export const getPaystackPublicKey = (): string => {
   const metaEnv = (import.meta as any).env;
   return (metaEnv?.VITE_PAYSTACK_PUBLIC_KEY as string) || 'pk_test_a041f02c6b4fc348bebc0d80c0dbca30fbefae61';
+};
+
+export const getPaystackEnvironmentDetails = () => {
+  const metaEnv = (import.meta as any).env;
+  const keyEntered = metaEnv?.VITE_PAYSTACK_PUBLIC_KEY as string;
+  
+  if (!keyEntered) {
+    return {
+      status: 'fallback_test',
+      message: 'Fallback Test mode (Using standard sandbox keys). Configure VITE_PAYSTACK_PUBLIC_KEY with your Live Key "pk_live_..." in Settings.'
+    };
+  }
+  
+  if (keyEntered.startsWith('pk_live_')) {
+    return {
+      status: 'live',
+      message: 'Active Live Mode! Secure real payments will connect directly to your Paystack dashboard.'
+    };
+  }
+  
+  return {
+    status: 'test',
+    message: 'Custom Test Mode (Using custom "pk_test_..." key). Payments are simulated safely.'
+  };
 };
 
 /**
