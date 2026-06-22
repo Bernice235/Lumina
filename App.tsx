@@ -601,7 +601,7 @@ const App: React.FC = () => {
         // Log out immediately to allow the separate partner (companion) sign-up / log-in flow.
         console.log("Logged in user is a standard cycle tracker. Logging out to ensure separate partner setup.");
         handleLogout();
-      } else if (!user.isPartnerLinked) {
+      } else if (!user.partnerId) {
         // Valid partner user, but not linked yet. Let's auto-link them!
         const codeToAccept = inviteCode.toUpperCase();
         acceptInvite(codeToAccept, user.id, user.name)
@@ -611,7 +611,7 @@ const App: React.FC = () => {
                 ...user,
                 partnerId: inviteData.senderId,
                 partnerName: inviteData.name,
-                isPartnerLinked: true,
+                isPartnerLinked: false,
                 isPartner: true
               };
               setUser(updated);
@@ -625,11 +625,11 @@ const App: React.FC = () => {
           });
       }
     }
-  }, [inviteCode, user?.id, user?.isPartner, user?.isPartnerLinked]);
+  }, [inviteCode, user?.id, user?.isPartner, user?.partnerId]);
 
   // Subscribe to partner user data changes in real time
   useEffect(() => {
-    if (user && user.isPartnerLinked && user.partnerId) {
+    if (user && user.partnerId) {
       const unsubscribe = subscribeToUser(user.partnerId, (pUser) => {
         setPartnerUser(pUser);
       });
@@ -637,7 +637,7 @@ const App: React.FC = () => {
     } else {
       setPartnerUser(null);
     }
-  }, [user?.isPartnerLinked, user?.partnerId]);
+  }, [user?.partnerId]);
 
   const updateTheme = (newTheme: AppTheme) => {
     if (user) {

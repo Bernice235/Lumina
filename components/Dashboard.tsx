@@ -150,7 +150,8 @@ const Dashboard: React.FC<DashboardProps> = ({
     // Update user
     const updatedUser = {
       ...user,
-      sharingSettings: approvedSettings
+      sharingSettings: approvedSettings,
+      isPartnerLinked: true
     };
     setUser(updatedUser);
     await syncUser(updatedUser);
@@ -161,7 +162,8 @@ const Dashboard: React.FC<DashboardProps> = ({
       partnerRequest: {
         ...partnerUser.partnerRequest!,
         status: 'approved' as const
-      }
+      },
+      isPartnerLinked: true
     };
     await syncUser(updatedPartner);
     alert(`You successfully approved ${partnerUser.name}'s connection and sharing preferences! 💖`);
@@ -175,7 +177,8 @@ const Dashboard: React.FC<DashboardProps> = ({
         ...user.sharingSettings,
         ...sharingPrefs,
         shareNotes: user.sharingSettings?.shareNotes || false
-      }
+      },
+      isPartnerLinked: true
     };
     setUser(updatedUser);
     await syncUser(updatedUser);
@@ -185,7 +188,8 @@ const Dashboard: React.FC<DashboardProps> = ({
       partnerRequest: {
         ...partnerUser.partnerRequest!,
         status: 'approved' as const
-      }
+      },
+      isPartnerLinked: true
     };
     await syncUser(updatedPartner);
     setIsCustomizingSharing(false);
@@ -193,16 +197,27 @@ const Dashboard: React.FC<DashboardProps> = ({
   };
 
   const handleDeclineRequest = async () => {
-    if (!partnerUser) return;
+    if (!partnerUser || !setUser) return;
     if (confirm(`Are you sure you want to decline ${partnerUser.name}'s request?`)) {
       const updatedPartner = {
         ...partnerUser,
         partnerRequest: {
           ...partnerUser.partnerRequest!,
           status: 'declined' as const
-        }
+        },
+        isPartnerLinked: false
       };
       await syncUser(updatedPartner);
+
+      const updatedUser = {
+        ...user,
+        partnerId: undefined,
+        partnerName: '',
+        isPartnerLinked: false
+      };
+      setUser(updatedUser);
+      await syncUser(updatedUser);
+
       alert(`Request from ${partnerUser.name} declined.`);
     }
   };

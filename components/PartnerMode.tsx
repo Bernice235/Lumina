@@ -17,9 +17,10 @@ interface PartnerModeProps {
   reminders: Reminder[];
   setReminders: React.Dispatch<React.SetStateAction<Reminder[]>>;
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
+  partnerUser?: User | null;
 }
 
-const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders, setUser }) => {
+const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders, setUser, partnerUser }) => {
   const [giftIdeas, setGiftIdeas] = useState<string[]>([]);
   const [supportMission, setSupportMission] = useState<string[]>([]);
   const [commTips, setCommTips] = useState<string>('');
@@ -34,7 +35,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
   const [onboardingStep, setOnboardingStep] = useState<number>(user.isPartner && !user.onboardingCompleted ? 1 : 0);
   const [partnerStep, setPartnerStep] = useState<number>(() => {
     if (!user.isPartner) return 0;
-    if (!user.isPartnerLinked) return 0;
+    if (!user.partnerId) return 0;
     if (!user.partnerRequest) return 1;
     if (user.partnerRequest.status === 'pending') return 3;
     if (user.partnerRequest.status === 'approved' && !user.onboardingCompleted) return 4;
@@ -55,14 +56,22 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
   const [copied, setCopied] = useState(false);
   const [linkOnlyCopied, setLinkOnlyCopied] = useState(false);
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
-  const [linkedUser, setLinkedUser] = useState<User | null>(null);
+  const [linkedUser, setLinkedUser] = useState<User | null>(() => partnerUser || null);
+
+  useEffect(() => {
+    if (partnerUser) {
+      setLinkedUser(partnerUser);
+    }
+  }, [partnerUser]);
   const [receivedGifts, setReceivedGifts] = useState<ReceivedComfort[]>([]);
   const [generatingLink, setGeneratingLink] = useState(false);
   const [showQRCode, setShowQRCode] = useState(false);
   const [inviteSuccess, setInviteSuccess] = useState(false);
+  const [subTab, setSubTab] = useState<'partners' | 'requests' | 'invitations' | 'privacy'>('partners');
+  const [isCustomizingSharing, setIsCustomizingSharing] = useState(false);
 
   useEffect(() => {
-    if (user.isPartner && user.isPartnerLinked) {
+    if (user.isPartner && user.partnerId) {
       if (!user.partnerRequest) {
         setPartnerStep(1);
       } else if (user.partnerRequest.status === 'pending') {
@@ -75,25 +84,25 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
         setPartnerStep(6);
       }
     }
-  }, [user.isPartner, user.isPartnerLinked, user.partnerRequest?.status, user.onboardingCompleted]);
+  }, [user.isPartner, user.partnerId, user.partnerRequest?.status, user.onboardingCompleted]);
 
   useEffect(() => {
     // Check for invite link in URL
     const params = new URLSearchParams(window.location.search);
     const inviteCode = params.get('invite');
-    if (inviteCode && !user.isPartnerLinked) {
+    if (inviteCode && !user.partnerId) {
       setPartnerCodeInput(inviteCode.toUpperCase());
     }
-  }, [user.isPartnerLinked]);
+  }, [user.partnerId]);
 
   useEffect(() => {
-    if (user.isPartnerLinked && user.partnerId) {
+    if (user.partnerId) {
       const unsubUser = subscribeToUser(user.partnerId, (linked) => {
         if (linked) setLinkedUser(linked);
       });
       return () => unsubUser();
     }
-  }, [user.isPartnerLinked, user.partnerId]);
+  }, [user.partnerId]);
 
   useEffect(() => {
     const unsubGifts = subscribeToGifts(user.id, (gifts) => {
@@ -520,7 +529,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
     setPartnerStep(6);
   };
 
-  if (user.isPartner && user.isPartnerLinked && partnerStep < 6) {
+  if (user.isPartner && user.partnerId && partnerStep < 6) {
     return (
       <div className="min-h-[80vh] flex flex-col items-center justify-center p-6 animate-fadeIn font-sans">
         <div className="w-full max-w-md bg-white rounded-[3rem] shadow-2xl border border-pink-50 p-10 space-y-8 relative overflow-hidden">
@@ -747,7 +756,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
     );
   }
 
-  if (!user.isPartner && !user.isPartnerLinked) {
+  if (!user.isPartner && !user.partnerId) {
     return (
       <div className="space-y-8 animate-fadeIn pb-24 font-sans select-none">
         <header className="bg-gradient-to-br from-pink-500 to-rose-500 p-10 rounded-[3rem] shadow-xl text-white text-center">
@@ -946,89 +955,439 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
     );
   }
 
-  if (!user.isPartner && user.isPartnerLinked) {
+  if (!user.isPartner && user.partnerId) {
+    const handleApproveAll = async () => {
+      if (!linkedUser) return;
+      const requested = linkedUser.partnerRequest?.requestedReceives || [];
+      const approvedSettings = {
+        shareCycleInfo: requested.some(r => r.includes('Period')),
+        shareFertilityInfo: requested.some(r => r.includes('Fertility') || r.includes('Ovulation')),
+        sharePregnancyInfo: requested.some(r => r.includes('Pregnancy')),
+        shareSymptoms: requested.some(r => r.includes('Symptom')),
+        shareMood: requested.some(r => r.includes('Mood')),
+        shareNotes: user.sharingSettings?.shareNotes || false,
+        shareIntimacyInfo: false,
+        shareDoctorReports: false,
+        shareAppointmentReminders: requested.some(r => r.includes('Appointment') || r.includes('Doctor')),
+        shareWellnessUpdates: requested.some(r => r.includes('Wellness') || r.includes('Suggestions') || r.includes('Support') || r.includes('Gift') || r.includes('Messages')),
+      };
+      
+      const updatedUser = {
+        ...user,
+        sharingSettings: approvedSettings,
+        isPartnerLinked: true
+      };
+      setUser(updatedUser);
+      await syncUser(updatedUser);
+
+      const updatedPartner = {
+        ...linkedUser,
+        partnerRequest: {
+          ...linkedUser.partnerRequest!,
+          status: 'approved' as const
+        },
+        isPartnerLinked: true
+      };
+      setLinkedUser(updatedPartner);
+      await syncUser(updatedPartner);
+      
+      setSubTab('partners');
+      alert(`You successfully approved ${linkedUser.name}'s connection and sharing preferences! 💖`);
+    };
+
+    const handleDeclineRequest = async () => {
+      if (!linkedUser) return;
+      if (confirm(`Are you sure you want to decline ${linkedUser.name}'s request?`)) {
+        const updatedPartner = {
+          ...linkedUser,
+          partnerRequest: {
+            ...linkedUser.partnerRequest!,
+            status: 'declined' as const
+          },
+          isPartnerLinked: false
+        };
+        setLinkedUser(updatedPartner);
+        await syncUser(updatedPartner);
+
+        const updatedUser = {
+          ...user,
+          partnerId: undefined,
+          partnerName: '',
+          isPartnerLinked: false
+        };
+        setUser(updatedUser);
+        await syncUser(updatedUser);
+        
+        alert(`Request from ${linkedUser.name} declined.`);
+      }
+    };
+
+    const handleSaveCustomSharing = async () => {
+      if (!linkedUser) return;
+      const updatedUser = {
+        ...user,
+        isPartnerLinked: true
+      };
+      setUser(updatedUser);
+      await syncUser(updatedUser);
+
+      const updatedPartner = {
+        ...linkedUser,
+        partnerRequest: {
+          ...linkedUser.partnerRequest!,
+          status: 'approved' as const
+        },
+        isPartnerLinked: true
+      };
+      setLinkedUser(updatedPartner);
+      await syncUser(updatedPartner);
+      
+      setIsCustomizingSharing(false);
+      setSubTab('partners');
+      alert(`Custom privacy preferences saved and connection approved for ${linkedUser.name}! 💮`);
+    };
+
+    const togglePauseSharing = async () => {
+      const updatedUser = {
+        ...user,
+        isSharingPaused: !user.isSharingPaused
+      };
+      setUser(updatedUser);
+      await syncUser(updatedUser);
+      alert(updatedUser.isSharingPaused ? 'Sharing paused successfully.' : 'Sharing resumed successfully.');
+    };
+
+    const isPendingApproval = linkedUser?.partnerRequest?.status === 'pending';
+    const isApproved = linkedUser?.partnerRequest?.status === 'approved';
+
     return (
-      <div className="space-y-8 animate-fadeIn pb-24">
+      <div className="space-y-8 animate-fadeIn pb-24 font-sans select-none">
         <header className="bg-gradient-to-br from-pink-500 to-rose-500 p-10 rounded-[3rem] shadow-xl text-white text-center">
-          <h2 className="text-4xl font-serif italic mb-2">Your Partner</h2>
-          <p className="text-sm opacity-90">Connected with {user.partnerName}</p>
+          <h2 className="text-4xl font-serif italic mb-2">Partner Sanctuary</h2>
+          <p className="text-sm opacity-90">Manage connection and privacy controls seamlessly</p>
         </header>
 
-        <section className="bg-white p-8 rounded-[3rem] shadow-sm border border-pink-50 space-y-6">
-          <div className="flex items-center gap-4 p-6 bg-pink-50/30 rounded-[2.5rem] border border-pink-50">
-            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-3xl shadow-sm">👩</div>
-            <div className="flex-1">
-              <h3 className="text-xl font-serif text-pink-600 italic">{user.partnerName}</h3>
-              <p className="text-[10px] font-bold text-green-500 uppercase tracking-widest">Status: Connected ✅</p>
-            </div>
-          </div>
+        {/* Sub-Navigation tabs */}
+        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide py-1">
+          <button 
+            type="button"
+            onClick={() => { setSubTab('partners'); setIsCustomizingSharing(false); }}
+            className={`px-5 py-3 rounded-full text-[10px] font-black uppercase tracking-wider whitespace-nowrap shrink-0 transition-all cursor-pointer ${subTab === 'partners' ? 'bg-pink-500 text-white shadow-md' : 'bg-white border border-pink-150/40 text-pink-500 hover:bg-pink-50/20'}`}
+          >
+            👥 Connected Partners
+          </button>
+          <button 
+            type="button"
+            onClick={() => { setSubTab('requests'); }}
+            className={`px-5 py-3 rounded-full text-[10px] font-black uppercase tracking-wider relative whitespace-nowrap shrink-0 transition-all cursor-pointer ${subTab === 'requests' ? 'bg-pink-500 text-white shadow-md' : 'bg-white border border-pink-150/40 text-pink-500 hover:bg-pink-50/20'}`}
+          >
+            📩 Pending Requests
+            {isPendingApproval && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-white flex items-center justify-center text-[8px] font-bold text-white animate-pulse">!</span>
+            )}
+          </button>
+          <button 
+            type="button"
+            onClick={() => { setSubTab('invitations'); setIsCustomizingSharing(false); }}
+            className={`px-5 py-3 rounded-full text-[10px] font-black uppercase tracking-wider whitespace-nowrap shrink-0 transition-all cursor-pointer ${subTab === 'invitations' ? 'bg-pink-500 text-white shadow-md' : 'bg-white border border-pink-150/40 text-pink-500 hover:bg-pink-50/20'}`}
+          >
+            💌 Sent Invitations
+          </button>
+          <button 
+            type="button"
+            onClick={() => { setSubTab('privacy'); }}
+            className={`px-5 py-3 rounded-full text-[10px] font-black uppercase tracking-wider whitespace-nowrap shrink-0 transition-all cursor-pointer ${subTab === 'privacy' ? 'bg-pink-500 text-white shadow-md' : 'bg-white border border-pink-150/40 text-pink-500 hover:bg-pink-50/20'}`}
+          >
+            🔒 Privacy & Permissions
+          </button>
+        </div>
 
-          <div className="grid gap-3">
-            <button 
-              onClick={() => setUser({ ...user, isPartner: true })}
-              className="w-full py-4 bg-pink-500 text-white rounded-2xl font-bold uppercase text-xs tracking-widest shadow-lg shadow-pink-100"
-            >
-              View Partner Dashboard
-            </button>
-            <button 
-              onClick={() => setShowSettings(!showSettings)}
-              className="w-full py-4 bg-white border-2 border-pink-100 text-pink-500 rounded-2xl font-bold uppercase text-xs tracking-widest"
-            >
-              Manage Sharing Settings
-            </button>
-            <button 
-              onClick={() => setShowDisconnectConfirm(true)}
-              className="w-full py-4 text-rose-400 font-bold uppercase text-[10px] tracking-widest"
-            >
-              Disconnect Partner ❌
-            </button>
+        {/* Sub-Tab Contents */}
+        {subTab === 'partners' && (
+          <div className="space-y-6 animate-fadeIn">
+            <section className="bg-white p-8 rounded-[3rem] shadow-sm border border-pink-50 space-y-6">
+              <div className="flex items-center gap-4 p-6 bg-pink-50/30 rounded-[2.5rem] border border-pink-50">
+                <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-3xl shadow-sm">👨</div>
+                <div className="flex-1 text-left">
+                  <h3 className="text-xl font-serif text-pink-600 italic font-bold">{user.partnerName}</h3>
+                  {isApproved ? (
+                    <p className="text-[10px] font-bold text-green-500 uppercase tracking-widest flex items-center gap-1">
+                      <span>●</span> Status: Sync Active ✅
+                    </p>
+                  ) : isPendingApproval ? (
+                    <p className="text-[10px] font-bold text-amber-500 uppercase tracking-widest flex items-center gap-1">
+                      <span>●</span> Status: Awaiting Approval ⏳
+                    </p>
+                  ) : (
+                    <p className="text-[10px] font-bold text-rose-400 uppercase tracking-widest flex items-center gap-1">
+                      <span>●</span> Status: Setup Pending 📪
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {!isApproved && isPendingApproval && (
+                <div className="p-4 bg-amber-50 border border-amber-100 rounded-2xl text-left text-xs text-amber-700 leading-relaxed">
+                  ⚠️ <span className="font-bold">{user.partnerName}</span> has sent a connection request. Head to the <span className="font-bold text-pink-600 cursor-pointer underline" onClick={() => setSubTab('requests')}>Pending Requests</span> tab to review and approve!
+                </div>
+              )}
+
+              <div className="grid gap-3">
+                {isApproved && (
+                  <button 
+                    type="button"
+                    onClick={() => setUser({ ...user, isPartner: true })}
+                    className="w-full py-4 bg-gradient-to-r from-pink-500 to-rose-400 text-white rounded-2xl font-bold uppercase text-[10px] tracking-widest shadow-lg shadow-pink-100 hover:scale-[1.01] active:scale-95 transition-all cursor-pointer"
+                  >
+                    View Companion Dashboard 💻
+                  </button>
+                )}
+                
+                <button 
+                  type="button"
+                  onClick={() => setSubTab('privacy')}
+                  className="w-full py-4 bg-white border-2 border-pink-100 text-pink-500 rounded-2xl font-bold uppercase text-[10px] tracking-widest hover:bg-pink-50/10 cursor-pointer"
+                >
+                  Manage Sharing Settings 🔒
+                </button>
+
+                <button 
+                  type="button"
+                  onClick={() => setShowDisconnectConfirm(true)}
+                  className="w-full py-4 text-rose-450 hover:text-rose-600 font-bold uppercase text-[10px] tracking-widest cursor-pointer"
+                >
+                  Disconnect Partner ❌
+                </button>
+              </div>
+            </section>
+
+            {isApproved && (
+              <section className="bg-white p-8 rounded-[3rem] shadow-sm border border-pink-50 space-y-6 text-center">
+                <h3 className="text-lg font-serif italic text-indigo-950 font-bold">Send supportive comfort instead! 💕</h3>
+                <p className="text-xs text-gray-500 max-w-md mx-auto leading-relaxed">
+                  Just because you are synchronized doesn't mean you can't have fun. Send your partner cute digital gifts that bloom on their companion dashboard instantly!
+                </p>
+                <div className="flex justify-center gap-8 pt-2">
+                  <ComfortButton icon="🌸" label="Flower" onClick={() => sendDigitalComfort('flower')} />
+                  <ComfortButton icon="🍫" label="Chocolate" onClick={() => sendDigitalComfort('chocolate')} />
+                  <ComfortButton icon="🍵" label="Warm Tea" onClick={() => sendDigitalComfort('tea')} />
+                </div>
+              </section>
+            )}
           </div>
-        </section>
+        )}
+
+        {subTab === 'requests' && (
+          <div className="space-y-6 animate-fadeIn">
+            {isPendingApproval && linkedUser ? (
+              <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-8 rounded-[2.5rem] border border-pink-100 shadow-sm space-y-6 text-left">
+                <div className="flex items-start gap-4">
+                  <span className="text-3xl">💕</span>
+                  <div className="space-y-1">
+                    <h3 className="text-2xl font-serif text-indigo-950 italic font-black">New Partner Request</h3>
+                    <p className="text-sm text-gray-600">
+                      <span className="font-bold text-indigo-600">{linkedUser.name}</span> would like to connect on Lumina and has requested to receive the following categories:
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl border border-pink-100/50">
+                  <h4 className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-3">Requested Access Categories:</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-indigo-900 leading-relaxed font-semibold">
+                    {linkedUser.partnerRequest?.requestedReceives?.map((reqItem, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <span className="text-pink-500">✓</span>
+                        <span>{reqItem}</span>
+                      </div>
+                    )) || (
+                      <span className="text-xs text-gray-400 italic">No specific categories specified (All by default)</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={handleApproveAll}
+                    className="px-6 py-4 bg-pink-500 hover:bg-pink-600 text-white font-bold rounded-2xl text-[10px] uppercase tracking-widest shadow-md transition-all cursor-pointer"
+                  >
+                    Approve Request 💖
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSubTab('privacy');
+                      setIsCustomizingSharing(true);
+                    }}
+                    className="px-6 py-4 bg-white text-pink-500 border border-pink-100 hover:bg-pink-50/50 font-bold rounded-2xl text-[10px] uppercase tracking-widest shadow-sm transition-all cursor-pointer"
+                  >
+                    Customize Permissions ⚙️
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDeclineRequest}
+                    className="px-6 py-4 bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold rounded-2xl text-[10px] uppercase tracking-widest transition-all cursor-pointer"
+                  >
+                    Decline Request ✕
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <section className="bg-white p-10 rounded-[3rem] shadow-sm border border-pink-50 text-center space-y-4">
+                <span className="text-4xl block">📪</span>
+                <h3 className="text-xl font-serif text-pink-600 italic">No Pending Requests</h3>
+                <p className="text-xs text-gray-400 max-w-xs mx-auto">
+                  You don't have any pending requests at the moment. All synchronized connections are up-to-date.
+                </p>
+              </section>
+            )}
+          </div>
+        )}
+
+        {subTab === 'invitations' && (
+          <div className="space-y-6 animate-fadeIn text-left">
+            <section className="bg-white p-8 rounded-[3rem] shadow-sm border border-pink-50 space-y-6">
+              <div className="bg-gradient-to-br from-pink-500/5 to-rose-500/5 border border-pink-100 rounded-[2.5rem] p-6 text-center space-y-3">
+                <span className="text-3xl">✨</span>
+                <h3 className="text-lg font-serif italic font-extrabold text-pink-600">Your Invitation Code</h3>
+                <p className="text-[10px] text-gray-400 uppercase tracking-widest font-black">Invite Code</p>
+                <div className="bg-white py-3 px-8 rounded-2xl border-2 border-pink-100 inline-block text-2xl font-mono font-black text-pink-600 tracking-widest shadow-sm">
+                  {user.partnerCode || 'CREATING...'}
+                </div>
+              </div>
+
+              {/* QR Code Option */}
+              <button
+                type="button"
+                onClick={() => setShowQRCode(!showQRCode)}
+                className="w-full p-4.5 bg-white hover:bg-amber-50/10 border border-amber-100 rounded-2xl text-left transition-all flex items-center justify-between gap-4 shadow-sm cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">🔳</span>
+                  <div>
+                    <span className="font-bold text-xs text-gray-850 block">QR Code</span>
+                    <span className="text-[9px] text-gray-400 block">Scan invitation directly on device</span>
+                  </div>
+                </div>
+                <span className="text-[10px] uppercase font-bold text-amber-500">{showQRCode ? 'Hide ✕' : 'View →'}</span>
+              </button>
+
+              {showQRCode && (
+                <div className="bg-amber-50/10 border border-amber-100/50 p-6 rounded-3xl text-center space-y-4 animate-slideDown">
+                  <p className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">Lumina Scan Invitation</p>
+                  <div className="bg-white p-4 inline-block rounded-2xl border border-amber-100 shadow-md">
+                    <img 
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&color=db2777&data=${encodeURIComponent(inviteLink)}`} 
+                      alt="Lumina Partner Invitation QR Code"
+                      className="w-44 h-44 mx-auto"
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
+                  <p className="text-[10px] text-gray-400 italic">Have your partner open their camera app to scan and connect instantly.</p>
+                </div>
+              )}
+
+              {/* Generate New Link button */}
+              <div className="pt-4 border-t border-pink-55/40 flex justify-end">
+                <button 
+                  type="button"
+                  onClick={handleForceGenerateNewCode}
+                  disabled={generatingLink}
+                  className="px-4 py-2 bg-pink-50 hover:bg-pink-100 rounded-full font-serif font-bold italic text-xs border border-pink-100 text-pink-500 transition-colors cursor-pointer"
+                >
+                  🔄 Generate New Link
+                </button>
+              </div>
+            </section>
+          </div>
+        )}
+
+        {subTab === 'privacy' && (
+          <div className="space-y-6 animate-fadeIn text-left">
+            <section className="bg-white p-8 rounded-[3rem] shadow-sm border border-pink-50 space-y-6">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="text-xl font-serif text-pink-600 italic font-bold">Privacy Controls</h3>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Control exactly what information your connected companion can view in real time.
+                  </p>
+                </div>
+                <button 
+                  type="button"
+                  onClick={togglePauseSharing}
+                  className={`px-3 py-1.5 rounded-full text-[8.5px] font-black uppercase tracking-widest border transition-all cursor-pointer ${user.isSharingPaused ? 'bg-amber-500 border-amber-500 text-white animate-pulse' : 'bg-white border-amber-200 text-amber-600 hover:bg-amber-55/10'}`}
+                >
+                  {user.isSharingPaused ? '⏸️ Sharing Paused' : '⏸️ Pause All'}
+                </button>
+              </div>
+
+              {isCustomizingSharing && (
+                <div className="p-4 bg-pink-50/20 border border-pink-100 rounded-2xl text-xs text-pink-800 leading-relaxed font-semibold">
+                  🛠️ <span className="font-extrabold uppercase text-pink-600">Custom Mode:</span> Toggling the variables below will adjust your sharing settings. Once you are finished, hit the "Approve Permissions" button below to active sync!
+                </div>
+              )}
+
+              <div className="space-y-4">
+                <SharingToggle label="Share Cycle Information" active={user.sharingSettings.shareCycleInfo} onChange={(v) => updateSharing('shareCycleInfo', v)} />
+                <SharingToggle label="Share Symptoms" active={user.sharingSettings.shareSymptoms} onChange={(v) => updateSharing('shareSymptoms', v)} />
+                <SharingToggle label="Share Mood" active={user.sharingSettings.shareMood} onChange={(v) => updateSharing('shareMood', v)} />
+                <SharingToggle label="Share Notes" active={user.sharingSettings.shareNotes} onChange={(v) => updateSharing('shareNotes', v)} />
+                <SharingToggle label="Share Fertility Information" active={user.sharingSettings.shareFertilityInfo} onChange={(v) => updateSharing('shareFertilityInfo', v)} />
+                <SharingToggle label="Share Pregnancy Information" active={user.sharingSettings.sharePregnancyInfo} onChange={(v) => updateSharing('sharePregnancyInfo', v)} />
+                <SharingToggle label="Share Doctor Reports" active={user.sharingSettings.shareDoctorReports} onChange={(v) => updateSharing('shareDoctorReports', v)} />
+                <SharingToggle label="Share Appointment Reminders" active={user.sharingSettings.shareAppointmentReminders} onChange={(v) => updateSharing('shareAppointmentReminders', v)} />
+                <SharingToggle label="Share Wellness Updates" active={user.sharingSettings.shareWellnessUpdates} onChange={(v) => updateSharing('shareWellnessUpdates', v)} />
+              </div>
+
+              {isCustomizingSharing ? (
+                <button 
+                  type="button"
+                  onClick={handleSaveCustomSharing}
+                  className="w-full mt-6 py-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl font-bold uppercase text-[10px] tracking-widest shadow-lg shadow-pink-150 cursor-pointer"
+                >
+                  Save & Approve Connection 💮
+                </button>
+              ) : (
+                <button 
+                  type="button"
+                  onClick={() => alert('Settings synchronized in real-time with partner! ✨')}
+                  className="w-full mt-6 py-4 bg-pink-500 text-white rounded-2xl font-bold uppercase text-[10px] tracking-widest shadow-md cursor-pointer"
+                >
+                  All Settings Synced ✨
+                </button>
+              )}
+            </section>
+          </div>
+        )}
 
         {showDisconnectConfirm && (
           <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
             <div className="bg-white rounded-[3rem] p-10 w-full max-w-sm text-center space-y-8 animate-fadeIn">
               <div className="w-20 h-20 bg-rose-50 rounded-full flex items-center justify-center text-4xl mx-auto shadow-inner">⚠️</div>
               <div className="space-y-3">
-                <h3 className="text-2xl font-serif italic text-rose-900">Disconnect?</h3>
-                <p className="text-xs text-rose-300 leading-relaxed">
+                <h3 className="text-2xl font-serif italic text-rose-905 font-bold">Disconnect?</h3>
+                <p className="text-xs text-rose-450 leading-relaxed font-semibold">
                   This will immediately stop sharing your cycle data with {user.partnerName}. They will no longer be able to see your updates.
                 </p>
               </div>
               <div className="grid gap-3">
                 <button 
+                  type="button"
                   onClick={handleDisconnect}
-                  className="w-full py-4 bg-rose-500 text-white rounded-2xl font-bold uppercase text-xs tracking-widest shadow-lg shadow-rose-100"
+                  className="w-full py-4 bg-rose-500 text-white rounded-2xl font-bold uppercase text-xs tracking-widest shadow-lg shadow-rose-100 cursor-pointer"
                 >
                   Yes, Disconnect ❌
                 </button>
                 <button 
+                  type="button"
                   onClick={() => setShowDisconnectConfirm(false)}
-                  className="w-full py-4 bg-white border-2 border-rose-100 text-rose-400 rounded-2xl font-bold uppercase text-xs tracking-widest"
+                  className="w-full py-4 bg-white border-2 border-rose-100 text-rose-400 rounded-2xl font-bold uppercase text-xs tracking-widest cursor-pointer"
                 >
                   Cancel
                 </button>
               </div>
             </div>
           </div>
-        )}
-
-        {showSettings && (
-          <section className="bg-white p-8 rounded-[3rem] shadow-sm border border-pink-50 animate-fadeIn">
-            <h3 className="text-xl font-serif text-pink-600 mb-6 italic">Sharing Settings</h3>
-            <div className="space-y-4">
-              <SharingToggle label="Share Cycle Info" active={user.sharingSettings.shareCycleInfo} onChange={(v) => updateSharing('shareCycleInfo', v)} />
-              <SharingToggle label="Share Symptoms" active={user.sharingSettings.shareSymptoms} onChange={(v) => updateSharing('shareSymptoms', v)} />
-              <SharingToggle label="Share Mood" active={user.sharingSettings.shareMood} onChange={(v) => updateSharing('shareMood', v)} />
-              <SharingToggle label="Share Notes" active={user.sharingSettings.shareNotes} onChange={(v) => updateSharing('shareNotes', v)} />
-            </div>
-            <button 
-              onClick={() => setShowSettings(false)}
-              className="w-full mt-8 py-4 bg-pink-500 text-white rounded-2xl font-bold uppercase text-xs tracking-widest"
-            >
-              Save
-            </button>
-          </section>
         )}
       </div>
     );

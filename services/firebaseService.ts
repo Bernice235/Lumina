@@ -117,7 +117,7 @@ export const acceptInvite = async (code: string, currentUserId: string, currentU
         ...currentUser,
         partnerId: inviteData.senderId,
         partnerName: inviteData.senderName,
-        isPartnerLinked: true,
+        isPartnerLinked: false,
         isPartner: true
       };
       await syncUser(updatedUser);
@@ -131,7 +131,7 @@ export const acceptInvite = async (code: string, currentUserId: string, currentU
         ...senderUser,
         partnerId: currentUserId,
         partnerName: currentUserName,
-        isPartnerLinked: true
+        isPartnerLinked: false
       };
       await syncUser(updatedSender);
     }
@@ -151,14 +151,14 @@ export const acceptInvite = async (code: string, currentUserId: string, currentU
     await updateDoc(doc(db, "users", currentUserId), {
       partnerId: inviteData.senderId,
       partnerName: inviteData.senderName,
-      isPartnerLinked: true,
+      isPartnerLinked: false,
       isPartner: true
     });
 
     await updateDoc(doc(db, "users", inviteData.senderId), {
       partnerId: currentUserId,
       partnerName: currentUserName,
-      isPartnerLinked: true
+      isPartnerLinked: false
     });
 
     // Cleanup invite
