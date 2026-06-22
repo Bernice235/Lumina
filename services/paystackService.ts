@@ -30,7 +30,7 @@ export const PAYSTACK_PLANS: PaystackPlan[] = [
   }
 ];
 
-// Load Paystack Public key or fall back to high-fidelity Sandbox Key
+// Load Paystack Public key or fall back to standard sandbox public key
 const getPaystackPublicKey = (): string => {
   const metaEnv = (import.meta as any).env;
   return (metaEnv?.VITE_PAYSTACK_PUBLIC_KEY as string) || 'pk_test_a041f02c6b4fc348bebc0d80c0dbca30fbefae61';
@@ -87,7 +87,7 @@ export const startPaystackTrialCheckout = async ({
   const amountToCharge = isUSD ? 100 : 10000; // $1.00 (100 cents) or ₦100 (10000 kobo)
   const transactionRef = `lumina_trial_${plan.id}_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
 
-  if (window.PaystackPop) {
+  if (publicKey && window.PaystackPop) {
     try {
       const handler = window.PaystackPop.setup({
         key: publicKey,
@@ -379,7 +379,7 @@ export const updatePaystackPaymentMethod = async ({
   const isUSD = currency === 'USD';
   const amountToCharge = isUSD ? 100 : 10000; // minimal security card verification (e.g. ₦100)
 
-  if (window.PaystackPop) {
+  if (publicKey && window.PaystackPop) {
     try {
       const handler = window.PaystackPop.setup({
         key: publicKey,
