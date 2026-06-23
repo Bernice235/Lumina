@@ -56,6 +56,21 @@
         "timestamp": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "type", "senderId", "receiverId"]
+    },
+    "PartnerRequest": {
+      "title": "PartnerRequest",
+      "description": "A sync request sent from a partner to a user.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "user_id": { "type": "string" },
+        "partner_id": { "type": "string" },
+        "partnerName": { "type": "string" },
+        "requested_permissions": { "type": "array" },
+        "status": { "type": "string", "enum": ["pending", "approved", "declined"] },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "user_id", "partner_id", "status"]
     }
   },
   "firestore": {
@@ -70,6 +85,10 @@
     "users/{userId}/gifts/{giftId}": {
       "schema": "Gift",
       "description": "Gifts received by a specific user."
+    },
+    "partner_requests/{requestId}": {
+      "schema": "PartnerRequest",
+      "description": "Active sync requests between user and partner."
     }
   }
 }

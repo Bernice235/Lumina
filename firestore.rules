@@ -64,6 +64,16 @@ service cloud.firestore {
              data.senderName is string && data.senderName.size() <= 100;
     }
 
+    function isValidPartnerRequest(data) {
+      return data.keys().hasAll(['id', 'user_id', 'partner_id', 'partnerName', 'requested_permissions', 'status', 'created_at']) &&
+             data.keys().size() == 7 &&
+             data.status in ['pending', 'approved', 'declined'] &&
+             data.user_id is string && data.user_id.size() <= 128 &&
+             data.partner_id is string && data.partner_id.size() <= 128 &&
+             data.partnerName is string && data.partnerName.size() <= 100 &&
+             data.requested_permissions is list && data.requested_permissions.size() <= 20;
+    }
+
     // --- Match Blocks ---
 
     match /users/{userId} {
@@ -71,7 +81,7 @@ service cloud.firestore {
       allow list: if false;
       allow create: if isOwner(userId) && isValidUser(incoming());
       allow update: if (isOwner(userId) && isValidUser(incoming())) || 
-                     (isSignedIn() && isPartnerOf(userId) && incoming().diff(existing()).affectedKeys().hasOnly(['partnerId', 'partnerName', 'isPartnerLinked']));
+                     (isSignedIn() && isPartnerOf(userId) && incoming().diff(existing()).affectedKeys().hasOnly(['partnerId', 'partnerName', 'isPartnerLinked', 'sharingSettings']));
       
       match /gifts/{giftId} {
         allow read: if isOwner(userId);
@@ -84,6 +94,18 @@ service cloud.firestore {
       allow get: if isSignedIn();
       allow create: if isSignedIn() && isValidInvite(incoming());
       allow delete: if isSignedIn(); 
+    }
+
+    match /partner_requests/{requestId} {
+      allow get, list: if isSignedIn() && (request.auth.uid == resource.data.user_id || request.auth.uid == resource.data.partner_id);
+      allow create: if isSignedIn() && request.auth.uid == incoming().partner_id && isValidPartnerRequest(incoming());
+      allow update: if isSignedIn() && (
+        // The recipient can approve or decline status
+        (request.auth.uid == resource.data.user_id && incoming().diff(existing()).affectedKeys().hasOnly(['status']) && incoming().status in ['approved', 'declined']) ||
+        // The requester can update
+        (request.auth.uid == resource.data.partner_id && isValidPartnerRequest(incoming()))
+      );
+      allow delete: if isSignedIn() && (request.auth.uid == resource.data.user_id || request.auth.uid == resource.data.partner_id);
     }
   }
 }

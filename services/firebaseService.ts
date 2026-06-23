@@ -275,3 +275,116 @@ export const subscribeToGifts = (userId: string, callback: (gifts: ReceivedComfo
     handleFirestoreError(error, OperationType.GET, path);
   });
 };
+
+export interface DPartnerRequest {
+  id: string;
+  request_id: string;
+  user_id: string;
+  partner_id: string;
+  partnerName: string;
+  requested_permissions: string[];
+  status: 'pending' | 'approved' | 'declined';
+  created_at: string;
+}
+
+export const subscribeToPartnerRequests = (roleId: string, role: 'user' | 'partner', callback: (requests: DPartnerRequest[]) => void) => {
+  if (roleId.startsWith('sandbox_')) {
+    const getLocalRequests = () => {
+      try {
+        const saved = localStorage.getItem('lumina_partner_requests');
+        const list = saved ? JSON.parse(saved) : [];
+        if (role === 'user') {
+          return list.filter((r: any) => r.user_id === roleId);
+        } else {
+          return list.filter((r: any) => r.partner_id === roleId);
+        }
+      } catch (err) {
+        return [];
+      }
+    };
+    
+    callback(getLocalRequests());
+    
+    const listener = (e: StorageEvent) => {
+      if (e.key === 'lumina_partner_requests') {
+        callback(getLocalRequests());
+      }
+    };
+    window.addEventListener('storage', listener);
+    return () => window.removeEventListener('storage', listener);
+  }
+  
+  const path = 'partner_requests';
+  const collRef = collection(db, "partner_requests");
+  const q = query(
+    collRef,
+    where(role === 'user' ? 'user_id' : 'partner_id', '==', roleId)
+  );
+  
+  return onSnapshot(q, (snapshot) => {
+    const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as DPartnerRequest));
+    callback(list);
+  }, (err) => {
+    handleFirestoreError(err, OperationType.GET, path);
+  });
+};
+
+export const submitPartnerRequest = async (userId: string, partnerId: string, partnerName: string, requestedPermissions: string[]) => {
+  const isSandbox = userId.startsWith('sandbox_') || partnerId.startsWith('sandbox_');
+  const request_id = isSandbox ? Math.random().toString(36).substr(2, 9) : `${userId}_${partnerId}`;
+  
+  const requestData: DPartnerRequest = {
+    id: request_id,
+    request_id,
+    user_id: userId,
+    partner_id: partnerId,
+    partnerName,
+    requested_permissions: requestedPermissions,
+    status: 'pending',
+    created_at: new Date().toISOString()
+  };
+  
+  if (isSandbox) {
+    const saved = localStorage.getItem('lumina_partner_requests');
+    const list = saved ? JSON.parse(saved) : [];
+    const filtered = list.filter((r: any) => !(r.user_id === userId && r.partner_id === partnerId));
+    filtered.push(requestData);
+    localStorage.setItem('lumina_partner_requests', JSON.stringify(filtered));
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: 'lumina_partner_requests',
+      newValue: JSON.stringify(filtered)
+    }));
+    return request_id;
+  }
+  
+  const path = `partner_requests/${request_id}`;
+  try {
+    await setDoc(doc(db, "partner_requests", request_id), requestData);
+    return request_id;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+};
+
+export const updatePartnerRequestStatus = async (requestId: string, status: 'approved' | 'declined') => {
+  const isSandbox = requestId.length < 15 || requestId.startsWith('sandbox_');
+  
+  if (isSandbox) {
+    const saved = localStorage.getItem('lumina_partner_requests');
+    const list = saved ? JSON.parse(saved) : [];
+    const updated = list.map((r: any) => r.id === requestId ? { ...r, status } : r);
+    localStorage.setItem('lumina_partner_requests', JSON.stringify(updated));
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: 'lumina_partner_requests',
+      newValue: JSON.stringify(updated)
+    }));
+    return;
+  }
+  
+  const path = `partner_requests/${requestId}`;
+  try {
+    await updateDoc(doc(db, "partner_requests", requestId), { status });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+};

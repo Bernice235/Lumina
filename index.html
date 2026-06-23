@@ -36,7 +36,11 @@
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#fffafb">
 
-  <script src="https://cdn.tailwindcss.com" crossorigin="anonymous"></script>
+  <script>
+    window.global = window;
+    window.process = { env: { NODE_ENV: 'development' } };
+  </script>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
@@ -87,8 +91,6 @@
       animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
   </style>
-
-<link rel="stylesheet" href="/index.css">
 </head>
 <body>
   <div id="root"></div>

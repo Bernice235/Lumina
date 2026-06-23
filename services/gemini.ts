@@ -1,166 +1,64 @@
-import { GoogleGenAI, Modality } from "@google/genai";
 import { decodeBase64, decodeAudioData } from "./audio";
-import firebaseConfig from "../firebase-applet-config.json";
 
-const ai = new GoogleGenAI({ 
-  apiKey: process.env.GEMINI_API_KEY || process.env.API_KEY || firebaseConfig.apiKey 
-});
-
-// A robust helper to try multiple models sequentially when services are degraded or high load
-async function generateSafeContent(config: {
-  contents: string;
-  systemInstruction?: string;
-}): Promise<string> {
-  const models = ["gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-flash-latest"];
-  let lastError: any = null;
-
-  for (const model of models) {
-    try {
-      const response = await ai.models.generateContent({
-        model,
-        contents: config.contents,
-        config: config.systemInstruction ? { systemInstruction: config.systemInstruction } : undefined
-      });
-      if (response.text) {
-        return response.text;
-      }
-    } catch (error: any) {
-      console.warn(`Lumina model fetch notice for model ${model}:`, error?.message || error);
-      lastError = error;
-    }
+// Helper function to send safe POST requests to our server API proxy endpoints 
+async function fetchGeminiProxy(endpoint: string, body: object): Promise<any> {
+  const response = await fetch(`/api/gemini/${endpoint}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
   }
-
-  throw lastError || new Error("All models are currently experiencing high demand.");
-}
-
-// Gorgeous local fallback affirmations if services are completely offline or degraded
-function getLocalFallbackAffirmation(name: string, phase?: string, mood?: string): string {
-  const normalizedMood = mood?.toLowerCase() || '';
-  const normalizedPhase = phase?.toLowerCase() || '';
-
-  const templates: string[] = [];
-
-  if (normalizedMood.includes('happy') || normalizedMood.includes('excited')) {
-    templates.push(
-      `Your light is radiant today, ${name}. Keep shining and embracing this wonderful, magnetic energy. You are exactly where you need to be. 🌟`,
-      `The world is a softer, brighter place with your laughter, ${name}. Celebrate your strength and flow with joy. ✨`,
-      `Abundance and bliss flow to you naturally today, ${name}. Your positive spirit is a gift to yourself and everyone around you. 🌸`
-    );
-  } else if (normalizedMood.includes('calm') || normalizedMood.includes('dreamy')) {
-    templates.push(
-      `Rest in your own gentle rhythm today, ${name}. Your peaceful mind is your sanctuary, and you are surrounded by love. 🍃`,
-      `Breath by breath, you are creating a beautiful, harmonious space for yourself, ${name}. In trust and ease, you bloom. 🤍`,
-      `Allow yourself to simply be, sweet ${name}. Your stillness is powerful, and your dreams are being nurtured. ✨`
-    );
-  } else if (normalizedMood.includes('crampy') || normalizedMood.includes('sleepy') || normalizedMood.includes('tired')) {
-    templates.push(
-      `Be gentle with your beautiful temple, ${name}. Your body is doing sacred work right now, and you deserve deep comfort, rest, and peace. 🩹`,
-      `It is safe to slow down and rest, sweet ${name}. Wrapped in comfort, you are recharging your internal light. 🌙`,
-      `Your comfort is precious, ${name}. Give yourself permission to hibernate, wrap yourself in warmth, and let go of all demands. 🧸`
-    );
-  } else {
-    templates.push(
-      `You are a masterpiece in progress, ${name}. Stay gentle with your heart, hold space for your feelings, and trust your magnificent flow. 🌸`,
-      `Every phase of your journey is beautiful, ${name}. You are blooming with strength, grace, and limitless potential. ✨`,
-      `Your presence is a gentle whisper of beauty in the world, ${name}. Nurture your soul, honor your pace, and love your magic. 💖`
-    );
-  }
-
-  if (normalizedPhase.includes('menstrual')) {
-    templates.push(
-      `In this winter of your cycle, ${name}, your softest surrender is your greatest power. Let go, rest deeply, and let your body renew. ❄️`,
-      `Honoring the deep, cleansing release of your cycle, ${name}. You are restoring, healing, and listening to your inner wisdom. 🩸`
-    );
-  } else if (normalizedPhase.includes('follicular')) {
-    templates.push(
-      `Your spring is rising, ${name}. New beginnings, fresh clarity, and beautiful ideas are starting to bloom in your heart. 🌱`,
-      `Feel the gentle spark of awakening within you, ${name}. You are stepping into your radiant, creative power. ✨`
-    );
-  } else if (normalizedPhase.includes('ovulat')) {
-    templates.push(
-      `You are at your absolute solar peak, ${name}. Magnetic, brilliant, and deeply alluring, the world reflects your inner sun. ☀️`,
-      `Speak your truth with passion, ${name}. Your voice is magnetic, and you are fully aligned with your feminine power. 🌺`
-    );
-  } else if (normalizedPhase.includes('luteal')) {
-    templates.push(
-      `As the autumn wind blows, ${name}, draw inward. Protect your boundaries, nest in cozy comfort, and honor your intuitive wisdom. 🍂`,
-      `It is safe to pull back and conserve your magic, ${name}. You are beautiful, wise, and protecting your peace. 🕯️`
-    );
-  }
-
-  const index = Math.floor(Math.random() * templates.length);
-  return templates[index];
+  return await response.json();
 }
 
 export async function getDailyAffirmation(name: string, phase?: string, mood?: string): Promise<string> {
   try {
-    let prompt = `Generate a super girly, empowering, and poetic daily affirmation for ${name}. Keep it short, beautiful, and address her directly by name occasionally.`;
-    if (phase) {
-      prompt += ` She is currently in her ${phase} phase of her menstrual cycle.`;
-    }
-    if (mood) {
-      prompt += ` She is feeling ${mood}.`;
-    }
-    
-    return await generateSafeContent({
-      contents: prompt,
-      systemInstruction: "You are a supportive and elegant wellness coach. Your affirmations should be deeply personal, poetic, and encouraging."
-    });
+    const data = await fetchGeminiProxy("affirmation", { name, phase, mood });
+    return data.text;
   } catch (error) {
-    return getLocalFallbackAffirmation(name, phase, mood);
+    console.error("Failed to fetch daily affirmation from proxy:", error);
+    return `Your presence is a gentle whisper of beauty in the world, ${name}. Nurture your soul, honor your pace, and love your magic. 💖`;
   }
 }
 
 export async function getSupplementAdvice(symptoms: string[]): Promise<string> {
   try {
-    const symStr = symptoms.join(', ');
-    return await generateSafeContent({
-      contents: `I am experiencing these symptoms: ${symStr}. Please give me some comforting, big-sisterly advice on which natural supplements or vitamins might help me feel better. Include a medical disclaimer.`,
-      systemInstruction: "You are a kind, wise older sister and wellness expert. You specialize in feminine health and natural remedies."
-    });
+    const data = await fetchGeminiProxy("supplement", { symptoms });
+    return data.text;
   } catch (error) {
+    console.error("Failed to fetch supplement advice from proxy:", error);
     return "Your body is doing its best! Consider magnesium for cramps and some quiet rest. Always check with a professional first, sweet girl!";
   }
 }
 
 export async function getLuminaAdvice(question: string): Promise<string> {
   try {
-    return await generateSafeContent({
-      contents: `I have a question about the female body or feminine health: ${question}. Please give me some comforting, big-sisterly advice that is medically sound but very gentle and empowering. Include a medical disclaimer.`,
-      systemInstruction: "You are a kind, wise older sister and wellness expert. You specialize in feminine health, anatomy, and emotional well-being."
-    });
+    const data = await fetchGeminiProxy("advice", { question });
+    return data.text;
   } catch (error) {
+    console.error("Failed to fetch Lumina advice from proxy:", error);
     return "Your body is a beautiful mystery! It's always best to chat with a professional for specific medical concerns, but remember that you are perfectly made.";
   }
 }
 
 export async function getProductAdvice(product: string, concern: string): Promise<string> {
   try {
-    return await generateSafeContent({
-      contents: `I am nervous about using a ${product}. My specific concern is: ${concern}. Please give me some comforting, big-sisterly advice that is medically sound but very gentle and empowering.`,
-      systemInstruction: "You are a kind, wise older sister and wellness expert."
-    });
+    const data = await fetchGeminiProxy("product", { product, concern });
+    return data.text;
   } catch (error) {
+    console.error("Failed to fetch product advice from proxy:", error);
     return "Take a deep breath. You are in control of your body, and it's okay to take it slow. You've got this, beautiful!";
   }
 }
 
-export async function playWelcomeVoice(name: string) {
+export async function playWelcomeVoice(name: string): Promise<void> {
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3.1-flash-tts-preview",
-      contents: [{ parts: [{ text: `Hello ${name}. Welcome back to your sanctuary. I hope you're feeling wonderful today.` }] }],
-      config: {
-        responseModalities: [Modality.AUDIO],
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: 'Zephyr' },
-          },
-        },
-      },
-    });
-
-    const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+    const data = await fetchGeminiProxy("welcome-voice", { name });
+    const base64Audio = data.base64Audio;
     if (base64Audio) {
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
       const audioBuffer = await decodeAudioData(
@@ -175,54 +73,46 @@ export async function playWelcomeVoice(name: string) {
       source.start();
     }
   } catch (error: any) {
-    // Graceful failure for welcome voice as it's a non-critical feature
     console.warn("Welcome Voice could not be played:", error?.message || error);
   }
 }
 
 export async function getGiftIdeas(phase: string): Promise<string[]> {
   try {
-    const response = await generateSafeContent({
-      contents: `My partner is in her ${phase} phase of her menstrual cycle. Suggest 5 thoughtful, romantic, or comforting gift ideas for this specific time.`,
-      systemInstruction: "You are a thoughtful romantic advisor."
-    });
-    return (response.split('\n').filter(s => s.trim().length > 5).slice(0, 5)) || [];
+    const data = await fetchGeminiProxy("gift-ideas", { phase });
+    return data.items || [];
   } catch (error) {
+    console.error("Failed to fetch gift ideas from proxy:", error);
     return ["A bouquet of flowers", "Soft silk pajamas", "A handwritten letter", "Luxury chocolates", "A relaxing foot rub"];
   }
 }
 
 export async function getSupportMission(phase: string): Promise<string[]> {
   try {
-    const response = await generateSafeContent({
-      contents: `My partner is in her ${phase} phase. Give me a list of 5 concrete, actionable chores or support tasks I can do to make her life easier today. Keep them simple like 'Clean the kitchen' or 'Prepare a heating pad'.`,
-      systemInstruction: "You are a pragmatic and deeply empathetic support coach for partners."
-    });
-    return (response.split('\n').filter(s => s.trim().length > 5).slice(0, 5)) || [];
+    const data = await fetchGeminiProxy("support-mission", { phase });
+    return data.items || [];
   } catch (error) {
+    console.error("Failed to fetch support missions from proxy:", error);
     return ["Clean the kitchen", "Prepare a warm bath", "Get her favorite snacks", "Light a scented candle", "Take care of dinner tonight"];
   }
 }
 
 export async function getCommunicationTips(phase: string): Promise<string> {
   try {
-    return await generateSafeContent({
-      contents: `My partner is in her ${phase} phase. What are some sensitive and supportive ways I can talk to her and listen to her right now? Give me 3 bullet points.`,
-      systemInstruction: "You are a relationship therapist specializing in empathy."
-    });
+    const data = await fetchGeminiProxy("communication-tips", { phase });
+    return data.text;
   } catch (error) {
+    console.error("Failed to fetch communication tips from proxy:", error);
     return "Be patient, offer snacks, and ask 'How can I support you best right now?'";
   }
 }
 
 export async function getLoveNoteIdeas(phase: string): Promise<string[]> {
   try {
-    const response = await generateSafeContent({
-      contents: `Write 3 short, sweet, and incredibly romantic text messages I can send my partner who is in her ${phase} phase. Make them feel seen and loved.`,
-      systemInstruction: "You are a romantic poet and supportive partner."
-    });
-    return (response.split('\n').filter(s => s.trim().length > 5).slice(0, 3)) || [];
+    const data = await fetchGeminiProxy("love-note-ideas", { phase });
+    return data.items || [];
   } catch (error) {
+    console.error("Failed to fetch love note ideas from proxy:", error);
     return ["Just thinking about you and how amazing you are. ✨", "I'm here for whatever you need today, my love.", "You're doing so much, don't forget how much you're appreciated."];
   }
 }

@@ -9,7 +9,10 @@ import {
   sendGift, 
   subscribeToUser, 
   subscribeToGifts,
-  syncUser
+  syncUser,
+  subscribeToPartnerRequests,
+  submitPartnerRequest,
+  updatePartnerRequestStatus
 } from '../services/firebaseService';
 
 interface PartnerModeProps {
@@ -70,8 +73,51 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
   const [subTab, setSubTab] = useState<'partners' | 'requests' | 'invitations' | 'privacy'>('partners');
   const [isCustomizingSharing, setIsCustomizingSharing] = useState(false);
 
+  const [incomingRequests, setIncomingRequests] = useState<any[]>([]);
+  const [outgoingRequests, setOutgoingRequests] = useState<any[]>([]);
+
   useEffect(() => {
-    if (user.isPartner && user.partnerId) {
+    if (user && !user.isPartner && user.partnerId) {
+      const unsub = subscribeToPartnerRequests(user.id, 'user', (reqs) => {
+        setIncomingRequests(reqs);
+      });
+      return () => unsub();
+    } else {
+      setIncomingRequests([]);
+    }
+  }, [user?.id, user?.isPartner, user?.partnerId]);
+
+  useEffect(() => {
+    if (user && user.isPartner && user.partnerId) {
+      const unsub = subscribeToPartnerRequests(user.id, 'partner', (reqs) => {
+        setOutgoingRequests(reqs);
+      });
+      return () => unsub();
+    } else {
+      setOutgoingRequests([]);
+    }
+  }, [user?.id, user?.isPartner, user?.partnerId]);
+
+  // Synchronize partnerStep with actual active Request status dynamically in real-time
+  useEffect(() => {
+    if (!user.isPartner || !user.partnerId) return;
+    
+    // Check outgoing requests list first for the source of truth
+    const activeRequest = outgoingRequests.find(r => r.user_id === user.partnerId);
+    if (activeRequest) {
+      if (activeRequest.status === 'pending') {
+        setPartnerStep(3);
+      } else if (activeRequest.status === 'approved') {
+        if (!user.isPartnerLinked || !user.onboardingCompleted) {
+          setPartnerStep(4);
+        } else {
+          setPartnerStep(6);
+        }
+      } else if (activeRequest.status === 'declined') {
+        setPartnerStep(5);
+      }
+    } else {
+      // Fallback to legacy in-user profile representation
       if (!user.partnerRequest) {
         setPartnerStep(1);
       } else if (user.partnerRequest.status === 'pending') {
@@ -84,7 +130,26 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
         setPartnerStep(6);
       }
     }
-  }, [user.isPartner, user.partnerId, user.partnerRequest?.status, user.onboardingCompleted]);
+  }, [outgoingRequests, user.isPartner, user.partnerId, user.partnerRequest?.status, user.onboardingCompleted, user.isPartnerLinked]);
+
+  // Listen to visual navigation tab changes from banner clicks
+  useEffect(() => {
+    const handleSetSubTab = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail) {
+        setSubTab(detail as any);
+      }
+    };
+    window.addEventListener('lumina-set-partner-subtab', handleSetSubTab);
+    
+    const saved = sessionStorage.getItem('lumina_partnermode_subtab');
+    if (saved) {
+      setSubTab(saved as any);
+      sessionStorage.removeItem('lumina_partnermode_subtab');
+    }
+    
+    return () => window.removeEventListener('lumina-set-partner-subtab', handleSetSubTab);
+  }, []);
 
   useEffect(() => {
     // Check for invite link in URL
@@ -625,6 +690,15 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                     };
                     setUser(updatedUser);
                     await syncUser(updatedUser);
+
+                    // Create real-time Firestore / Sandbox PartnerRequest document!
+                    await submitPartnerRequest(
+                      user.partnerId || '', // user_id (Ella, the tracked user)
+                      user.id || '',        // partner_id (Michael, the logged-in partner)
+                      user.name || '',      // partnerName (Michael)
+                      requestedReceives     // requested_permissions
+                    );
+
                     setPartnerStep(3);
                   } catch (err) {
                     console.error(err);
@@ -956,9 +1030,16 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
   }
 
   if (!user.isPartner && user.partnerId) {
+    const activePendingRequest = incomingRequests.find(r => r.status === 'pending');
+    const isPendingApproval = activePendingRequest ? true : (linkedUser?.partnerRequest?.status === 'pending');
+    const isApproved = activePendingRequest ? false : (linkedUser?.partnerRequest?.status === 'approved');
+    const requestedPermissionsList = activePendingRequest 
+      ? activePendingRequest.requested_permissions 
+      : (linkedUser?.partnerRequest?.requestedReceives || []);
+
     const handleApproveAll = async () => {
       if (!linkedUser) return;
-      const requested = linkedUser.partnerRequest?.requestedReceives || [];
+      const requested = requestedPermissionsList;
       const approvedSettings = {
         shareCycleInfo: requested.some(r => r.includes('Period')),
         shareFertilityInfo: requested.some(r => r.includes('Fertility') || r.includes('Ovulation')),
@@ -980,10 +1061,14 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
       setUser(updatedUser);
       await syncUser(updatedUser);
 
+      const reqId = activePendingRequest ? activePendingRequest.id : `${user.id}_${user.partnerId}`;
+      await updatePartnerRequestStatus(reqId, 'approved');
+
       const updatedPartner = {
         ...linkedUser,
         partnerRequest: {
           ...linkedUser.partnerRequest!,
+          requestedReceives: requested,
           status: 'approved' as const
         },
         isPartnerLinked: true
@@ -998,6 +1083,9 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
     const handleDeclineRequest = async () => {
       if (!linkedUser) return;
       if (confirm(`Are you sure you want to decline ${linkedUser.name}'s request?`)) {
+        const reqId = activePendingRequest ? activePendingRequest.id : `${user.id}_${user.partnerId}`;
+        await updatePartnerRequestStatus(reqId, 'declined');
+
         const updatedPartner = {
           ...linkedUser,
           partnerRequest: {
@@ -1031,6 +1119,9 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
       setUser(updatedUser);
       await syncUser(updatedUser);
 
+      const reqId = activePendingRequest ? activePendingRequest.id : `${user.id}_${user.partnerId}`;
+      await updatePartnerRequestStatus(reqId, 'approved');
+
       const updatedPartner = {
         ...linkedUser,
         partnerRequest: {
@@ -1056,9 +1147,6 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
       await syncUser(updatedUser);
       alert(updatedUser.isSharingPaused ? 'Sharing paused successfully.' : 'Sharing resumed successfully.');
     };
-
-    const isPendingApproval = linkedUser?.partnerRequest?.status === 'pending';
-    const isApproved = linkedUser?.partnerRequest?.status === 'approved';
 
     return (
       <div className="space-y-8 animate-fadeIn pb-24 font-sans select-none">

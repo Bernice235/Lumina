@@ -21,7 +21,7 @@ import DoctorReport from './components/DoctorReport';
 import { CycleGraph } from './components/CycleGraph';
 import { playWelcomeVoice } from './services/gemini';
 import { THEMES, SONGS } from './constants';
-import { syncUser, subscribeToGifts, subscribeToUser, acceptInvite } from './services/firebaseService';
+import { syncUser, subscribeToGifts, subscribeToUser, acceptInvite, subscribeToPartnerRequests } from './services/firebaseService';
 import { getDefaultNotificationSettings } from './services/notificationService';
 import { auth } from './services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -101,7 +101,98 @@ const App: React.FC = () => {
     body: string;
     emoji: string;
     isPartner: boolean;
+    action?: () => void;
   } | null>(null);
+
+  const [partnerRequests, setPartnerRequests] = useState<any[]>([]);
+  const notifiedRequestIds = useRef<Set<string>>(new Set());
+  const isRequestsFirstLoad = useRef(true);
+
+  // Subscribe to real-time partner requests (Incoming & Outgoing)
+  useEffect(() => {
+    if (user?.id) {
+      const role = user.isPartner ? 'partner' : 'user';
+      const unsub = subscribeToPartnerRequests(user.id, role, (requests) => {
+        if (isRequestsFirstLoad.current) {
+          // Identify existing requests and suppress initial toast banners upon login/tab reload
+          requests.forEach(req => {
+            notifiedRequestIds.current.add(req.id);
+            notifiedRequestIds.current.add(`${req.id}_${req.status}`);
+          });
+          isRequestsFirstLoad.current = false;
+        }
+        setPartnerRequests(requests);
+      });
+      return () => {
+        unsub();
+        isRequestsFirstLoad.current = true;
+      };
+    } else {
+      setPartnerRequests([]);
+      isRequestsFirstLoad.current = true;
+    }
+  }, [user?.id, user?.isPartner]);
+
+  // Handle simulated top-bar notification alerts on real-time request activities
+  useEffect(() => {
+    if (!user || partnerRequests.length === 0) return;
+
+    if (!user.isPartner) {
+      // Ella (tracked user) receives request alerts
+      const pendingRequests = partnerRequests.filter(r => r.status === 'pending');
+      pendingRequests.forEach(req => {
+        if (!notifiedRequestIds.current.has(req.id)) {
+          notifiedRequestIds.current.add(req.id);
+
+          const requestedText = req.requested_permissions
+            .map((p: string) => `✓ ${p}`)
+            .join('\n');
+
+          setSimulatedNotify({
+            id: req.id,
+            title: "💕 New Partner Request",
+            body: `${req.partnerName || 'Michael'} wants to connect with you.\n\nRequested Access:\n${requestedText}`,
+            emoji: "💕",
+            isPartner: true,
+            action: () => {
+              setActiveTab('partner');
+              sessionStorage.setItem('lumina_partnermode_subtab', 'requests');
+              window.dispatchEvent(new CustomEvent('lumina-set-partner-subtab', { detail: 'requests' }));
+            }
+          });
+        }
+      });
+    } else {
+      // Michael (partner) receives approved/declined status change alerts
+      partnerRequests.forEach(req => {
+        const key = `${req.id}_${req.status}`;
+        if (!notifiedRequestIds.current.has(key)) {
+          notifiedRequestIds.current.add(key);
+
+          if (req.status === 'approved') {
+            setSimulatedNotify({
+              id: req.id,
+              title: "💕 Connection Approved",
+              body: `${req.partnerName || 'Ella'} approved your request.`,
+              emoji: "💕",
+              isPartner: true,
+              action: () => {
+                window.location.reload();
+              }
+            });
+          } else if (req.status === 'declined') {
+            setSimulatedNotify({
+              id: req.id,
+              title: "💔 Connection Declined",
+              body: `Your connection request has been declined or unlinked.`,
+              emoji: "💔",
+              isPartner: true
+            });
+          }
+        }
+      });
+    }
+  }, [partnerRequests, user]);
 
   // Listen for simulated notifications
   useEffect(() => {
@@ -146,7 +237,8 @@ const App: React.FC = () => {
           title: detail.title,
           body: detail.body,
           emoji: detail.emoji || '🔔',
-          isPartner: !!detail.isPartner
+          isPartner: !!detail.isPartner,
+          action: detail.action
         });
         playChime();
       }
@@ -1254,7 +1346,12 @@ const App: React.FC = () => {
       {/* Simulated Phone Push Notification Lock Screen Card */}
       {simulatedNotify && (
         <div 
-          onClick={() => setSimulatedNotify(null)}
+          onClick={() => {
+            if (simulatedNotify.action) {
+              simulatedNotify.action();
+            }
+            setSimulatedNotify(null);
+          }}
           className={`fixed top-4 left-1/2 -translate-x-1/2 md:left-auto md:right-6 md:translate-x-0 z-[200] w-[92%] max-w-sm rounded-3xl p-4.5 cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 animate-slideDown shadow-[0_20px_50px_rgba(0,0,0,0.18)] border backdrop-blur-3xl flex flex-col gap-2.5 ${
             simulatedNotify.isPartner 
               ? 'bg-gradient-to-br from-slate-900/95 to-slate-800/95 text-white border-slate-700/60' 
