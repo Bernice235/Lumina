@@ -36,6 +36,72 @@ export const getPaystackPublicKey = (): string => {
   return (metaEnv?.VITE_PAYSTACK_PUBLIC_KEY as string) || 'pk_test_a041f02c6b4fc348bebc0d80c0dbca30fbefae61';
 };
 
+export const loadPaystackScript = (): Promise<boolean> => {
+  return new Promise((resolve) => {
+    if (window.PaystackPop) {
+      resolve(true);
+      return;
+    }
+
+    // Detect if running inside a sandboxed iframe or using the default sandbox key
+    let isInSandboxIframe = false;
+    try {
+      isInSandboxIframe = window.self !== window.top;
+    } catch (e) {
+      isInSandboxIframe = true; // Blocked access to top window implies a cross-origin sandboxed iframe
+    }
+
+    const key = getPaystackPublicKey();
+    const isDefaultMockKey = !key || key === 'pk_test_a041f02c6b4fc348bebc0d80c0dbca30fbefae61';
+
+    // If in an iframe or operating with the default mock key, do not load the remote Paystack script.
+    // This avoids throwing uncatchable cross-origin "Script error." in sandboxed browser previews.
+    if (isInSandboxIframe || isDefaultMockKey) {
+      console.log('Running in sandboxed/preview environment. Bypassing remote Paystack script in favor of inline high-fidelity simulator.');
+      resolve(false);
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://js.paystack.co/v1/inline.js';
+    script.crossOrigin = 'anonymous';
+    script.async = true;
+    script.onload = () => {
+      resolve(!!window.PaystackPop);
+    };
+    script.onerror = () => {
+      console.warn('Failed to load Paystack inline script dynamically. Falling back to sandbox simulator.');
+      resolve(false);
+    };
+    document.head.appendChild(script);
+  });
+};
+
+export const getPaystackPlanCode = (planId: 'monthly' | '6month', currency: 'USD' | 'NGN' | 'GHS' | 'ZAR' = 'NGN'): string | undefined => {
+  const metaEnv = (import.meta as any).env;
+  if (planId === 'monthly') {
+    return metaEnv?.VITE_PAYSTACK_PLAN_MONTHLY as string || undefined;
+  } else {
+    return metaEnv?.VITE_PAYSTACK_PLAN_6MONTH as string || undefined;
+  }
+};
+
+export const getPlanPrice = (plan: PaystackPlan, currency: 'USD' | 'NGN' | 'GHS' | 'ZAR'): number => {
+  if (currency === 'USD') {
+    return plan.priceUSD;
+  }
+  if (currency === 'NGN') {
+    return plan.priceNGN;
+  }
+  if (currency === 'GHS') {
+    return Number((plan.priceUSD * 14.5).toFixed(2));
+  }
+  if (currency === 'ZAR') {
+    return Number((plan.priceUSD * 18.2).toFixed(2));
+  }
+  return plan.priceUSD;
+};
+
 export const getPaystackEnvironmentDetails = () => {
   const metaEnv = (import.meta as any).env;
   const keyEntered = metaEnv?.VITE_PAYSTACK_PUBLIC_KEY as string;
@@ -105,15 +171,16 @@ export const startPaystackTrialCheckout = async ({
   const publicKey = getPaystackPublicKey();
   const email = user.email || 'customer@lumina.app';
   
-  // To verify cards for starting a 7-day free trial, Paystack recommends a tokenization/verification charge of $1.00 / ₦100 NGN.
-  // This validates the user's card and returns an authorization token. No subscription charge is made yet.
-  const isUSD = currency === 'USD';
-  const amountToCharge = isUSD ? 100 : 10000; // $1.00 (100 cents) or ₦100 (10000 kobo)
+  // Dynamically calculate actual plan price in subunits based on chosen currency
+  const planPriceOnCheckout = getPlanPrice(plan, currency);
+  const amountToCharge = Math.round(planPriceOnCheckout * 100); // 100 subunits for 1 currency unit
   const transactionRef = `lumina_trial_${plan.id}_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
 
-  if (publicKey && window.PaystackPop) {
+  const isLoaded = await loadPaystackScript();
+
+  if (isLoaded && publicKey && window.PaystackPop) {
     try {
-      const handler = window.PaystackPop.setup({
+      const setupOptions: PaystackPopOptions = {
         key: publicKey,
         email: email,
         amount: amountToCharge,
@@ -129,7 +196,15 @@ export const startPaystackTrialCheckout = async ({
         onClose: () => {
           onCancel();
         }
-      });
+      };
+
+      // If a Paystack plan code is configured in the environment, declare it to activate automatic subscription trial handling
+      const planCode = getPaystackPlanCode(plan.id, currency);
+      if (planCode) {
+        setupOptions.plan = planCode;
+      }
+
+      const handler = window.PaystackPop.setup(setupOptions);
       handler.openIframe();
     } catch (err: any) {
       onError(err?.message || 'Failed to initialize Paystack sandbox popup');
@@ -151,6 +226,9 @@ export const startPaystackTrialCheckout = async ({
 /**
  * High-Fidelity Custom Paystack Popup Simulator to work safely in iframes/sandboxes
  */
+/**
+ * High-Fidelity Custom Paystack Popup Simulator to work safely in iframes/sandboxes
+ */
 function SimulateCheckoutPop({
   plan,
   currency,
@@ -160,7 +238,7 @@ function SimulateCheckoutPop({
   onClose
 }: {
   plan: PaystackPlan;
-  currency: string;
+  currency: 'USD' | 'NGN' | 'GHS' | 'ZAR';
   email: string;
   ref: string;
   onSuccess: (ref: string) => void;
@@ -168,70 +246,93 @@ function SimulateCheckoutPop({
 }) {
   const overlay = document.createElement('div');
   overlay.id = 'paystack-sim-modal';
-  overlay.className = 'fixed inset-0 bg-neutral-900/40 backdrop-blur-sm z-[99999] flex items-center justify-center p-4 font-sans';
+  overlay.className = 'fixed inset-0 bg-neutral-900/40 backdrop-blur-sm z-[99991] flex items-center justify-center p-4 font-sans text-neutral-800';
   
-  const isUSD = currency === 'USD';
-  const priceDisplay = isUSD ? `$${plan.priceUSD.toFixed(2)}` : `₦${plan.priceNGN.toLocaleString()}`;
-  const verifyPriceDisplay = isUSD ? `$1.00` : `₦100`;
+  const envDetails = getPaystackEnvironmentDetails();
+  const isLive = envDetails.status === 'live';
+  
+  // Use professional human display terms per requirements
+  const checkoutTitle = "Secure Paystack Payment";
+  const bankName = isLive ? "Titan Trust Bank" : "Titan Trust Bank (Paystack Sandbox)";
+  
+  const planPriceOnCheckout = getPlanPrice(plan, currency);
+  let priceDisplay = '';
+  if (currency === 'USD') {
+    priceDisplay = `$${planPriceOnCheckout.toFixed(2)}`;
+  } else if (currency === 'NGN') {
+    priceDisplay = `₦${planPriceOnCheckout.toLocaleString()}`;
+  } else if (currency === 'GHS') {
+    priceDisplay = `${planPriceOnCheckout.toFixed(2)} GHS`;
+  } else {
+    priceDisplay = `${planPriceOnCheckout.toFixed(2)} ZAR`;
+  }
 
   overlay.innerHTML = `
     <div class="bg-white rounded-3xl shadow-2xl border border-rose-50 w-full max-w-md p-8 relative overflow-hidden animate-fadeIn space-y-6">
       <!-- Paystack Branding Header -->
       <div class="flex justify-between items-center pb-4 border-b border-rose-100">
         <div class="flex items-center gap-2">
-          <span class="w-3.5 h-3.5 rounded-full bg-emerald-500 animate-pulse"></span>
-          <p class="text-[10px] font-black uppercase tracking-widest text-emerald-600">Secure paystack checkout</p>
+          <span class="w-3.5 h-3.5 rounded-full bg-[#09a5db] animate-pulse"></span>
+          <p class="text-[10px] font-black uppercase tracking-widest text-[#09a5db]">${checkoutTitle}</p>
         </div>
-        <button id="paystack-sim-close" class="text-neutral-400 hover:text-neutral-600 transition-all text-sm font-bold">✕ Close</button>
+        <button id="paystack-sim-close" class="text-neutral-400 hover:text-neutral-600 transition-all text-xs font-bold">✕ Close</button>
       </div>
 
       <!-- Plan Info -->
-      <div class="space-y-3.5 bg-rose-50/20 p-5 rounded-2xl border border-rose-100/50">
-        <p class="text-[10px] font-black text-rose-500 uppercase tracking-wider">Start 7-Day Free Trial</p>
-        <p class="text-xl font-serif italic text-purple-950">${plan.name}</p>
+      <div class="space-y-3 bg-rose-50/20 px-5 py-4 rounded-2xl border border-rose-100/50 text-left">
+        <p class="text-[9px] font-black text-rose-500 uppercase tracking-wider">7-Day Premium Trial Initiation</p>
+        <p class="text-lg font-serif italic text-purple-950">${plan.name}</p>
         <p class="text-[11px] text-neutral-500 leading-relaxed">${plan.description}</p>
-        <div class="pt-3 border-t border-rose-100/30 flex justify-between text-xs font-semibold">
-          <span class="text-neutral-400">Card Verification:</span>
-          <span class="text-emerald-600">${verifyPriceDisplay} (Refunded instantly)</span>
+        <div class="pt-3 border-t border-rose-100/30 flex justify-between text-xs font-semibold text-neutral-600">
+          <span>Amount showing at Checkout:</span>
+          <span class="text-emerald-600 font-bold">${priceDisplay}</span>
         </div>
-        <div class="pt-1.5 flex justify-between text-xs font-bold text-indigo-950">
-          <span>Charge after 7 days:</span>
-          <span>${priceDisplay} / ${plan.id === 'monthly' ? 'month' : '6 months'}</span>
+        <div class="pt-1 flex justify-between text-[11px] text-neutral-400 font-medium">
+          <span>Charge Timeline:</span>
+          <span>Initiates 7 days free trial. Cancel anytime in Settings.</span>
         </div>
       </div>
 
-      <!-- Paystack Payment Methods Input -->
-      <div class="space-y-4">
+      <!-- Secure Payment by Paystack Bullet Box -->
+      <div class="px-5 py-4 bg-rose-50/30 border border-pink-100/60 rounded-2xl text-left space-y-2.5">
+        <p class="text-xs font-bold text-neutral-800 flex items-center gap-1.5">
+          <span class="text-pink-500">🔒</span> Secure Payment by Paystack
+        </p>
+        <ul class="text-[11px] text-neutral-600 space-y-1.5 font-medium">
+          <li class="flex items-center gap-2">
+            <span class="text-[9px] text-pink-400">✦</span> 7-Day Free Trial
+          </li>
+          <li class="flex items-center gap-2">
+            <span class="text-[9px] text-pink-400">✦</span> Cancel Anytime
+          </li>
+          <li class="flex items-center gap-2">
+            <span class="text-[9px] text-pink-400">✦</span> Secure Checkout
+          </li>
+          <li class="flex items-center gap-2">
+            <span class="text-[9px] text-pink-400">✦</span> Payments Protected by Paystack
+          </li>
+        </ul>
+      </div>
+
+      <!-- Paystack Payment Methods Tabs -->
+      <div class="space-y-4 text-left">
         <div class="space-y-2">
           <label class="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Select payment method</label>
           <div class="grid grid-cols-2 gap-2">
-            <button class="paystack-method-tab py-2.5 px-3 border border-emerald-500 bg-emerald-500/10 text-emerald-600 rounded-xl text-[10px] uppercase tracking-widest font-bold font-sans">💳 Card</button>
-            <button class="paystack-method-tab py-2.5 px-3 border border-neutral-100 hover:border-emerald-500 rounded-xl text-[10px] text-neutral-500 uppercase tracking-widest font-semibold font-sans">🏦 Transfer</button>
+            <button id="btn-tab-card" class="py-2.5 px-3 border border-[#09a5db] bg-[#09a5db]/10 text-[#09a5db] rounded-xl text-[10px] uppercase tracking-widest font-black transition-all">💳 Card</button>
+            <button id="btn-tab-transfer" class="py-2.5 px-3 border border-neutral-200 hover:border-neutral-300 rounded-xl text-[10px] text-neutral-500 uppercase tracking-widest font-bold transition-all">🏦 Transfer</button>
           </div>
         </div>
 
-        <!-- Simulated Card Details Form -->
-        <div class="space-y-3">
-          <div class="flex flex-col gap-1">
-            <label class="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Card number</label>
-            <input type="text" value="4000 1234 5678 9010" disabled class="py-2.5 px-4 bg-neutral-50/50 border border-neutral-200 rounded-xl text-xs font-mono text-neutral-700 focus:outline-none" />
-          </div>
-          <div class="grid grid-cols-2 gap-3">
-            <div class="flex flex-col gap-1">
-              <label class="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Expiry</label>
-              <input type="text" value="12/29" disabled class="py-2.5 px-4 bg-neutral-50/50 border border-neutral-200 rounded-xl text-xs font-mono text-neutral-700 focus:outline-none" />
-            </div>
-            <div class="flex flex-col gap-1">
-              <label class="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">CVV</label>
-              <input type="password" value="123" disabled class="py-2.5 px-4 bg-neutral-50/50 border border-neutral-200 rounded-xl text-xs font-mono text-neutral-700 focus:outline-none" />
-            </div>
-          </div>
+        <!-- Simulated Inputs Area -->
+        <div id="simulated-payment-details" class="space-y-3">
+          <!-- Card Details (Active by Default) -->
         </div>
       </div>
 
       <!-- Action Button -->
-      <button id="paystack-sim-submit" class="w-full py-4 bg-emerald-500 hover:bg-emerald-600 active:scale-[0.98] text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg shadow-emerald-100 transition-all flex items-center justify-center gap-1.5">
-        🔒 Authorize Free Trial Setup
+      <button id="paystack-sim-submit" class="w-full py-4 bg-[#09a5db] hover:bg-[#0895c6] active:scale-[0.98] text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg shadow-[#09a5db]/10 transition-all flex items-center justify-center gap-1.5">
+        🔒 Pin & Complete Card Trial Setup
       </button>
 
       <!-- Paystack Security Footprint -->
@@ -241,6 +342,87 @@ function SimulateCheckoutPop({
 
   document.body.appendChild(overlay);
 
+  const cardTab = overlay.querySelector('#btn-tab-card') as HTMLButtonElement;
+  const transferTab = overlay.querySelector('#btn-tab-transfer') as HTMLButtonElement;
+  const detailsArea = overlay.querySelector('#simulated-payment-details') as HTMLDivElement;
+  const submitBtn = overlay.querySelector('#paystack-sim-submit') as HTMLButtonElement;
+
+  let currentTab: 'card' | 'transfer' = 'card';
+
+  const updateSimulatedView = () => {
+    if (currentTab === 'card') {
+      cardTab.className = "py-2.5 px-3 border border-[#09a5db] bg-[#09a5db]/10 text-[#09a5db] rounded-xl text-[10px] uppercase tracking-widest font-black transition-all";
+      transferTab.className = "py-2.5 px-3 border border-neutral-200 hover:border-neutral-300 rounded-xl text-[10px] text-neutral-500 uppercase tracking-widest font-bold transition-all";
+      detailsArea.innerHTML = `
+        <div class="flex flex-col gap-1">
+          <label class="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Card number</label>
+          <input type="text" value="4000 1234 5678 9010" disabled class="py-2.5 px-4 bg-neutral-100 border border-neutral-200 rounded-xl text-xs font-mono text-neutral-600 focus:outline-none" />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="flex flex-col gap-1">
+            <label class="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Expiry</label>
+            <input type="text" value="12/29" disabled class="py-2.5 px-4 bg-neutral-100 border border-neutral-200 rounded-xl text-xs font-mono text-neutral-600 focus:outline-none" />
+          </div>
+          <div class="flex flex-col gap-1">
+            <label class="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">CVV</label>
+            <input type="password" value="123" disabled class="py-2.5 px-4 bg-neutral-100 border border-neutral-200 rounded-xl text-xs font-mono text-neutral-600 focus:outline-none" />
+          </div>
+        </div>
+      `;
+      submitBtn.innerHTML = `🔒 Pin & Complete Card Trial Setup`;
+    } else {
+      cardTab.className = "py-2.5 px-3 border border-neutral-200 hover:border-neutral-300 rounded-xl text-[10px] text-neutral-500 uppercase tracking-widest font-bold transition-all";
+      transferTab.className = "py-2.5 px-3 border border-[#09a5db] bg-[#09a5db]/10 text-[#09a5db] rounded-xl text-[10px] uppercase tracking-widest font-black transition-all";
+      
+      detailsArea.innerHTML = `
+        <div class="p-4 bg-neutral-50 border border-neutral-200 rounded-2xl flex flex-col gap-2.5 text-xs text-neutral-700">
+          <div class="flex justify-between items-center pb-2 border-b border-neutral-200">
+            <span class="text-[9px] font-bold text-neutral-400 uppercase">Transfer Amount</span>
+            <span class="font-black text-emerald-600">${priceDisplay}</span>
+          </div>
+          <div class="flex flex-col gap-0.5">
+            <span class="text-[9px] font-black text-neutral-400 uppercase tracking-wider">Bank Name</span>
+            <span class="font-bold text-neutral-800">${bankName}</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <div class="flex flex-col gap-0.5">
+              <span class="text-[9px] font-black text-neutral-400 uppercase tracking-wider">Account Number</span>
+              <span class="font-mono font-bold text-neutral-800 tracking-wider">0094857201</span>
+            </div>
+            <button id="paystack-copy-btn" class="py-1 px-2.5 border border-neutral-300 rounded hover:bg-neutral-150 transition text-[9px] font-semibold text-neutral-600">Copy</button>
+          </div>
+          <div class="flex flex-col gap-0.5">
+            <span class="text-[9px] font-black text-neutral-400 uppercase tracking-wider">Account Name</span>
+            <span class="font-semibold text-neutral-800">Lumina Bloom Ltd Subscription</span>
+          </div>
+        </div>
+      `;
+      submitBtn.innerHTML = `I've sent the money`;
+
+      const copyBtn = overlay.querySelector('#paystack-copy-btn') as HTMLButtonElement;
+      copyBtn?.addEventListener('click', () => {
+        navigator.clipboard?.writeText('0094857201');
+        copyBtn.innerHTML = '✅ Copied!';
+        setTimeout(() => {
+          copyBtn.innerHTML = 'Copy';
+        }, 1500);
+      });
+    }
+  };
+
+  // Initialize Default Card View
+  updateSimulatedView();
+
+  cardTab.addEventListener('click', () => {
+    currentTab = 'card';
+    updateSimulatedView();
+  });
+
+  transferTab.addEventListener('click', () => {
+    currentTab = 'transfer';
+    updateSimulatedView();
+  });
+
   // Close trigger
   const closeBtn = overlay.querySelector('#paystack-sim-close');
   closeBtn?.addEventListener('click', () => {
@@ -249,10 +431,9 @@ function SimulateCheckoutPop({
   });
 
   // Submit trigger
-  const submitBtn = overlay.querySelector('#paystack-sim-submit');
   submitBtn?.addEventListener('click', () => {
-    const originalText = submitBtn.innerHTML;
     submitBtn.setAttribute('disabled', 'true');
+    submitBtn.className = "w-full py-4 bg-emerald-500 text-white font-black text-xs uppercase tracking-widest rounded-2xl transition-all cursor-not-allowed flex items-center justify-center gap-1.5";
     submitBtn.innerHTML = `⌛ Creating Subscription Tunnel...`;
     
     setTimeout(() => {
@@ -285,9 +466,9 @@ export const syncStartSubscriptionTrial = async (
   const newCharge: BillingItem = {
     id: `bill_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
     date: now.toISOString(),
-    amount: isUSD ? 1.0 : 100, // Minimal trial card-authorization security deposit
+    amount: 0.0, // 0.0 since they are not charged immediately during the 7-day free trial
     currency: currency,
-    planName: `${plan.name} (Verification & 7-Day Trial Initiation)`,
+    planName: `${plan.name} (7-Day Trial Started - ${isUSD ? '$' + plan.priceUSD : '₦' + plan.priceNGN.toLocaleString()} after)`,
     status: 'paid',
     reference: reference
   };
@@ -403,7 +584,9 @@ export const updatePaystackPaymentMethod = async ({
   const isUSD = currency === 'USD';
   const amountToCharge = isUSD ? 100 : 10000; // minimal security card verification (e.g. ₦100)
 
-  if (publicKey && window.PaystackPop) {
+  const isLoaded = await loadPaystackScript();
+
+  if (isLoaded && publicKey && window.PaystackPop) {
     try {
       const handler = window.PaystackPop.setup({
         key: publicKey,
