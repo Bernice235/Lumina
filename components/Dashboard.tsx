@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { User, Symptom, Reminder, ReceivedComfort } from '../types';
+import { CommunityInvite } from './CommunityInvite';
 import { getDailyAffirmation } from '../services/gemini';
 import { syncUser } from '../services/firebaseService';
 import { SONGS, MOODS, BABY_SIZES } from '../constants';
@@ -1540,6 +1541,11 @@ const Dashboard: React.FC<DashboardProps> = ({
       ) : (
         renderStandardDashboard()
       )}
+
+      {/* Community Invite Section */}
+      <section className="mt-8 animate-fadeIn">
+        <CommunityInvite user={user} />
+      </section>
 
       {/* "Mark Delivered" Birth modal */}
       {isDeliveredModalOpen && (

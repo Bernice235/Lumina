@@ -10,7 +10,7 @@ import {
   updateProfile,
   sendPasswordResetEmail
 } from 'firebase/auth';
-import { syncUser, subscribeToUser } from '../services/firebaseService';
+import { syncUser, subscribeToUser, getInvite } from '../services/firebaseService';
 import { 
   Fingerprint, 
   Scan, 
@@ -78,7 +78,7 @@ const defaultReturningUser: User = {
 
 const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, latestCloudUser, latestCloudLoading }) => {
   const [connectionMode, setConnectionMode] = useState<'cloud' | 'offline'>('cloud');
-  const [screen, setScreen] = useState<'returning' | 'welcome' | 'email_login' | 'email_signup' | 'partner_invite'>('returning');
+  const [screen, setScreen] = useState<'returning' | 'welcome' | 'email_login' | 'email_signup' | 'partner_invite' | 'scan_welcome'>('returning');
   const [welcomeStep, setWelcomeStep] = useState<'choose_experience' | 'auth_creation'>('choose_experience');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -111,11 +111,22 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
   const [registerRole, setRegisterRole] = useState<'tracker' | 'partner'>('tracker');
   const [rememberMe, setRememberMe] = useState(true);
 
+  const [inviteSenderName, setInviteSenderName] = useState<string>('');
+
   // Determine on mount whether there is a saved profile or returner
   useEffect(() => {
     if (initialInviteCode) {
       setScreen('partner_invite');
       setRegisterRole('partner');
+      getInvite(initialInviteCode).then((invite) => {
+        if (invite && invite.senderName) {
+          setInviteSenderName(invite.senderName);
+        } else {
+          setInviteSenderName('Ella'); // fallback standard name as requested
+        }
+      }).catch(() => {
+        setInviteSenderName('Ella');
+      });
       return;
     }
     const hasBiometric = !!localStorage.getItem('lumina_biometric_user');
@@ -749,12 +760,12 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
             <div className="space-y-6 animate-fadeIn py-4">
               <div className="text-center space-y-3">
                 <span className="text-5xl animate-bounce inline-block">💞</span>
-                <h2 className="text-2xl font-serif text-pink-950 font-black tracking-tight leading-tight">
-                  You've been invited!
+                <h2 className="text-2xl font-serif text-pink-950 font-black tracking-tight leading-tight px-2">
+                  🌸 {inviteSenderName || 'Ella'} invited you to connect on Lumina.
                 </h2>
                 <div className="w-12 h-0.5 bg-gradient-to-r from-pink-400 to-rose-450 mx-auto my-2" />
                 <p className="text-xs text-gray-500 italic font-serif leading-relaxed px-1">
-                  Someone who loves you dearly has invited you to connect securely via <strong className="text-pink-600">Lumina Partner Mode</strong>.
+                  Connect securely with your partner via <strong className="text-pink-600">Lumina Partner Mode</strong> to stay in perfect sync.
                 </p>
                 <div className="bg-pink-50/50 py-3 px-6 rounded-2xl border border-pink-100 inline-block">
                   <p className="text-[10px] text-pink-400 uppercase tracking-widest font-black mb-1">Invitation Code</p>
@@ -1031,6 +1042,94 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+
+          {/* Welcome Screen after Scan */}
+          {!pendingRestoreUser && screen === 'scan_welcome' && (
+            <div className="space-y-6 text-center animate-fadeIn max-w-sm mx-auto" id="scan-welcome-screen">
+              <div className="space-y-3">
+                <span className="text-4xl animate-bounce inline-block">🌸</span>
+                <h2 className="text-3xl font-serif text-pink-950 font-black tracking-tight leading-tight">Welcome to Lumina</h2>
+                <p className="text-sm text-pink-700 font-medium italic font-serif">Your cycle, your sanctuary.</p>
+              </div>
+
+              <div className="w-12 h-0.5 bg-pink-200/80 mx-auto my-4" />
+
+              <div className="space-y-3.5 text-left bg-pink-50/20 p-5 rounded-3xl border border-pink-100/50">
+                <div className="flex items-center gap-3 text-[10px] font-bold text-pink-950 uppercase tracking-widest">
+                  <span className="text-pink-500">✨</span>
+                  <span>Track your cycle</span>
+                </div>
+                <div className="flex items-center gap-3 text-[10px] font-bold text-pink-950 uppercase tracking-widest">
+                  <span className="text-pink-500">✨</span>
+                  <span>Understand your body</span>
+                </div>
+                <div className="flex items-center gap-3 text-[10px] font-bold text-pink-950 uppercase tracking-widest">
+                  <span className="text-pink-500">✨</span>
+                  <span>Stay connected to your wellness journey</span>
+                </div>
+              </div>
+
+              <div className="space-y-2.5 pt-2">
+                <button
+                  type="button"
+                  id="btn-scan-create-account"
+                  onClick={() => {
+                    setScreen('welcome');
+                    setWelcomeStep('choose_experience');
+                  }}
+                  className="w-full py-4.5 bg-gradient-to-r from-pink-500 to-rose-450 hover:scale-[1.01] active:scale-95 text-white font-bold rounded-2xl text-[9px] uppercase tracking-widest shadow-md shadow-pink-100 flex items-center justify-center gap-2 cursor-pointer transition-all"
+                >
+                  Create Account
+                </button>
+
+                <button
+                  type="button"
+                  id="btn-scan-google"
+                  onClick={handleGoogleLogin}
+                  className="w-full py-4 bg-white border border-pink-100 rounded-2xl hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-3 text-pink-900 font-bold text-[9px] uppercase tracking-widest cursor-pointer shadow-sm hover:bg-rose-50/30 transition-all"
+                >
+                  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-4 h-4" referrerPolicy="no-referrer" />
+                  <span>Continue with Google</span>
+                </button>
+
+                <button
+                  type="button"
+                  id="btn-scan-apple"
+                  onClick={() => setIsAppleSheetOpen(true)}
+                  className="w-full py-4 bg-black text-white rounded-2xl hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-3 font-bold text-[9px] uppercase tracking-widest cursor-pointer shadow-sm hover:opacity-90 transition-all"
+                >
+                  <Smartphone size={14} className="text-white fill-white" />
+                  <span>Continue with Apple</span>
+                </button>
+
+                <button
+                  type="button"
+                  id="btn-scan-email"
+                  onClick={() => {
+                    setScreen('email_signup');
+                    setError('');
+                  }}
+                  className="w-full py-4 bg-white border border-pink-100 text-pink-500 rounded-2xl hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-3 font-bold text-[9px] uppercase tracking-widest cursor-pointer shadow-sm hover:bg-pink-50/10 transition-all"
+                >
+                  Continue with Email
+                </button>
+              </div>
+
+              <div className="text-center pt-3 border-t border-pink-50">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setScreen('email_login');
+                    setError('');
+                  }}
+                  className="text-[10px] font-sans font-bold uppercase tracking-widest text-pink-500 hover:text-pink-600 transition-colors cursor-pointer"
+                >
+                  Already have an account? Log In
+                </button>
+              </div>
             </div>
           )}
 

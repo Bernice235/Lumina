@@ -103,6 +103,8 @@ export interface User {
   subscriptionTrialEnd?: string;
   subscriptionEnd?: string;
   billingHistory?: BillingItem[];
+  referralCount?: number;
+  referredBy?: string;
 }
 
 export interface BillingItem {

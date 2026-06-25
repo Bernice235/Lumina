@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { User, NotificationSettings, Symptom, DiaryEntry, BirthControlLog, TemperatureLog, SharingSettings, BillingItem } from '../types';
+import { CommunityInvite } from './CommunityInvite';
 import { 
   Bell, 
   Sparkles, 
@@ -24,7 +25,8 @@ import {
   Layers,
   Download,
   CreditCard,
-  ShieldCheck
+  ShieldCheck,
+  Share2
 } from 'lucide-react';
 import { 
   getCyclePredictions, 
@@ -59,7 +61,7 @@ interface SettingsProps {
   diaryEntries?: DiaryEntry[];
   bcLogs?: BirthControlLog[];
   tempLogs?: TemperatureLog[];
-  initialSubTab?: 'notifications' | 'general' | 'billing';
+  initialSubTab?: 'notifications' | 'general' | 'billing' | 'invite';
 }
 
 const Settings: React.FC<SettingsProps> = ({ 
@@ -72,7 +74,7 @@ const Settings: React.FC<SettingsProps> = ({
   tempLogs = [],
   initialSubTab = 'notifications'
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'notifications' | 'general' | 'billing'>(initialSubTab);
+  const [activeSubTab, setActiveSubTab] = useState<'notifications' | 'general' | 'billing' | 'invite'>(initialSubTab);
 
   React.useEffect(() => {
     setActiveSubTab(initialSubTab);
@@ -645,6 +647,17 @@ const Settings: React.FC<SettingsProps> = ({
         >
           <Smartphone size={13} />
           General
+        </button>
+        <button 
+          onClick={() => setActiveSubTab('invite')}
+          className={`flex-1 py-3 text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+            activeSubTab === 'invite' 
+              ? 'bg-gradient-to-r from-pink-500 to-rose-400 text-white shadow-md shadow-pink-100' 
+              : 'text-pink-400 hover:text-pink-600'
+          }`}
+        >
+          <Share2 size={13} />
+          Invite
         </button>
       </div>
 
@@ -1989,6 +2002,10 @@ const Settings: React.FC<SettingsProps> = ({
             )}
           </div>
         </div>
+      ) : activeSubTab === 'invite' ? (
+        <div className="space-y-8 animate-fadeIn">
+          <CommunityInvite user={user} />
+        </div>
       ) : (
         <div className="space-y-8 animate-fadeIn">
           {/* PROFILE & CYCLE CONFIGURATOR */}
@@ -2020,6 +2037,28 @@ const Settings: React.FC<SettingsProps> = ({
                   className="bg-pink-50/50 px-4 py-3 rounded-2xl outline-none font-medium text-xs text-pink-700 border border-pink-100 placeholder-pink-300 shadow-inner w-full focus:border-pink-300 transition-colors"
                   placeholder="e.g. Beautiful Bloom"
                 />
+              </div>
+
+              {/* Invite friends promo card */}
+              <div className="bg-gradient-to-r from-pink-500/10 via-rose-500/5 to-transparent p-5 rounded-3xl border border-pink-100/40 flex flex-col sm:flex-row items-center justify-between gap-4 mt-4">
+                <div className="space-y-1 text-center sm:text-left">
+                  <h4 className="text-xs font-bold text-pink-900 uppercase tracking-wider flex items-center gap-1.5 justify-center sm:justify-start">
+                    <span>🌸</span> Invite Friends to Lumina
+                  </h4>
+                  <p className="text-[10px] text-gray-500 leading-normal max-w-sm">
+                    Get your personal signup QR code and share the sanctuary with your friends! Track how many have joined.
+                  </p>
+                  <p className="text-[10px] font-bold text-pink-600 font-serif">
+                    Friends Joined Through You: {user.referralCount || 0}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveSubTab('invite')}
+                  className="py-2.5 px-4 bg-pink-500 text-white font-bold rounded-xl text-[9px] uppercase tracking-wider shadow-sm hover:bg-pink-600 transition-all cursor-pointer whitespace-nowrap"
+                >
+                  View My Invite QR →
+                </button>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

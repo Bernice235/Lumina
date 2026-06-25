@@ -1,1 +1,66 @@
 @import "tailwindcss";
+
+@keyframes slideDownWithCentering {
+  from {
+    transform: translate(-50%, -20px);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideDownMd {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.notification-drawer {
+    width: calc(100vw - 24px) !important;
+    max-width: 420px !important;
+    left: 50% !important;
+    right: auto !important;
+    transform: translate(-50%, 0) !important;
+    box-sizing: border-box !important;
+    animation: slideDownWithCentering 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease !important;
+}
+
+.notification-drawer:hover {
+    transform: translate(-50%, 0) scale(1.02) !important;
+}
+
+.notification-drawer:active {
+    transform: translate(-50%, 0) scale(0.98) !important;
+}
+
+.notification-drawer h4, .notification-drawer p {
+    white-space: pre-line !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+    max-height: none !important;
+}
+
+@media (min-width: 768px) {
+    .notification-drawer {
+        width: 384px !important;
+        max-width: 384px !important;
+        left: auto !important;
+        right: 24px !important;
+        transform: none !important;
+        animation: slideDownMd 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+    }
+    .notification-drawer:hover {
+        transform: scale(1.02) !important;
+    }
+    .notification-drawer:active {
+        transform: scale(0.98) !important;
+    }
+}

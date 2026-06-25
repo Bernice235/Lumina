@@ -25,7 +25,7 @@ async function generateSafeContent(config: {
   contents: string;
   systemInstruction?: string;
 }): Promise<string> {
-  const models = ["gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-flash-latest"];
+  const models = ["gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-flash-latest", "gemini-3.1-pro-preview"];
   let lastError: any = null;
 
   for (const model of models) {
@@ -39,7 +39,7 @@ async function generateSafeContent(config: {
         return response.text;
       }
     } catch (error: any) {
-      console.warn(`Lumina server model fetch notice for model ${model}:`, error?.message || error);
+      console.warn(`Model ${model} fetch notice (falling back if available):`, error?.message || error);
       lastError = error;
     }
   }

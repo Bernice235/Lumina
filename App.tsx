@@ -536,11 +536,35 @@ const App: React.FC = () => {
     { id: '4', task: 'Gentle yoga stretch', completed: false },
   ]);
 
-  // Real-time Gifts Listener
+  const lastGiftCount = useRef<number | null>(null);
+
+  // Real-time Gifts Listener & push notifications
   useEffect(() => {
     if (user) {
       const unsub = subscribeToGifts(user.id, (gifts) => {
         setReceivedGifts(gifts);
+        if (lastGiftCount.current !== null && gifts.length > lastGiftCount.current) {
+          const newGift = gifts[gifts.length - 1];
+          const emojiMap: Record<string, string> = {
+            flower: '🌸',
+            chocolate: '🍫',
+            tea: '🍵',
+            hug: '💖',
+            sparkle: '✨'
+          };
+          const emoji = emojiMap[newGift.type.toLowerCase()] || '💝';
+          setSimulatedNotify({
+            id: newGift.id,
+            title: `💝 Digital Gift from ${newGift.senderName || 'Partner'}`,
+            body: `${newGift.senderName || 'Your partner'} sent you a digital ${newGift.type}! ${emoji}`,
+            emoji: emoji,
+            isPartner: false,
+            action: () => {
+              setActiveTab('dashboard');
+            }
+          });
+        }
+        lastGiftCount.current = gifts.length;
       });
       return () => unsub();
     }
@@ -1339,7 +1363,14 @@ const App: React.FC = () => {
             <NavItem icon="📖" label="Learn" active={activeTab === 'edu'} onClick={() => setActiveTab('edu')} theme={user.theme} />
             <NavItem icon="📔" label="Diary" active={activeTab === 'diary'} onClick={() => setActiveTab('diary')} theme={user.theme} />
             <NavItem icon="💆‍♀️" label="Self" active={activeTab === 'selfcare'} onClick={() => setActiveTab('selfcare')} theme={user.theme} />
-            <NavItem icon="💞" label="Partner" active={activeTab === 'partner'} onClick={() => setActiveTab('partner')} theme={user.theme} />
+            <NavItem 
+              icon="💞" 
+              label="Partner" 
+              active={activeTab === 'partner'} 
+              onClick={() => setActiveTab('partner')} 
+              theme={user.theme} 
+              badge={user && !user.isPartner ? partnerRequests.filter(r => r.status === 'pending').length : 0}
+            />
           </nav>
         </>
       )}
@@ -1352,7 +1383,7 @@ const App: React.FC = () => {
             }
             setSimulatedNotify(null);
           }}
-          className={`fixed top-4 left-1/2 -translate-x-1/2 md:left-auto md:right-6 md:translate-x-0 z-[200] w-[92%] max-w-sm rounded-3xl p-4.5 cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 animate-slideDown shadow-[0_20px_50px_rgba(0,0,0,0.18)] border backdrop-blur-3xl flex flex-col gap-2.5 ${
+          className={`notification-drawer fixed top-4 z-[200] rounded-3xl p-4.5 cursor-pointer shadow-[0_20px_50px_rgba(0,0,0,0.18)] border backdrop-blur-3xl flex flex-col gap-2.5 overflow-hidden ${
             simulatedNotify.isPartner 
               ? 'bg-gradient-to-br from-slate-900/95 to-slate-800/95 text-white border-slate-700/60' 
               : 'bg-white/95 text-gray-800 border-pink-100/80 hover:border-pink-200'
@@ -1360,11 +1391,11 @@ const App: React.FC = () => {
         >
           {/* Header */}
           <div className="flex items-center justify-between text-[9px] uppercase tracking-widest font-black leading-none opacity-85">
-            <div className="flex items-center gap-1.5 font-sans">
-              <span className="text-sm">{simulatedNotify.isPartner ? '💞' : '🌸'}</span>
-              <span>{simulatedNotify.isPartner ? 'LUMINA PARTNER SYNC' : 'LUMINA SANCTUARY'}</span>
+            <div className="flex items-center gap-1.5 font-sans min-w-0">
+              <span className="text-sm shrink-0">{simulatedNotify.isPartner ? '💞' : '🌸'}</span>
+              <span className="truncate">{simulatedNotify.isPartner ? 'LUMINA PARTNER SYNC' : 'LUMINA SANCTUARY'}</span>
             </div>
-            <div className="flex items-center gap-1 opacity-70">
+            <div className="flex items-center gap-1 opacity-70 shrink-0">
               <span>now</span>
               <span>•</span>
               <span>simulated</span>
@@ -1372,7 +1403,7 @@ const App: React.FC = () => {
           </div>
 
           {/* Body */}
-          <div className="flex gap-3 items-start pr-1">
+          <div className="flex gap-3 items-start pr-1 min-w-0">
             <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-xl shrink-0 ${
               simulatedNotify.isPartner 
                 ? 'bg-indigo-950/45 border border-indigo-500/30' 
@@ -1381,7 +1412,7 @@ const App: React.FC = () => {
               {simulatedNotify.emoji}
             </div>
             <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-              <h4 className={`text-[11px] font-bold tracking-tight leading-snug ${simulatedNotify.isPartner ? 'text-indigo-200' : 'text-rose-500'}`}>
+              <h4 className={`text-[11px] font-bold tracking-tight leading-snug break-words ${simulatedNotify.isPartner ? 'text-indigo-200' : 'text-rose-500'}`}>
                 {simulatedNotify.title}
               </h4>
               <p className="text-[10px] leading-relaxed font-semibold tracking-tight opacity-90 break-words whitespace-pre-line">
@@ -1401,16 +1432,21 @@ const App: React.FC = () => {
   );
 };
 
-const NavItem: React.FC<{ icon: string, label: string, active: boolean, onClick: () => void, theme: AppTheme }> = ({ icon, label, active, onClick, theme }) => {
+const NavItem: React.FC<{ icon: string, label: string, active: boolean, onClick: () => void, theme: AppTheme, badge?: number }> = ({ icon, label, active, onClick, theme, badge }) => {
   const color = THEMES[theme].primary;
   return (
     <button 
       onClick={onClick}
-      className={`flex flex-col items-center gap-1.5 transition-all ${active ? `text-${color} scale-110 font-bold drop-shadow-sm` : 'text-gray-400 grayscale'}`}
+      className={`flex flex-col items-center gap-1.5 transition-all relative ${active ? `text-${color} scale-110 font-bold drop-shadow-sm` : 'text-gray-400 grayscale'}`}
     >
       <span className="text-2xl">{icon}</span>
       <span className="text-[8px] uppercase tracking-tighter font-black">{label}</span>
       {active && <div className={`w-1 h-1 rounded-full bg-pink-400 mt-0.5`}></div>}
+      {badge !== undefined && badge > 0 && (
+        <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[8px] font-black w-4.5 h-4.5 rounded-full flex items-center justify-center border border-white animate-pulse">
+          {badge}
+        </span>
+      )}
     </button>
   );
 };

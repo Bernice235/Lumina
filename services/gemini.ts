@@ -17,7 +17,7 @@ async function fetchGeminiProxy(endpoint: string, body: object): Promise<any> {
 
 export async function getDailyAffirmation(name: string, phase?: string, mood?: string): Promise<string> {
   try {
-    const data = await fetchGeminiProxy("affirmation", { name, phase, mood });
+    const data = await fetchGeminiProxy("daily-affirmation", { name, phase, mood });
     return data.text;
   } catch (error) {
     console.error("Failed to fetch daily affirmation from proxy:", error);
@@ -27,7 +27,7 @@ export async function getDailyAffirmation(name: string, phase?: string, mood?: s
 
 export async function getSupplementAdvice(symptoms: string[]): Promise<string> {
   try {
-    const data = await fetchGeminiProxy("supplement", { symptoms });
+    const data = await fetchGeminiProxy("supplement-advice", { symptoms });
     return data.text;
   } catch (error) {
     console.error("Failed to fetch supplement advice from proxy:", error);
@@ -37,7 +37,7 @@ export async function getSupplementAdvice(symptoms: string[]): Promise<string> {
 
 export async function getLuminaAdvice(question: string): Promise<string> {
   try {
-    const data = await fetchGeminiProxy("advice", { question });
+    const data = await fetchGeminiProxy("lumina-advice", { question });
     return data.text;
   } catch (error) {
     console.error("Failed to fetch Lumina advice from proxy:", error);
@@ -47,7 +47,7 @@ export async function getLuminaAdvice(question: string): Promise<string> {
 
 export async function getProductAdvice(product: string, concern: string): Promise<string> {
   try {
-    const data = await fetchGeminiProxy("product", { product, concern });
+    const data = await fetchGeminiProxy("product-advice", { product, concern });
     return data.text;
   } catch (error) {
     console.error("Failed to fetch product advice from proxy:", error);

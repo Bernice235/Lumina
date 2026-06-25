@@ -12,7 +12,8 @@ import {
   syncUser,
   subscribeToPartnerRequests,
   submitPartnerRequest,
-  updatePartnerRequestStatus
+  updatePartnerRequestStatus,
+  completePartnerConnection
 } from '../services/firebaseService';
 
 interface PartnerModeProps {
@@ -70,14 +71,14 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
   const [generatingLink, setGeneratingLink] = useState(false);
   const [showQRCode, setShowQRCode] = useState(false);
   const [inviteSuccess, setInviteSuccess] = useState(false);
-  const [subTab, setSubTab] = useState<'partners' | 'requests' | 'invitations' | 'privacy'>('partners');
+  const [subTab, setSubTab] = useState<'partners' | 'requests' | 'invitations' | 'invite_friends' | 'privacy' | 'permissions'>('partners');
   const [isCustomizingSharing, setIsCustomizingSharing] = useState(false);
 
   const [incomingRequests, setIncomingRequests] = useState<any[]>([]);
   const [outgoingRequests, setOutgoingRequests] = useState<any[]>([]);
 
   useEffect(() => {
-    if (user && !user.isPartner && user.partnerId) {
+    if (user && !user.isPartner) {
       const unsub = subscribeToPartnerRequests(user.id, 'user', (reqs) => {
         setIncomingRequests(reqs);
       });
@@ -85,7 +86,14 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
     } else {
       setIncomingRequests([]);
     }
-  }, [user?.id, user?.isPartner, user?.partnerId]);
+  }, [user?.id, user?.isPartner]);
+
+  // Auto-redirect to requests tab if there are pending requests
+  useEffect(() => {
+    if (incomingRequests.some(r => r.status === 'pending') && subTab === 'partners') {
+      setSubTab('requests');
+    }
+  }, [incomingRequests, subTab]);
 
   useEffect(() => {
     if (user && user.isPartner && user.partnerId) {
@@ -299,6 +307,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
 
   const handleDisconnect = async () => {
     if (user.partnerId) {
+      const pName = user.partnerName || 'Michael';
       await disconnectPartner(user.id, user.partnerId);
       setShowDisconnectConfirm(false);
       setUser({ 
@@ -309,6 +318,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
         isPartner: false, 
         partnerCode: undefined 
       });
+      alert(`You have disconnected from ${pName}.`);
     }
   };
 
@@ -628,27 +638,24 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
             <div className="space-y-6 animate-fadeIn py-4">
               <div className="text-center space-y-2">
                 <span className="text-3xl">💕</span>
-                <h2 className="text-2xl font-serif italic text-pink-905">What would you like to receive from your partner?</h2>
-                <p className="text-[11px] text-pink-400 font-medium col-span-full">Select all the categories you request to stay synchronized with:</p>
+                <h2 className="text-2xl font-serif italic text-pink-905">What information would you like to receive?</h2>
+                <p className="text-[11px] text-pink-400 font-medium col-span-full">Select the categories you request to stay synchronized with:</p>
               </div>
 
               <div className="max-h-[300px] overflow-y-auto pr-2 space-y-2 border border-pink-50/50 p-4 rounded-3xl bg-pink-50/5">
                 {[
-                  "Period Start Notifications",
-                  "Period End Notifications",
-                  "Ovulation Notifications",
+                  "Period Start Alerts",
+                  "Period End Alerts",
+                  "Ovulation Updates",
                   "Fertility Window Updates",
                   "Pregnancy Updates",
-                  "Symptom Updates",
                   "Mood Updates",
-                  "Wellness Check-ins",
+                  "Symptom Updates",
                   "Doctor Appointment Reminders",
-                  "Self-Care Suggestions",
+                  "Wellness Check-ins",
                   "Gift Reminders",
-                  "Partner Support Tips",
-                  "Low Pregnancy Risk Alerts",
-                  "High Pregnancy Risk Alerts",
-                  "Custom Messages From Partner"
+                  "Support Suggestions",
+                  "Custom Messages"
                 ].map((item) => {
                   const isChecked = requestedReceives.includes(item);
                   return (
@@ -708,7 +715,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                 }}
                 className="w-full py-4.5 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-lg cursor-pointer"
               >
-                Send Request to Partner &rarr;
+                Submit Request
               </button>
             </div>
           )}
@@ -966,17 +973,17 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                       </button>
 
                       {showQRCode && (
-                        <div className="bg-amber-50/10 border border-amber-100/50 p-6 rounded-3xl text-center space-y-4 animate-slideDown">
+                        <div className="bg-amber-50/10 border border-amber-100/50 p-4 sm:p-6 rounded-3xl text-center space-y-4 animate-slideDown flex flex-col items-center justify-center">
                           <p className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">Lumina Scan Invitation</p>
-                          <div className="bg-white p-4 inline-block rounded-2xl border border-amber-100 shadow-md">
+                          <div className="bg-white p-3 sm:p-4 rounded-2xl border border-amber-100 shadow-md w-full max-w-[320px] mx-auto overflow-hidden flex items-center justify-center">
                             <img 
-                              src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&color=db2777&data=${encodeURIComponent(inviteLink)}`} 
+                              src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&color=db2777&data=${encodeURIComponent(inviteLink)}`} 
                               alt="Lumina Partner Invitation QR Code"
-                              className="w-44 h-44 mx-auto"
+                              className="w-full h-auto max-w-[250px] aspect-square mx-auto block object-contain"
                               referrerPolicy="no-referrer"
                             />
                           </div>
-                          <p className="text-[10px] text-gray-400 italic">Have your partner open their camera app to scan and connect instantly.</p>
+                          <p className="text-[10px] text-gray-400 italic leading-relaxed break-words max-w-full px-2">Have your partner open their camera app to scan and connect instantly.</p>
                         </div>
                       )}
                     </div>
@@ -1029,7 +1036,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
     );
   }
 
-  if (!user.isPartner && user.partnerId) {
+  if (!user.isPartner && (user.partnerId || incomingRequests.some(r => r.status === 'pending'))) {
     const activePendingRequest = incomingRequests.find(r => r.status === 'pending');
     const isPendingApproval = activePendingRequest ? true : (linkedUser?.partnerRequest?.status === 'pending');
     const isApproved = activePendingRequest ? false : (linkedUser?.partnerRequest?.status === 'approved');
@@ -1037,65 +1044,79 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
       ? activePendingRequest.requested_permissions 
       : (linkedUser?.partnerRequest?.requestedReceives || []);
 
+    const requesterName = activePendingRequest ? activePendingRequest.partnerName : (linkedUser?.name || user.partnerName || 'Your partner');
+
     const handleApproveAll = async () => {
-      if (!linkedUser) return;
       const requested = requestedPermissionsList;
       const approvedSettings = {
-        shareCycleInfo: requested.some(r => r.includes('Period')),
-        shareFertilityInfo: requested.some(r => r.includes('Fertility') || r.includes('Ovulation')),
-        sharePregnancyInfo: requested.some(r => r.includes('Pregnancy')),
-        shareSymptoms: requested.some(r => r.includes('Symptom')),
-        shareMood: requested.some(r => r.includes('Mood')),
+        shareCycleInfo: requested.some(r => r.toLowerCase().includes('period') || r.toLowerCase().includes('ovulation') || r.toLowerCase().includes('fertility')),
+        shareFertilityInfo: requested.some(r => r.toLowerCase().includes('fertility') || r.toLowerCase().includes('ovulation')),
+        sharePregnancyInfo: requested.some(r => r.toLowerCase().includes('pregnancy')),
+        shareSymptoms: requested.some(r => r.toLowerCase().includes('symptom')),
+        shareMood: requested.some(r => r.toLowerCase().includes('mood')),
         shareNotes: user.sharingSettings?.shareNotes || false,
         shareIntimacyInfo: false,
-        shareDoctorReports: false,
-        shareAppointmentReminders: requested.some(r => r.includes('Appointment') || r.includes('Doctor')),
-        shareWellnessUpdates: requested.some(r => r.includes('Wellness') || r.includes('Suggestions') || r.includes('Support') || r.includes('Gift') || r.includes('Messages')),
+        shareDoctorReports: requested.some(r => r.toLowerCase().includes('doctor') || r.toLowerCase().includes('report') || r.toLowerCase().includes('appointment')),
+        shareAppointmentReminders: requested.some(r => r.toLowerCase().includes('appointment') || r.toLowerCase().includes('reminder')),
+        shareWellnessUpdates: requested.some(r => r.toLowerCase().includes('wellness') || r.toLowerCase().includes('support') || r.toLowerCase().includes('tip') || r.toLowerCase().includes('gift') || r.toLowerCase().includes('message')),
       };
       
+      const partnerIdToSet = activePendingRequest ? activePendingRequest.partner_id : (user.partnerId || '');
+      const partnerNameToSet = activePendingRequest ? activePendingRequest.partnerName : (user.partnerName || 'Partner');
+
       const updatedUser = {
         ...user,
+        partnerId: partnerIdToSet,
+        partnerName: partnerNameToSet,
         sharingSettings: approvedSettings,
         isPartnerLinked: true
       };
       setUser(updatedUser);
       await syncUser(updatedUser);
 
+      // Establish bidirectional connection on both users
+      await completePartnerConnection(user.id, partnerIdToSet, partnerNameToSet, user.name || 'Ella');
+
       const reqId = activePendingRequest ? activePendingRequest.id : `${user.id}_${user.partnerId}`;
       await updatePartnerRequestStatus(reqId, 'approved');
 
-      const updatedPartner = {
-        ...linkedUser,
-        partnerRequest: {
-          ...linkedUser.partnerRequest!,
-          requestedReceives: requested,
-          status: 'approved' as const
-        },
-        isPartnerLinked: true
-      };
-      setLinkedUser(updatedPartner);
-      await syncUser(updatedPartner);
-      
-      setSubTab('partners');
-      alert(`You successfully approved ${linkedUser.name}'s connection and sharing preferences! 💖`);
-    };
-
-    const handleDeclineRequest = async () => {
-      if (!linkedUser) return;
-      if (confirm(`Are you sure you want to decline ${linkedUser.name}'s request?`)) {
-        const reqId = activePendingRequest ? activePendingRequest.id : `${user.id}_${user.partnerId}`;
-        await updatePartnerRequestStatus(reqId, 'declined');
-
+      if (linkedUser) {
         const updatedPartner = {
           ...linkedUser,
+          partnerId: user.id,
+          partnerName: user.name || 'Ella',
           partnerRequest: {
             ...linkedUser.partnerRequest!,
-            status: 'declined' as const
+            requestedReceives: requested,
+            status: 'approved' as const
           },
-          isPartnerLinked: false
+          isPartnerLinked: true
         };
         setLinkedUser(updatedPartner);
         await syncUser(updatedPartner);
+      }
+      
+      setSubTab('partners');
+      alert(`You successfully approved ${partnerNameToSet}'s connection and sharing preferences! 💖`);
+    };
+
+    const handleDeclineRequest = async () => {
+      if (confirm(`Are you sure you want to decline ${requesterName}'s request?`)) {
+        const reqId = activePendingRequest ? activePendingRequest.id : `${user.id}_${user.partnerId}`;
+        await updatePartnerRequestStatus(reqId, 'declined');
+
+        if (linkedUser) {
+          const updatedPartner = {
+            ...linkedUser,
+            partnerRequest: {
+              ...linkedUser.partnerRequest!,
+              status: 'declined' as const
+            },
+            isPartnerLinked: false
+          };
+          setLinkedUser(updatedPartner);
+          await syncUser(updatedPartner);
+        }
 
         const updatedUser = {
           ...user,
@@ -1106,36 +1127,47 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
         setUser(updatedUser);
         await syncUser(updatedUser);
         
-        alert(`Request from ${linkedUser.name} declined.`);
+        alert(`Request from ${requesterName} declined.`);
       }
     };
 
     const handleSaveCustomSharing = async () => {
-      if (!linkedUser) return;
+      const partnerIdToSet = activePendingRequest ? activePendingRequest.partner_id : (user.partnerId || '');
+      const partnerNameToSet = activePendingRequest ? activePendingRequest.partnerName : (user.partnerName || 'Partner');
+
       const updatedUser = {
         ...user,
+        partnerId: partnerIdToSet,
+        partnerName: partnerNameToSet,
         isPartnerLinked: true
       };
       setUser(updatedUser);
       await syncUser(updatedUser);
 
+      // Establish bidirectional connection on both users
+      await completePartnerConnection(user.id, partnerIdToSet, partnerNameToSet, user.name || 'Ella');
+
       const reqId = activePendingRequest ? activePendingRequest.id : `${user.id}_${user.partnerId}`;
       await updatePartnerRequestStatus(reqId, 'approved');
 
-      const updatedPartner = {
-        ...linkedUser,
-        partnerRequest: {
-          ...linkedUser.partnerRequest!,
-          status: 'approved' as const
-        },
-        isPartnerLinked: true
-      };
-      setLinkedUser(updatedPartner);
-      await syncUser(updatedPartner);
+      if (linkedUser) {
+        const updatedPartner = {
+          ...linkedUser,
+          partnerId: user.id,
+          partnerName: user.name || 'Ella',
+          partnerRequest: {
+            ...linkedUser.partnerRequest!,
+            status: 'approved' as const
+          },
+          isPartnerLinked: true
+        };
+        setLinkedUser(updatedPartner);
+        await syncUser(updatedPartner);
+      }
       
       setIsCustomizingSharing(false);
       setSubTab('partners');
-      alert(`Custom privacy preferences saved and connection approved for ${linkedUser.name}! 💮`);
+      alert(`Custom privacy preferences saved and connection approved for ${partnerNameToSet}! 💮`);
     };
 
     const togglePauseSharing = async () => {
@@ -1183,10 +1215,24 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
           </button>
           <button 
             type="button"
+            onClick={() => { setSubTab('invite_friends'); }}
+            className={`px-5 py-3 rounded-full text-[10px] font-black uppercase tracking-wider whitespace-nowrap shrink-0 transition-all cursor-pointer ${subTab === 'invite_friends' ? 'bg-pink-500 text-white shadow-md' : 'bg-white border border-pink-150/40 text-pink-500 hover:bg-pink-50/20'}`}
+          >
+            🌸 Invite Friends to Lumina
+          </button>
+          <button 
+            type="button"
             onClick={() => { setSubTab('privacy'); }}
             className={`px-5 py-3 rounded-full text-[10px] font-black uppercase tracking-wider whitespace-nowrap shrink-0 transition-all cursor-pointer ${subTab === 'privacy' ? 'bg-pink-500 text-white shadow-md' : 'bg-white border border-pink-150/40 text-pink-500 hover:bg-pink-50/20'}`}
           >
-            🔒 Privacy & Permissions
+            🔒 Privacy Settings
+          </button>
+          <button 
+            type="button"
+            onClick={() => { setSubTab('permissions'); }}
+            className={`px-5 py-3 rounded-full text-[10px] font-black uppercase tracking-wider whitespace-nowrap shrink-0 transition-all cursor-pointer ${subTab === 'permissions' ? 'bg-pink-500 text-white shadow-md' : 'bg-white border border-pink-150/40 text-pink-500 hover:bg-pink-50/20'}`}
+          >
+            ⚙️ Manage Permissions
           </button>
         </div>
 
@@ -1267,14 +1313,14 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
 
         {subTab === 'requests' && (
           <div className="space-y-6 animate-fadeIn">
-            {isPendingApproval && linkedUser ? (
+            {isPendingApproval ? (
               <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-8 rounded-[2.5rem] border border-pink-100 shadow-sm space-y-6 text-left">
                 <div className="flex items-start gap-4">
                   <span className="text-3xl">💕</span>
                   <div className="space-y-1">
                     <h3 className="text-2xl font-serif text-indigo-950 italic font-black">New Partner Request</h3>
                     <p className="text-sm text-gray-600">
-                      <span className="font-bold text-indigo-600">{linkedUser.name}</span> would like to connect on Lumina and has requested to receive the following categories:
+                      <span className="font-bold text-indigo-600">{requesterName}</span> wants to connect with you and has requested to receive the following categories:
                     </p>
                   </div>
                 </div>
@@ -1282,12 +1328,13 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                 <div className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl border border-pink-100/50">
                   <h4 className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-3">Requested Access Categories:</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-indigo-900 leading-relaxed font-semibold">
-                    {linkedUser.partnerRequest?.requestedReceives?.map((reqItem, i) => (
+                    {requestedPermissionsList.map((reqItem, i) => (
                       <div key={i} className="flex items-center gap-2">
                         <span className="text-pink-500">✓</span>
                         <span>{reqItem}</span>
                       </div>
-                    )) || (
+                    ))}
+                    {requestedPermissionsList.length === 0 && (
                       <span className="text-xs text-gray-400 italic">No specific categories specified (All by default)</span>
                     )}
                   </div>
@@ -1337,46 +1384,110 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
             <section className="bg-white p-8 rounded-[3rem] shadow-sm border border-pink-50 space-y-6">
               <div className="bg-gradient-to-br from-pink-500/5 to-rose-500/5 border border-pink-100 rounded-[2.5rem] p-6 text-center space-y-3">
                 <span className="text-3xl">✨</span>
-                <h3 className="text-lg font-serif italic font-extrabold text-pink-600">Your Invitation Code</h3>
-                <p className="text-[10px] text-gray-400 uppercase tracking-widest font-black">Invite Code</p>
-                <div className="bg-white py-3 px-8 rounded-2xl border-2 border-pink-100 inline-block text-2xl font-mono font-black text-pink-600 tracking-widest shadow-sm">
-                  {user.partnerCode || 'CREATING...'}
+                <h3 className="text-lg font-serif italic font-extrabold text-pink-600">Your Partner Link</h3>
+                <p className="text-[10px] text-gray-400 uppercase tracking-widest font-black">Share with your partner to connect</p>
+                <div className="bg-white py-3 px-6 rounded-2xl border-2 border-pink-100 block text-sm font-mono font-black text-pink-600 tracking-wide truncate shadow-sm">
+                  {window.location.host}/invite/{user.partnerCode || '...'}
                 </div>
               </div>
 
-              {/* QR Code Option */}
-              <button
-                type="button"
-                onClick={() => setShowQRCode(!showQRCode)}
-                className="w-full p-4.5 bg-white hover:bg-amber-50/10 border border-amber-100 rounded-2xl text-left transition-all flex items-center justify-between gap-4 shadow-sm cursor-pointer"
-              >
-                <div className="flex items-center gap-3">
+              {/* Share Options Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {/* Copy Link */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(inviteLink);
+                    alert("Invite link copied to clipboard! 📋");
+                  }}
+                  className="p-4 bg-pink-50/50 hover:bg-pink-50 border border-pink-100 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all cursor-pointer"
+                >
+                  <span className="text-2xl">📋</span>
+                  <span className="text-xs font-bold text-pink-700">Copy Link</span>
+                </button>
+
+                {/* Share Link */}
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (navigator.share) {
+                      try {
+                        await navigator.share({
+                          title: 'Connect on Lumina',
+                          text: `${user.name || 'Ella'} invited you to connect on Lumina.`,
+                          url: inviteLink
+                        });
+                      } catch (err) {
+                        console.warn(err);
+                      }
+                    } else {
+                      navigator.clipboard.writeText(inviteLink);
+                      alert("Web Share not supported. Link copied to clipboard instead! 📋");
+                    }
+                  }}
+                  className="p-4 bg-pink-50/50 hover:bg-pink-50 border border-pink-100 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all cursor-pointer"
+                >
+                  <span className="text-2xl">🔗</span>
+                  <span className="text-xs font-bold text-pink-700">Share Link</span>
+                </button>
+
+                {/* WhatsApp */}
+                <a
+                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`${user.name || 'Ella'} invited you to connect on Lumina. Click here to connect: ${inviteLink}`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-4 bg-emerald-50/50 hover:bg-emerald-50 border border-emerald-100 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all cursor-pointer text-center"
+                >
+                  <span className="text-2xl">💬</span>
+                  <span className="text-xs font-bold text-emerald-700">WhatsApp</span>
+                </a>
+
+                {/* Messages */}
+                <a
+                  href={`sms:?&body=${encodeURIComponent(`${user.name || 'Ella'} invited you to connect on Lumina: ${inviteLink}`)}`}
+                  className="p-4 bg-blue-50/50 hover:bg-blue-50 border border-blue-100 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all cursor-pointer text-center"
+                >
+                  <span className="text-2xl">✉️</span>
+                  <span className="text-xs font-bold text-blue-700">Messages</span>
+                </a>
+
+                {/* Email */}
+                <a
+                  href={`mailto:?subject=${encodeURIComponent('Connect with me on Lumina')}&body=${encodeURIComponent(`Hi,\n\nI want to connect with you securely on Lumina Partner Mode! Here is my invitation link:\n${inviteLink}\n\nLove,\n${user.name || 'Ella'}`)}`}
+                  className="p-4 bg-purple-50/50 hover:bg-purple-50 border border-purple-100 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all cursor-pointer text-center"
+                >
+                  <span className="text-2xl">📧</span>
+                  <span className="text-xs font-bold text-purple-700">Email</span>
+                </a>
+
+                {/* QR Code toggle */}
+                <button
+                  type="button"
+                  onClick={() => setShowQRCode(!showQRCode)}
+                  className={`p-4 border rounded-2xl flex flex-col items-center justify-center gap-2 transition-all cursor-pointer ${showQRCode ? 'bg-amber-100 border-amber-300' : 'bg-amber-50/50 hover:bg-amber-50 border-amber-100'}`}
+                >
                   <span className="text-2xl">🔳</span>
-                  <div>
-                    <span className="font-bold text-xs text-gray-850 block">QR Code</span>
-                    <span className="text-[9px] text-gray-400 block">Scan invitation directly on device</span>
-                  </div>
-                </div>
-                <span className="text-[10px] uppercase font-bold text-amber-500">{showQRCode ? 'Hide ✕' : 'View →'}</span>
-              </button>
+                  <span className="text-xs font-bold text-amber-700">QR Code</span>
+                </button>
+              </div>
 
               {showQRCode && (
-                <div className="bg-amber-50/10 border border-amber-100/50 p-6 rounded-3xl text-center space-y-4 animate-slideDown">
+                <div className="bg-amber-50/10 border border-amber-100/50 p-4 sm:p-6 rounded-3xl text-center space-y-4 animate-slideDown flex flex-col items-center justify-center">
                   <p className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">Lumina Scan Invitation</p>
-                  <div className="bg-white p-4 inline-block rounded-2xl border border-amber-100 shadow-md">
+                  <div className="bg-white p-3 sm:p-4 rounded-2xl border border-amber-100 shadow-md w-full max-w-[320px] mx-auto overflow-hidden flex items-center justify-center">
                     <img 
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&color=db2777&data=${encodeURIComponent(inviteLink)}`} 
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&color=db2777&data=${encodeURIComponent(inviteLink)}`} 
                       alt="Lumina Partner Invitation QR Code"
-                      className="w-44 h-44 mx-auto"
+                      className="w-full h-auto max-w-[250px] aspect-square mx-auto block object-contain"
                       referrerPolicy="no-referrer"
                     />
                   </div>
-                  <p className="text-[10px] text-gray-400 italic">Have your partner open their camera app to scan and connect instantly.</p>
+                  <p className="text-[10px] text-gray-400 italic leading-relaxed break-words max-w-full px-2">Have your partner open their camera app to scan and connect instantly.</p>
                 </div>
               )}
 
               {/* Generate New Link button */}
-              <div className="pt-4 border-t border-pink-55/40 flex justify-end">
+              <div className="pt-4 border-t border-pink-50 flex justify-end">
                 <button 
                   type="button"
                   onClick={handleForceGenerateNewCode}

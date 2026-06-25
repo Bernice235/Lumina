@@ -388,3 +388,53 @@ export const updatePartnerRequestStatus = async (requestId: string, status: 'app
     handleFirestoreError(error, OperationType.WRITE, path);
   }
 };
+
+export const getInvite = async (code: string) => {
+  if (code.startsWith('sandbox_') || localStorage.getItem(`lumina_invite_${code}`)) {
+    const inviteSnap = localStorage.getItem(`lumina_invite_${code}`);
+    return inviteSnap ? JSON.parse(inviteSnap) : null;
+  }
+  try {
+    const inviteSnap = await getDoc(doc(db, "invites", code));
+    if (inviteSnap.exists()) {
+      return inviteSnap.data();
+    }
+    return null;
+  } catch (error) {
+    console.error("Failed to fetch invite details:", error);
+    return null;
+  }
+};
+
+export const completePartnerConnection = async (userId: string, partnerId: string, partnerName: string, userName: string) => {
+  const isSandbox = userId.startsWith('sandbox_') || partnerId.startsWith('sandbox_');
+  if (isSandbox) {
+    const saved = localStorage.getItem('lumina_partner_requests');
+    const list = saved ? JSON.parse(saved) : [];
+    const updated = list.map((r: any) => 
+      (r.user_id === userId && r.partner_id === partnerId) ? { ...r, status: 'approved' as const } : r
+    );
+    localStorage.setItem('lumina_partner_requests', JSON.stringify(updated));
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: 'lumina_partner_requests',
+      newValue: JSON.stringify(updated)
+    }));
+    return;
+  }
+  try {
+    await updateDoc(doc(db, "users", userId), {
+      partnerId,
+      partnerName,
+      isPartnerLinked: true
+    });
+    await updateDoc(doc(db, "users", partnerId), {
+      partnerId: userId,
+      partnerName: userName,
+      isPartnerLinked: true
+    });
+  } catch (error) {
+    console.error("Failed to complete partner connection in Firestore:", error);
+  }
+};
+
+
