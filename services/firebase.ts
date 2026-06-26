@@ -1,11 +1,17 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { initializeAuth, indexedDBLocalPersistence, browserLocalPersistence, browserSessionPersistence } from 'firebase/auth';
 import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
-export const auth = getAuth(app);
+
+// Initialize Firebase Auth with a robust chain of local persistence managers.
+// This allows the app to store authentication tokens directly under the first-party origin (e.g. *.run.app)
+// without relying on third-party cookies or nested iframes, which are heavily blocked by mobile Safari/Chrome and private/incognito modes.
+export const auth = initializeAuth(app, {
+  persistence: [indexedDBLocalPersistence, browserLocalPersistence, browserSessionPersistence]
+});
 
 enum OperationType {
   CREATE = 'create',

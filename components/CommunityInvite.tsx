@@ -21,8 +21,16 @@ export const CommunityInvite: React.FC<CommunityInviteProps> = ({ user }) => {
   const [copied, setCopied] = useState(false);
   const [showIGInfo, setShowIGInfo] = useState(false);
 
-  // Generate unique link
-  const inviteLink = `${window.location.origin}?ref=${user.id}&code=${user.partnerCode || user.id}`;
+  // Generate unique link using the configured public app URL if available, falling back to window.location.origin
+  const getBaseUrl = () => {
+    const envUrl = (import.meta as any).env?.VITE_PUBLIC_APP_URL;
+    if (envUrl && envUrl.trim().length > 0) {
+      return envUrl.trim().replace(/\/$/, "");
+    }
+    return window.location.origin;
+  };
+
+  const inviteLink = `${getBaseUrl()}?ref=${user.id}&code=${user.partnerCode || user.id}`;
 
   const handleCopy = async () => {
     try {
