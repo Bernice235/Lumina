@@ -84,21 +84,6 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
   const [error, setError] = useState('');
   const [pendingRestoreUser, setPendingRestoreUser] = useState<User | null>(null);
 
-  const [storageBlocked, setStorageBlocked] = useState(false);
-  const [isInIframe, setIsInIframe] = useState(false);
-
-  useEffect(() => {
-    setIsInIframe(window.self !== window.top);
-    try {
-      const testKey = '__lumina_test_storage__';
-      localStorage.setItem(testKey, 'test');
-      localStorage.removeItem(testKey);
-    } catch (e) {
-      console.warn("Lumina secure local storage access is restricted:", e);
-      setStorageBlocked(true);
-    }
-  }, []);
-
   // Auto-trigger biometric authentication if in returning screen
   useEffect(() => {
     if (screen === 'returning' && biometricScanning === 'none') {
@@ -665,41 +650,6 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
             </div>
           )}
 
-          {/* Secure Connection & Cookie Guidance Block */}
-          {(storageBlocked || isInIframe) && (
-            <div className="w-full bg-amber-50/75 border border-amber-100 p-4 rounded-2xl space-y-2.5 text-left animate-fadeIn">
-              <div className="flex items-center gap-2">
-                <span className="text-xs">🌸</span>
-                <p className="font-sans font-bold text-[9px] uppercase tracking-wider text-amber-700">
-                  Secure Connection Guidance
-                </p>
-              </div>
-              <p className="text-[10px] text-amber-900/80 leading-relaxed font-serif italic">
-                Lumina requires local storage access to securely track cycles and sync your partner connections. 
-                {isInIframe && " Since Lumina is currently rendering in a safe preview frame, your browser's third-party cookie restrictions may block standard loading."}
-              </p>
-              <div className="pt-1 flex flex-wrap gap-2">
-                <a 
-                  href={window.location.href} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="bg-white hover:bg-amber-100/50 border border-amber-200 text-amber-800 font-sans font-bold text-[8px] uppercase tracking-wider px-2.5 py-1.5 rounded-xl shadow-sm transition-all text-center inline-block cursor-pointer"
-                >
-                  Open in New Tab ↗
-                </a>
-                <button 
-                  type="button"
-                  onClick={() => {
-                    setConnectionMode('offline');
-                    setError("Switched to offline play mode. Enjoy your sanctuary! 🌸");
-                  }}
-                  className="bg-amber-600 hover:bg-amber-700 text-white font-sans font-bold text-[8px] uppercase tracking-wider px-2.5 py-1.5 rounded-xl shadow-sm transition-all cursor-pointer"
-                >
-                  Launch Offline Mode ✨
-                </button>
-              </div>
-            </div>
-          )}
 
           {pendingRestoreUser && (
             <div className="space-y-6 animate-fadeIn py-4">
