@@ -102,6 +102,8 @@ export interface User {
   subscriptionStatus?: 'active' | 'cancelled' | 'trialing' | 'failed' | 'none';
   subscriptionTrialEnd?: string;
   subscriptionEnd?: string;
+  trial_start_date?: string;
+  trial_end_date?: string;
   billingHistory?: BillingItem[];
   referralCount?: number;
   referredBy?: string;

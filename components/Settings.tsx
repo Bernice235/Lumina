@@ -84,6 +84,18 @@ const Settings: React.FC<SettingsProps> = ({
   const [billingProgress, setBillingProgress] = useState<string | null>(null);
   const [billingError, setBillingError] = useState<string | null>(null);
   const [billingSuccess, setBillingSuccess] = useState<string | null>(null);
+  const [verificationReceipt, setVerificationReceipt] = useState<{
+    status: 'success' | 'pending' | 'failed';
+    planId: 'monthly' | '6month';
+    planName: string;
+    amountPaid: number;
+    currency: string;
+    reference: string;
+    nextBillingDate?: string;
+    trialEndDate?: string;
+    updatedUserObj?: User;
+    errorMessage?: string;
+  } | null>(null);
 
   const handleExportData = () => {
     const backupData = {
@@ -171,6 +183,7 @@ const Settings: React.FC<SettingsProps> = ({
   const handleStartTrial = async () => {
     setBillingError(null);
     setBillingSuccess(null);
+    setVerificationReceipt(null);
     setBillingProgress("Initializing Paystack Checkout secure window...");
 
     const targetPlan = PAYSTACK_PLANS.find(p => p.id === selectedPlanId);
@@ -186,18 +199,103 @@ const Settings: React.FC<SettingsProps> = ({
         plan: targetPlan,
         currency: selectedCurrency,
         onSuccess: async (ref) => {
-          setBillingProgress("Validating payment authorization token...");
+          setBillingProgress("Verifying payment authorization with Paystack...");
+          const fallbackPrice = selectedCurrency === 'USD' 
+            ? targetPlan.priceUSD 
+            : selectedCurrency === 'NGN' 
+              ? targetPlan.priceNGN 
+              : selectedCurrency === 'GHS'
+                ? Number((targetPlan.priceUSD * 14.5).toFixed(2))
+                : Number((targetPlan.priceUSD * 18.2).toFixed(2));
+
           try {
-            await syncStartSubscriptionTrial(
-              user,
-              targetPlan,
-              selectedCurrency,
-              ref,
-              setUser
-            );
-            setBillingSuccess(`Congratulations! Your 7-day free trial has been initiated. Monthly recurring charges of ${selectedCurrency === 'USD' ? '$' + targetPlan.priceUSD : '₦' + targetPlan.priceNGN} will only begin after 7 days.`);
+            const verifyRes = await fetch("/api/paystack/verify", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                reference: ref,
+                planId: targetPlan.id,
+                currency: selectedCurrency,
+                userId: user.id
+              })
+            });
+
+            const result = await verifyRes.json().catch(() => ({}));
+
+            if (!verifyRes.ok) {
+              setVerificationReceipt({
+                status: 'failed',
+                planId: targetPlan.id,
+                planName: targetPlan.name,
+                amountPaid: fallbackPrice,
+                currency: selectedCurrency,
+                reference: ref,
+                errorMessage: result.error || `Server verification failed with status ${verifyRes.status}`
+              });
+              return;
+            }
+
+            if (result.status === "pending") {
+              setVerificationReceipt({
+                status: 'pending',
+                planId: targetPlan.id,
+                planName: targetPlan.name,
+                amountPaid: fallbackPrice,
+                currency: selectedCurrency,
+                reference: ref
+              });
+              return;
+            }
+
+            if (result.status === "success") {
+              const updatedUser: User = {
+                ...user,
+                isPremium: true,
+                subscriptionPlan: result.subscriptionPlan || targetPlan.id,
+                subscriptionStatus: result.subscriptionStatus || "trialing",
+                subscriptionTrialEnd: result.subscriptionTrialEnd,
+                subscriptionEnd: result.subscriptionEnd,
+                trial_start_date: result.trial_start_date,
+                trial_end_date: result.trial_end_date,
+                billingHistory: result.billingHistory || (user.id.startsWith("sandbox_") 
+                  ? [...(user.billingHistory || []), result.billingHistoryItem]
+                  : user.billingHistory)
+              };
+
+              setVerificationReceipt({
+                status: 'success',
+                planId: targetPlan.id,
+                planName: targetPlan.name,
+                amountPaid: result.billingHistoryItem?.amount ?? 0.0,
+                currency: selectedCurrency,
+                reference: ref,
+                nextBillingDate: result.subscriptionEnd,
+                trialEndDate: result.trial_end_date || result.subscriptionTrialEnd,
+                updatedUserObj: updatedUser
+              });
+            } else {
+              setVerificationReceipt({
+                status: 'failed',
+                planId: targetPlan.id,
+                planName: targetPlan.name,
+                amountPaid: fallbackPrice,
+                currency: selectedCurrency,
+                reference: ref,
+                errorMessage: result.error || "Payment not completed"
+              });
+            }
           } catch (syncErr: any) {
-            setBillingError(`Sandbox payment authorized, but sync failed: ${syncErr?.message || syncErr}`);
+            setVerificationReceipt({
+              status: 'failed',
+              planId: targetPlan.id,
+              planName: targetPlan.name,
+              amountPaid: fallbackPrice,
+              currency: selectedCurrency,
+              reference: ref,
+              errorMessage: syncErr?.message || "Payment not completed"
+            });
           } finally {
             setBillingProgress(null);
           }
@@ -214,6 +312,75 @@ const Settings: React.FC<SettingsProps> = ({
     } catch (checkoutErr: any) {
       setBillingProgress(null);
       setBillingError(checkoutErr?.message || "Failed to boot Paystack checkout tunnel.");
+    }
+  };
+
+  const handleCheckPendingStatus = async () => {
+    if (!verificationReceipt) return;
+    setBillingProgress("Re-checking verification status with Paystack...");
+    setBillingError(null);
+    try {
+      const verifyRes = await fetch("/api/paystack/verify", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          reference: verificationReceipt.reference,
+          planId: verificationReceipt.planId,
+          currency: verificationReceipt.currency,
+          userId: user.id
+        })
+      });
+
+      const result = await verifyRes.json().catch(() => ({}));
+
+      if (!verifyRes.ok) {
+        setVerificationReceipt({
+          ...verificationReceipt,
+          status: 'failed',
+          errorMessage: result.error || `Verification failed with status ${verifyRes.status}`
+        });
+        return;
+      }
+
+      if (result.status === "pending") {
+        setBillingError("Transaction is still pending confirmation by Paystack. Please check back in a few moments or use card checkout.");
+      } else if (result.status === "success") {
+        const updatedUser: User = {
+          ...user,
+          isPremium: true,
+          subscriptionPlan: result.subscriptionPlan || verificationReceipt.planId,
+          subscriptionStatus: result.subscriptionStatus || "trialing",
+          subscriptionTrialEnd: result.subscriptionTrialEnd,
+          subscriptionEnd: result.subscriptionEnd,
+          trial_start_date: result.trial_start_date,
+          trial_end_date: result.trial_end_date,
+          billingHistory: result.billingHistory || (user.id.startsWith("sandbox_") 
+            ? [...(user.billingHistory || []), result.billingHistoryItem]
+            : user.billingHistory)
+        };
+
+        setVerificationReceipt({
+          ...verificationReceipt,
+          status: 'success',
+          amountPaid: result.billingHistoryItem?.amount ?? 0.0,
+          nextBillingDate: result.subscriptionEnd,
+          trialEndDate: result.trial_end_date || result.subscriptionTrialEnd,
+          updatedUserObj: updatedUser
+        });
+        setBillingSuccess("Payment successfully verified by Paystack!");
+      } else {
+        setVerificationReceipt({
+          ...verificationReceipt,
+          status: 'failed',
+          errorMessage: result.error || "Payment not completed"
+        });
+      }
+    } catch (err: any) {
+      setBillingError(`Re-check failed: ${err.message || err}`);
+    } finally {
+      setBillingProgress(null);
     }
   };
 
@@ -1665,21 +1832,184 @@ const Settings: React.FC<SettingsProps> = ({
             </div>
           )}
 
-          {billingError && (
+          {billingError && !verificationReceipt && (
             <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl text-xs text-rose-600 font-serif flex flex-col gap-1">
               <span className="font-bold flex items-center gap-1.5 text-rose-700">⚠️ Billing Issue</span>
               <p>{billingError}</p>
             </div>
           )}
 
-          {billingSuccess && (
+          {billingSuccess && !verificationReceipt && (
             <div className="p-4 bg-teal-50 border border-teal-100 rounded-2xl text-xs text-teal-800 font-serif flex flex-col gap-1">
               <span className="font-bold flex items-center gap-1.5 text-teal-900">✨ Success</span>
               <p>{billingSuccess}</p>
             </div>
           )}
 
-          {/* ACTIVE PREMIUM WORKSPACE HEADER / CONTROLLER */}
+          {verificationReceipt ? (
+            <div className="bg-gradient-to-br from-indigo-50 via-pink-50/10 to-rose-50/30 p-[2px] rounded-[2.5rem] shadow-xl border border-pink-100/50 animate-fadeIn">
+              <div className="bg-white p-8 md:p-12 rounded-[2.4rem] space-y-8">
+                {/* Header Icon & Status Badge */}
+                <div className="text-center space-y-3">
+                  {verificationReceipt.status === 'success' ? (
+                    <>
+                      <div className="w-16 h-16 bg-emerald-50 border border-emerald-200 text-emerald-500 rounded-full flex items-center justify-center text-3xl mx-auto shadow-md animate-scaleUp">
+                        ✨
+                      </div>
+                      <span className="inline-flex py-1 px-3 bg-emerald-50 text-emerald-700 border border-emerald-200/50 rounded-full font-black text-[9px] uppercase tracking-widest">
+                        Verified & Ready
+                      </span>
+                      <h3 className="text-3xl font-serif text-indigo-950 italic">Payment Successful!</h3>
+                      <p className="text-xs text-neutral-500 max-w-md mx-auto leading-relaxed">
+                        Your payment authorization was successfully verified by Paystack. Click the button below to activate your Lumina Premium sanctuary.
+                      </p>
+                    </>
+                  ) : verificationReceipt.status === 'pending' ? (
+                    <>
+                      <div className="w-16 h-16 bg-amber-50 border border-amber-200 text-amber-500 rounded-full flex items-center justify-center text-3xl mx-auto shadow-md animate-pulse">
+                        ⏳
+                      </div>
+                      <span className="inline-flex py-1 px-3 bg-amber-50 text-amber-700 border border-amber-200/50 rounded-full font-black text-[9px] uppercase tracking-widest">
+                        Payment Pending
+                      </span>
+                      <h3 className="text-3xl font-serif text-indigo-950 italic">Waiting for Confirmation</h3>
+                      <p className="text-xs text-neutral-500 max-w-md mx-auto leading-relaxed">
+                        We are waiting for bank confirmation or Paystack webhook update for this reference code. Click check status to verify.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-16 h-16 bg-rose-50 border border-rose-200 text-rose-500 rounded-full flex items-center justify-center text-3xl mx-auto shadow-md animate-scaleUp">
+                        ⚠️
+                      </div>
+                      <span className="inline-flex py-1 px-3 bg-rose-50 text-rose-700 border border-rose-200/50 rounded-full font-black text-[9px] uppercase tracking-widest">
+                        Payment Failed
+                      </span>
+                      <h3 className="text-3xl font-serif text-indigo-950 italic">Verification Failed</h3>
+                      <p className="text-xs text-rose-600 max-w-md mx-auto bg-rose-50/45 p-3 rounded-2xl border border-rose-100/50 font-serif leading-relaxed">
+                        {verificationReceipt.errorMessage || "Your payment was not completed or could not be verified by the gateway."}
+                      </p>
+                    </>
+                  )}
+                </div>
+
+                {/* Receipt Fields Grid */}
+                <div className="max-w-md mx-auto bg-neutral-50/50 border border-neutral-100 rounded-3xl p-6 space-y-4">
+                  <div className="flex justify-between items-center text-xs pb-3 border-b border-neutral-100">
+                    <span className="text-neutral-400">Subscription Plan</span>
+                    <span className="font-bold text-neutral-800 font-serif italic">{verificationReceipt.planName}</span>
+                  </div>
+
+                  <div className="flex justify-between items-center text-xs pb-3 border-b border-neutral-100">
+                    <span className="text-neutral-400">Amount Paid</span>
+                    <span className="font-mono font-bold text-neutral-800">
+                      {verificationReceipt.amountPaid === 0 ? (
+                        <span className="text-pink-600 font-bold">0.00 {verificationReceipt.currency} (7-Day Trial Setup)</span>
+                      ) : (
+                        `${verificationReceipt.amountPaid.toFixed(2)} ${verificationReceipt.currency}`
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-center text-xs pb-3 border-b border-neutral-100">
+                    <span className="text-neutral-400">Payment Status</span>
+                    <span className={`font-black uppercase tracking-widest text-[9px] py-0.5 px-2 rounded ${
+                      verificationReceipt.status === 'success' 
+                        ? 'bg-emerald-100 text-emerald-700' 
+                        : verificationReceipt.status === 'pending'
+                          ? 'bg-amber-100 text-amber-700 animate-pulse'
+                          : 'bg-rose-100 text-rose-700'
+                    }`}>
+                      {verificationReceipt.status === 'success' ? 'Verified' : verificationReceipt.status === 'pending' ? 'Pending' : 'Failed'}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-center text-xs pb-3 border-b border-neutral-100">
+                    <span className="text-neutral-400">Transaction Reference</span>
+                    <span className="font-mono text-[10px] text-neutral-500 break-all select-all">{verificationReceipt.reference}</span>
+                  </div>
+
+                  {verificationReceipt.nextBillingDate && (
+                    <div className="flex justify-between items-center text-xs pb-3 border-b border-neutral-100">
+                      <span className="text-neutral-400">Next Billing Date</span>
+                      <span className="font-semibold text-neutral-700">
+                        {new Date(verificationReceipt.nextBillingDate).toLocaleDateString(undefined, { dateStyle: 'medium' })}
+                      </span>
+                    </div>
+                  )}
+
+                  {verificationReceipt.trialEndDate && (
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-neutral-400">Trial End Date</span>
+                      <span className="font-semibold text-pink-600">
+                        {new Date(verificationReceipt.trialEndDate).toLocaleDateString(undefined, { dateStyle: 'medium' })}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Control Action Buttons */}
+                <div className="max-w-md mx-auto space-y-3">
+                  {verificationReceipt.status === 'success' ? (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (verificationReceipt.updatedUserObj) {
+                          setUser(verificationReceipt.updatedUserObj);
+                          if (verificationReceipt.updatedUserObj.id.startsWith("sandbox_")) {
+                            await syncUser(verificationReceipt.updatedUserObj);
+                          }
+                        }
+                        setVerificationReceipt(null);
+                      }}
+                      className="w-full py-4 bg-gradient-to-r from-emerald-500 via-teal-500 to-indigo-600 hover:scale-[1.01] active:scale-[0.98] text-white font-black text-xs uppercase tracking-widest rounded-3xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      🚀 Continue to Premium
+                    </button>
+                  ) : verificationReceipt.status === 'pending' ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={handleCheckPendingStatus}
+                        className="w-full py-4 bg-amber-500 hover:bg-amber-600 text-white font-black text-xs uppercase tracking-widest rounded-3xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        🔄 Check Status & Verify
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setVerificationReceipt(null)}
+                        className="w-full py-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-bold text-xs uppercase tracking-wider rounded-3xl transition-all cursor-pointer"
+                      >
+                        ⬅️ Back to Pricing
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setVerificationReceipt(null);
+                          handleStartTrial();
+                        }}
+                        className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-widest rounded-3xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        🔄 Retry Checkout
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setVerificationReceipt(null)}
+                        className="w-full py-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-bold text-xs uppercase tracking-wider rounded-3xl transition-all cursor-pointer"
+                      >
+                        ⬅️ Close & Back to Settings
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* ACTIVE PREMIUM WORKSPACE HEADER / CONTROLLER */}
           {user.isPremium ? (
             <div className="space-y-6">
               {/* Premium Status Banner */}
@@ -2001,7 +2331,9 @@ const Settings: React.FC<SettingsProps> = ({
               </div>
             )}
           </div>
-        </div>
+        </>
+      )}
+    </div>
       ) : activeSubTab === 'invite' ? (
         <div className="space-y-8 animate-fadeIn">
           <CommunityInvite user={user} />

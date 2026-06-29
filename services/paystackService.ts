@@ -533,7 +533,7 @@ function SimulateCheckoutPop({
       if (document.body.contains(overlay)) {
         document.body.removeChild(overlay);
       }
-      onSuccess(ref);
+      onSuccess(currentTab === 'transfer' ? `${ref}_transfer_pending` : `${ref}_card_success`);
     }, 1800);
   });
 }

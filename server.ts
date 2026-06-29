@@ -3,6 +3,49 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Modality } from "@google/genai";
 import firebaseConfig from "./firebase-applet-config.json" with { type: "json" };
+import admin from "firebase-admin";
+import { getFirestore } from "firebase-admin/firestore";
+
+// Initialize firebase-admin safely
+let firestoreDb: any;
+try {
+  admin.initializeApp({
+    projectId: firebaseConfig.projectId
+  });
+  firestoreDb = getFirestore(firebaseConfig.firestoreDatabaseId);
+} catch (err) {
+  console.error("Firebase Admin initialization error:", err);
+  try {
+    firestoreDb = getFirestore(firebaseConfig.firestoreDatabaseId);
+  } catch (err2) {
+    console.error("Firebase Admin retry failed:", err2);
+  }
+}
+
+// Memory cache for stateful simulated bank transfers
+const transferAttempts = new Map<string, number>();
+
+interface PaystackPlan {
+  id: 'monthly' | '6month';
+  name: string;
+  priceUSD: number;
+  priceNGN: number;
+}
+
+const PLANS_CONFIG: PaystackPlan[] = [
+  { id: 'monthly', name: 'Premium Monthly', priceUSD: 10.97, priceNGN: 16500 },
+  { id: '6month', name: 'Premium 6-Month Plan', priceUSD: 49.99, priceNGN: 75000 }
+];
+
+function getPlanPrice(planId: 'monthly' | '6month', currency: string): number {
+  const plan = PLANS_CONFIG.find(p => p.id === planId);
+  if (!plan) return 0;
+  if (currency === 'USD') return plan.priceUSD;
+  if (currency === 'NGN') return plan.priceNGN;
+  if (currency === 'GHS') return Number((plan.priceUSD * 14.5).toFixed(2));
+  if (currency === 'ZAR') return Number((plan.priceUSD * 18.2).toFixed(2));
+  return plan.priceUSD;
+}
 
 // Safe initialization of Google Gen AI with fallbacks
 const apiKey = process.env.GEMINI_API_KEY || firebaseConfig.apiKey;
@@ -107,6 +150,174 @@ function getLocalFallbackAffirmation(name: string, phase?: string, mood?: string
 // API Routes
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", mode: process.env.NODE_ENV });
+});
+
+app.post("/api/paystack/verify", async (req, res) => {
+  const { reference, planId, currency, userId } = req.body;
+
+  if (!reference || !planId || !currency || !userId) {
+    return res.status(400).json({ error: "Missing required verification fields" });
+  }
+
+  try {
+    const targetPlan = PLANS_CONFIG.find(p => p.id === planId);
+    if (!targetPlan) {
+      return res.status(400).json({ error: "Invalid plan ID" });
+    }
+
+    const expectedPrice = getPlanPrice(planId, currency);
+    const expectedAmountSubunits = Math.round(expectedPrice * 100);
+
+    // Check if running in simulation / mock mode:
+    // Simulated mock mode is ONLY allowed if PAYSTACK_SECRET_KEY is completely missing/empty,
+    // or if the userId is a local sandbox profile.
+    // If a PAYSTACK_SECRET_KEY is set (even a test key like sk_test_...), we MUST perform
+    // real remote Paystack API verification to ensure production integrity and prevent any bypass.
+    const isMock = !process.env.PAYSTACK_SECRET_KEY || userId.startsWith("sandbox_");
+
+    let isSuccess = false;
+    let gatewayChannel = "";
+    let verificationError = "";
+
+    if (isMock) {
+      console.log(`[Verify] Simulating payment verification in mock mode for ${reference}...`);
+      
+      // If reference contains transfer_pending or is a transfer, we enforce the pending state.
+      // Simulated bank transfers should NEVER auto-activate Premium to align with security logic.
+      if (reference.includes("_transfer_pending") || reference.includes("_transfer")) {
+        return res.status(200).json({
+          status: "pending",
+          message: "Waiting for payment confirmation",
+          keepFree: true
+        });
+      } else if (reference.includes("_card_success")) {
+        // Card simulation succeeds
+        isSuccess = true;
+        gatewayChannel = "card";
+      } else {
+        verificationError = "Payment not completed";
+      }
+    } else {
+      // Real Paystack verification
+      const verifyUrl = `https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`;
+      const verifyRes = await fetch(verifyUrl, {
+        headers: {
+          Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+          "Content-Type": "application/json"
+        }
+      });
+
+      if (!verifyRes.ok) {
+        throw new Error(`Paystack API returned status ${verifyRes.status}`);
+      }
+
+      const resData = (await verifyRes.json()) as any;
+      if (resData && resData.status && resData.data) {
+        const paystackData = resData.data;
+        
+        if (paystackData.status === "success") {
+          const actualAmount = paystackData.amount;
+          const diff = Math.abs(actualAmount - expectedAmountSubunits);
+          if (diff <= 100) { // allow 1 subunit threshold
+            isSuccess = true;
+            gatewayChannel = paystackData.channel || "";
+          } else {
+            verificationError = `Amount mismatch: expected ${expectedAmountSubunits}, got ${actualAmount}`;
+          }
+        } else if (paystackData.status === "ongoing" || paystackData.status === "pending") {
+          return res.status(200).json({
+            status: "pending",
+            message: "Waiting for payment confirmation",
+            keepFree: true
+          });
+        } else {
+          verificationError = `Paystack transaction status: ${paystackData.status}`;
+        }
+      } else {
+        verificationError = "Invalid verification payload from Paystack";
+      }
+    }
+
+    if (isSuccess) {
+      const now = new Date();
+      const trialEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      const subscriptionEnd = new Date(trialEnd.getTime() + (planId === 'monthly' ? 30 : 180) * 24 * 60 * 60 * 1000);
+
+      const trial_start_date = now.toISOString();
+      const trial_end_date = trialEnd.toISOString();
+
+      const billingItem = {
+        id: `bill_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+        date: now.toISOString(),
+        amount: 0.0, // 0.0 during 7-day free trial
+        currency: currency,
+        planName: planId === 'monthly' ? `${targetPlan.name} (7-Day Trial Started)` : `${targetPlan.name} (7-Day Trial Started)`,
+        status: 'paid',
+        reference: reference
+      };
+
+      if (userId.startsWith("sandbox_")) {
+        return res.status(200).json({
+          status: "success",
+          message: "Payment successfully verified (Sandbox Mode)",
+          isPremium: true,
+          subscriptionPlan: planId,
+          subscriptionStatus: "trialing",
+          subscriptionTrialEnd: trial_end_date,
+          subscriptionEnd: subscriptionEnd.toISOString(),
+          trial_start_date,
+          trial_end_date,
+          billingHistoryItem: billingItem
+        });
+      }
+
+      if (!firestoreDb) {
+        throw new Error("Firestore Admin database is not initialized");
+      }
+
+      const userRef = firestoreDb.collection("users").doc(userId);
+      const docSnap = await userRef.get();
+      if (!docSnap.exists) {
+        return res.status(404).json({ error: "User document not found in Firestore" });
+      }
+
+      const userData = docSnap.data() || {};
+      const currentHistory = userData.billingHistory || [];
+      const updatedHistory = [...currentHistory, billingItem];
+
+      await userRef.update({
+        isPremium: true,
+        subscriptionPlan: planId,
+        subscriptionStatus: "trialing",
+        subscriptionTrialEnd: trial_end_date,
+        subscriptionEnd: subscriptionEnd.toISOString(),
+        trial_start_date: trial_start_date,
+        trial_end_date: trial_end_date,
+        billingHistory: updatedHistory
+      });
+
+      return res.status(200).json({
+        status: "success",
+        message: "Payment successfully verified and premium activated!",
+        isPremium: true,
+        subscriptionPlan: planId,
+        subscriptionStatus: "trialing",
+        subscriptionTrialEnd: trial_end_date,
+        subscriptionEnd: subscriptionEnd.toISOString(),
+        trial_start_date,
+        trial_end_date,
+        billingHistoryItem: billingItem
+      });
+    } else {
+      return res.status(400).json({
+        status: "failed",
+        error: verificationError || "Payment not completed"
+      });
+    }
+  } catch (err: any) {
+    console.error("[Verify Error]:", err);
+    return res.status(500).json({ error: err?.message || "Internal server error during verification" });
+  }
 });
 
 app.post("/api/gemini/daily-affirmation", async (req, res) => {
