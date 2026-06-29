@@ -74,13 +74,14 @@ export const subscribeToUser = (userId: string, callback: (user: User | null) =>
   });
 };
 
-export const createInvite = async (userId: string, userName: string) => {
+export const createInvite = async (userId: string, userName: string, userEmail?: string) => {
   if (userId.startsWith('sandbox_')) {
     const code = Math.random().toString(36).substr(2, 6).toUpperCase();
     const inviteData = {
       code,
       senderId: userId,
       senderName: userName,
+      senderEmail: userEmail || '',
       createdAt: new Date().toISOString()
     };
     localStorage.setItem(`lumina_invite_${code}`, JSON.stringify(inviteData));
@@ -93,6 +94,7 @@ export const createInvite = async (userId: string, userName: string) => {
       code,
       senderId: userId,
       senderName: userName,
+      senderEmail: userEmail || '',
       createdAt: new Date().toISOString()
     });
     return code;
@@ -282,6 +284,7 @@ export interface DPartnerRequest {
   user_id: string;
   partner_id: string;
   partnerName: string;
+  partnerEmail?: string;
   requested_permissions: string[];
   status: 'pending' | 'approved' | 'declined';
   created_at: string;
@@ -329,7 +332,7 @@ export const subscribeToPartnerRequests = (roleId: string, role: 'user' | 'partn
   });
 };
 
-export const submitPartnerRequest = async (userId: string, partnerId: string, partnerName: string, requestedPermissions: string[]) => {
+export const submitPartnerRequest = async (userId: string, partnerId: string, partnerName: string, partnerEmail: string, requestedPermissions: string[]) => {
   const isSandbox = userId.startsWith('sandbox_') || partnerId.startsWith('sandbox_');
   const request_id = isSandbox ? Math.random().toString(36).substr(2, 9) : `${userId}_${partnerId}`;
   
@@ -339,6 +342,7 @@ export const submitPartnerRequest = async (userId: string, partnerId: string, pa
     user_id: userId,
     partner_id: partnerId,
     partnerName,
+    partnerEmail,
     requested_permissions: requestedPermissions,
     status: 'pending',
     created_at: new Date().toISOString()
@@ -435,6 +439,11 @@ export const completePartnerConnection = async (userId: string, partnerId: strin
   } catch (error) {
     console.error("Failed to complete partner connection in Firestore:", error);
   }
+};
+
+export const getUserDisplayName = (user: { name?: string; email?: string } | null | undefined) => {
+  if (!user) return 'Bernice';
+  return getCleanName(user.name, user.email);
 };
 
 

@@ -10,7 +10,7 @@ import {
   updateProfile,
   sendPasswordResetEmail
 } from 'firebase/auth';
-import { syncUser, subscribeToUser, getInvite } from '../services/firebaseService';
+import { syncUser, subscribeToUser, getInvite, getUserDisplayName } from '../services/firebaseService';
 import { 
   Fingerprint, 
   Scan, 

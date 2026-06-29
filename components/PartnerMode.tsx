@@ -13,7 +13,8 @@ import {
   subscribeToPartnerRequests,
   submitPartnerRequest,
   updatePartnerRequestStatus,
-  completePartnerConnection
+  completePartnerConnection,
+  getUserDisplayName
 } from '../services/firebaseService';
 
 interface PartnerModeProps {
@@ -48,12 +49,13 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
   });
   const [requestedReceives, setRequestedReceives] = useState<string[]>(() => {
     return user.partnerRequest?.requestedReceives || [
-      "Period Start Notifications",
-      "Period End Notifications",
-      "Symptom Updates",
-      "Mood Updates",
-      "Wellness Check-ins",
-      "Partner Support Tips"
+      "Cycle status",
+      "Period predictions",
+      "Mood updates",
+      "Symptoms",
+      "Cravings",
+      "Wellness insights",
+      "Journal access (optional)"
     ];
   });
   const [notificationStyle, setNotificationStyle] = useState<'gentle' | 'full'>('gentle');
@@ -76,6 +78,17 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
 
   const [incomingRequests, setIncomingRequests] = useState<any[]>([]);
   const [outgoingRequests, setOutgoingRequests] = useState<any[]>([]);
+  const [reviewedPermissions, setReviewedPermissions] = useState<string[]>([]);
+
+  const activePendingRequest = incomingRequests.find(r => r.status === 'pending');
+
+  useEffect(() => {
+    if (activePendingRequest) {
+      setReviewedPermissions(activePendingRequest.requested_permissions || []);
+    } else {
+      setReviewedPermissions([]);
+    }
+  }, [activePendingRequest?.id]);
 
   useEffect(() => {
     if (user && !user.isPartner) {
@@ -94,6 +107,22 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
       setSubTab('requests');
     }
   }, [incomingRequests, subTab]);
+
+  useEffect(() => {
+    const handleSubtabChange = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail) {
+        setSubTab(detail);
+      }
+    };
+    window.addEventListener('lumina-set-partner-subtab', handleSubtabChange);
+    const stored = sessionStorage.getItem('lumina_partnermode_subtab');
+    if (stored) {
+      setSubTab(stored as any);
+      sessionStorage.removeItem('lumina_partnermode_subtab');
+    }
+    return () => window.removeEventListener('lumina-set-partner-subtab', handleSubtabChange);
+  }, []);
 
   useEffect(() => {
     if (user && user.isPartner && user.partnerId) {
@@ -237,7 +266,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
     // Add deliberate premium delay for loader visibility so they know it is building the tunnel
     await new Promise(resolve => setTimeout(resolve, 1500));
     try {
-      const code = await createInvite(user.id, user.name);
+      const code = await createInvite(user.id, getUserDisplayName(user), user.email);
       if (code) {
         setUser({ ...user, partnerCode: code });
         setInviteSuccess(true);
@@ -254,7 +283,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
     setInviteSuccess(false);
     await new Promise(resolve => setTimeout(resolve, 1500));
     try {
-      const code = await createInvite(user.id, user.name);
+      const code = await createInvite(user.id, getUserDisplayName(user), user.email);
       if (code) {
         setUser({ ...user, partnerCode: code });
         setInviteSuccess(true);
@@ -653,18 +682,13 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
 
               <div className="max-h-[300px] overflow-y-auto pr-2 space-y-2 border border-pink-50/50 p-4 rounded-3xl bg-pink-50/5">
                 {[
-                  "Period Start Alerts",
-                  "Period End Alerts",
-                  "Ovulation Updates",
-                  "Fertility Window Updates",
-                  "Pregnancy Updates",
-                  "Mood Updates",
-                  "Symptom Updates",
-                  "Doctor Appointment Reminders",
-                  "Wellness Check-ins",
-                  "Gift Reminders",
-                  "Support Suggestions",
-                  "Custom Messages"
+                  "Cycle status",
+                  "Period predictions",
+                  "Mood updates",
+                  "Symptoms",
+                  "Cravings",
+                  "Wellness insights",
+                  "Journal access (optional)"
                 ].map((item) => {
                   const isChecked = requestedReceives.includes(item);
                   return (
@@ -709,9 +733,10 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
 
                     // Create real-time Firestore / Sandbox PartnerRequest document!
                     await submitPartnerRequest(
-                      user.partnerId || '', // user_id (Ella, the tracked user)
+                      user.partnerId || '', // user_id (The tracked user)
                       user.id || '',        // partner_id (Michael, the logged-in partner)
                       user.name || '',      // partnerName (Michael)
+                      user.email || '',     // partnerEmail (Michael)
                       requestedReceives     // requested_permissions
                     );
 
@@ -1055,20 +1080,25 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
 
     const requesterName = activePendingRequest ? activePendingRequest.partnerName : (linkedUser?.name || user.partnerName || 'Your partner');
 
+    const mapPermissionsToSharingSettings = (permissions: string[]) => {
+      const lowercasePerms = permissions.map(p => p.toLowerCase());
+      return {
+        shareCycleInfo: lowercasePerms.some(p => p.includes('period') || p.includes('cycle') || p.includes('ovulation') || p.includes('fertility')),
+        shareFertilityInfo: lowercasePerms.some(p => p.includes('fertility') || p.includes('ovulation')),
+        sharePregnancyInfo: lowercasePerms.some(p => p.includes('pregnancy')),
+        shareSymptoms: lowercasePerms.some(p => p.includes('symptom') || p.includes('craving')),
+        shareMood: lowercasePerms.some(p => p.includes('mood')),
+        shareNotes: lowercasePerms.some(p => p.includes('journal') || p.includes('diary') || p.includes('note')),
+        shareIntimacyInfo: false,
+        shareDoctorReports: lowercasePerms.some(p => p.includes('doctor') || p.includes('report') || p.includes('appointment')),
+        shareAppointmentReminders: lowercasePerms.some(p => p.includes('appointment') || p.includes('reminder')),
+        shareWellnessUpdates: lowercasePerms.some(p => p.includes('wellness') || p.includes('insight') || p.includes('support') || p.includes('gift') || p.includes('message')),
+      };
+    };
+
     const handleApproveAll = async () => {
       const requested = requestedPermissionsList;
-      const approvedSettings = {
-        shareCycleInfo: requested.some(r => r.toLowerCase().includes('period') || r.toLowerCase().includes('ovulation') || r.toLowerCase().includes('fertility')),
-        shareFertilityInfo: requested.some(r => r.toLowerCase().includes('fertility') || r.toLowerCase().includes('ovulation')),
-        sharePregnancyInfo: requested.some(r => r.toLowerCase().includes('pregnancy')),
-        shareSymptoms: requested.some(r => r.toLowerCase().includes('symptom')),
-        shareMood: requested.some(r => r.toLowerCase().includes('mood')),
-        shareNotes: user.sharingSettings?.shareNotes || false,
-        shareIntimacyInfo: false,
-        shareDoctorReports: requested.some(r => r.toLowerCase().includes('doctor') || r.toLowerCase().includes('report') || r.toLowerCase().includes('appointment')),
-        shareAppointmentReminders: requested.some(r => r.toLowerCase().includes('appointment') || r.toLowerCase().includes('reminder')),
-        shareWellnessUpdates: requested.some(r => r.toLowerCase().includes('wellness') || r.toLowerCase().includes('support') || r.toLowerCase().includes('tip') || r.toLowerCase().includes('gift') || r.toLowerCase().includes('message')),
-      };
+      const approvedSettings = mapPermissionsToSharingSettings(requested);
       
       const partnerIdToSet = activePendingRequest ? activePendingRequest.partner_id : (user.partnerId || '');
       const partnerNameToSet = activePendingRequest ? activePendingRequest.partnerName : (user.partnerName || 'Partner');
@@ -1084,7 +1114,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
       await syncUser(updatedUser);
 
       // Establish bidirectional connection on both users
-      await completePartnerConnection(user.id, partnerIdToSet, partnerNameToSet, user.name || 'Ella');
+      await completePartnerConnection(user.id, partnerIdToSet, partnerNameToSet, getUserDisplayName(user));
 
       const reqId = activePendingRequest ? activePendingRequest.id : `${user.id}_${user.partnerId}`;
       await updatePartnerRequestStatus(reqId, 'approved');
@@ -1093,7 +1123,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
         const updatedPartner = {
           ...linkedUser,
           partnerId: user.id,
-          partnerName: user.name || 'Ella',
+          partnerName: getUserDisplayName(user),
           partnerRequest: {
             ...linkedUser.partnerRequest!,
             requestedReceives: requested,
@@ -1107,6 +1137,48 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
       
       setSubTab('partners');
       alert(`You successfully approved ${partnerNameToSet}'s connection and sharing preferences! 💖`);
+    };
+
+    const handleApproveSelected = async () => {
+      const approvedSettings = mapPermissionsToSharingSettings(reviewedPermissions);
+      
+      const partnerIdToSet = activePendingRequest ? activePendingRequest.partner_id : (user.partnerId || '');
+      const partnerNameToSet = activePendingRequest ? activePendingRequest.partnerName : (user.partnerName || 'Partner');
+
+      const updatedUser = {
+        ...user,
+        partnerId: partnerIdToSet,
+        partnerName: partnerNameToSet,
+        sharingSettings: approvedSettings,
+        isPartnerLinked: true
+      };
+      setUser(updatedUser);
+      await syncUser(updatedUser);
+
+      // Establish bidirectional connection on both users
+      await completePartnerConnection(user.id, partnerIdToSet, partnerNameToSet, getUserDisplayName(user));
+
+      const reqId = activePendingRequest ? activePendingRequest.id : `${user.id}_${user.partnerId}`;
+      await updatePartnerRequestStatus(reqId, 'approved');
+
+      if (linkedUser) {
+        const updatedPartner = {
+          ...linkedUser,
+          partnerId: user.id,
+          partnerName: getUserDisplayName(user),
+          partnerRequest: {
+            ...linkedUser.partnerRequest!,
+            requestedReceives: reviewedPermissions,
+            status: 'approved' as const
+          },
+          isPartnerLinked: true
+        };
+        setLinkedUser(updatedPartner);
+        await syncUser(updatedPartner);
+      }
+      
+      setSubTab('partners');
+      alert(`You successfully approved ${partnerNameToSet}'s connection with selected categories! 💖`);
     };
 
     const handleDeclineRequest = async () => {
@@ -1154,7 +1226,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
       await syncUser(updatedUser);
 
       // Establish bidirectional connection on both users
-      await completePartnerConnection(user.id, partnerIdToSet, partnerNameToSet, user.name || 'Ella');
+      await completePartnerConnection(user.id, partnerIdToSet, partnerNameToSet, getUserDisplayName(user));
 
       const reqId = activePendingRequest ? activePendingRequest.id : `${user.id}_${user.partnerId}`;
       await updatePartnerRequestStatus(reqId, 'approved');
@@ -1163,7 +1235,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
         const updatedPartner = {
           ...linkedUser,
           partnerId: user.id,
-          partnerName: user.name || 'Ella',
+          partnerName: getUserDisplayName(user),
           partnerRequest: {
             ...linkedUser.partnerRequest!,
             status: 'approved' as const
@@ -1321,28 +1393,55 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
         )}
 
         {subTab === 'requests' && (
-          <div className="space-y-6 animate-fadeIn">
+          <div className="space-y-6 animate-fadeIn text-left">
+            {/* Header / Subtitle */}
+            <div className="space-y-1">
+              <h3 className="text-xl font-serif text-indigo-950 font-bold italic">Partner Requests Inbox</h3>
+              <p className="text-xs text-gray-500">Review connection requests, customize sharing categories, and check request status history.</p>
+            </div>
+
             {isPendingApproval ? (
-              <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-8 rounded-[2.5rem] border border-pink-100 shadow-sm space-y-6 text-left">
+              <div className="bg-gradient-to-br from-purple-50 via-pink-50/50 to-indigo-50/20 p-8 rounded-[2.5rem] border border-pink-100 shadow-sm space-y-6">
                 <div className="flex items-start gap-4">
                   <span className="text-3xl">💕</span>
-                  <div className="space-y-1">
-                    <h3 className="text-2xl font-serif text-indigo-950 italic font-black">New Partner Request</h3>
-                    <p className="text-sm text-gray-600">
-                      <span className="font-bold text-indigo-600">{requesterName}</span> wants to connect with you and has requested to receive the following categories:
-                    </p>
+                  <div className="space-y-1 w-full">
+                    <h3 className="text-xl font-serif text-indigo-950 italic font-black">Active Connection Request</h3>
+                    <div className="text-xs space-y-1 mt-2 text-gray-600 bg-white/40 p-3 rounded-2xl border border-pink-150">
+                      <p><span className="font-bold text-indigo-950">Partner Name:</span> {requesterName}</p>
+                      <p><span className="font-bold text-indigo-950">Partner Email:</span> {activePendingRequest?.partnerEmail || 'No email provided'}</p>
+                      <p><span className="font-bold text-indigo-950">Date Requested:</span> {activePendingRequest?.created_at ? new Date(activePendingRequest.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recently'}</p>
+                    </div>
                   </div>
                 </div>
 
-                <div className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl border border-pink-100/50">
-                  <h4 className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-3">Requested Access Categories:</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-indigo-900 leading-relaxed font-semibold">
-                    {requestedPermissionsList.map((reqItem, i) => (
-                      <div key={i} className="flex items-center gap-2">
-                        <span className="text-pink-500">✓</span>
-                        <span>{reqItem}</span>
-                      </div>
-                    ))}
+                <div className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl border border-pink-100/50 space-y-4">
+                  <div>
+                    <h4 className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Permission Review</h4>
+                    <p className="text-xs text-gray-400 mt-1">Deselect any categories you do not wish to share before approving. Checked items will be shared.</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                    {requestedPermissionsList.map((reqItem) => {
+                      const isChecked = reviewedPermissions.includes(reqItem);
+                      return (
+                        <div 
+                          key={reqItem}
+                          onClick={() => {
+                            if (isChecked) {
+                              setReviewedPermissions(reviewedPermissions.filter(p => p !== reqItem));
+                            } else {
+                              setReviewedPermissions([...reviewedPermissions, reqItem]);
+                            }
+                          }}
+                          className={`flex items-center gap-3 p-2.5 rounded-xl border transition-all cursor-pointer ${isChecked ? 'border-pink-300 bg-pink-50/20' : 'border-gray-150 hover:bg-gray-50'}`}
+                        >
+                          <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${isChecked ? 'border-pink-500 bg-pink-500 text-white animate-fadeIn' : 'border-gray-300 bg-white'}`}>
+                            {isChecked && <span className="text-[10px] font-bold">✓</span>}
+                          </div>
+                          <span className="font-semibold text-gray-750">{reqItem}</span>
+                        </div>
+                      );
+                    })}
                     {requestedPermissionsList.length === 0 && (
                       <span className="text-xs text-gray-400 italic">No specific categories specified (All by default)</span>
                     )}
@@ -1352,20 +1451,17 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                 <div className="flex flex-wrap gap-3 pt-2">
                   <button
                     type="button"
-                    onClick={handleApproveAll}
-                    className="px-6 py-4 bg-pink-500 hover:bg-pink-600 text-white font-bold rounded-2xl text-[10px] uppercase tracking-widest shadow-md transition-all cursor-pointer"
+                    onClick={handleApproveSelected}
+                    className="px-6 py-4 bg-pink-500 hover:bg-pink-600 text-white font-bold rounded-2xl text-[10px] uppercase tracking-widest shadow-md transition-all cursor-pointer flex items-center gap-1.5"
                   >
-                    Approve Request 💖
+                    <span>💖</span> Save Permissions & Approve Connection
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      setSubTab('privacy');
-                      setIsCustomizingSharing(true);
-                    }}
+                    onClick={handleApproveAll}
                     className="px-6 py-4 bg-white text-pink-500 border border-pink-100 hover:bg-pink-50/50 font-bold rounded-2xl text-[10px] uppercase tracking-widest shadow-sm transition-all cursor-pointer"
                   >
-                    Customize Permissions ⚙️
+                    Approve All Categories
                   </button>
                   <button
                     type="button"
@@ -1377,14 +1473,77 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                 </div>
               </div>
             ) : (
-              <section className="bg-white p-10 rounded-[3rem] shadow-sm border border-pink-50 text-center space-y-4">
+              <section className="bg-white p-8 rounded-[3rem] shadow-sm border border-pink-50 text-center space-y-4">
                 <span className="text-4xl block">📪</span>
-                <h3 className="text-xl font-serif text-pink-600 italic">No Pending Requests</h3>
+                <h3 className="text-lg font-serif text-pink-600 italic">No Active Pending Requests</h3>
                 <p className="text-xs text-gray-400 max-w-xs mx-auto">
-                  You don't have any pending requests at the moment. All synchronized connections are up-to-date.
+                  You don't have any pending requests to approve at the moment. All companion links are fully processed.
                 </p>
               </section>
             )}
+
+            {/* Notification & Connection History */}
+            <section className="bg-white p-8 rounded-[3rem] shadow-sm border border-pink-50 space-y-6">
+              <div className="flex items-center justify-between border-b border-pink-50 pb-4">
+                <div className="space-y-1">
+                  <h4 className="text-lg font-serif italic text-indigo-950 font-bold">Request & Connection History</h4>
+                  <p className="text-[11px] text-gray-400">A historical timeline of companion connection requests on this account.</p>
+                </div>
+                <span className="text-xs font-bold font-mono text-gray-400 px-3 py-1 bg-gray-50 rounded-full border border-gray-100">
+                  Total: {incomingRequests.length}
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                {incomingRequests.map((req) => (
+                  <div key={req.id} className="p-5 rounded-3xl border border-gray-100 bg-white/50 space-y-3 hover:border-pink-100 transition-colors">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="space-y-1 text-left">
+                        <span className="text-sm font-bold text-indigo-950">{req.partnerName}</span>
+                        <p className="text-xs text-gray-400">{req.partnerEmail || 'No email provided'}</p>
+                      </div>
+                      
+                      <span className={`px-3.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                        req.status === 'approved' 
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
+                          : req.status === 'declined'
+                          ? 'bg-rose-50 text-rose-700 border-rose-100'
+                          : 'bg-amber-50 text-amber-700 border-amber-100 animate-pulse'
+                      }`}>
+                        {req.status === 'approved' ? '✓ Access Approved' : req.status === 'declined' ? '✕ Declined' : '⏱ Pending Review'}
+                      </span>
+                    </div>
+
+                    <div className="pt-2 border-t border-dashed border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs text-left">
+                      <div>
+                        <span className="font-bold text-gray-500">Date:</span>{' '}
+                        <span className="text-gray-600">
+                          {req.created_at ? new Date(req.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : 'Recently'}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-1 items-center">
+                        <span className="font-bold text-gray-500 mr-1">Categories requested:</span>
+                        {(req.requested_permissions || []).map((p: string, idx: number) => (
+                          <span key={idx} className="bg-pink-50/50 text-[10px] font-bold text-pink-600 px-2 py-0.5 rounded-full border border-pink-100/50">
+                            {p}
+                          </span>
+                        ))}
+                        {(!req.requested_permissions || req.requested_permissions.length === 0) && (
+                          <span className="text-gray-400 italic">None specified</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {incomingRequests.length === 0 && (
+                  <div className="text-center py-10 text-gray-400 space-y-2">
+                    <span className="text-3xl">📭</span>
+                    <p className="text-xs font-semibold">No requests recorded in history.</p>
+                  </div>
+                )}
+              </div>
+            </section>
           </div>
         )}
 
@@ -1423,7 +1582,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                       try {
                         await navigator.share({
                           title: 'Connect on Lumina',
-                          text: `${user.name || 'Ella'} invited you to connect on Lumina.`,
+                          text: `🌸 ${getUserDisplayName(user)} invited you to join her Lumina Partner Circle`,
                           url: inviteLink
                         });
                       } catch (err) {
@@ -1442,7 +1601,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
 
                 {/* WhatsApp */}
                 <a
-                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`${user.name || 'Ella'} invited you to connect on Lumina. Click here to connect: ${inviteLink}`)}`}
+                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`🌸 ${getUserDisplayName(user)} invited you to join her Lumina Partner Circle: ${inviteLink}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-4 bg-emerald-50/50 hover:bg-emerald-50 border border-emerald-100 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all cursor-pointer text-center"
@@ -1453,7 +1612,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
 
                 {/* Messages */}
                 <a
-                  href={`sms:?&body=${encodeURIComponent(`${user.name || 'Ella'} invited you to connect on Lumina: ${inviteLink}`)}`}
+                  href={`sms:?&body=${encodeURIComponent(`🌸 ${getUserDisplayName(user)} invited you to join her Lumina Partner Circle: ${inviteLink}`)}`}
                   className="p-4 bg-blue-50/50 hover:bg-blue-50 border border-blue-100 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all cursor-pointer text-center"
                 >
                   <span className="text-2xl">✉️</span>
@@ -1462,7 +1621,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
 
                 {/* Email */}
                 <a
-                  href={`mailto:?subject=${encodeURIComponent('Connect with me on Lumina')}&body=${encodeURIComponent(`Hi,\n\nI want to connect with you securely on Lumina Partner Mode! Here is my invitation link:\n${inviteLink}\n\nLove,\n${user.name || 'Ella'}`)}`}
+                  href={`mailto:?subject=${encodeURIComponent('Join my Lumina Partner Circle')}&body=${encodeURIComponent(`Hi,\n\nI want to connect with you securely on Lumina Partner Mode! Here is my invitation link to join my Lumina Partner Circle:\n${inviteLink}\n\nLove,\n${getUserDisplayName(user)}`)}`}
                   className="p-4 bg-purple-50/50 hover:bg-purple-50 border border-purple-100 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all cursor-pointer text-center"
                 >
                   <span className="text-2xl">📧</span>

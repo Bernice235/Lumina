@@ -138,7 +138,7 @@ const App: React.FC = () => {
     if (!user || partnerRequests.length === 0) return;
 
     if (!user.isPartner) {
-      // Ella (tracked user) receives request alerts
+      // Tracked user receives request alerts
       const pendingRequests = partnerRequests.filter(r => r.status === 'pending');
       pendingRequests.forEach(req => {
         if (!notifiedRequestIds.current.has(req.id)) {
@@ -151,7 +151,7 @@ const App: React.FC = () => {
           setSimulatedNotify({
             id: req.id,
             title: "💕 New Partner Request",
-            body: `${req.partnerName || 'Michael'} wants to connect with you.\n\nRequested Access:\n${requestedText}`,
+            body: `${getCleanName(req.partnerName, req.partnerEmail || '')} wants to connect with you.\n\nRequested Access:\n${requestedText}`,
             emoji: "💕",
             isPartner: true,
             action: () => {
@@ -163,7 +163,7 @@ const App: React.FC = () => {
         }
       });
     } else {
-      // Michael (partner) receives approved/declined status change alerts
+      // Partner receives approved/declined status change alerts
       partnerRequests.forEach(req => {
         const key = `${req.id}_${req.status}`;
         if (!notifiedRequestIds.current.has(key)) {
@@ -173,7 +173,7 @@ const App: React.FC = () => {
             setSimulatedNotify({
               id: req.id,
               title: "💕 Connection Approved",
-              body: `${req.partnerName || 'Ella'} approved your request.`,
+              body: `${getCleanName(req.partnerName, req.partnerEmail || '')} approved your request.`,
               emoji: "💕",
               isPartner: true,
               action: () => {
@@ -1250,6 +1250,23 @@ const App: React.FC = () => {
               className="w-10 h-1 accent-pink-400"
             />
           </div>
+
+          {!user.isPartner && (
+            <button 
+              onClick={() => {
+                setActiveTab('partner');
+                sessionStorage.setItem('lumina_partnermode_subtab', 'requests');
+                window.dispatchEvent(new CustomEvent('lumina-set-partner-subtab', { detail: 'requests' }));
+              }} 
+              className="p-2 text-gray-400 hover:text-pink-400 transition-colors relative"
+              title="Partner Connection Requests"
+            >
+              <span>🔔</span>
+              {partnerRequests.filter(r => r.status === 'pending').length > 0 && (
+                <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white animate-pulse" />
+              )}
+            </button>
+          )}
 
           <button 
             onClick={() => {
