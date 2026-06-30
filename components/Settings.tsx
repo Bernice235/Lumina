@@ -259,7 +259,7 @@ const Settings: React.FC<SettingsProps> = ({
                 subscriptionEnd: result.subscriptionEnd,
                 trial_start_date: result.trial_start_date,
                 trial_end_date: result.trial_end_date,
-                billingHistory: result.billingHistory || (user.id.startsWith("sandbox_") 
+                billingHistory: result.billingHistory || (user.id.startsWith("sandbox_") || user.id.startsWith("offline_") 
                   ? [...(user.billingHistory || []), result.billingHistoryItem]
                   : user.billingHistory)
               };
@@ -356,7 +356,7 @@ const Settings: React.FC<SettingsProps> = ({
           subscriptionEnd: result.subscriptionEnd,
           trial_start_date: result.trial_start_date,
           trial_end_date: result.trial_end_date,
-          billingHistory: result.billingHistory || (user.id.startsWith("sandbox_") 
+          billingHistory: result.billingHistory || (user.id.startsWith("sandbox_") || user.id.startsWith("offline_") 
             ? [...(user.billingHistory || []), result.billingHistoryItem]
             : user.billingHistory)
         };
@@ -1956,7 +1956,7 @@ const Settings: React.FC<SettingsProps> = ({
                       onClick={async () => {
                         if (verificationReceipt.updatedUserObj) {
                           setUser(verificationReceipt.updatedUserObj);
-                          if (verificationReceipt.updatedUserObj.id.startsWith("sandbox_")) {
+                          if (verificationReceipt.updatedUserObj.id.startsWith("sandbox_") || verificationReceipt.updatedUserObj.id.startsWith("offline_")) {
                             await syncUser(verificationReceipt.updatedUserObj);
                           }
                         }
@@ -2466,6 +2466,46 @@ const Settings: React.FC<SettingsProps> = ({
                   className="bg-pink-50/50 px-4 py-3 rounded-2xl outline-none font-medium text-xs text-pink-700 border border-pink-100 shadow-inner w-full focus:border-pink-300 transition-colors cursor-pointer"
                 />
                 <span className="text-[8px] text-gray-400 italic">This anchors the beginning of your dynamic timeline predictions.</span>
+              </div>
+            </div>
+          </section>
+
+          {/* THEME & EYE CARE */}
+          <section className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-pink-50 space-y-6">
+            <h3 className="text-xl font-serif text-pink-500 flex items-center gap-2">
+              <Eye size={20} className="text-pink-400" />
+              Nighttime Comfort & Theme 🌙
+            </h3>
+            <p className="text-xs text-gray-400 leading-relaxed font-serif italic">
+               Reduce eye strain during nighttime logging with our soft Dark Mode theme, or toggle your visual palette.
+            </p>
+
+            <div className="space-y-5">
+              {/* Dark Mode Toggle */}
+              <div className="bg-rose-50/30 p-5 rounded-3xl border border-rose-100/30 flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <p className="text-xs font-bold text-pink-900 tracking-wide flex items-center gap-1.5 uppercase tracking-widest text-[9px]">
+                      <Moon size={13} className="text-pink-400" />
+                      Nighttime Dark Mode
+                    </p>
+                    <p className="text-[9px] text-gray-400 leading-none">Toggle soft dark colors to rest your eyes in low light</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      className="sr-only peer"
+                      checked={!!user.darkMode}
+                      onChange={(e) => {
+                        const updatedUser = { ...user, darkMode: e.target.checked };
+                        setUser(updatedUser);
+                        localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+                        syncUser(updatedUser);
+                      }}
+                    />
+                    <div className="w-9 h-5 bg-pink-100 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-pink-500 peer-checked:to-rose-400"></div>
+                  </label>
+                </div>
               </div>
             </div>
           </section>

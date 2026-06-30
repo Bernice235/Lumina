@@ -10,7 +10,7 @@ import {
   updateProfile,
   sendPasswordResetEmail
 } from 'firebase/auth';
-import { syncUser, subscribeToUser, getInvite, getUserDisplayName } from '../services/firebaseService';
+import { syncUser, subscribeToUser, getInvite, getUserDisplayName, getCleanName, getSanctuaryTitle } from '../services/firebaseService';
 import { 
   Fingerprint, 
   Scan, 
@@ -108,6 +108,20 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
   const [email, setEmail] = useState(() => localStorage.getItem('lumina_saved_email') || '');
   const [password, setPassword] = useState(() => localStorage.getItem('lumina_saved_password') || '');
   const [name, setName] = useState(() => localStorage.getItem('lumina_saved_name') || '');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [age, setAge] = useState('');
+  const [dob, setDob] = useState('');
+  const [profilePhoto, setProfilePhoto] = useState('');
+  const [country, setCountry] = useState('');
+  const [timezone, setTimezone] = useState(() => {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    } catch {
+      return 'UTC';
+    }
+  });
   const [registerRole, setRegisterRole] = useState<'tracker' | 'partner'>('tracker');
   const [rememberMe, setRememberMe] = useState(true);
 
@@ -118,14 +132,29 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
     if (initialInviteCode) {
       setScreen('partner_invite');
       setRegisterRole('partner');
-      getInvite(initialInviteCode).then((invite) => {
-        if (invite && invite.senderName) {
-          setInviteSenderName(invite.senderName);
+      getInvite(initialInviteCode).then(async (invite) => {
+        if (invite) {
+          let resolvedName = invite.senderName;
+          if (invite.senderId) {
+            try {
+              const userSnap = await getDoc(doc(db, "users", invite.senderId));
+              if (userSnap.exists()) {
+                const userData = userSnap.data();
+                if (userData) {
+                  resolvedName = getUserDisplayName(userData);
+                }
+              }
+            } catch (err) {
+              console.error("Failed to pull actual profile from Firebase:", err);
+            }
+          }
+          const cleaned = getCleanName(resolvedName || invite.senderName, invite.senderEmail || '');
+          setInviteSenderName(cleaned || 'Bernice');
         } else {
-          setInviteSenderName('Ella'); // fallback standard name as requested
+          setInviteSenderName('Bernice'); // fallback standard name as requested
         }
       }).catch(() => {
-        setInviteSenderName('Ella');
+        setInviteSenderName('Bernice');
       });
       return;
     }
@@ -419,27 +448,47 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
     const emailKey = email.toLowerCase().trim();
     const isSignUp = screen === 'email_signup';
 
+    const resolvedName = isSignUp ? (displayName || `${firstName} ${lastName}`).trim() : name;
+
+    if (isSignUp) {
+      const isPartnerRole = registerRole === 'partner';
+      const hasAllFields = isPartnerRole 
+        ? (firstName.trim() && lastName.trim() && displayName.trim() && emailKey && password)
+        : (firstName.trim() && lastName.trim() && displayName.trim() && age.trim() && dob.trim() && emailKey && password);
+
+      if (!hasAllFields) {
+        setError(isPartnerRole
+          ? "Please provide all required registration fields (First Name, Last Name, Display Name, Email, and Password) to continue."
+          : "Please provide all required registration fields (First Name, Last Name, Display Name, Age, Date of Birth, Email, and Password) to continue."
+        );
+        setLoading(false);
+        return;
+      }
+    }
+
     if (connectionMode === 'offline') {
       // Local Database logic
       if (isSignUp) {
-        if (!name) {
-          setError("Please tell us your name, darling.");
-          setLoading(false);
-          return;
-        }
-
         const offlineUser = createNewSandboxUser(
           'offline_' + Date.now(),
-          name,
+          resolvedName,
           emailKey,
           'offline_companion',
           'Loving Companion',
-          registerRole === 'partner'
+          registerRole === 'partner',
+          firstName,
+          lastName,
+          displayName,
+          parseInt(age) || undefined,
+          dob,
+          profilePhoto || undefined,
+          country || undefined,
+          timezone
         );
 
         localStorage.setItem('lumina_user', JSON.stringify(offlineUser));
         localStorage.setItem('lumina_biometric_user', JSON.stringify(offlineUser));
-        handleSaveCredentials(emailKey, password, name);
+        handleSaveCredentials(emailKey, password, resolvedName);
         onLogin(offlineUser);
         setLoading(false);
       } else {
@@ -457,15 +506,22 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
     // Cloud Database logic (With elegant, silent fallback to local database on iframe restrictions)
     try {
       if (isSignUp) {
-        if (!name) throw new Error("Please tell us your name.");
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const fbUser = userCredential.user;
-        await updateProfile(fbUser, { displayName: name });
+        await updateProfile(fbUser, { displayName: resolvedName });
 
         const newUser: User = {
           id: fbUser.uid,
-          name: name,
+          name: resolvedName,
           email: fbUser.email || email,
+          firstName,
+          lastName,
+          displayName,
+          age: parseInt(age) || undefined,
+          dob,
+          profilePhoto: profilePhoto || undefined,
+          country: country || undefined,
+          timezone,
           partnerName: 'Loving Partner',
           cycleLength: 28,
           periodLength: 5,
@@ -487,13 +543,14 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
             shareAppointmentReminders: false,
             shareWellnessUpdates: false
           },
-          waterGoal: 8
+          waterGoal: 8,
+          onboardingCompleted: false
         };
 
         await syncUser(newUser);
         localStorage.setItem('lumina_user', JSON.stringify(newUser));
         localStorage.setItem('lumina_biometric_user', JSON.stringify(newUser));
-        handleSaveCredentials(newUser.email, password, name);
+        handleSaveCredentials(newUser.email, password, resolvedName);
         onLogin(newUser);
       } else {
         // Sign In
@@ -540,11 +597,19 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
       // silent offline registration/login so their trial behaves perfectly.
       const fallbackUser = isSignUp ? createNewSandboxUser(
         'offline_' + emailKey.replace(/[^a-zA-Z0-9]/g, ''),
-        name || 'Bernice',
+        resolvedName || 'Bernice',
         emailKey,
         'offline_companion_' + emailKey.replace(/[^a-zA-Z0-9]/g, ''),
         'Loving Companion',
-        registerRole === 'partner'
+        registerRole === 'partner',
+        firstName,
+        lastName,
+        displayName,
+        parseInt(age) || undefined,
+        dob,
+        profilePhoto || undefined,
+        country || undefined,
+        timezone
       ) : getTargetUser();
 
       localStorage.setItem('lumina_user', JSON.stringify(fallbackUser));
@@ -564,12 +629,28 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
     emailStr: string, 
     partnerId: string, 
     partnerName: string, 
-    isPartner: boolean
+    isPartner: boolean,
+    firstName?: string,
+    lastName?: string,
+    displayName?: string,
+    age?: number,
+    dob?: string,
+    profilePhoto?: string,
+    country?: string,
+    timezone?: string
   ): User => {
     return {
       id: currentId,
       name: currentName,
       email: emailStr,
+      firstName,
+      lastName,
+      displayName,
+      age,
+      dob,
+      profilePhoto,
+      country,
+      timezone,
       partnerName: '',
       partnerId: undefined,
       isPartnerLinked: false,
@@ -762,11 +843,11 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
               <div className="text-center space-y-3">
                 <span className="text-5xl animate-bounce inline-block">💞</span>
                 <h2 className="text-2xl font-serif text-pink-950 font-black tracking-tight leading-tight px-2">
-                  🌸 {inviteSenderName || 'Ella'} invited you to connect on Lumina.
+                  🌸 {inviteSenderName || 'Bernice'} invited you to join their Lumina Partner Circle.
                 </h2>
                 <div className="w-12 h-0.5 bg-gradient-to-r from-pink-400 to-rose-450 mx-auto my-2" />
                 <p className="text-xs text-gray-500 italic font-serif leading-relaxed px-1">
-                  Connect securely with your partner via <strong className="text-pink-600">Lumina Partner Mode</strong> to stay in perfect sync.
+                  Connect securely with your partner via <strong className="text-pink-600">Lumina Partner Circle</strong> to stay in perfect sync.
                 </p>
                 <div className="bg-pink-50/50 py-3 px-6 rounded-2xl border border-pink-100 inline-block">
                   <p className="text-[10px] text-pink-400 uppercase tracking-widest font-black mb-1">Invitation Code</p>
@@ -785,10 +866,10 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
                     setWelcomeStep('auth_creation');
                     setScreen('email_signup');
                   }}
-                  className="w-full py-4 bg-gradient-to-r from-pink-400 to-rose-450 hover:scale-[1.01] active:scale-95 text-white font-bold rounded-2xl text-[9px] uppercase tracking-widest shadow-md shadow-pink-150 flex items-center justify-center gap-2 cursor-pointer transition-all"
+                  className="w-full py-4 bg-gradient-to-r from-pink-400 to-rose-450 hover:scale-[1.01] active:scale-95 text-white font-bold rounded-2xl text-[10px] uppercase tracking-widest shadow-md shadow-pink-150 flex items-center justify-center gap-2 cursor-pointer transition-all"
                 >
                   <Sparkles size={13} />
-                  <span>Create Partner Account</span>
+                  <span>Create Account</span>
                 </button>
 
                 <button
@@ -798,9 +879,9 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
                     setRegisterRole('partner');
                     setScreen('email_login');
                   }}
-                  className="w-full py-4 bg-white border border-pink-100 rounded-2xl hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-3 text-pink-850 font-bold text-[9px] uppercase tracking-widest cursor-pointer shadow-sm hover:bg-rose-50/30 transition-all"
+                  className="w-full py-4 bg-white border border-pink-100 rounded-2xl hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-3 text-pink-850 font-bold text-[10px] uppercase tracking-widest cursor-pointer shadow-sm hover:bg-rose-50/30 transition-all"
                 >
-                  <span>✉️ Log In to Partner Account</span>
+                  <span>✉️ Sign In</span>
                 </button>
 
                 {onClearInvite && (
@@ -894,155 +975,43 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
 
           {/* 2. NO ACCOUNT / FIRST TIME USER */}
           {!pendingRestoreUser && screen === 'welcome' && (
-            <div className="space-y-6 animate-fadeIn">
-              {welcomeStep === 'choose_experience' ? (
-                <div className="space-y-6 animate-fadeIn">
-                  <div className="text-center space-y-2">
-                    <span className="text-4xl animate-bounce inline-block">🌸</span>
-                    <h2 className="text-2xl font-serif text-pink-950 font-black tracking-tight">Welcome to Lumina</h2>
-                    <div className="w-10 h-0.5 bg-pink-200 mx-auto my-2" />
-                    <p className="text-xs text-pink-700/80 font-serif italic max-w-xs mx-auto">
-                      Choose your experience:
-                    </p>
-                  </div>
+            <div className="space-y-8 animate-fadeIn text-center py-6">
+              <div className="space-y-3">
+                <span className="text-5xl animate-bounce inline-block">🌸</span>
+                <h2 className="text-3xl font-serif text-pink-950 font-black tracking-tight leading-tight">Welcome to Lumina</h2>
+                <div className="w-12 h-0.5 bg-gradient-to-r from-pink-300 to-rose-400 mx-auto my-1" />
+                <p className="text-xs text-pink-700 font-medium italic font-serif leading-relaxed px-1">
+                  Your cycle, your sanctuary.
+                </p>
+              </div>
 
-                  {/* Experience Selection cards */}
-                  <div className="grid grid-cols-1 gap-3.5 pt-1">
-                    <button
-                      type="button"
-                      id="btn-track-cycle"
-                      onClick={() => {
-                        setRegisterRole('tracker');
-                        setWelcomeStep('auth_creation');
-                      }}
-                      className="w-full p-4.5 bg-gradient-to-r from-pink-50 to-pink-100/30 border border-pink-200/60 rounded-2xl text-left hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer shadow-sm flex items-center gap-4 hover:border-pink-300 group"
-                    >
-                      <div className="w-10 h-10 bg-pink-400 text-white rounded-2xl flex items-center justify-center text-xl shadow-md shrink-0 group-hover:scale-105 transition-transform">
-                        🩷
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[10px] font-extrabold text-pink-900 tracking-wider uppercase">I Am Tracking My Cycle</p>
-                        <p className="text-[8px] text-pink-600/70 font-semibold uppercase tracking-wide">Personal Sanctuary</p>
-                      </div>
-                      <ChevronRight size={14} className="text-pink-400" />
-                    </button>
+              <div className="space-y-3.5 pt-4">
+                <button
+                  type="button"
+                  id="btn-welcome-signup"
+                  onClick={() => {
+                    setRegisterRole('tracker');
+                    setScreen('email_signup');
+                    setError('');
+                  }}
+                  className="w-full py-4.5 bg-gradient-to-r from-pink-400 to-rose-450 hover:scale-[1.01] active:scale-95 text-white font-bold rounded-2xl text-[10px] uppercase tracking-[0.15em] shadow-md shadow-pink-150 flex items-center justify-center gap-2 cursor-pointer transition-all"
+                >
+                  <Sparkles size={12} />
+                  <span>Create Account</span>
+                </button>
 
-                    <button
-                      type="button"
-                      id="btn-partner"
-                      onClick={() => {
-                        setRegisterRole('partner');
-                        setWelcomeStep('auth_creation');
-                      }}
-                      className="w-full p-4.5 bg-gradient-to-r from-slate-50 to-indigo-50/20 border border-pink-100/40 rounded-2xl text-left hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer shadow-sm flex items-center gap-4 hover:border-pink-300 group"
-                    >
-                      <div className="w-10 h-10 bg-white text-pink-500 border border-pink-100 rounded-2xl flex items-center justify-center text-xl shadow-md shrink-0 group-hover:scale-105 transition-transform">
-                        🤍
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[10px] font-extrabold text-pink-900 tracking-wider uppercase">I Am a Partner</p>
-                        <p className="text-[8px] text-pink-600/70 font-semibold uppercase tracking-wide">Sync & Support Companion</p>
-                      </div>
-                      <ChevronRight size={14} className="text-pink-400" />
-                    </button>
-                  </div>
-
-                  <div className="text-center pt-1.5 flex flex-col gap-3 items-center">
-                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest animate-pulse">
-                      Select experience to unlock account creation
-                    </p>
-                    <button
-                      type="button"
-                      id="btn-existing-login"
-                      onClick={() => {
-                        setScreen('email_login');
-                        setError('');
-                      }}
-                      className="text-[10px] font-sans font-bold uppercase tracking-widest text-pink-500 hover:text-pink-600 transition-colors cursor-pointer"
-                    >
-                      I Already Have an Account • Log In
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-6 animate-fadeIn">
-                  <button
-                    type="button"
-                    onClick={() => setWelcomeStep('choose_experience')}
-                    className="inline-flex items-center gap-1.5 text-[8px] font-sans font-bold uppercase tracking-widest text-pink-400 hover:text-pink-600 cursor-pointer"
-                  >
-                    <ArrowLeft size={11} /> Back to Choice
-                  </button>
-
-                  <div className="text-center space-y-2">
-                    <span className="text-3xl inline-block">🌸</span>
-                    <h2 className="text-2xl font-serif text-pink-950 font-black tracking-tight font-black">Create Sanctuary</h2>
-                    <p className="text-[9px] text-pink-500 font-bold uppercase tracking-widest bg-pink-50/50 py-1.5 px-3 rounded-full border border-pink-100/50 inline-block">
-                      Selected: {registerRole === 'partner' ? "Partner 🤍" : "Cycle Tracker 🩷"}
-                    </p>
-                  </div>
-
-                  <div className="space-y-2.5 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setScreen('email_signup');
-                        setError('');
-                      }}
-                      className="w-full py-4.5 bg-gradient-to-r from-pink-400 to-rose-450 hover:scale-[1.01] active:scale-95 text-white font-bold rounded-2xl text-[9px] uppercase tracking-widest shadow-md shadow-pink-150 flex items-center justify-center gap-2 cursor-pointer transition-all"
-                    >
-                      <Sparkles size={13} />
-                      <span>Create Account with Email</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleGoogleLogin}
-                      className="w-full py-4 bg-white border border-pink-100 rounded-2xl hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-3 text-pink-900 font-bold text-[9px] uppercase tracking-widest cursor-pointer shadow-sm hover:bg-rose-50/30 transition-all"
-                    >
-                      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-4 h-4" referrerPolicy="no-referrer" />
-                      <span>Continue with Google</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setIsAppleSheetOpen(true)}
-                      className="w-full py-4 bg-black text-white rounded-2xl hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-3 font-bold text-[9px] uppercase tracking-widest cursor-pointer shadow-sm hover:opacity-90 transition-all"
-                    >
-                      <Smartphone size={14} className="text-white fill-white" />
-                      <span>Continue with Apple (iPhone)</span>
-                    </button>
-                  </div>
-
-                  {/* Secure navigation bypass options */}
-                  <div className="flex justify-center items-center gap-4 pt-4 border-t border-pink-50/45">
-                    <button
-                      type="button"
-                      id="btn-back-login"
-                      onClick={() => {
-                        setScreen('email_login');
-                        setError('');
-                      }}
-                      className="text-[9px] font-serif font-black uppercase tracking-widest text-[#db2777] hover:text-[#be185d] cursor-pointer"
-                    >
-                      Use Existing Login ✉️
-                    </button>
-                    {(localStorage.getItem('lumina_biometric_user') || localStorage.getItem('lumina_saved_email')) && (
-                      <>
-                        <span className="text-gray-300">•</span>
-                        <button
-                          type="button"
-                          id="btn-use-biometric"
-                          onClick={() => setScreen('returning')}
-                          className="text-[9px] font-serif font-black uppercase tracking-widest text-pink-400 hover:text-pink-600 cursor-pointer"
-                        >
-                          Use Biometrics 🔑
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              )}
+                <button
+                  type="button"
+                  id="btn-welcome-signin"
+                  onClick={() => {
+                    setScreen('email_login');
+                    setError('');
+                  }}
+                  className="w-full py-4.5 bg-white border border-pink-150 rounded-2xl hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-3 text-pink-850 font-bold text-[10px] uppercase tracking-[0.15em] cursor-pointer shadow-sm hover:bg-rose-50/20 transition-all"
+                >
+                  <span>✉️ Sign In</span>
+                </button>
+              </div>
             </div>
           )}
 
@@ -1198,11 +1167,9 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
               </form>
             </div>
           )}
-
-
-          {/* 4. EMAIL SIGNUP PAGE */}
+                        {/* 4. EMAIL SIGNUP PAGE */}
           {!pendingRestoreUser && screen === 'email_signup' && (
-            <div className="space-y-4 animate-fadeIn">
+            <div className="space-y-4 animate-fadeIn w-full">
               <button
                 type="button"
                 onClick={() => setScreen('welcome')}
@@ -1216,54 +1183,165 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
                 <p className="text-[10px] text-gray-400">Nurture and align with your companion.</p>
               </div>
 
-              <form onSubmit={handleEmailFormSubmit} className="space-y-3.5 pt-1">
-                <input
-                  type="text"
-                  placeholder="FIRST & LAST NAME"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full px-5 py-4 bg-white/50 border border-pink-100/60 rounded-2xl text-[9px] font-bold tracking-widest outline-none focus:border-pink-300 transition-colors"
-                  required
-                />
-                <input
-                  type="email"
-                  placeholder="EMAIL ADDRESS"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-5 py-4 bg-white/50 border border-pink-100/60 rounded-2xl text-[9px] font-bold tracking-widest outline-none focus:border-pink-300 transition-colors"
-                  required
-                />
-                <input
-                  type="password"
-                  placeholder="CHOOSE A PASSWORD"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-5 py-4 bg-white/50 border border-pink-100/60 rounded-2xl text-[9px] font-bold tracking-widest outline-none focus:border-pink-300 transition-colors"
-                  required
-                />
+              <form onSubmit={handleEmailFormSubmit} className="space-y-4 pt-1">
+                <div className="max-h-[300px] overflow-y-auto pr-1.5 space-y-3.5">
+                  
+                  {/* Account Role */}
+                  <div className="space-y-1 bg-rose-50/30 p-2.5 rounded-2xl border border-pink-100/50">
+                    <p className="text-[7.5px] font-extrabold text-pink-400 uppercase tracking-widest text-center">Select Account Role</p>
+                    <div className="grid grid-cols-2 gap-2 bg-pink-100/30 p-1 rounded-xl border border-pink-200/40">
+                      <button
+                        type="button"
+                        onClick={() => setRegisterRole('tracker')}
+                        className={`py-1.5 text-[8px] font-bold uppercase tracking-widest rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                          registerRole === 'tracker' ? 'bg-gradient-to-r from-pink-400 to-rose-400 text-white shadow-sm' : 'text-pink-300 hover:text-pink-500'
+                        }`}
+                      >
+                        🌸 Tracker Mode
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRegisterRole('partner')}
+                        className={`py-1.5 text-[8px] font-bold uppercase tracking-widest rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                          registerRole === 'partner' ? 'bg-gradient-to-r from-pink-400 to-rose-400 text-white shadow-sm' : 'text-pink-300 hover:text-pink-500'
+                        }`}
+                      >
+                        🧸 Companion Mode
+                      </button>
+                    </div>
+                  </div>
 
-                {/* Secure Role selection for native companion experience */}
-                <div className="space-y-1.5 bg-rose-50/30 p-3.5 rounded-2xl border border-pink-100/50">
-                  <p className="text-[8px] font-bold text-pink-400 uppercase tracking-widest text-center">Select Account Role</p>
-                  <div className="grid grid-cols-2 gap-2 bg-pink-100/30 p-1.5 rounded-xl border border-pink-200/40">
-                    <button
-                      type="button"
-                      onClick={() => setRegisterRole('tracker')}
-                      className={`py-2 text-[8px] font-bold uppercase tracking-widest rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                        registerRole === 'tracker' ? 'bg-gradient-to-r from-pink-400 to-rose-400 text-white shadow-sm' : 'text-pink-300 hover:text-pink-500'
-                      }`}
-                    >
-                      🌸 Tracker Mode
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setRegisterRole('partner')}
-                      className={`py-2 text-[8px] font-bold uppercase tracking-widest rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                        registerRole === 'partner' ? 'bg-gradient-to-r from-pink-400 to-rose-400 text-white shadow-sm' : 'text-pink-300 hover:text-pink-500'
-                      }`}
-                    >
-                      🧸 Companion Mode
-                    </button>
+                  {/* Required Fields Group */}
+                  <div className="space-y-3">
+                    <p className="text-[7.5px] font-extrabold text-gray-400 uppercase tracking-widest border-b border-pink-50 pb-1">Required Information</p>
+                    
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <label className="text-[7px] font-bold text-pink-500 uppercase tracking-widest px-1">First Name</label>
+                        <input
+                          type="text"
+                          placeholder="FIRST NAME"
+                          value={firstName}
+                          onChange={(e) => setFirstName(e.target.value)}
+                          className="w-full px-4 py-3 bg-white/50 border border-pink-100/60 rounded-xl text-[9px] font-bold tracking-widest outline-none focus:border-pink-300 transition-colors"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[7px] font-bold text-pink-500 uppercase tracking-widest px-1">Last Name</label>
+                        <input
+                          type="text"
+                          placeholder="LAST NAME"
+                          value={lastName}
+                          onChange={(e) => setLastName(e.target.value)}
+                          className="w-full px-4 py-3 bg-white/50 border border-pink-100/60 rounded-xl text-[9px] font-bold tracking-widest outline-none focus:border-pink-300 transition-colors"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[7px] font-bold text-pink-500 uppercase tracking-widest px-1">Display Name</label>
+                      <input
+                        type="text"
+                        placeholder="DISPLAY NAME"
+                        value={displayName}
+                        onChange={(e) => setDisplayName(e.target.value)}
+                        className="w-full px-4 py-3 bg-white/50 border border-pink-100/60 rounded-xl text-[9px] font-bold tracking-widest outline-none focus:border-pink-300 transition-colors"
+                        required
+                      />
+                    </div>
+
+                    {registerRole !== 'partner' && (
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <label className="text-[7px] font-bold text-pink-500 uppercase tracking-widest px-1">Age</label>
+                          <input
+                            type="number"
+                            placeholder="AGE"
+                            min="1"
+                            max="120"
+                            value={age}
+                            onChange={(e) => setAge(e.target.value)}
+                            className="w-full px-4 py-3 bg-white/50 border border-pink-100/60 rounded-xl text-[9px] font-bold tracking-widest outline-none focus:border-pink-300 transition-colors"
+                            required={registerRole !== 'partner'}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[7px] font-bold text-pink-500 uppercase tracking-widest px-1">Date of Birth</label>
+                          <input
+                            type="date"
+                            value={dob}
+                            onChange={(e) => setDob(e.target.value)}
+                            className="w-full px-4 py-3 bg-white/50 border border-pink-100/60 rounded-xl text-[9px] font-bold tracking-widest outline-none focus:border-pink-300 transition-colors"
+                            required={registerRole !== 'partner'}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="space-y-1">
+                      <label className="text-[7px] font-bold text-pink-500 uppercase tracking-widest px-1">Email Address</label>
+                      <input
+                        type="email"
+                        placeholder="EMAIL ADDRESS"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full px-4 py-3 bg-white/50 border border-pink-100/60 rounded-xl text-[9px] font-bold tracking-widest outline-none focus:border-pink-300 transition-colors"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[7px] font-bold text-pink-500 uppercase tracking-widest px-1">Choose Password</label>
+                      <input
+                        type="password"
+                        placeholder="PASSWORD"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full px-4 py-3 bg-white/50 border border-pink-100/60 rounded-xl text-[9px] font-bold tracking-widest outline-none focus:border-pink-300 transition-colors"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  {/* Optional Fields Group */}
+                  <div className="space-y-3">
+                    <p className="text-[7.5px] font-extrabold text-gray-400 uppercase tracking-widest border-b border-pink-50 pb-1">Optional Details</p>
+                    
+                    <div className="space-y-1">
+                      <label className="text-[7px] font-bold text-gray-400 uppercase tracking-widest px-1">Profile Photo URL</label>
+                      <input
+                        type="url"
+                        placeholder="https://example.com/photo.jpg"
+                        value={profilePhoto}
+                        onChange={(e) => setProfilePhoto(e.target.value)}
+                        className="w-full px-4 py-3 bg-white/50 border border-pink-100/60 rounded-xl text-[9px] font-bold tracking-widest outline-none focus:border-pink-300 transition-colors"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <label className="text-[7px] font-bold text-gray-400 uppercase tracking-widest px-1">Country</label>
+                        <input
+                          type="text"
+                          placeholder="COUNTRY"
+                          value={country}
+                          onChange={(e) => setCountry(e.target.value)}
+                          className="w-full px-4 py-3 bg-white/50 border border-pink-100/60 rounded-xl text-[9px] font-bold tracking-widest outline-none focus:border-pink-300 transition-colors"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[7px] font-bold text-gray-400 uppercase tracking-widest px-1">Time Zone</label>
+                        <input
+                          type="text"
+                          placeholder="UTC"
+                          value={timezone}
+                          onChange={(e) => setTimezone(e.target.value)}
+                          className="w-full px-4 py-3 bg-white/50 border border-pink-100/60 rounded-xl text-[9px] font-bold tracking-widest outline-none focus:border-pink-300 transition-colors"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
 

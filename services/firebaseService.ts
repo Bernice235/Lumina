@@ -31,8 +31,13 @@ function cleanUndefined<T>(obj: T): T {
   return newObj;
 }
 
+const isSandboxId = (id?: string | null): boolean => {
+  if (!id) return false;
+  return id.startsWith('sandbox_') || id.startsWith('offline_');
+};
+
 export const syncUser = async (user: User) => {
-  if (user.id.startsWith('sandbox_')) {
+  if (isSandboxId(user.id)) {
     localStorage.setItem(`lumina_user_${user.id}`, JSON.stringify(user));
     // Trigger real-time storage event for local updates
     window.dispatchEvent(new StorageEvent('storage', {
@@ -50,7 +55,7 @@ export const syncUser = async (user: User) => {
 };
 
 export const subscribeToUser = (userId: string, callback: (user: User | null) => void) => {
-  if (userId.startsWith('sandbox_')) {
+  if (isSandboxId(userId)) {
     const localData = localStorage.getItem(`lumina_user_${userId}`);
     callback(localData ? JSON.parse(localData) : null);
 
@@ -75,7 +80,7 @@ export const subscribeToUser = (userId: string, callback: (user: User | null) =>
 };
 
 export const createInvite = async (userId: string, userName: string, userEmail?: string) => {
-  if (userId.startsWith('sandbox_')) {
+  if (isSandboxId(userId)) {
     const code = Math.random().toString(36).substr(2, 6).toUpperCase();
     const inviteData = {
       code,
@@ -104,7 +109,7 @@ export const createInvite = async (userId: string, userName: string, userEmail?:
 };
 
 export const acceptInvite = async (code: string, currentUserId: string, currentUserName: string) => {
-  if (currentUserId.startsWith('sandbox_')) {
+  if (isSandboxId(currentUserId)) {
     const inviteSnap = localStorage.getItem(`lumina_invite_${code}`);
     if (!inviteSnap) {
       throw new Error("Invalid or expired code. ❌");
@@ -173,7 +178,7 @@ export const acceptInvite = async (code: string, currentUserId: string, currentU
 };
 
 export const disconnectPartner = async (userId: string, partnerId: string) => {
-  if (userId.startsWith('sandbox_')) {
+  if (isSandboxId(userId)) {
     const userRaw = localStorage.getItem(`lumina_user_${userId}`);
     if (userRaw) {
       const u = JSON.parse(userRaw);
@@ -219,7 +224,7 @@ export const disconnectPartner = async (userId: string, partnerId: string) => {
 };
 
 export const sendGift = async (senderName: string, senderId: string, receiverId: string, type: string) => {
-  if (senderId.startsWith('sandbox_') || receiverId.startsWith('sandbox_')) {
+  if (isSandboxId(senderId) || isSandboxId(receiverId)) {
     const giftId = Math.random().toString(36).substr(2, 9);
     const giftObj = {
       id: giftId,
@@ -256,7 +261,7 @@ export const sendGift = async (senderName: string, senderId: string, receiverId:
 };
 
 export const subscribeToGifts = (userId: string, callback: (gifts: ReceivedComfort[]) => void) => {
-  if (userId.startsWith('sandbox_')) {
+  if (isSandboxId(userId)) {
     const localGifts = localStorage.getItem(`lumina_gifts_${userId}`);
     callback(localGifts ? JSON.parse(localGifts) : []);
     
@@ -291,7 +296,7 @@ export interface DPartnerRequest {
 }
 
 export const subscribeToPartnerRequests = (roleId: string, role: 'user' | 'partner', callback: (requests: DPartnerRequest[]) => void) => {
-  if (roleId.startsWith('sandbox_')) {
+  if (isSandboxId(roleId)) {
     const getLocalRequests = () => {
       try {
         const saved = localStorage.getItem('lumina_partner_requests');
@@ -333,7 +338,7 @@ export const subscribeToPartnerRequests = (roleId: string, role: 'user' | 'partn
 };
 
 export const submitPartnerRequest = async (userId: string, partnerId: string, partnerName: string, partnerEmail: string, requestedPermissions: string[]) => {
-  const isSandbox = userId.startsWith('sandbox_') || partnerId.startsWith('sandbox_');
+  const isSandbox = isSandboxId(userId) || isSandboxId(partnerId);
   const request_id = isSandbox ? Math.random().toString(36).substr(2, 9) : `${userId}_${partnerId}`;
   
   const requestData: DPartnerRequest = {
@@ -371,7 +376,7 @@ export const submitPartnerRequest = async (userId: string, partnerId: string, pa
 };
 
 export const updatePartnerRequestStatus = async (requestId: string, status: 'approved' | 'declined') => {
-  const isSandbox = requestId.length < 15 || requestId.startsWith('sandbox_');
+  const isSandbox = requestId.length < 15 || isSandboxId(requestId);
   
   if (isSandbox) {
     const saved = localStorage.getItem('lumina_partner_requests');
@@ -394,7 +399,7 @@ export const updatePartnerRequestStatus = async (requestId: string, status: 'app
 };
 
 export const getInvite = async (code: string) => {
-  if (code.startsWith('sandbox_') || localStorage.getItem(`lumina_invite_${code}`)) {
+  if (isSandboxId(code) || localStorage.getItem(`lumina_invite_${code}`)) {
     const inviteSnap = localStorage.getItem(`lumina_invite_${code}`);
     return inviteSnap ? JSON.parse(inviteSnap) : null;
   }
@@ -411,7 +416,7 @@ export const getInvite = async (code: string) => {
 };
 
 export const completePartnerConnection = async (userId: string, partnerId: string, partnerName: string, userName: string) => {
-  const isSandbox = userId.startsWith('sandbox_') || partnerId.startsWith('sandbox_');
+  const isSandbox = isSandboxId(userId) || isSandboxId(partnerId);
   if (isSandbox) {
     const saved = localStorage.getItem('lumina_partner_requests');
     const list = saved ? JSON.parse(saved) : [];
@@ -441,9 +446,58 @@ export const completePartnerConnection = async (userId: string, partnerId: strin
   }
 };
 
+export const getCleanName = (name: string | undefined | null, email: string | undefined | null): string => {
+  const isPlaceholder = (n: string | undefined | null) => {
+    if (!n) return true;
+    const lower = n.toLowerCase().trim();
+    return lower === '' || lower === 'ella' || lower === 'demo user' || lower === 'test user' || lower === 'bloom member' || lower === 'null' || lower === 'undefined';
+  };
+
+  // 1. If we have a valid name
+  if (name && !isPlaceholder(name)) {
+    const cleanStr = name.trim();
+    const firstWord = cleanStr.split(/[\s,.-]+/)[0];
+    if (firstWord && !isPlaceholder(firstWord)) {
+      return firstWord.charAt(0).toUpperCase() + firstWord.slice(1).toLowerCase();
+    }
+    return cleanStr;
+  }
+
+  // 2. If we have an email
+  if (email && email.includes('@')) {
+    const lowerEmail = email.toLowerCase();
+    if (lowerEmail.includes('bernice')) {
+      return 'Bernice';
+    }
+    const part = email.split('@')[0];
+    if (part) {
+      // Split by any non-alphabetic characters
+      const cleanPart = part.replace(/[^a-zA-Z]/g, ' ');
+      // Split camelCase or adjacent uppercase-lowercase boundaries
+      const camelSplit = cleanPart.replace(/([a-z])([A-Z])/g, '$1 $2')
+                                  .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2');
+      const words = camelSplit.trim().split(/\s+/);
+      const firstWord = words[0];
+      if (firstWord && !isPlaceholder(firstWord)) {
+        return firstWord.charAt(0).toUpperCase() + firstWord.slice(1).toLowerCase();
+      }
+    }
+  }
+
+  return '';
+};
+
 export const getUserDisplayName = (user: { name?: string; email?: string } | null | undefined) => {
   if (!user) return 'Bernice';
-  return getCleanName(user.name, user.email);
+  const clean = getCleanName(user.name, user.email);
+  return clean || 'Bernice';
+};
+
+export const getSanctuaryTitle = (userOrPartner: { name?: string; email?: string } | null | undefined): string => {
+  if (!userOrPartner) return "Your Partner's Sanctuary 🌸";
+  const name = getCleanName(userOrPartner.name, userOrPartner.email);
+  if (!name) return "Your Partner's Sanctuary 🌸";
+  return `${name}'s Sanctuary 🌸`;
 };
 
 

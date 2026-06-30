@@ -21,7 +21,7 @@ import DoctorReport from './components/DoctorReport';
 import { CycleGraph } from './components/CycleGraph';
 import { playWelcomeVoice } from './services/gemini';
 import { THEMES, SONGS } from './constants';
-import { syncUser, subscribeToGifts, subscribeToUser, acceptInvite, subscribeToPartnerRequests } from './services/firebaseService';
+import { syncUser, subscribeToGifts, subscribeToUser, acceptInvite, subscribeToPartnerRequests, getCleanName } from './services/firebaseService';
 import { getDefaultNotificationSettings } from './services/notificationService';
 import { auth } from './services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -1185,7 +1185,7 @@ const App: React.FC = () => {
   const currentTrack = fullLibrary[currentSongIndex];
 
   return (
-    <div className={`min-h-screen pb-28 ${currentThemeData.bg} selection:bg-pink-100 transition-colors duration-500`}>
+    <div className={`min-h-screen pb-28 ${user?.darkMode ? 'dark-mode bg-[#12100e]' : currentThemeData.bg} selection:bg-pink-100 transition-colors duration-500`}>
       <audio 
         ref={audioRef}
         src={currentTrack?.source === 'internal' ? currentTrack.url : undefined} 

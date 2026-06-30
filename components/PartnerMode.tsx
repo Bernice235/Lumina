@@ -14,7 +14,9 @@ import {
   submitPartnerRequest,
   updatePartnerRequestStatus,
   completePartnerConnection,
-  getUserDisplayName
+  getUserDisplayName,
+  getCleanName,
+  getSanctuaryTitle
 } from '../services/firebaseService';
 
 interface PartnerModeProps {
@@ -658,10 +660,10 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
             <div className="text-center space-y-6 animate-fadeIn py-6">
               <div className="w-24 h-24 bg-pink-100 rounded-full flex items-center justify-center text-5xl mx-auto shadow-inner animate-pulse">🌸</div>
               <h2 className="text-3xl font-serif italic text-pink-900 leading-tight">
-                {user.partnerName || 'Your partner'} invited you to connect on Lumina
+                {getCleanName(user.partnerName, user.partnerEmail) || 'Your partner'} invited you to connect on Lumina
               </h2>
               <p className="text-sm text-pink-500 leading-relaxed max-w-sm mx-auto">
-                You are about to connect safely as {user.partnerName || 'their'}'s Partner. First, complete your companion connection permission setup.
+                You are about to connect safely as {getCleanName(user.partnerName, user.partnerEmail) || 'your partner'}'s Partner. First, complete your companion connection permission setup.
               </p>
               <button 
                 onClick={() => setPartnerStep(2)}
@@ -682,13 +684,12 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
 
               <div className="max-h-[300px] overflow-y-auto pr-2 space-y-2 border border-pink-50/50 p-4 rounded-3xl bg-pink-50/5">
                 {[
-                  "Cycle status",
-                  "Period predictions",
-                  "Mood updates",
-                  "Symptoms",
-                  "Cravings",
-                  "Wellness insights",
-                  "Journal access (optional)"
+                  "Period Updates",
+                  "Fertility Updates",
+                  "Ovulation Updates",
+                  "Pregnancy Updates",
+                  "Mood Updates",
+                  "Wellness Updates"
                 ].map((item) => {
                   const isChecked = requestedReceives.includes(item);
                   return (
@@ -757,9 +758,9 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
           {partnerStep === 3 && (
             <div className="text-center space-y-6 animate-fadeIn py-6">
               <div className="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center text-3xl mx-auto shadow-inner animate-pulse">📨</div>
-              <h2 className="text-3xl font-serif italic text-indigo-900 leading-tight">Request Sent!</h2>
+              <h2 className="text-2xl font-serif italic text-indigo-900 leading-tight">Connection request sent to {user.partnerName || 'your partner'}.</h2>
               <div className="space-y-2 max-w-sm mx-auto">
-                <p className="text-sm text-indigo-500 leading-relaxed">
+                <p className="text-xs text-indigo-500 leading-relaxed">
                   We have sent your connection and privacy request to <span className="font-bold text-indigo-900">{user.partnerName || 'your partner'}</span>!
                 </p>
                 <p className="text-xs text-indigo-400 italic">
@@ -778,7 +779,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
 
               <div className="flex items-center justify-center gap-2 py-4">
                 <div className="w-2 h-2 bg-indigo-600 rounded-full animate-ping"></div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Waiting for {user.partnerName || 'partner'} approval...</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Waiting for approval from {user.partnerName || 'your partner'}.</span>
               </div>
 
               <button
@@ -809,7 +810,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
               <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center text-5xl mx-auto shadow-inner animate-bounce">🎉</div>
               <h2 className="text-3xl font-serif italic text-green-900">Request Approved!</h2>
               <p className="text-sm text-green-700 leading-relaxed max-w-sm mx-auto">
-                <span className="font-bold">{user.partnerName}</span> has approved and completed setting up your custom sharing permissions! Let's enter your companion workspace.
+                <span className="font-bold">{getCleanName(user.partnerName, user.partnerEmail) || 'Your partner'}</span> has approved and completed setting up your custom sharing permissions! Let's enter your companion workspace.
               </p>
               <button 
                 onClick={async () => {
@@ -1769,7 +1770,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
             <span className="text-5xl block animate-bounce">⏸️</span>
             <h2 className="text-3xl font-serif italic">Sharing Temporarily Paused</h2>
             <p className="text-sm opacity-90 max-w-sm mx-auto font-medium">
-              {targetUser?.name || 'Your partner'} has temporarily paused data sharing. We respect her privacy choices.
+              {getCleanName(targetUser?.name, targetUser?.email) || 'Your partner'} has temporarily paused data sharing. We respect her privacy choices.
             </p>
             <div className="pt-2">
               <span className="px-4 py-1.5 bg-white/15 rounded-full text-[10px] font-black uppercase tracking-widest border border-white/10">Active Pause Guard 🔒</span>
@@ -1812,8 +1813,12 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                 🛡️
               </div>
               <div>
-                <h2 className="text-4xl font-serif italic tracking-tight">{targetUser?.name}'s Sanctuary</h2>
-                <p className="text-sm opacity-80 font-medium">Supporting {targetUser?.name}'s bloom</p>
+                <h2 className="text-4xl font-serif italic tracking-tight">
+                  {getSanctuaryTitle(targetUser)}
+                </h2>
+                <p className="text-sm opacity-80 font-medium">
+                  Supporting {getCleanName(targetUser?.name, targetUser?.email) || "your partner"}'s bloom
+                </p>
               </div>
             </div>
             
@@ -1847,7 +1852,9 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
       {/* Cycle Overview Card */}
       <section className="bg-white p-8 rounded-[3rem] shadow-sm border border-indigo-50 space-y-6">
         <div className="flex items-center justify-between">
-          <h3 className="text-2xl font-serif text-indigo-600 italic">{targetUser?.name}'s Cycle</h3>
+          <h3 className="text-2xl font-serif text-indigo-600 italic">
+            {getCleanName(targetUser?.name, targetUser?.email) || "Your Partner"}'s Cycle
+          </h3>
           <button 
             onClick={() => setUser({ ...user, isPartner: false })}
             className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest"
@@ -2068,7 +2075,9 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
       )}
       {activeTab === 'calendar' && (
         <section className="bg-white p-8 rounded-[3rem] shadow-sm border border-indigo-50 animate-fadeIn">
-          <h3 className="text-2xl font-serif text-indigo-600 italic mb-6">{targetUser?.name}'s Calendar</h3>
+          <h3 className="text-2xl font-serif text-indigo-600 italic mb-6">
+            {getCleanName(targetUser?.name, targetUser?.email) || "Your Partner"}'s Calendar
+          </h3>
           <div className="p-6 bg-indigo-50/30 rounded-[2rem] border border-indigo-50 text-center">
             <p className="text-sm text-indigo-900 font-serif italic mb-4">Upcoming Period Days: April 12 - April 17</p>
             <div className="grid grid-cols-7 gap-2">

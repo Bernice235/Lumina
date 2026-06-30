@@ -64,3 +64,154 @@
         transform: scale(0.98) !important;
     }
 }
+
+/* Premium Dark Sanctuary Mode */
+.dark-mode {
+  background-color: #12100e !important;
+  color: #e7e5e4 !important;
+}
+
+/* Header & Navigation Overrides */
+.dark-mode header {
+  background-color: rgba(28, 25, 23, 0.85) !important;
+  border-color: #2e2a24 !important;
+}
+
+/* Card, Dialog & Section Containers */
+.dark-mode .bg-white,
+.dark-mode section,
+.dark-mode [class*="bg-white/80"],
+.dark-mode .bg-white\/80 {
+  background-color: #1c1917 !important;
+  border-color: #312e2b !important;
+  color: #e7e5e4 !important;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Soft Accent / Nested Backgrounds (rose-50, pink-50, etc.) */
+.dark-mode .bg-pink-50,
+.dark-mode .bg-pink-50\/50,
+.dark-mode .bg-rose-50,
+.dark-mode .bg-rose-50\/30,
+.dark-mode .bg-purple-50,
+.dark-mode .bg-purple-50\/50,
+.dark-mode .bg-teal-50,
+.dark-mode .bg-teal-50\/50,
+.dark-mode .bg-orange-50,
+.dark-mode .bg-orange-50\/50 {
+  background-color: #262220 !important;
+  border-color: #3a3530 !important;
+  color: #f5f5f4 !important;
+}
+
+/* Form Controls & Inputs */
+.dark-mode input,
+.dark-mode textarea,
+.dark-mode select {
+  background-color: #262220 !important;
+  color: #f5f5f4 !important;
+  border-color: #3d3730 !important;
+}
+
+.dark-mode input::placeholder,
+.dark-mode textarea::placeholder {
+  color: #78716c !important;
+}
+
+/* Headings and Main Text */
+.dark-mode h1,
+.dark-mode h2,
+.dark-mode h3,
+.dark-mode h4,
+.dark-mode h5,
+.dark-mode h6,
+.dark-mode .text-gray-900,
+.dark-mode .text-gray-800,
+.dark-mode .text-pink-950,
+.dark-mode .text-pink-900,
+.dark-mode .text-pink-850,
+.dark-mode .text-pink-800,
+.dark-mode .text-purple-950,
+.dark-mode .text-purple-900,
+.dark-mode .text-teal-950,
+.dark-mode .text-teal-900 {
+  color: #f5f5f4 !important;
+}
+
+/* Body / Secondary Text */
+.dark-mode p,
+.dark-mode span:not([class*="bg-"]),
+.dark-mode label,
+.dark-mode .text-gray-700,
+.dark-mode .text-gray-600,
+.dark-mode .text-pink-700,
+.dark-mode .text-pink-600,
+.dark-mode .text-purple-700,
+.dark-mode .text-purple-600,
+.dark-mode .text-teal-700,
+.dark-mode .text-teal-600 {
+  color: #d6d3d1 !important;
+}
+
+/* Subtle Metadata / Muted Text */
+.dark-mode .text-gray-500,
+.dark-mode .text-gray-400,
+.dark-mode .text-pink-400,
+.dark-mode .text-purple-400,
+.dark-mode .text-teal-400 {
+  color: #a8a29e !important;
+}
+
+/* Border color replacements */
+.dark-mode .border-pink-50,
+.dark-mode .border-pink-100,
+.dark-mode .border-pink-200,
+.dark-mode .border-rose-100,
+.dark-mode .border-rose-200,
+.dark-mode .border-purple-50,
+.dark-mode .border-purple-100,
+.dark-mode .border-teal-50,
+.dark-mode .border-teal-100,
+.dark-mode .border-orange-100 {
+  border-color: #312e2b !important;
+}
+
+/* Text and Background Accents adaptation for low-light strain */
+.dark-mode .text-pink-500 {
+  color: #fda4af !important; /* Soft rose pink */
+}
+.dark-mode .text-purple-500 {
+  color: #d8b4fe !important; /* Soft lavender purple */
+}
+.dark-mode .text-teal-500 {
+  color: #99f6e4 !important; /* Soft mint teal */
+}
+.dark-mode .text-orange-400 {
+  color: #ffedd5 !important; /* Soft peach orange */
+}
+
+.dark-mode .border-pink-500 { border-color: #fda4af !important; }
+.dark-mode .border-purple-500 { border-color: #d8b4fe !important; }
+.dark-mode .border-teal-500 { border-color: #99f6e4 !important; }
+
+/* Keep glowing buttons radiant but elegant */
+.dark-mode button[class*="from-pink-500"] {
+  background-image: linear-gradient(to right, #f43f5e, #fb7185) !important;
+  color: #ffffff !important;
+}
+
+/* Make sure scrollbars match dark theme */
+.dark-mode ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.dark-mode ::-webkit-scrollbar-track {
+  background: #12100e;
+}
+.dark-mode ::-webkit-scrollbar-thumb {
+  background: #312e2b;
+  border-radius: 3px;
+}
+.dark-mode ::-webkit-scrollbar-thumb:hover {
+  background: #44403c;
+}

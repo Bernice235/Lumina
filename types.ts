@@ -58,6 +58,14 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  firstName?: string;
+  lastName?: string;
+  displayName?: string;
+  age?: number;
+  dob?: string;
+  profilePhoto?: string;
+  country?: string;
+  timezone?: string;
   partnerName: string;
   partnerId?: string;
   partnerCode?: string;
@@ -73,6 +81,7 @@ export interface User {
   deliveryDate?: string;
   diaryPin?: string;
   theme: AppTheme;
+  darkMode?: boolean;
   periodDates?: string[];
   periodLogs?: PeriodLog[];
   periods?: Period[];
@@ -93,6 +102,7 @@ export interface User {
   sharingSettings: SharingSettings;
   partnerRequest?: PartnerRequest;
   waterGoal?: number;
+  wellnessPreferences?: string[];
   notificationSettings?: NotificationSettings;
   pregnancyAppointments?: { id: string; date: string; title: string; notes?: string }[];
   pregnancySupplements?: string[];
