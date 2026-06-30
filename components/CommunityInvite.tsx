@@ -191,11 +191,11 @@ export const CommunityInvite: React.FC<CommunityInviteProps> = ({ user }) => {
               </div>
 
               {/* QR Code Container styled strictly to match mobile limits */}
-              <div className="bg-white p-4 rounded-[2rem] border border-pink-100 shadow-lg w-full max-w-[300px] min-w-[220px] aspect-square flex items-center justify-center overflow-hidden mx-auto">
+              <div className="qr-code-container bg-white p-4 rounded-[2rem] border border-pink-100 shadow-lg w-full max-w-[260px] aspect-square flex items-center justify-center overflow-hidden mx-auto">
                 <img 
                   src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&color=db2777&data=${encodeURIComponent(inviteLink)}`} 
                   alt="My Personal Lumina Referral QR Code"
-                  className="w-full h-auto max-w-[250px] aspect-square mx-auto block object-contain"
+                  className="w-full h-full object-contain block"
                   referrerPolicy="no-referrer"
                 />
               </div>

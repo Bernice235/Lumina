@@ -12,7 +12,7 @@ interface OnboardingWizardProps {
 
 export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUser, onComplete }) => {
   const [step, setStep] = useState(1);
-  const totalSteps = 6;
+  const totalSteps = 7;
 
   // Local values prefilled with user defaults
   const [cycleLength, setCycleLength] = useState(user.cycleLength || 28);
@@ -478,6 +478,91 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                 </div>
               </motion.div>
             )}
+
+            {step === 7 && (
+              <motion.div
+                key="step7"
+                initial="enter"
+                animate="center"
+                exit="exit"
+                variants={variants}
+                transition={{ duration: 0.3 }}
+                className="space-y-6 animate-fadeIn"
+              >
+                <div className="space-y-2 text-center">
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-pink-100 text-pink-600 mb-2">
+                    <Sparkles size={24} className="animate-pulse" />
+                  </div>
+                  <h1 className="text-3xl font-serif italic text-pink-900 leading-tight">
+                    Your Cycle Setup Summary ✨
+                  </h1>
+                  <p className="text-xs text-gray-400 font-medium leading-relaxed max-w-sm mx-auto">
+                    Here is a summary of your customized cycle plan. Everything is tailored to your unique rhythm.
+                  </p>
+                </div>
+
+                <div className="bg-pink-50/30 border border-pink-100/50 p-5 rounded-3xl space-y-4 text-xs max-h-[280px] overflow-y-auto">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-white p-3 rounded-2xl border border-pink-100/30 shadow-sm">
+                      <p className="text-[9px] uppercase font-bold text-pink-500 tracking-wider">Last Period Start</p>
+                      <p className="font-bold text-gray-700 mt-1">
+                        {new Date(lastPeriodStart).toLocaleDateString(undefined, {
+                          month: 'long',
+                          day: 'numeric',
+                          year: 'numeric'
+                        })}
+                      </p>
+                    </div>
+                    <div className="bg-white p-3 rounded-2xl border border-pink-100/30 shadow-sm">
+                      <p className="text-[9px] uppercase font-bold text-pink-500 tracking-wider">Cycle & Flow</p>
+                      <p className="font-bold text-gray-700 mt-1">
+                        {cycleLength} days / {periodLength} days
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-3 rounded-2xl border border-pink-100/30 shadow-sm flex items-center justify-between">
+                    <div>
+                      <p className="text-[9px] uppercase font-bold text-pink-500 tracking-wider">Tracking Mode</p>
+                      <p className="font-bold text-gray-700 mt-0.5">
+                        {isPregnancyMode ? '🍼 Pregnancy Mode' : '🌸 Regular Cycle Tracking'}
+                      </p>
+                    </div>
+                    <span className={`text-[8px] font-bold uppercase px-2 py-1 rounded-full ${
+                      isPregnancyMode ? 'bg-indigo-50 text-indigo-600 border border-indigo-100' : 'bg-pink-50 text-pink-600 border border-pink-100'
+                    }`}>
+                      Active
+                    </span>
+                  </div>
+
+                  {wellnessPrefs.length > 0 && (
+                    <div className="bg-white p-3 rounded-2xl border border-pink-100/30 shadow-sm space-y-2">
+                      <p className="text-[9px] uppercase font-bold text-pink-500 tracking-wider">Wellness Preferences</p>
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {wellnessPrefs.map((pref) => (
+                          <span key={pref} className="text-[9px] font-semibold bg-pink-50 text-pink-700 border border-pink-100 px-2 py-0.5 rounded-lg">
+                            {pref}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {notificationPrefs.length > 0 && (
+                    <div className="bg-white p-3 rounded-2xl border border-pink-100/30 shadow-sm space-y-2">
+                      <p className="text-[9px] uppercase font-bold text-pink-500 tracking-wider">Notification Subscriptions</p>
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {notificationPrefs.map((pref) => (
+                          <span key={pref} className="text-[9px] font-semibold bg-amber-50 text-amber-700 border border-amber-100 px-2 py-0.5 rounded-lg">
+                            {pref}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
           </AnimatePresence>
         </div>
 
@@ -514,7 +599,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
             {step === totalSteps ? (
               <>
                 <Sparkles size={11} className="animate-spin-slow" />
-                Enter Sanctuary
+                Continue to Dashboard
               </>
             ) : (
               <>

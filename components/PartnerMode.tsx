@@ -1008,13 +1008,13 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                       </button>
 
                       {showQRCode && (
-                        <div className="bg-amber-50/10 border border-amber-100/50 p-4 sm:p-6 rounded-3xl text-center space-y-4 animate-slideDown flex flex-col items-center justify-center">
+                        <div className="bg-amber-50/10 border border-amber-100/50 p-4 sm:p-6 rounded-3xl text-center space-y-4 animate-slideDown flex flex-col items-center justify-center w-full">
                           <p className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">Lumina Scan Invitation</p>
-                          <div className="bg-white p-3 sm:p-4 rounded-2xl border border-amber-100 shadow-md w-full max-w-[320px] mx-auto overflow-hidden flex items-center justify-center">
+                          <div className="qr-code-container bg-white p-4 rounded-2xl border border-amber-100 shadow-md w-full max-w-[260px] aspect-square flex items-center justify-center overflow-hidden mx-auto">
                             <img 
                               src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&color=db2777&data=${encodeURIComponent(inviteLink)}`} 
                               alt="Lumina Partner Invitation QR Code"
-                              className="w-full h-auto max-w-[250px] aspect-square mx-auto block object-contain"
+                              className="w-full h-full object-contain block"
                               referrerPolicy="no-referrer"
                             />
                           </div>
@@ -1641,13 +1641,13 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
               </div>
 
               {showQRCode && (
-                <div className="bg-amber-50/10 border border-amber-100/50 p-4 sm:p-6 rounded-3xl text-center space-y-4 animate-slideDown flex flex-col items-center justify-center">
+                <div className="bg-amber-50/10 border border-amber-100/50 p-4 sm:p-6 rounded-3xl text-center space-y-4 animate-slideDown flex flex-col items-center justify-center w-full">
                   <p className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">Lumina Scan Invitation</p>
-                  <div className="bg-white p-3 sm:p-4 rounded-2xl border border-amber-100 shadow-md w-full max-w-[320px] mx-auto overflow-hidden flex items-center justify-center">
+                  <div className="qr-code-container bg-white p-4 rounded-2xl border border-amber-100 shadow-md w-full max-w-[260px] aspect-square flex items-center justify-center overflow-hidden mx-auto">
                     <img 
                       src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&color=db2777&data=${encodeURIComponent(inviteLink)}`} 
                       alt="Lumina Partner Invitation QR Code"
-                      className="w-full h-auto max-w-[250px] aspect-square mx-auto block object-contain"
+                      className="w-full h-full object-contain block"
                       referrerPolicy="no-referrer"
                     />
                   </div>

@@ -362,7 +362,8 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
           shareAppointmentReminders: false,
           shareWellnessUpdates: false
         },
-        waterGoal: 8
+        waterGoal: 8,
+        onboardingCompleted: false
       };
 
       await syncUser(newUser);

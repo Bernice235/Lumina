@@ -215,3 +215,17 @@
 .dark-mode ::-webkit-scrollbar-thumb:hover {
   background: #44403c;
 }
+
+/* QR Code Container Alignment & Centering */
+.qr-code-container {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  float: none !important;
+  position: relative !important;
+  left: auto !important;
+  right: auto !important;
+}
+
