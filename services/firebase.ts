@@ -1,10 +1,18 @@
 import { initializeApp } from 'firebase/app';
 import { initializeAuth, indexedDBLocalPersistence, browserLocalPersistence, browserSessionPersistence } from 'firebase/auth';
-import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, getDocFromServer } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+
+// Initialize Firestore with robust local caching.
+// This ensures that even if Cloud Firestore is temporarily unreachable (due to sandbox network isolation or first-time setup delay),
+// the application continues to run flawlessly in offline mode, storing and serving data locally.
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({
+    tabManager: persistentMultipleTabManager()
+  })
+}, firebaseConfig.firestoreDatabaseId);
 
 // Initialize Firebase Auth with a robust chain of local persistence managers.
 // This allows the app to store authentication tokens directly under the first-party origin (e.g. *.run.app)

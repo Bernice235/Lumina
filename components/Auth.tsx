@@ -372,12 +372,8 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
       handleSaveCredentials(newUser.email, 'google_sim', newUser.name);
       onLogin(newUser);
     } catch (fbErr: any) {
-      console.warn("Google Login failed or blocked. Automatically launching in local mode:", fbErr);
-      // Seamless silent fallback to direct offline login
-      const fallbackUser = getTargetUser();
-      localStorage.setItem('lumina_user', JSON.stringify(fallbackUser));
-      localStorage.setItem('lumina_biometric_user', JSON.stringify(fallbackUser));
-      onLogin(fallbackUser);
+      console.warn("Google Login failed or was cancelled:", fbErr);
+      setError("Google Sign-In could not be completed. Please try again or use email sign-in below. 🌸");
     } finally {
       setLoading(false);
     }
@@ -402,7 +398,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
         periodLength: 5,
         lastPeriodStart: new Date().toISOString(),
         isPregnancyMode: false,
-        onboardingCompleted: true,
+        onboardingCompleted: false,
         diaryPin: '1234',
         theme: 'rose',
         favoriteSongs: [],
@@ -493,13 +489,31 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
         onLogin(offlineUser);
         setLoading(false);
       } else {
-        // Simple local match
+        // Simple local match with strict email isolation check
         const localUser = getTargetUser();
-        localStorage.setItem('lumina_user', JSON.stringify(localUser));
-        localStorage.setItem('lumina_biometric_user', JSON.stringify(localUser));
-        handleSaveCredentials(emailKey, password, localUser.name);
-        onLogin(localUser);
-        setLoading(false);
+        if (localUser && localUser.email && localUser.email.toLowerCase().trim() === emailKey) {
+          localStorage.setItem('lumina_user', JSON.stringify(localUser));
+          localStorage.setItem('lumina_biometric_user', JSON.stringify(localUser));
+          handleSaveCredentials(emailKey, password, localUser.name);
+          onLogin(localUser);
+          setLoading(false);
+        } else {
+          // Since no local account with matching email exists, create a brand-new isolated sandbox
+          const offlineUser = createNewSandboxUser(
+            'offline_' + emailKey.replace(/[^a-zA-Z0-9]/g, ''),
+            'Bernice',
+            emailKey,
+            'offline_companion_' + emailKey.replace(/[^a-zA-Z0-9]/g, ''),
+            'Loving Companion',
+            registerRole === 'partner',
+            '', '', '', undefined, '', undefined, undefined, timezone
+          );
+          localStorage.setItem('lumina_user', JSON.stringify(offlineUser));
+          localStorage.setItem('lumina_biometric_user', JSON.stringify(offlineUser));
+          handleSaveCredentials(emailKey, password, offlineUser.name);
+          onLogin(offlineUser);
+          setLoading(false);
+        }
       }
       return;
     }
@@ -596,22 +610,41 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
 
       // If network, cookie block, or CORS blocked inside preview sandboxes, we perform a gorgeous, 
       // silent offline registration/login so their trial behaves perfectly.
-      const fallbackUser = isSignUp ? createNewSandboxUser(
-        'offline_' + emailKey.replace(/[^a-zA-Z0-9]/g, ''),
-        resolvedName || 'Bernice',
-        emailKey,
-        'offline_companion_' + emailKey.replace(/[^a-zA-Z0-9]/g, ''),
-        'Loving Companion',
-        registerRole === 'partner',
-        firstName,
-        lastName,
-        displayName,
-        parseInt(age) || undefined,
-        dob,
-        profilePhoto || undefined,
-        country || undefined,
-        timezone
-      ) : getTargetUser();
+      let fallbackUser: User;
+      if (isSignUp) {
+        fallbackUser = createNewSandboxUser(
+          'offline_' + emailKey.replace(/[^a-zA-Z0-9]/g, ''),
+          resolvedName || 'Bernice',
+          emailKey,
+          'offline_companion_' + emailKey.replace(/[^a-zA-Z0-9]/g, ''),
+          'Loving Companion',
+          registerRole === 'partner',
+          firstName,
+          lastName,
+          displayName,
+          parseInt(age) || undefined,
+          dob,
+          profilePhoto || undefined,
+          country || undefined,
+          timezone
+        );
+      } else {
+        const cachedUser = getTargetUser();
+        if (cachedUser && cachedUser.email && cachedUser.email.toLowerCase().trim() === emailKey) {
+          fallbackUser = cachedUser;
+        } else {
+          // No local account with matching email exists, create a brand-new isolated sandbox
+          fallbackUser = createNewSandboxUser(
+            'offline_' + emailKey.replace(/[^a-zA-Z0-9]/g, ''),
+            'Bernice',
+            emailKey,
+            'offline_companion_' + emailKey.replace(/[^a-zA-Z0-9]/g, ''),
+            'Loving Companion',
+            registerRole === 'partner',
+            '', '', '', undefined, '', undefined, undefined, timezone
+          );
+        }
+      }
 
       localStorage.setItem('lumina_user', JSON.stringify(fallbackUser));
       localStorage.setItem('lumina_biometric_user', JSON.stringify(fallbackUser));

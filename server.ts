@@ -152,6 +152,14 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok", mode: process.env.NODE_ENV });
 });
 
+app.get("/api/paystack/config", (req, res) => {
+  res.json({
+    publicKey: process.env.VITE_PAYSTACK_PUBLIC_KEY || "",
+    planMonthly: process.env.VITE_PAYSTACK_PLAN_MONTHLY || "",
+    plan6Month: process.env.VITE_PAYSTACK_PLAN_6MONTH || ""
+  });
+});
+
 app.post("/api/paystack/verify", async (req, res) => {
   const { reference, planId, currency, userId } = req.body;
 

@@ -229,3 +229,32 @@
   right: auto !important;
 }
 
+/* Site-wide Mobile Layout Lock & Anti-Horizontal Overflow */
+html, body {
+  max-width: 100vw !important;
+  overflow-x: hidden !important;
+  position: relative;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+#root, .min-h-screen {
+  max-width: 100% !important;
+  overflow-x: hidden !important;
+  width: 100%;
+}
+
+/* Ensure all images and large assets scale down smoothly to never exceed mobile screen width */
+img, video, canvas, svg, iframe, table {
+  max-width: 100%;
+  height: auto;
+  box-sizing: border-box;
+}
+
+/* Base border box for all elements to prevent padding overflow */
+*, ::before, ::after {
+  box-sizing: border-box;
+}
+
+

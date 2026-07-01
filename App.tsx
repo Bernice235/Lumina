@@ -26,9 +26,25 @@ import { getDefaultNotificationSettings } from './services/notificationService';
 import { auth } from './services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { SplashScreen } from './components/SplashScreen';
+import { initializePaystackConfig } from './services/paystackService';
 
 const App: React.FC = () => {
   const [user, setUserState] = useState<User | null>(() => {
+    // Check if there is an active invite link in the URL.
+    // If so, we must NEVER auto-restore any cached session (protect user account isolation).
+    const urlParams = new URLSearchParams(window.location.search);
+    const qInvite = urlParams.get('invite');
+    const pathParts = window.location.pathname.split('/');
+    const inviteIdx = pathParts.indexOf('invite');
+    const hasInvite = !!(qInvite || (inviteIdx !== -1 && pathParts[inviteIdx + 1]));
+
+    if (hasInvite) {
+      localStorage.removeItem('lumina_user');
+      localStorage.removeItem('lumina_biometric_user');
+      sessionStorage.removeItem('lumina_session_unlocked');
+      return null;
+    }
+
     // Check if we have a saved user to restore automatically on relaunch
     const saved = localStorage.getItem('lumina_user');
     if (saved) {
@@ -263,6 +279,7 @@ const App: React.FC = () => {
   const [latestCloudLoading, setLatestCloudLoading] = useState(false);
 
   useEffect(() => {
+    initializePaystackConfig();
     const timer = setTimeout(() => {
       setShowSplash(false);
     }, 2000);
@@ -370,11 +387,35 @@ const App: React.FC = () => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [receivedGifts, setReceivedGifts] = useState<ReceivedComfort[]>([]);
   const [authLoading, setAuthLoading] = useState(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const qInvite = urlParams.get('invite');
+    const pathParts = window.location.pathname.split('/');
+    const inviteIdx = pathParts.indexOf('invite');
+    const hasInvite = !!(qInvite || (inviteIdx !== -1 && pathParts[inviteIdx + 1]));
+
+    if (hasInvite) return false;
     return !localStorage.getItem('lumina_user');
   });
 
   // Restore Session
   useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const qInvite = urlParams.get('invite');
+    const pathParts = window.location.pathname.split('/');
+    const inviteIdx = pathParts.indexOf('invite');
+    const hasInvite = !!(qInvite || (inviteIdx !== -1 && pathParts[inviteIdx + 1]));
+
+    if (hasInvite) {
+      // Force clear cache and sign out immediately for account isolation
+      localStorage.removeItem('lumina_user');
+      localStorage.removeItem('lumina_biometric_user');
+      sessionStorage.removeItem('lumina_session_unlocked');
+      auth.signOut().catch(() => {});
+      setUser(null);
+      setAuthLoading(false);
+      return;
+    }
+
     const isUnlocked = sessionStorage.getItem('lumina_session_unlocked') === 'true';
     let unsubscribeUser: (() => void) | undefined;
 
@@ -445,6 +486,12 @@ const App: React.FC = () => {
 
     // 2. ENFORCE RETRIEVING THE LATEST PROFILE SECURELY BEHIND THE BIOMETRIC BLOCK
     const unsubscribeAuth = onAuthStateChanged(auth, (fbUser: any) => {
+      if (hasInvite) {
+        setLatestCloudUser(null);
+        setLatestCloudLoading(false);
+        setAuthLoading(false);
+        return;
+      }
       if (fbUser) {
         setLatestCloudLoading(true);
         // Retrieve and update cache for user experience, but do NOT log them into Active unlocked state if blocked
@@ -1185,7 +1232,7 @@ const App: React.FC = () => {
   const currentTrack = fullLibrary[currentSongIndex];
 
   return (
-    <div className={`min-h-screen pb-28 ${user?.darkMode ? 'dark-mode bg-[#12100e]' : currentThemeData.bg} selection:bg-pink-100 transition-colors duration-500`}>
+    <div className={`min-h-screen w-full overflow-x-hidden pb-28 ${user?.darkMode ? 'dark-mode bg-[#12100e]' : currentThemeData.bg} selection:bg-pink-100 transition-colors duration-500`}>
       <audio 
         ref={audioRef}
         src={currentTrack?.source === 'internal' ? currentTrack.url : undefined} 
@@ -1193,90 +1240,92 @@ const App: React.FC = () => {
         loop={false}
       />
       
-      <header className="px-6 pt-10 pb-6 flex justify-between items-center bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-[60] border-b border-pink-50">
-        <div className="cursor-pointer" onClick={() => setActiveTab('dashboard')}>
-          <h1 className={`text-3xl font-serif italic ${themeClass}`}>Lumina</h1>
-          <div className="flex gap-1 mt-1">
-            {(Object.keys(THEMES) as AppTheme[]).map(t => (
+      <header className="px-4 md:px-6 pt-8 pb-5 bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-[60] border-b border-pink-50">
+        <div className="w-full flex flex-wrap md:flex-nowrap justify-between items-center gap-4">
+          <div className="cursor-pointer flex-shrink-0" onClick={() => setActiveTab('dashboard')}>
+            <h1 className={`text-2xl md:text-3xl font-serif italic ${themeClass}`}>Lumina</h1>
+            <div className="flex gap-1 mt-1">
+              {(Object.keys(THEMES) as AppTheme[]).map(t => (
+                <button 
+                  key={t}
+                  onClick={(e) => { e.stopPropagation(); updateTheme(t); }}
+                  className={`w-2.5 h-2.5 md:w-3 md:h-3 rounded-full border border-white shadow-sm transition-transform hover:scale-125 ${t === 'rose' ? 'bg-pink-400' : t === 'lavender' ? 'bg-purple-400' : t === 'mint' ? 'bg-teal-400' : 'bg-orange-400'} ${user.theme === t ? 'ring-2 ring-offset-2 ring-gray-300' : ''}`}
+                />
+              ))}
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2 md:gap-4 flex-wrap justify-end">
+            <button 
+              onClick={() => {
+                setSettingsSubTab('billing');
+                setActiveTab('settings');
+              }}
+              className={`text-[8px] md:text-[9px] font-black tracking-widest uppercase px-2.5 py-1.5 md:px-3.5 md:py-2 rounded-full transition-all flex items-center gap-1 cursor-pointer hover:scale-105 ${
+                user.isPremium 
+                  ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-sm shadow-emerald-100 hover:opacity-95' 
+                  : 'bg-gradient-to-r from-pink-500 to-rose-400 text-white shadow-md shadow-pink-100 animate-pulse'
+              }`}
+            >
+              {user.isPremium ? '👑 Premium' : '💎 Try Premium'}
+            </button>
+
+            {!user.isPartner && (
               <button 
-                key={t}
-                onClick={(e) => { e.stopPropagation(); updateTheme(t); }}
-                className={`w-3 h-3 rounded-full border border-white shadow-sm transition-transform hover:scale-125 ${t === 'rose' ? 'bg-pink-400' : t === 'lavender' ? 'bg-purple-400' : t === 'mint' ? 'bg-teal-400' : 'bg-orange-400'} ${user.theme === t ? 'ring-2 ring-offset-2 ring-gray-300' : ''}`}
+                onClick={togglePregnancy}
+                className={`text-[8px] md:text-[9px] font-bold px-2.5 py-1.5 md:px-4 md:py-1.5 rounded-full border transition-all ${user.isPregnancyMode ? 'bg-indigo-500 text-white border-indigo-500 shadow-md' : 'bg-white text-gray-400 border-gray-200'}`}
+              >
+                {user.isPregnancyMode ? 'PREGNANCY' : 'CYCLE'}
+              </button>
+            )}
+
+            <div className="flex items-center gap-1.5 md:gap-2 bg-pink-50/50 px-2 py-1 md:px-3 md:py-1.5 rounded-full border border-pink-100/50">
+              <button 
+                onClick={() => {
+                  if (currentTrack?.source !== 'internal') {
+                    window.open(currentTrack.url, '_blank');
+                  } else {
+                    toggleMusic();
+                  }
+                }} 
+                className="text-[10px] md:text-xs"
+              >
+                {currentTrack?.source !== 'internal' ? '↗' : (isMusicPlaying ? '⏸️' : '▶️')}
+              </button>
+              <input 
+                type="range" min="0" max="1" step="0.01" value={volume} 
+                onChange={(e) => setVolume(parseFloat(e.target.value))}
+                className="w-8 md:w-10 h-1 accent-pink-400"
               />
-            ))}
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => {
-              setSettingsSubTab('billing');
-              setActiveTab('settings');
-            }}
-            className={`text-[9px] font-black tracking-widest uppercase px-3.5 py-2 rounded-full transition-all flex items-center gap-1 cursor-pointer hover:scale-105 ${
-              user.isPremium 
-                ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-sm shadow-emerald-100 hover:opacity-95' 
-                : 'bg-gradient-to-r from-pink-500 to-rose-400 text-white shadow-md shadow-pink-100 animate-pulse'
-            }`}
-          >
-            {user.isPremium ? '👑 Premium' : '💎 Try Premium'}
-          </button>
+            </div>
 
-          {!user.isPartner && (
-            <button 
-              onClick={togglePregnancy}
-              className={`text-[9px] font-bold px-4 py-1.5 rounded-full border transition-all ${user.isPregnancyMode ? 'bg-indigo-500 text-white border-indigo-500 shadow-md' : 'bg-white text-gray-400 border-gray-200'}`}
-            >
-              {user.isPregnancyMode ? 'PREGNANCY MODE' : 'OFF'}
-            </button>
-          )}
+            {!user.isPartner && (
+              <button 
+                onClick={() => {
+                  setActiveTab('partner');
+                  sessionStorage.setItem('lumina_partnermode_subtab', 'requests');
+                  window.dispatchEvent(new CustomEvent('lumina-set-partner-subtab', { detail: 'requests' }));
+                }} 
+                className="p-1 md:p-2 text-gray-400 hover:text-pink-400 transition-colors relative"
+                title="Partner Connection Requests"
+              >
+                <span>🔔</span>
+                {partnerRequests.filter(r => r.status === 'pending').length > 0 && (
+                  <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-white animate-pulse" />
+                )}
+              </button>
+            )}
 
-          <div className="flex items-center gap-2 bg-pink-50/50 px-3 py-1.5 rounded-full border border-pink-100/50">
             <button 
               onClick={() => {
-                if (currentTrack?.source !== 'internal') {
-                  window.open(currentTrack.url, '_blank');
-                } else {
-                  toggleMusic();
-                }
+                setSettingsSubTab('notifications');
+                setActiveTab('settings');
               }} 
-              className="text-xs"
+              className="p-1 md:p-2 text-gray-400 hover:text-pink-400 transition-colors"
             >
-              {currentTrack?.source !== 'internal' ? '↗' : (isMusicPlaying ? '⏸️' : '▶️')}
+              ⚙️
             </button>
-            <input 
-              type="range" min="0" max="1" step="0.01" value={volume} 
-              onChange={(e) => setVolume(parseFloat(e.target.value))}
-              className="w-10 h-1 accent-pink-400"
-            />
           </div>
-
-          {!user.isPartner && (
-            <button 
-              onClick={() => {
-                setActiveTab('partner');
-                sessionStorage.setItem('lumina_partnermode_subtab', 'requests');
-                window.dispatchEvent(new CustomEvent('lumina-set-partner-subtab', { detail: 'requests' }));
-              }} 
-              className="p-2 text-gray-400 hover:text-pink-400 transition-colors relative"
-              title="Partner Connection Requests"
-            >
-              <span>🔔</span>
-              {partnerRequests.filter(r => r.status === 'pending').length > 0 && (
-                <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white animate-pulse" />
-              )}
-            </button>
-          )}
-
-          <button 
-            onClick={() => {
-              setSettingsSubTab('notifications');
-              setActiveTab('settings');
-            }} 
-            className="p-2 text-gray-400 hover:text-pink-400 transition-colors"
-          >
-            ⚙️
-          </button>
         </div>
       </header>
 
