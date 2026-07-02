@@ -8,10 +8,12 @@ const app = initializeApp(firebaseConfig);
 // Initialize Firestore with robust local caching.
 // This ensures that even if Cloud Firestore is temporarily unreachable (due to sandbox network isolation or first-time setup delay),
 // the application continues to run flawlessly in offline mode, storing and serving data locally.
+// We also force/enable long polling to securely bypass WebSocket connection blockages typical in sandboxed preview environments.
 export const db = initializeFirestore(app, {
   localCache: persistentLocalCache({
     tabManager: persistentMultipleTabManager()
-  })
+  }),
+  experimentalForceLongPolling: true
 }, firebaseConfig.firestoreDatabaseId);
 
 // Initialize Firebase Auth with a robust chain of local persistence managers.

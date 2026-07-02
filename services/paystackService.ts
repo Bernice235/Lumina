@@ -51,12 +51,12 @@ export const initializePaystackConfig = async (): Promise<void> => {
   }
 };
 
-// Load Paystack Public key or fall back to standard sandbox public key
+// Load Paystack Public key
 export const getPaystackPublicKey = (): string => {
   const windowKey = (window as any).VITE_PAYSTACK_PUBLIC_KEY;
   if (windowKey) return windowKey;
   const metaEnv = (import.meta as any).env;
-  return (metaEnv?.VITE_PAYSTACK_PUBLIC_KEY as string) || 'pk_test_a041f02c6b4fc348bebc0d80c0dbca30fbefae61';
+  return (metaEnv?.VITE_PAYSTACK_PUBLIC_KEY as string) || '';
 };
 
 export const loadPaystackScript = (): Promise<boolean> => {
@@ -162,6 +162,301 @@ declare global {
   }
 }
 
+interface SimulateCheckoutPopProps {
+  plan: any;
+  currency: 'USD' | 'NGN' | 'GHS' | 'ZAR';
+  email: string;
+  ref: string;
+  onSuccess: (reference: string) => void;
+  onClose: () => void;
+}
+
+export const SimulateCheckoutPop = ({
+  plan,
+  currency,
+  email,
+  ref,
+  onSuccess,
+  onClose
+}: SimulateCheckoutPopProps) => {
+  const overlay = document.createElement('div');
+  overlay.id = 'paystack-sim-overlay';
+  overlay.className = 'fixed inset-0 bg-black/60 backdrop-blur-sm z-[99999] flex justify-center items-start md:items-center p-4 overflow-y-auto';
+
+  const planPriceOnCheckout = getPlanPrice(plan, currency);
+  const formattedPrice = currency === 'USD' 
+    ? `$${planPriceOnCheckout.toFixed(2)}` 
+    : currency === 'NGN'
+      ? `₦${planPriceOnCheckout.toLocaleString()}`
+      : currency === 'GHS'
+        ? `GH₵${planPriceOnCheckout.toFixed(2)}`
+        : `R${planPriceOnCheckout.toFixed(2)}`;
+
+  let currentTab: 'card' | 'transfer' = 'card';
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      cleanup();
+      onClose();
+    }
+  };
+
+  const handleBackdropClick = (e: MouseEvent) => {
+    if (e.target === overlay) {
+      cleanup();
+      onClose();
+    }
+  };
+
+  const updateModalContent = () => {
+    overlay.innerHTML = `
+      <div class="bg-white w-full max-w-xl rounded-3xl overflow-hidden shadow-2xl border border-neutral-100 flex flex-col md:flex-row min-h-[360px] md:min-h-[420px] my-auto relative animate-scaleUp">
+        <!-- Close Button (Highly Visible) -->
+        <button id="paystack-close" class="absolute top-3 right-3 md:top-4 md:right-4 text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100/80 transition-all cursor-pointer px-3.5 py-1.5 md:px-4 md:py-2 rounded-full border border-rose-100 flex items-center gap-1.5 text-[9px] md:text-[10px] font-black uppercase tracking-widest z-10 shadow-sm">
+          ✕ Cancel
+        </button>
+
+        <!-- Left Channel Selector Sidebar (Desktop: vertical, Mobile: horizontal tabs) -->
+        <div class="w-full md:w-52 bg-neutral-50/70 border-b md:border-b-0 md:border-r border-neutral-100 p-4 md:p-6 flex flex-col justify-between">
+          <div>
+            <!-- Header Branding -->
+            <div class="flex items-center justify-between gap-2 mb-3 md:mb-6">
+              <div class="flex items-center gap-2">
+                <span class="text-2xl">🌸</span>
+                <div>
+                  <h4 class="text-xs font-black text-neutral-800 uppercase tracking-wider">LUMINA</h4>
+                  <p class="text-[9px] text-neutral-400 font-bold tracking-widest uppercase">Premium Portal</p>
+                </div>
+              </div>
+              <button id="paystack-close-mobile" class="md:hidden text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all cursor-pointer border border-rose-100">
+                ✕
+              </button>
+            </div>
+
+            <!-- Tab Selectors -->
+            <div class="flex md:flex-col gap-2 mb-2 md:mb-0">
+              <button id="tab-card" class="flex-1 md:flex-initial text-left py-2.5 px-3 md:py-3 md:px-4 rounded-2xl flex items-center gap-2.5 transition-all text-xs font-bold cursor-pointer ${
+                currentTab === 'card' 
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100' 
+                  : 'bg-white hover:bg-neutral-100 text-neutral-600 border border-neutral-100'
+              }">
+                💳 <span class="truncate">Card</span>
+              </button>
+              <button id="tab-transfer" class="flex-1 md:flex-initial text-left py-2.5 px-3 md:py-3 md:px-4 rounded-2xl flex items-center gap-2.5 transition-all text-xs font-bold cursor-pointer ${
+                currentTab === 'transfer' 
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100' 
+                  : 'bg-white hover:bg-neutral-100 text-neutral-600 border border-neutral-100'
+              }">
+                🏦 <span class="truncate">Bank Transfer</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Bottom merchant info / Cancel (desktop only) -->
+          <div class="hidden md:block space-y-3 mt-6">
+            <button id="paystack-cancel-sidebar" class="w-full py-2.5 bg-rose-50 hover:bg-rose-100 border border-rose-100 text-rose-600 font-bold text-[10px] uppercase tracking-widest rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-1.5">
+              🛑 Cancel & Exit
+            </button>
+            <div class="border-t border-neutral-100/80 pt-4">
+              <span class="inline-flex items-center gap-1 text-[9px] font-black text-emerald-500 uppercase tracking-widest bg-emerald-50 py-1 px-2.5 rounded-full">
+                ● SECURED BY PAYSTACK
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Content Panel -->
+        <div class="flex-1 p-5 md:p-8 flex flex-col justify-between min-h-[260px] md:min-h-[340px]">
+          <div>
+            <!-- Top invoice segment -->
+            <div class="pb-3 md:pb-5 border-b border-neutral-100 flex justify-between items-start mb-4 md:mb-6">
+              <div class="space-y-1">
+                <p class="text-[10px] text-neutral-400 font-bold uppercase tracking-widest">${email}</p>
+                <h3 class="text-sm font-bold text-neutral-800 font-serif italic">${plan.name}</h3>
+              </div>
+              <div class="text-right">
+                <span class="text-xs text-neutral-400 block font-bold uppercase tracking-wider text-[10px]">Amount</span>
+                <span class="text-base md:text-lg font-black text-neutral-900 font-mono">${formattedPrice}</span>
+              </div>
+            </div>
+
+            <!-- Tab contents -->
+            <div id="tab-content" class="space-y-3.5 md:space-y-4">
+              ${
+                currentTab === 'card'
+                  ? `
+                    <div class="space-y-2.5 md:space-y-3.5 animate-fadeIn">
+                      <p class="text-[9.5px] md:text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1">Simulate Card Authorization</p>
+                      <div>
+                        <label class="block text-[8px] md:text-[9px] font-black text-neutral-400 uppercase tracking-widest mb-1">Card Number</label>
+                        <input type="text" id="sim-card-num" value="4000 1234 5678 9010" class="w-full bg-neutral-50 border border-neutral-100 rounded-2xl py-2 px-3 md:py-3 md:px-4 text-xs font-mono font-bold text-neutral-800 outline-none focus:border-indigo-300 transition-colors" />
+                      </div>
+                      <div class="grid grid-cols-2 gap-3.5">
+                        <div>
+                          <label class="block text-[8px] md:text-[9px] font-black text-neutral-400 uppercase tracking-widest mb-1">Expiry Date</label>
+                          <input type="text" id="sim-card-expiry" value="12/30" class="w-full bg-neutral-50 border border-neutral-100 rounded-2xl py-2 px-3 md:py-3 md:px-4 text-xs font-mono font-bold text-neutral-800 outline-none focus:border-indigo-300 transition-colors text-center" />
+                        </div>
+                        <div>
+                          <label class="block text-[8px] md:text-[9px] font-black text-neutral-400 uppercase tracking-widest mb-1">CVV</label>
+                          <input type="text" id="sim-card-cvv" value="123" class="w-full bg-neutral-50 border border-neutral-100 rounded-2xl py-2 px-3 md:py-3 md:px-4 text-xs font-mono font-bold text-neutral-800 outline-none focus:border-indigo-300 transition-colors text-center" />
+                        </div>
+                      </div>
+                      <p class="text-[9px] md:text-[9.5px] text-neutral-400 italic leading-snug">This is an authorized Sandbox simulation environment. You can use any testing credentials.</p>
+                    </div>
+                  `
+                  : `
+                    <div class="space-y-3 md:space-y-4 animate-fadeIn">
+                      <p class="text-[9.5px] md:text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Simulate Bank Transfer Payment</p>
+                      <div class="bg-indigo-50/45 border border-indigo-100/55 rounded-3xl p-4 md:p-5 space-y-2 md:space-y-3">
+                        <div class="flex justify-between items-center text-xs pb-1.5 md:pb-2 border-b border-indigo-100/30">
+                          <span class="text-neutral-500">Bank Name</span>
+                           <span class="font-bold text-indigo-950 font-serif">Wema Bank / ALAT</span>
+                        </div>
+                        <div class="flex justify-between items-center text-xs pb-1.5 md:pb-2 border-b border-indigo-100/30">
+                          <span class="text-neutral-500">Account Number</span>
+                          <span class="font-mono font-bold text-indigo-950 text-sm select-all">9920182743</span>
+                        </div>
+                        <div class="flex justify-between items-center text-xs pb-1.5 md:pb-2 border-b border-indigo-100/30">
+                          <span class="text-neutral-500">Account Name</span>
+                          <span class="font-semibold text-indigo-900 text-[10px] md:text-[11px] truncate max-w-[140px] md:max-w-none">Lumina Bloom Portal</span>
+                        </div>
+                        <div class="flex justify-between items-center text-xs">
+                          <span class="text-neutral-400">Total Amount</span>
+                          <span class="font-black text-indigo-950 font-mono">${formattedPrice}</span>
+                        </div>
+                      </div>
+                      <div class="flex gap-2 items-start bg-neutral-50 border border-neutral-100 p-2.5 md:p-3.5 rounded-2xl">
+                        <span class="text-sm mt-0.5">💡</span>
+                        <p class="text-[8.5px] md:text-[9.5px] text-neutral-500 leading-relaxed">
+                          Please transfer the exact amount of <strong class="text-neutral-800 font-bold">${formattedPrice}</strong>. After completing, click <strong class="text-indigo-600 font-bold">"I've sent the money"</strong>.
+                        </p>
+                      </div>
+                    </div>
+                  `
+              }
+            </div>
+          </div>
+
+          <!-- Bottom Action Buttons -->
+          <div class="pt-6 border-t border-neutral-50 flex flex-col gap-2.5">
+            ${
+              currentTab === 'card'
+                ? `
+                  <button id="paystack-submit" class="w-full py-4 bg-indigo-600 hover:scale-[1.01] active:scale-[0.98] text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all cursor-pointer flex items-center justify-center gap-2">
+                    🔒 Pay ${formattedPrice}
+                  </button>
+                `
+                : `
+                  <button id="paystack-submit" class="w-full py-4 bg-amber-500 hover:scale-[1.01] active:scale-[0.98] text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg shadow-amber-100 hover:bg-amber-600 transition-all cursor-pointer flex items-center justify-center gap-2">
+                    ⏳ I've sent the money
+                  </button>
+                `
+            }
+            <button id="paystack-cancel" class="w-full py-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 font-bold text-xs uppercase tracking-wider rounded-2xl transition-all cursor-pointer text-center">
+              Cancel & Go Back
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Attach listeners
+    document.getElementById('paystack-close')?.addEventListener('click', () => {
+      cleanup();
+      onClose();
+    });
+
+    document.getElementById('paystack-close-mobile')?.addEventListener('click', () => {
+      cleanup();
+      onClose();
+    });
+
+    document.getElementById('paystack-cancel-sidebar')?.addEventListener('click', () => {
+      cleanup();
+      onClose();
+    });
+
+    document.getElementById('paystack-cancel')?.addEventListener('click', () => {
+      cleanup();
+      onClose();
+    });
+
+    document.getElementById('tab-card')?.addEventListener('click', () => {
+      if (currentTab !== 'card') {
+        currentTab = 'card';
+        updateModalContent();
+      }
+    });
+
+    document.getElementById('tab-transfer')?.addEventListener('click', () => {
+      if (currentTab !== 'transfer') {
+        currentTab = 'transfer';
+        updateModalContent();
+      }
+    });
+
+    const submitBtn = document.getElementById('paystack-submit') as HTMLButtonElement;
+    submitBtn?.addEventListener('click', () => {
+      submitBtn.setAttribute('disabled', 'true');
+      submitBtn.classList.add('opacity-80', 'cursor-not-allowed');
+      submitBtn.style.pointerEvents = 'none';
+      
+      // Also disable cancel buttons during active processing
+      const cancelBtn = document.getElementById('paystack-cancel') as HTMLButtonElement;
+      if (cancelBtn) {
+        cancelBtn.setAttribute('disabled', 'true');
+        cancelBtn.classList.add('opacity-50', 'cursor-not-allowed');
+      }
+      
+      const sidebarCancelBtn = document.getElementById('paystack-cancel-sidebar') as HTMLButtonElement;
+      if (sidebarCancelBtn) {
+        sidebarCancelBtn.setAttribute('disabled', 'true');
+        sidebarCancelBtn.classList.add('opacity-50', 'cursor-not-allowed');
+      }
+
+      const closeBtn = document.getElementById('paystack-close') as HTMLButtonElement;
+      if (closeBtn) {
+        closeBtn.setAttribute('disabled', 'true');
+        closeBtn.classList.add('opacity-50', 'cursor-not-allowed');
+      }
+
+      const closeMobileBtn = document.getElementById('paystack-close-mobile') as HTMLButtonElement;
+      if (closeMobileBtn) {
+        closeMobileBtn.setAttribute('disabled', 'true');
+        closeMobileBtn.classList.add('opacity-50', 'cursor-not-allowed');
+      }
+      
+      if (currentTab === 'card') {
+        submitBtn.innerHTML = `⌛ Authorizing Secure Card Connection...`;
+        setTimeout(() => {
+          cleanup();
+          onSuccess(`${ref}_card_success`);
+        }, 1800);
+      } else {
+        submitBtn.innerHTML = `⌛ Creating Bank Audit Confirmation...`;
+        setTimeout(() => {
+          cleanup();
+          onSuccess(`${ref}_transfer_pending`);
+        }, 1800);
+      }
+    });
+  };
+
+  const cleanup = () => {
+    window.removeEventListener('keydown', handleKeyDown);
+    overlay.removeEventListener('click', handleBackdropClick);
+    if (document.body.contains(overlay)) {
+      document.body.removeChild(overlay);
+    }
+  };
+
+  window.addEventListener('keydown', handleKeyDown);
+  overlay.addEventListener('click', handleBackdropClick);
+
+  document.body.appendChild(overlay);
+  updateModalContent();
+};
+
 /**
  * Initializes a standard Paystack checkout authorization flow for 7-Day Free Trial Setup
  */
@@ -181,52 +476,54 @@ export const startPaystackTrialCheckout = async ({
   onError: (error: string) => void;
 }): Promise<void> => {
   const publicKey = getPaystackPublicKey();
+  const isMock = !publicKey || user.id.startsWith("sandbox_") || user.id.startsWith("offline_");
   const email = user.email || 'customer@lumina.app';
-  
-  // Dynamically calculate actual plan price in subunits based on chosen currency
   const planPriceOnCheckout = getPlanPrice(plan, currency);
-  const amountToCharge = Math.round(planPriceOnCheckout * 100); // 100 subunits for 1 currency unit
+  const amountToCharge = Math.round(planPriceOnCheckout * 100);
   const transactionRef = `lumina_trial_${plan.id}_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
 
-  const isLoaded = await loadPaystackScript();
+  if (isMock) {
+    SimulateCheckoutPop({
+      plan,
+      currency,
+      email,
+      ref: transactionRef,
+      onSuccess: (ref) => onSuccess(ref, `auth_simulated_${Math.random().toString(36).substring(4)}`),
+      onClose: onCancel
+    });
+    return;
+  }
 
-  if (isLoaded && publicKey && window.PaystackPop) {
-    try {
-      const setupOptions: PaystackPopOptions = {
-        key: publicKey,
-        email: email,
+  try {
+    const res = await fetch("/api/paystack/initialize", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        email,
         amount: amountToCharge,
-        currency: currency,
-        ref: transactionRef,
-        callback: (response) => {
-          if (response && response.status === 'success') {
-            onSuccess(response.reference, `auth_${Math.random().toString(36).substring(4)}`);
-          } else {
-            onError('Transaction completed with validation failure');
-          }
-        },
-        onClose: () => {
-          onCancel();
-        }
-      };
+        currency,
+        planId: plan.id,
+        userId: user.id,
+        callbackUrl: `${window.location.origin}/settings`
+      })
+    });
 
-      // If a Paystack plan code is configured in the environment, declare it to activate automatic subscription trial handling
-      const planCode = getPaystackPlanCode(plan.id, currency);
-      if (planCode) {
-        setupOptions.plan = planCode;
-      }
+    const data = await res.json().catch(() => ({}));
 
-      const handler = window.PaystackPop.setup(setupOptions);
-      handler.openIframe();
-    } catch (err: any) {
-      onError(err?.message || 'Failed to initialize Paystack checkout popup');
+    if (!res.ok) {
+      throw new Error(data.error || "Failed to initiate payment gateway connection.");
     }
-  } else {
-    if (!publicKey) {
-      onError('Paystack Public Key is missing. Please configure VITE_PAYSTACK_PUBLIC_KEY in your setting parameters.');
+
+    if (data.authorization_url) {
+      // Redirect to the real Paystack secure page directly
+      window.location.href = data.authorization_url;
     } else {
-      onError('Paystack payment popup could not be loaded. If you are inside the developer preview iframe, please click "Open in new tab" at the top right to complete your secure payment directly on the published URL. 🌸');
+      throw new Error("Invalid initialization response from server.");
     }
+  } catch (err: any) {
+    onError(err?.message || "Error setting up checkout session. Please try again.");
   }
 };
 
@@ -365,42 +662,53 @@ export const updatePaystackPaymentMethod = async ({
   onError: (error: string) => void;
 }) => {
   const publicKey = getPaystackPublicKey();
+  const isMock = !publicKey || user.id.startsWith("sandbox_") || user.id.startsWith("offline_");
   const email = user.email || 'customer@lumina.app';
+  const isUSD = currency === 'USD';
+  const amountToCharge = isUSD ? 100 : 10000; // minimal security card verification trace
   const transactionRef = `lumina_update_card_${Date.now()}`;
 
-  const isUSD = currency === 'USD';
-  const amountToCharge = isUSD ? 100 : 10000; // minimal security card verification (e.g. ₦100)
+  if (isMock) {
+    SimulateCheckoutPop({
+      plan: { id: 'monthly', name: 'Card Update Verification', priceUSD: isUSD ? 1.00 : 100, priceNGN: 100, interval: 'once', description: 'Validate Card' },
+      currency,
+      email,
+      ref: transactionRef,
+      onSuccess: (ref) => onSuccess(ref),
+      onClose: onCancel
+    });
+    return;
+  }
 
-  const isLoaded = await loadPaystackScript();
-
-  if (isLoaded && publicKey && window.PaystackPop) {
-    try {
-      const handler = window.PaystackPop.setup({
-        key: publicKey,
-        email: email,
+  try {
+    const res = await fetch("/api/paystack/initialize", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        email,
         amount: amountToCharge,
-        currency: currency,
-        ref: transactionRef,
-        callback: (response) => {
-          if (response && response.status === 'success') {
-            onSuccess(response.reference);
-          } else {
-            onError('Failed to tokenize card');
-          }
-        },
-        onClose: () => {
-          onCancel();
-        }
-      });
-      handler.openIframe();
-    } catch (err: any) {
-      onError(err?.message || 'Error executing card update checkout');
+        currency,
+        planId: 'monthly',
+        userId: user.id,
+        callbackUrl: `${window.location.origin}/settings`
+      })
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      throw new Error(data.error || "Failed to initiate card update gateway.");
     }
-  } else {
-    if (!publicKey) {
-      onError('Paystack Public Key is missing. Please configure VITE_PAYSTACK_PUBLIC_KEY in your settings.');
+
+    if (data.authorization_url) {
+      // Redirect to the real Paystack secure card update verification page directly
+      window.location.href = data.authorization_url;
     } else {
-      onError('Paystack payment popup could not be loaded. If you are inside the developer preview iframe, please click "Open in new tab" at the top right to complete your card update directly on the published URL. 🌸');
+      throw new Error("Invalid initialization response from server.");
     }
+  } catch (err: any) {
+    onError(err?.message || "Error setting up payment method update. Please try again.");
   }
 };

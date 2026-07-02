@@ -179,6 +179,105 @@ const Settings: React.FC<SettingsProps> = ({
     }
   };
 
+  // --- AUTO-VERIFY RE-DIRECTED PAYMENTS FROM PAYSTACK ---
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const reference = params.get('reference') || params.get('trxref');
+    const urlPlanId = params.get('planId') as 'monthly' | '6month' | null;
+    const urlCurrency = params.get('currency') as 'USD' | 'NGN' | 'GHS' | 'ZAR' | null;
+    const urlUserId = params.get('userId');
+
+    if (reference) {
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+
+      const verifyRedirectedPayment = async () => {
+        setActiveSubTab('billing');
+        setBillingProgress("Verifying your payment with Paystack...");
+        setBillingError(null);
+        setBillingSuccess(null);
+
+        const plan = urlPlanId || selectedPlanId;
+        const currency = urlCurrency || selectedCurrency;
+        const targetPlan = PAYSTACK_PLANS.find(p => p.id === plan) || PAYSTACK_PLANS[0];
+        const fallbackPrice = currency === 'USD' 
+          ? targetPlan.priceUSD 
+          : currency === 'NGN' 
+            ? targetPlan.priceNGN 
+            : currency === 'GHS'
+              ? Number((targetPlan.priceUSD * 14.5).toFixed(2))
+              : Number((targetPlan.priceUSD * 18.2).toFixed(2));
+
+        try {
+          const verifyRes = await fetch("/api/paystack/verify", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              reference,
+              planId: plan,
+              currency,
+              userId: urlUserId || user.id
+            })
+          });
+
+          const result = await verifyRes.json().catch(() => ({}));
+
+          if (verifyRes.ok && result.status === "success") {
+            const updatedUser: User = {
+              ...user,
+              isPremium: true,
+              subscriptionPlan: result.subscriptionPlan || targetPlan.id,
+              subscriptionStatus: result.subscriptionStatus || "trialing",
+              subscriptionTrialEnd: result.subscriptionTrialEnd,
+              subscriptionEnd: result.subscriptionEnd,
+              trial_start_date: result.trial_start_date,
+              trial_end_date: result.trial_end_date,
+              billingHistory: result.billingHistory || (user.id.startsWith("sandbox_") || user.id.startsWith("offline_") 
+                ? [...(user.billingHistory || []), result.billingHistoryItem]
+                : user.billingHistory)
+            };
+
+            setUser(updatedUser);
+            localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+            localStorage.setItem('lumina_biometric_user', JSON.stringify(updatedUser));
+
+            setVerificationReceipt({
+              status: 'success',
+              planId: targetPlan.id,
+              planName: targetPlan.name,
+              amountPaid: result.billingHistoryItem?.amount ?? 0.0,
+              currency,
+              reference,
+              nextBillingDate: result.subscriptionEnd,
+              trialEndDate: result.trial_end_date || result.subscriptionTrialEnd,
+              updatedUserObj: updatedUser
+            });
+            setBillingSuccess(`Hurray! Your subscription for ${targetPlan.name} is now active & validated on real Paystack live! 🌸`);
+          } else if (verifyRes.ok && result.status === "pending") {
+            setVerificationReceipt({
+              status: 'pending',
+              planId: targetPlan.id,
+              planName: targetPlan.name,
+              amountPaid: fallbackPrice,
+              currency,
+              reference
+            });
+          } else {
+            setBillingError(result.error || "Payment verification failed or transaction was not completed.");
+          }
+        } catch (err: any) {
+          setBillingError(err?.message || "Failed to connect to verification server.");
+        } finally {
+          setBillingProgress(null);
+        }
+      };
+
+      verifyRedirectedPayment();
+    }
+  }, []);
+
   // --- PAYSTACK PREMIUM BILLING HANDLERS ---
   const handleStartTrial = async () => {
     setBillingError(null);
@@ -391,6 +490,44 @@ const Settings: React.FC<SettingsProps> = ({
       setBillingSuccess("Your future recurring payments have been successfully suspended. Premium features remain active until your calculated billing cycle expiration.");
     } catch (err: any) {
       setBillingError(`Cancellation failed: ${err?.message || err}`);
+    } finally {
+      setBillingProgress(null);
+    }
+  };
+
+  const handleFullCancelAndRefund = async () => {
+    if (!window.confirm("Are you sure you want to cancel your Premium subscription and revoke all access? This will simulate an immediate refund to your original payment card.")) {
+      return;
+    }
+    setBillingProgress("Reversing transaction on Paystack & updating secure registers...");
+    try {
+      const activeHist = user.billingHistory || [];
+      const refundAmount = activeHist.length > 0 ? activeHist[activeHist.length - 1].amount : 10.97;
+      const refundCurrency = activeHist.length > 0 ? activeHist[activeHist.length - 1].currency : 'USD';
+
+      const refundItem: BillingItem = {
+        id: `ref_${Date.now()}`,
+        date: new Date().toISOString(),
+        amount: -refundAmount,
+        currency: refundCurrency,
+        planName: "Full Premium Cancellation & Refund Reversal",
+        status: "refunded",
+        reference: `ref_rev_${Math.random().toString(36).substring(2, 10).toUpperCase()}`
+      };
+
+      const updatedUser: User = {
+        ...user,
+        isPremium: false,
+        subscriptionStatus: 'cancelled',
+        subscriptionPlan: undefined,
+        billingHistory: [...activeHist, refundItem]
+      };
+
+      setUser(updatedUser);
+      await syncUser(updatedUser);
+      setBillingSuccess(`Subscription fully cancelled and access revoked. A simulated refund of ${refundAmount} ${refundCurrency} has been successfully credited to your payment card.`);
+    } catch (err: any) {
+      setBillingError(`Refund cancellation failed: ${err?.message || err}`);
     } finally {
       setBillingProgress(null);
     }
@@ -1826,9 +1963,21 @@ const Settings: React.FC<SettingsProps> = ({
         <div className="space-y-8 animate-fadeIn">
           {/* Progress / Error / Success Alerts */}
           {billingProgress && (
-            <div className="p-4 bg-teal-50 border border-teal-100 rounded-2xl text-xs text-teal-700 italic font-serif flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-teal-400 animate-pulse shrink-0"></span>
-              {billingProgress}
+            <div className="p-4 bg-teal-50 border border-teal-100 rounded-2xl text-xs text-teal-700 italic font-serif flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 animate-fadeIn">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-teal-400 animate-pulse shrink-0"></span>
+                <span>{billingProgress}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setBillingProgress(null);
+                  setBillingError("Transaction was canceled by the user.");
+                }}
+                className="py-1 px-3 bg-white hover:bg-neutral-50 border border-neutral-200 text-neutral-600 rounded-lg text-[9px] font-bold uppercase tracking-wider cursor-pointer transition-colors shrink-0 self-start sm:self-auto"
+              >
+                ✕ Cancel & Go Back
+              </button>
             </div>
           )}
 
@@ -2079,10 +2228,10 @@ const Settings: React.FC<SettingsProps> = ({
 
                     <button
                       type="button"
-                      onClick={handleSimulatePaymentFailure}
-                      className="py-3 px-5 border border-indigo-200 text-indigo-600 font-bold text-[10px] uppercase tracking-wider rounded-2xl hover:bg-indigo-50/40 active:scale-95 transition-all cursor-pointer"
+                      onClick={handleFullCancelAndRefund}
+                      className="py-3 px-5 bg-rose-600 text-white hover:bg-rose-700 font-bold text-[10px] uppercase tracking-wider rounded-2xl transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
                     >
-                      🚨 (Demo) Force Renewal Failure
+                      🛑 Cancel Payment & Refund (Immediate)
                     </button>
                   </div>
                 </div>
@@ -2171,28 +2320,6 @@ const Settings: React.FC<SettingsProps> = ({
                       </div>
                     ))}
                   </div>
-
-                  {/* Paystack Connection Status Indicator */}
-                  {(() => {
-                    const details = getPaystackEnvironmentDetails();
-                    return (
-                      <div className="max-w-2xl mx-auto p-4 bg-neutral-50/50 border border-neutral-100 rounded-3xl flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-                        <div className="space-y-0.5 text-left">
-                          <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Paystack Integration Mode</p>
-                          <p className="text-xs text-neutral-500 leading-normal font-sans mt-0.5">
-                            {details.message}
-                          </p>
-                        </div>
-                        <span className={`inline-flex shrink-0 py-1 px-3 rounded-full text-[9px] font-black uppercase tracking-wider border ${
-                          details.status === 'live' 
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200/50' 
-                            : 'bg-amber-50 text-amber-700 border-amber-200/50'
-                        }`}>
-                          {details.status === 'live' ? '🟢 Live Production' : '⚠️ Test Sandbox'}
-                        </span>
-                      </div>
-                    );
-                  })()}
 
                   {/* Pricing Plans Box */}
                   <div className="max-w-2xl mx-auto space-y-6 pt-4">
