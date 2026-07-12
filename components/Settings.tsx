@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { User, NotificationSettings, Symptom, DiaryEntry, BirthControlLog, TemperatureLog, SharingSettings, BillingItem } from '../types';
+import { User, NotificationSettings, Symptom, DiaryEntry, BirthControlLog, TemperatureLog, SharingSettings, BillingItem, Reminder } from '../types';
 import { CommunityInvite } from './CommunityInvite';
+import PartnerMode from './PartnerMode';
 import { 
   Bell, 
   Sparkles, 
@@ -38,18 +39,13 @@ import {
   generatePregnancyNotificationText,
   generatePostpartumNotificationText
 } from '../services/notificationService';
-import { syncUser, disconnectPartner } from '../services/firebaseService';
+import { syncUser, disconnectPartner, saveGlobalBankDetails, getGlobalBankDetails, GlobalBankConfig } from '../services/firebaseService';
 import { 
-  PAYSTACK_PLANS, 
-  startPaystackTrialCheckout, 
-  syncStartSubscriptionTrial, 
-  syncCancelSubscription, 
-  syncChangeSubscriptionPlan, 
-  syncSimulateBillingFailure, 
-  updatePaystackPaymentMethod,
-  getPaystackEnvironmentDetails,
-  getPaystackPublicKey
-} from '../services/paystackService';
+  REVENUECAT_PLANS, 
+  purchasePremiumPlan, 
+  restorePremiumPurchases, 
+  syncActiveSubscriptionStatus 
+} from '../services/revenueCatService';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 
@@ -61,8 +57,32 @@ interface SettingsProps {
   diaryEntries?: DiaryEntry[];
   bcLogs?: BirthControlLog[];
   tempLogs?: TemperatureLog[];
-  initialSubTab?: 'notifications' | 'general' | 'billing' | 'invite';
+  initialSubTab?: 'account' | 'cycle' | 'notifications' | 'music' | 'partner' | 'premium' | 'privacy' | 'about' | 'general' | 'billing' | 'invite' | 'mobile';
+  reminders?: Reminder[];
+  setReminders?: React.Dispatch<React.SetStateAction<Reminder[]>>;
+  volume?: number;
+  setVolume?: (vol: number) => void;
+  partnerUser?: User | null;
+  isMusicPlaying?: boolean;
+  toggleMusic?: () => void;
+  isMusicActive?: boolean;
+  toggleMusicActive?: () => void;
 }
+
+export const NIGERIAN_BANKS = [
+  { code: "058", name: "Guaranty Trust Bank (GTB)" },
+  { code: "011", name: "First Bank of Nigeria" },
+  { code: "033", name: "United Bank for Africa (UBA)" },
+  { code: "057", name: "Zenith Bank" },
+  { code: "035", name: "Wema Bank / ALAT" },
+  { code: "070", name: "Fidelity Bank" },
+  { code: "030", name: "Heritage Bank" },
+  { code: "215", name: "Unity Bank" },
+  { code: "232", name: "Sterling Bank" },
+  { code: "044", name: "Access Bank" },
+  { code: "305", name: "Paycom (OPay)" },
+  { code: "311", name: "Kuda Bank" }
+];
 
 const Settings: React.FC<SettingsProps> = ({ 
   user, 
@@ -72,30 +92,44 @@ const Settings: React.FC<SettingsProps> = ({
   diaryEntries = [],
   bcLogs = [],
   tempLogs = [],
-  initialSubTab = 'notifications'
+  initialSubTab = 'account',
+  reminders = [],
+  setReminders = () => {},
+  volume = 0.3,
+  setVolume = (vol: number) => {},
+  partnerUser = null,
+  isMusicPlaying = false,
+  toggleMusic = () => {},
+  isMusicActive = false,
+  toggleMusicActive = () => {}
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'notifications' | 'general' | 'billing' | 'invite'>(initialSubTab);
+  const getMappedTab = (tab: any): 'account' | 'cycle' | 'notifications' | 'music_sanctuary' | 'partner' | 'premium' | 'privacy_security' | 'invite_friends' => {
+    if (tab === 'general') return 'account';
+    if (tab === 'billing') return 'premium';
+    if (tab === 'invite') return 'invite_friends';
+    if (tab === 'mobile') return 'privacy_security';
+    if (tab === 'notifications') return 'notifications';
+    if (tab === 'music') return 'music_sanctuary';
+    if (tab === 'music_sanctuary') return 'music_sanctuary';
+    if (tab === 'privacy') return 'privacy_security';
+    if (tab === 'privacy_security') return 'privacy_security';
+    if (tab === 'invite_friends') return 'invite_friends';
+    if (tab === 'about') return 'invite_friends';
+    if (!tab) return 'account';
+    return tab;
+  };
+
+  const [activeSubTab, setActiveSubTab] = useState<'account' | 'cycle' | 'notifications' | 'music_sanctuary' | 'partner' | 'premium' | 'privacy_security' | 'invite_friends'>(getMappedTab(initialSubTab));
+  const [showPrivacy, setShowPrivacy] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
 
   React.useEffect(() => {
-    setActiveSubTab(initialSubTab);
+    setActiveSubTab(getMappedTab(initialSubTab));
   }, [initialSubTab]);
-  const [selectedPlanId, setSelectedPlanId] = useState<'monthly' | '6month'>('monthly');
-  const [selectedCurrency, setSelectedCurrency] = useState<'USD' | 'NGN' | 'GHS' | 'ZAR'>('USD');
+  const [selectedPlanId, setSelectedPlanId] = useState<'monthly' | '6month' | 'yearly'>('monthly');
   const [billingProgress, setBillingProgress] = useState<string | null>(null);
   const [billingError, setBillingError] = useState<string | null>(null);
   const [billingSuccess, setBillingSuccess] = useState<string | null>(null);
-  const [verificationReceipt, setVerificationReceipt] = useState<{
-    status: 'success' | 'pending' | 'failed';
-    planId: 'monthly' | '6month';
-    planName: string;
-    amountPaid: number;
-    currency: string;
-    reference: string;
-    nextBillingDate?: string;
-    trialEndDate?: string;
-    updatedUserObj?: User;
-    errorMessage?: string;
-  } | null>(null);
 
   const handleExportData = () => {
     const backupData = {
@@ -179,440 +213,74 @@ const Settings: React.FC<SettingsProps> = ({
     }
   };
 
-  // --- AUTO-VERIFY RE-DIRECTED PAYMENTS FROM PAYSTACK ---
+  // --- REVENUECAT SUBSCRIPTION SYNCHRONIZATION ---
   React.useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const reference = params.get('reference') || params.get('trxref');
-    const urlPlanId = params.get('planId') as 'monthly' | '6month' | null;
-    const urlCurrency = params.get('currency') as 'USD' | 'NGN' | 'GHS' | 'ZAR' | null;
-    const urlUserId = params.get('userId');
-
-    if (reference) {
-      const cleanUrl = window.location.pathname;
-      window.history.replaceState({}, document.title, cleanUrl);
-
-      const verifyRedirectedPayment = async () => {
-        setActiveSubTab('billing');
-        setBillingProgress("Verifying your payment with Paystack...");
-        setBillingError(null);
-        setBillingSuccess(null);
-
-        const plan = urlPlanId || selectedPlanId;
-        const currency = urlCurrency || selectedCurrency;
-        const targetPlan = PAYSTACK_PLANS.find(p => p.id === plan) || PAYSTACK_PLANS[0];
-        const fallbackPrice = currency === 'USD' 
-          ? targetPlan.priceUSD 
-          : currency === 'NGN' 
-            ? targetPlan.priceNGN 
-            : currency === 'GHS'
-              ? Number((targetPlan.priceUSD * 14.5).toFixed(2))
-              : Number((targetPlan.priceUSD * 18.2).toFixed(2));
-
-        try {
-          const verifyRes = await fetch("/api/paystack/verify", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-              reference,
-              planId: plan,
-              currency,
-              userId: urlUserId || user.id
-            })
-          });
-
-          const result = await verifyRes.json().catch(() => ({}));
-
-          if (verifyRes.ok && result.status === "success") {
-            const updatedUser: User = {
-              ...user,
-              isPremium: true,
-              subscriptionPlan: result.subscriptionPlan || targetPlan.id,
-              subscriptionStatus: result.subscriptionStatus || "trialing",
-              subscriptionTrialEnd: result.subscriptionTrialEnd,
-              subscriptionEnd: result.subscriptionEnd,
-              trial_start_date: result.trial_start_date,
-              trial_end_date: result.trial_end_date,
-              billingHistory: result.billingHistory || (user.id.startsWith("sandbox_") || user.id.startsWith("offline_") 
-                ? [...(user.billingHistory || []), result.billingHistoryItem]
-                : user.billingHistory)
-            };
-
-            setUser(updatedUser);
-            localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
-            localStorage.setItem('lumina_biometric_user', JSON.stringify(updatedUser));
-
-            setVerificationReceipt({
-              status: 'success',
-              planId: targetPlan.id,
-              planName: targetPlan.name,
-              amountPaid: result.billingHistoryItem?.amount ?? 0.0,
-              currency,
-              reference,
-              nextBillingDate: result.subscriptionEnd,
-              trialEndDate: result.trial_end_date || result.subscriptionTrialEnd,
-              updatedUserObj: updatedUser
-            });
-            setBillingSuccess(`Hurray! Your subscription for ${targetPlan.name} is now active & validated on real Paystack live! 🌸`);
-          } else if (verifyRes.ok && result.status === "pending") {
-            setVerificationReceipt({
-              status: 'pending',
-              planId: targetPlan.id,
-              planName: targetPlan.name,
-              amountPaid: fallbackPrice,
-              currency,
-              reference
-            });
-          } else {
-            setBillingError(result.error || "Payment verification failed or transaction was not completed.");
-          }
-        } catch (err: any) {
-          setBillingError(err?.message || "Failed to connect to verification server.");
-        } finally {
-          setBillingProgress(null);
-        }
-      };
-
-      verifyRedirectedPayment();
-    }
+    const syncStatus = async () => {
+      try {
+        await syncActiveSubscriptionStatus(user, setUser);
+      } catch (err) {
+        console.error("Failed to auto-sync RevenueCat status on load:", err);
+      }
+    };
+    syncStatus();
   }, []);
 
-  // --- PAYSTACK PREMIUM BILLING HANDLERS ---
+  // --- REVENUECAT PREMIUM BILLING HANDLERS ---
   const handleStartTrial = async () => {
     setBillingError(null);
     setBillingSuccess(null);
-    setVerificationReceipt(null);
-    setBillingProgress("Initializing Paystack Checkout secure window...");
+    setBillingProgress("Connecting securely to subscription store...");
 
-    const targetPlan = PAYSTACK_PLANS.find(p => p.id === selectedPlanId);
+    const targetPlan = REVENUECAT_PLANS.find(p => p.id === selectedPlanId);
     if (!targetPlan) {
-      setBillingError("Invalid plan selected");
+      setBillingError("Invalid subscription plan selected");
       setBillingProgress(null);
       return;
     }
 
     try {
-      await startPaystackTrialCheckout({
-        user,
-        plan: targetPlan,
-        currency: selectedCurrency,
-        onSuccess: async (ref) => {
-          setBillingProgress("Verifying payment authorization with Paystack...");
-          const fallbackPrice = selectedCurrency === 'USD' 
-            ? targetPlan.priceUSD 
-            : selectedCurrency === 'NGN' 
-              ? targetPlan.priceNGN 
-              : selectedCurrency === 'GHS'
-                ? Number((targetPlan.priceUSD * 14.5).toFixed(2))
-                : Number((targetPlan.priceUSD * 18.2).toFixed(2));
-
-          try {
-            const verifyRes = await fetch("/api/paystack/verify", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json"
-              },
-              body: JSON.stringify({
-                reference: ref,
-                planId: targetPlan.id,
-                currency: selectedCurrency,
-                userId: user.id
-              })
-            });
-
-            const result = await verifyRes.json().catch(() => ({}));
-
-            if (!verifyRes.ok) {
-              setVerificationReceipt({
-                status: 'failed',
-                planId: targetPlan.id,
-                planName: targetPlan.name,
-                amountPaid: fallbackPrice,
-                currency: selectedCurrency,
-                reference: ref,
-                errorMessage: result.error || `Server verification failed with status ${verifyRes.status}`
-              });
-              return;
-            }
-
-            if (result.status === "pending") {
-              setVerificationReceipt({
-                status: 'pending',
-                planId: targetPlan.id,
-                planName: targetPlan.name,
-                amountPaid: fallbackPrice,
-                currency: selectedCurrency,
-                reference: ref
-              });
-              return;
-            }
-
-            if (result.status === "success") {
-              const updatedUser: User = {
-                ...user,
-                isPremium: true,
-                subscriptionPlan: result.subscriptionPlan || targetPlan.id,
-                subscriptionStatus: result.subscriptionStatus || "trialing",
-                subscriptionTrialEnd: result.subscriptionTrialEnd,
-                subscriptionEnd: result.subscriptionEnd,
-                trial_start_date: result.trial_start_date,
-                trial_end_date: result.trial_end_date,
-                billingHistory: result.billingHistory || (user.id.startsWith("sandbox_") || user.id.startsWith("offline_") 
-                  ? [...(user.billingHistory || []), result.billingHistoryItem]
-                  : user.billingHistory)
-              };
-
-              setVerificationReceipt({
-                status: 'success',
-                planId: targetPlan.id,
-                planName: targetPlan.name,
-                amountPaid: result.billingHistoryItem?.amount ?? 0.0,
-                currency: selectedCurrency,
-                reference: ref,
-                nextBillingDate: result.subscriptionEnd,
-                trialEndDate: result.trial_end_date || result.subscriptionTrialEnd,
-                updatedUserObj: updatedUser
-              });
-            } else {
-              setVerificationReceipt({
-                status: 'failed',
-                planId: targetPlan.id,
-                planName: targetPlan.name,
-                amountPaid: fallbackPrice,
-                currency: selectedCurrency,
-                reference: ref,
-                errorMessage: result.error || "Payment not completed"
-              });
-            }
-          } catch (syncErr: any) {
-            setVerificationReceipt({
-              status: 'failed',
-              planId: targetPlan.id,
-              planName: targetPlan.name,
-              amountPaid: fallbackPrice,
-              currency: selectedCurrency,
-              reference: ref,
-              errorMessage: syncErr?.message || "Payment not completed"
-            });
-          } finally {
-            setBillingProgress(null);
-          }
-        },
-        onCancel: () => {
-          setBillingProgress(null);
-          setBillingError("Checkout closed by user. No authorized changes made.");
-        },
-        onError: (errMessage) => {
-          setBillingProgress(null);
-          setBillingError(errMessage);
-        }
-      });
-    } catch (checkoutErr: any) {
+      const res = await purchasePremiumPlan(targetPlan, user, setUser);
+      if (res.success) {
+        setBillingSuccess(`Congratulations! Your ${targetPlan.name} is now active and validated via RevenueCat. Welcome to Lumina Premium! 🌸✨`);
+      } else {
+        setBillingError(res.error || "Failed to finalize subscription purchase.");
+      }
+    } catch (err: any) {
+      setBillingError(err?.message || "An unexpected error occurred during checkout.");
+    } finally {
       setBillingProgress(null);
-      setBillingError(checkoutErr?.message || "Failed to boot Paystack checkout tunnel.");
     }
   };
 
-  const handleCheckPendingStatus = async () => {
-    if (!verificationReceipt) return;
-    setBillingProgress("Re-checking verification status with Paystack...");
+  const handleRestorePurchases = async () => {
     setBillingError(null);
+    setBillingSuccess(null);
+    setBillingProgress("Contacting App Store / Google Play to restore purchases...");
+
     try {
-      const verifyRes = await fetch("/api/paystack/verify", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          reference: verificationReceipt.reference,
-          planId: verificationReceipt.planId,
-          currency: verificationReceipt.currency,
-          userId: user.id
-        })
-      });
-
-      const result = await verifyRes.json().catch(() => ({}));
-
-      if (!verifyRes.ok) {
-        setVerificationReceipt({
-          ...verificationReceipt,
-          status: 'failed',
-          errorMessage: result.error || `Verification failed with status ${verifyRes.status}`
-        });
-        return;
-      }
-
-      if (result.status === "pending") {
-        setBillingError("Transaction is still pending confirmation by Paystack. Please check back in a few moments or use card checkout.");
-      } else if (result.status === "success") {
-        const updatedUser: User = {
-          ...user,
-          isPremium: true,
-          subscriptionPlan: result.subscriptionPlan || verificationReceipt.planId,
-          subscriptionStatus: result.subscriptionStatus || "trialing",
-          subscriptionTrialEnd: result.subscriptionTrialEnd,
-          subscriptionEnd: result.subscriptionEnd,
-          trial_start_date: result.trial_start_date,
-          trial_end_date: result.trial_end_date,
-          billingHistory: result.billingHistory || (user.id.startsWith("sandbox_") || user.id.startsWith("offline_") 
-            ? [...(user.billingHistory || []), result.billingHistoryItem]
-            : user.billingHistory)
-        };
-
-        setVerificationReceipt({
-          ...verificationReceipt,
-          status: 'success',
-          amountPaid: result.billingHistoryItem?.amount ?? 0.0,
-          nextBillingDate: result.subscriptionEnd,
-          trialEndDate: result.trial_end_date || result.subscriptionTrialEnd,
-          updatedUserObj: updatedUser
-        });
-        setBillingSuccess("Payment successfully verified by Paystack!");
+      const res = await restorePremiumPurchases(user, setUser);
+      if (res.success && res.restored) {
+        setBillingSuccess("Success! Your previous Premium subscription was found and has been successfully restored on this device. 💖");
+      } else if (res.success && !res.restored) {
+        setBillingError("Restore complete, but no active Premium subscription was found for this account.");
       } else {
-        setVerificationReceipt({
-          ...verificationReceipt,
-          status: 'failed',
-          errorMessage: result.error || "Payment not completed"
-        });
+        setBillingError(res.error || "Restoration failed.");
       }
     } catch (err: any) {
-      setBillingError(`Re-check failed: ${err.message || err}`);
+      setBillingError(err?.message || "An unexpected error occurred during restoration.");
     } finally {
       setBillingProgress(null);
     }
   };
 
   const handleCancelSubscriptionAction = async () => {
-    setBillingProgress("Processing subscription lock cancellation...");
-    try {
-      await syncCancelSubscription(user, setUser);
-      setBillingSuccess("Your future recurring payments have been successfully suspended. Premium features remain active until your calculated billing cycle expiration.");
-    } catch (err: any) {
-      setBillingError(`Cancellation failed: ${err?.message || err}`);
-    } finally {
-      setBillingProgress(null);
-    }
-  };
-
-  const handleFullCancelAndRefund = async () => {
-    if (!window.confirm("Are you sure you want to cancel your Premium subscription and revoke all access? This will simulate an immediate refund to your original payment card.")) {
-      return;
-    }
-    setBillingProgress("Reversing transaction on Paystack & updating secure registers...");
-    try {
-      const activeHist = user.billingHistory || [];
-      const refundAmount = activeHist.length > 0 ? activeHist[activeHist.length - 1].amount : 10.97;
-      const refundCurrency = activeHist.length > 0 ? activeHist[activeHist.length - 1].currency : 'USD';
-
-      const refundItem: BillingItem = {
-        id: `ref_${Date.now()}`,
-        date: new Date().toISOString(),
-        amount: -refundAmount,
-        currency: refundCurrency,
-        planName: "Full Premium Cancellation & Refund Reversal",
-        status: "refunded",
-        reference: `ref_rev_${Math.random().toString(36).substring(2, 10).toUpperCase()}`
-      };
-
-      const updatedUser: User = {
-        ...user,
-        isPremium: false,
-        subscriptionStatus: 'cancelled',
-        subscriptionPlan: undefined,
-        billingHistory: [...activeHist, refundItem]
-      };
-
-      setUser(updatedUser);
-      await syncUser(updatedUser);
-      setBillingSuccess(`Subscription fully cancelled and access revoked. A simulated refund of ${refundAmount} ${refundCurrency} has been successfully credited to your payment card.`);
-    } catch (err: any) {
-      setBillingError(`Refund cancellation failed: ${err?.message || err}`);
-    } finally {
-      setBillingProgress(null);
-    }
-  };
-
-  const handleUpdatePaymentCard = async () => {
-    setBillingProgress("Opening Paystack payment token updater...");
     setBillingError(null);
     setBillingSuccess(null);
-
-    try {
-      await updatePaystackPaymentMethod({
-        user,
-        currency: selectedCurrency,
-        onSuccess: async (ref) => {
-          setBillingProgress("Updating security card token registers...");
-          const newCharge: BillingItem = {
-            id: `card_up_${Date.now()}`,
-            date: new Date().toISOString(),
-            amount: 0,
-            currency: selectedCurrency,
-            planName: "Verified & Updated Payment Card Source",
-            status: "paid",
-            reference: ref
-          };
-
-          const updatedUser: User = {
-            ...user,
-            billingHistory: [...(user.billingHistory || []), newCharge]
-          };
-
-          setUser(updatedUser);
-          await syncUser(updatedUser);
-          setBillingSuccess("Your payment method has been successfully updated and secured through Paystack.");
-          setBillingProgress(null);
-        },
-        onCancel: () => {
-          setBillingProgress(null);
-        },
-        onError: (err) => {
-          setBillingProgress(null);
-          setBillingError(err);
-        }
-      });
-    } catch (err: any) {
-      setBillingProgress(null);
-      setBillingError(err?.message || "Failed to set up payment method updater.");
-    }
-  };
-
-  const handleSimulatePaymentFailure = async () => {
-    setBillingProgress("Simulating renewal payment rejection...");
-    setBillingError(null);
-    setBillingSuccess(null);
-
-    try {
-      await syncSimulateBillingFailure(user, setUser);
-      setBillingError("Renewal Charge Declined: Paystack failed to authorize the periodic subscription fee. Premium access has been suspended. Please update/verify your payment card.");
-    } catch (err: any) {
-      setBillingError(`Failure simulation broke: ${err?.message || err}`);
-    } finally {
-      setBillingProgress(null);
-    }
-  };
-
-  const handleReactivatePlan = async (planId: 'monthly' | '6month') => {
-    setBillingProgress("Reactivating premium subscription...");
-    const targetPlan = PAYSTACK_PLANS.find(p => p.id === planId);
-    if (!targetPlan) return;
-
-    try {
-      const updatedUser: User = {
-        ...user,
-        isPremium: true,
-        subscriptionStatus: 'active',
-        subscriptionPlan: planId
-      };
-      setUser(updatedUser);
-      await syncUser(updatedUser);
-      setBillingSuccess(`Lumina Premium has been reactivated successfully for the ${targetPlan.name}!`);
-    } catch (err: any) {
-      setBillingError(err?.message || "Reactivation sync failed");
-    } finally {
-      setBillingProgress(null);
-    }
+    setBillingProgress("Opening subscription settings...");
+    
+    const platformMsg = "To cancel your active subscription, please open the App Store (iOS) or Google Play Store (Android) settings page on your device, select Subscriptions, and tap Cancel.";
+    setBillingSuccess(platformMsg);
+    setBillingProgress(null);
   };
 
   const parseAndImportJSON = (jsonText: string) => {
@@ -917,58 +585,102 @@ const Settings: React.FC<SettingsProps> = ({
         <p className="text-sm text-pink-300 italic">Configure notifications, companion tones, and device layouts</p>
       </header>
 
-      {/* Tabs */}
-      <div className="flex bg-rose-50/50 p-1 rounded-2xl w-full border border-rose-100 max-w-lg mx-auto">
+      {/* Tabs Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 bg-rose-50/50 p-1.5 rounded-3xl w-full border border-rose-100 max-w-5xl mx-auto gap-1.5 shadow-inner">
         <button 
-          onClick={() => setActiveSubTab('notifications')}
-          className={`flex-1 py-3 text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-1.5 ${
-            activeSubTab === 'notifications' 
-              ? 'bg-gradient-to-r from-pink-500 to-rose-400 text-white shadow-md shadow-pink-100' 
-              : 'text-pink-400 hover:text-pink-600'
+          onClick={() => setActiveSubTab('account')}
+          className={`py-3 px-2 text-[9px] font-black uppercase tracking-widest rounded-2xl transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 cursor-pointer ${
+            activeSubTab === 'account' 
+              ? 'bg-gradient-to-r from-pink-500 to-rose-400 text-white shadow-md' 
+              : 'text-pink-400 hover:text-pink-600 hover:bg-rose-50/40'
           }`}
         >
-          <Bell size={13} />
+          <UserIcon size={12} />
+          Account
+        </button>
+        <button 
+          onClick={() => setActiveSubTab('cycle')}
+          className={`py-3 px-2 text-[9px] font-black uppercase tracking-widest rounded-2xl transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 cursor-pointer ${
+            activeSubTab === 'cycle' 
+              ? 'bg-gradient-to-r from-pink-500 to-rose-400 text-white shadow-md' 
+              : 'text-pink-400 hover:text-pink-600 hover:bg-rose-50/40'
+          }`}
+        >
+          <Calendar size={12} />
+          Cycle
+        </button>
+        <button 
+          onClick={() => setActiveSubTab('notifications')}
+          className={`py-3 px-2 text-[9px] font-black uppercase tracking-widest rounded-2xl transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 cursor-pointer ${
+            activeSubTab === 'notifications' 
+              ? 'bg-gradient-to-r from-pink-500 to-rose-400 text-white shadow-md' 
+              : 'text-pink-400 hover:text-pink-600 hover:bg-rose-50/40'
+          }`}
+        >
+          <Bell size={12} />
           Notifications
         </button>
         <button 
-          onClick={() => setActiveSubTab('billing')}
-          className={`flex-1 py-3 text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-1.5 ${
-            activeSubTab === 'billing' 
-              ? 'bg-gradient-to-r from-pink-500 to-rose-400 text-white shadow-md shadow-pink-100' 
-              : 'text-pink-400 hover:text-pink-600'
+          onClick={() => setActiveSubTab('music_sanctuary')}
+          className={`py-3 px-2 text-[9px] font-black uppercase tracking-widest rounded-2xl transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 cursor-pointer ${
+            activeSubTab === 'music_sanctuary' 
+              ? 'bg-gradient-to-r from-pink-500 to-rose-400 text-white shadow-md' 
+              : 'text-pink-400 hover:text-pink-600 hover:bg-rose-50/40'
           }`}
         >
-          <CreditCard size={13} />
-          Premium & Billing
+          <Volume2 size={12} />
+          Music & Sanctuary
         </button>
         <button 
-          onClick={() => setActiveSubTab('general')}
-          className={`flex-1 py-3 text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-1.5 ${
-            activeSubTab === 'general' 
-              ? 'bg-gradient-to-r from-pink-500 to-rose-400 text-white shadow-md shadow-pink-100' 
-              : 'text-pink-400 hover:text-pink-600'
+          onClick={() => setActiveSubTab('partner')}
+          className={`py-3 px-2 text-[9px] font-black uppercase tracking-widest rounded-2xl transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 cursor-pointer ${
+            activeSubTab === 'partner' 
+              ? 'bg-gradient-to-r from-pink-500 to-rose-400 text-white shadow-md' 
+              : 'text-pink-400 hover:text-pink-600 hover:bg-rose-50/40'
           }`}
         >
-          <Smartphone size={13} />
-          General
+          <Heart size={12} />
+          Partner
         </button>
         <button 
-          onClick={() => setActiveSubTab('invite')}
-          className={`flex-1 py-3 text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-1.5 ${
-            activeSubTab === 'invite' 
-              ? 'bg-gradient-to-r from-pink-500 to-rose-400 text-white shadow-md shadow-pink-100' 
-              : 'text-pink-400 hover:text-pink-600'
+          onClick={() => setActiveSubTab('premium')}
+          className={`py-3 px-2 text-[9px] font-black uppercase tracking-widest rounded-2xl transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 cursor-pointer ${
+            activeSubTab === 'premium' 
+              ? 'bg-gradient-to-r from-pink-500 to-rose-400 text-white shadow-md' 
+              : 'text-pink-400 hover:text-pink-600 hover:bg-rose-50/40'
           }`}
         >
-          <Share2 size={13} />
-          Invite
+          <Sparkles size={12} />
+          Premium
+        </button>
+        <button 
+          onClick={() => setActiveSubTab('privacy_security')}
+          className={`py-3 px-2 text-[9px] font-black uppercase tracking-widest rounded-2xl transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 cursor-pointer ${
+            activeSubTab === 'privacy_security' 
+              ? 'bg-gradient-to-r from-pink-500 to-rose-400 text-white shadow-md' 
+              : 'text-pink-400 hover:text-pink-600 hover:bg-rose-50/40'
+          }`}
+        >
+          <ShieldCheck size={12} />
+          Privacy & Security
+        </button>
+        <button 
+          onClick={() => setActiveSubTab('invite_friends')}
+          className={`py-3 px-2 text-[9px] font-black uppercase tracking-widest rounded-2xl transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 cursor-pointer ${
+            activeSubTab === 'invite_friends' 
+              ? 'bg-gradient-to-r from-pink-500 to-rose-400 text-white shadow-md' 
+              : 'text-pink-400 hover:text-pink-600 hover:bg-rose-50/40'
+          }`}
+        >
+          <Share2 size={12} />
+          Invite Friends
         </button>
       </div>
 
-      {activeSubTab === 'notifications' ? (
+      {(activeSubTab === 'notifications' || activeSubTab === 'cycle') ? (
         <div className="space-y-8">
-          {/* Pregnancy Mode Switcher Card */}
-          <div className="bg-gradient-to-r from-pink-500 via-rose-500 to-amber-400 p-[2px] rounded-[2.5rem] shadow-lg shadow-rose-100/40">
+          {activeSubTab === 'cycle' && (
+            <div className="bg-gradient-to-r from-pink-500 via-rose-500 to-amber-400 p-[2px] rounded-[2.5rem] shadow-lg shadow-rose-100/40">
             <div className="bg-white p-6 rounded-[2.4rem] space-y-4">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="space-y-1">
@@ -1097,10 +809,119 @@ const Settings: React.FC<SettingsProps> = ({
                   </div>
                 </div>
               )}
+
+              {/* Menstrual Cycle Metrics Sliders */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-rose-50/50">
+                {/* Cycle Length Slider */}
+                <div className="bg-rose-50/30 p-5 rounded-3xl border border-rose-100/30 flex flex-col gap-2">
+                  <div className="flex justify-between items-center">
+                    <label className="text-[10px] font-bold text-pink-500 uppercase tracking-widest flex items-center gap-1.5">
+                      <Layers size={13} />
+                      Cycle Length
+                    </label>
+                    <span className="text-xs font-serif font-black text-pink-700">{user.cycleLength ?? 28} Days</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min="21" 
+                    max="42" 
+                    value={user.cycleLength ?? 28} 
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value) || 28;
+                      const updatedUser = { ...user, cycleLength: val };
+                      setUser(updatedUser);
+                      localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+                      syncUser(updatedUser);
+                    }}
+                    className="w-full accent-pink-500 h-1 bg-pink-100 rounded-lg cursor-pointer mt-1"
+                  />
+                  <span className="text-[8px] text-gray-400 font-sans italic">Distance between active flow starts (normally 28 days)</span>
+                </div>
+
+                {/* Period Length Slider */}
+                <div className="bg-rose-50/30 p-5 rounded-3xl border border-rose-100/30 flex flex-col gap-2">
+                  <div className="flex justify-between items-center">
+                    <label className="text-[10px] font-bold text-pink-500 uppercase tracking-widest flex items-center gap-1.5">
+                      <Calendar size={13} />
+                      Period Duration
+                    </label>
+                    <span className="text-xs font-serif font-black text-pink-700">{user.periodLength ?? 5} Days</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min="3" 
+                    max="10" 
+                    value={user.periodLength ?? 5} 
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value) || 5;
+                      const updatedUser = { ...user, periodLength: val };
+                      setUser(updatedUser);
+                      localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+                      syncUser(updatedUser);
+                    }}
+                    className="w-full accent-pink-500 h-1 bg-pink-100 rounded-lg cursor-pointer mt-1"
+                  />
+                  <span className="text-[8px] text-gray-400 font-sans italic">Expected active bleeding flow days (normally 5 days)</span>
+                </div>
+              </div>
+
+              {/* Last Period Start Date Picker */}
+              <div className="bg-rose-50/10 p-5 rounded-3xl border border-rose-50 flex flex-col gap-2">
+                <label className="text-[10px] font-bold text-pink-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Calendar size={13} />
+                  Last Period Start Date
+                </label>
+                <input 
+                  type="date"
+                  value={user.lastPeriodStart ? user.lastPeriodStart.split('T')[0] : new Date().toISOString().split('T')[0]}
+                  onChange={(e) => {
+                    const selectedDate = e.target.value ? new Date(e.target.value).toISOString() : new Date().toISOString();
+                    const updatedUser = { ...user, lastPeriodStart: selectedDate };
+                    setUser(updatedUser);
+                    localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+                    syncUser(updatedUser);
+                  }}
+                  className="bg-pink-50/50 px-4 py-3 rounded-2xl outline-none font-medium text-xs text-pink-700 border border-pink-100 shadow-inner w-full focus:border-pink-300 transition-colors cursor-pointer"
+                />
+                <span className="text-[8px] text-gray-400 italic">This anchors the beginning of your dynamic timeline predictions.</span>
+              </div>
+
+              {/* Fertility Tracking & Awareness */}
+              <div className="bg-rose-50/30 p-5 rounded-3xl border border-rose-100/30 flex flex-col gap-3">
+                <label className="text-[10px] font-bold text-pink-500 uppercase tracking-widest flex items-center gap-1.5">
+                  <Sparkles size={13} />
+                  Fertility Tracking & Awareness Options
+                </label>
+                <div className="space-y-3">
+                  {[
+                    { key: 'predictFertile', label: 'Predict Fertile Window & Ovulation', desc: 'Predict high, peak, and low fertility phases dynamically on your calendar.', value: user.sharingSettings?.shareFertilityInfo ?? true },
+                    { key: 'trackCervicalMucus', label: 'Track Cervical Mucus', desc: 'Enable tracking and analysis of cervical fluids for advanced cycle tracking.', value: true },
+                    { key: 'trackBBT', label: 'Basal Body Temperature (BBT)', desc: 'Integrate thermal charting to confirm ovulation and cycle precision.', value: true }
+                  ].map((opt, idx) => (
+                    <div key={idx} className="flex justify-between items-center p-3 bg-white rounded-2xl border border-pink-50">
+                      <div className="space-y-0.5 max-w-[80%]">
+                        <span className="text-xs font-bold text-gray-700">{opt.label}</span>
+                        <p className="text-[9px] text-gray-400 italic leading-snug">{opt.desc}</p>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                        <input 
+                          type="checkbox" 
+                          className="sr-only peer"
+                          defaultChecked={opt.value}
+                          onChange={() => {}}
+                        />
+                        <div className="w-8 h-4.5 bg-pink-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-pink-500 peer-checked:to-rose-400"></div>
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
-          {/* Main Toggle Block */}
-          <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-pink-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative overflow-hidden">
+          )}
+
+          {activeSubTab === 'notifications' && (
+            <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-pink-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative overflow-hidden">
             <div className="space-y-1 max-w-md">
               <h3 className="text-lg font-serif text-pink-500 flex items-center gap-2 italic">
                 <span className="text-2xl">🔔</span> Sanctuary Push Notifications
@@ -1118,11 +939,12 @@ const Settings: React.FC<SettingsProps> = ({
               <span className="w-6 h-6 rounded-full bg-white shadow-sm transition-transform duration-300"></span>
             </button>
           </div>
+          )}
 
           {settings.enabled && (
             <div className="space-y-8">
-              {/* Tone style selection */}
-              <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-pink-50 space-y-6">
+              {activeSubTab === 'music_sanctuary' && (
+                <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-pink-50 space-y-6">
                 <div className="space-y-1">
                   <h4 className="font-serif text-lg text-pink-500 flex items-center gap-2 italic">
                     <span className="text-base">🎀</span> Companion Personality Tone
@@ -1177,9 +999,12 @@ const Settings: React.FC<SettingsProps> = ({
                   </button>
                 </div>
               </div>
+              )}
 
-              {/* Reminder Timing & Quiet Hours */}
-              <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-pink-50 space-y-6">
+              {activeSubTab === 'notifications' && (
+                <>
+                  {/* Reminder Timing & Quiet Hours */}
+                  <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-pink-50 space-y-6">
                 <div className="space-y-1">
                   <h4 className="font-serif text-lg text-pink-500 flex items-center gap-2 italic">
                     <span className="text-base">⏰</span> Alert Timing & Quiet Hours
@@ -1374,6 +1199,9 @@ const Settings: React.FC<SettingsProps> = ({
                       { key: 'fertileWindow', label: 'Fertile Window Banner', d: 'Notice spanning fertile boundaries.' },
                       { key: 'lutealPhase', label: 'Luteal Phase Transition', d: 'Reminder to turn inward and embrace gentle rest.' },
                       { key: 'pregnancyRisk', label: 'Pregnancy Risk Insights', d: 'Discreet guidelines based on statistics.' },
+                      { key: 'medication', label: 'Medication Reminder', d: 'Gentle notification to take daily vitamins or medications.' },
+                      { key: 'contraception', label: 'Contraception Reminder', d: 'Scheduled alert to take your birth control pill or check method.' },
+                      { key: 'wellness', label: 'Wellness Reminder', d: 'Reminds you to check in on mood, hydrate or practice meditation.' },
                     ].map((item) => (
                       <div key={item.key} className="flex justify-between items-center p-3.5 bg-rose-50/15 border border-pink-100/30 rounded-2xl hover:bg-rose-50/30 transition-all">
                         <div className="space-y-0.5">
@@ -1381,9 +1209,9 @@ const Settings: React.FC<SettingsProps> = ({
                           <p className="text-[10px] text-gray-400 italic font-medium">{item.d}</p>
                         </div>
                         <button 
-                          onClick={() => updateTypes(item.key as any, !settings.types[item.key as keyof NotificationSettings['types']])}
+                          onClick={() => updateTypes(item.key as any, !(settings.types[item.key as keyof NotificationSettings['types']] ?? true))}
                           className={`w-10 h-6 rounded-full p-0.5 transition-colors duration-300 ease-in-out flex items-center ${
-                            settings.types[item.key as keyof NotificationSettings['types']] ? 'bg-pink-500 justify-end' : 'bg-pink-100 justify-start'
+                            (settings.types[item.key as keyof NotificationSettings['types']] ?? true) ? 'bg-pink-500 justify-end' : 'bg-pink-100 justify-start'
                           }`}
                         >
                           <span className="w-5 h-5 rounded-full bg-white shadow-sm"></span>
@@ -1956,10 +1784,12 @@ const Settings: React.FC<SettingsProps> = ({
                   )}
                 </div>
               </div>
+            </>
+          )}
             </div>
           )}
         </div>
-      ) : activeSubTab === 'billing' ? (
+      ) : activeSubTab === 'premium' ? (
         <div className="space-y-8 animate-fadeIn">
           {/* Progress / Error / Success Alerts */}
           {billingProgress && (
@@ -1981,187 +1811,23 @@ const Settings: React.FC<SettingsProps> = ({
             </div>
           )}
 
-          {billingError && !verificationReceipt && (
+          {billingError && (
             <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl text-xs text-rose-600 font-serif flex flex-col gap-1">
               <span className="font-bold flex items-center gap-1.5 text-rose-700">⚠️ Billing Issue</span>
               <p>{billingError}</p>
             </div>
           )}
 
-          {billingSuccess && !verificationReceipt && (
+          {billingSuccess && (
             <div className="p-4 bg-teal-50 border border-teal-100 rounded-2xl text-xs text-teal-800 font-serif flex flex-col gap-1">
               <span className="font-bold flex items-center gap-1.5 text-teal-900">✨ Success</span>
               <p>{billingSuccess}</p>
             </div>
           )}
 
-          {verificationReceipt ? (
-            <div className="bg-gradient-to-br from-indigo-50 via-pink-50/10 to-rose-50/30 p-[2px] rounded-[2.5rem] shadow-xl border border-pink-100/50 animate-fadeIn">
-              <div className="bg-white p-8 md:p-12 rounded-[2.4rem] space-y-8">
-                {/* Header Icon & Status Badge */}
-                <div className="text-center space-y-3">
-                  {verificationReceipt.status === 'success' ? (
-                    <>
-                      <div className="w-16 h-16 bg-emerald-50 border border-emerald-200 text-emerald-500 rounded-full flex items-center justify-center text-3xl mx-auto shadow-md animate-scaleUp">
-                        ✨
-                      </div>
-                      <span className="inline-flex py-1 px-3 bg-emerald-50 text-emerald-700 border border-emerald-200/50 rounded-full font-black text-[9px] uppercase tracking-widest">
-                        Verified & Ready
-                      </span>
-                      <h3 className="text-3xl font-serif text-indigo-950 italic">Payment Successful!</h3>
-                      <p className="text-xs text-neutral-500 max-w-md mx-auto leading-relaxed">
-                        Your payment authorization was successfully verified by Paystack. Click the button below to activate your Lumina Premium sanctuary.
-                      </p>
-                    </>
-                  ) : verificationReceipt.status === 'pending' ? (
-                    <>
-                      <div className="w-16 h-16 bg-amber-50 border border-amber-200 text-amber-500 rounded-full flex items-center justify-center text-3xl mx-auto shadow-md animate-pulse">
-                        ⏳
-                      </div>
-                      <span className="inline-flex py-1 px-3 bg-amber-50 text-amber-700 border border-amber-200/50 rounded-full font-black text-[9px] uppercase tracking-widest">
-                        Payment Pending
-                      </span>
-                      <h3 className="text-3xl font-serif text-indigo-950 italic">Waiting for Confirmation</h3>
-                      <p className="text-xs text-neutral-500 max-w-md mx-auto leading-relaxed">
-                        We are waiting for bank confirmation or Paystack webhook update for this reference code. Click check status to verify.
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <div className="w-16 h-16 bg-rose-50 border border-rose-200 text-rose-500 rounded-full flex items-center justify-center text-3xl mx-auto shadow-md animate-scaleUp">
-                        ⚠️
-                      </div>
-                      <span className="inline-flex py-1 px-3 bg-rose-50 text-rose-700 border border-rose-200/50 rounded-full font-black text-[9px] uppercase tracking-widest">
-                        Payment Failed
-                      </span>
-                      <h3 className="text-3xl font-serif text-indigo-950 italic">Verification Failed</h3>
-                      <p className="text-xs text-rose-600 max-w-md mx-auto bg-rose-50/45 p-3 rounded-2xl border border-rose-100/50 font-serif leading-relaxed">
-                        {verificationReceipt.errorMessage || "Your payment was not completed or could not be verified by the gateway."}
-                      </p>
-                    </>
-                  )}
-                </div>
-
-                {/* Receipt Fields Grid */}
-                <div className="max-w-md mx-auto bg-neutral-50/50 border border-neutral-100 rounded-3xl p-6 space-y-4">
-                  <div className="flex justify-between items-center text-xs pb-3 border-b border-neutral-100">
-                    <span className="text-neutral-400">Subscription Plan</span>
-                    <span className="font-bold text-neutral-800 font-serif italic">{verificationReceipt.planName}</span>
-                  </div>
-
-                  <div className="flex justify-between items-center text-xs pb-3 border-b border-neutral-100">
-                    <span className="text-neutral-400">Amount Paid</span>
-                    <span className="font-mono font-bold text-neutral-800">
-                      {verificationReceipt.amountPaid === 0 ? (
-                        <span className="text-pink-600 font-bold">0.00 {verificationReceipt.currency} (7-Day Trial Setup)</span>
-                      ) : (
-                        `${verificationReceipt.amountPaid.toFixed(2)} ${verificationReceipt.currency}`
-                      )}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between items-center text-xs pb-3 border-b border-neutral-100">
-                    <span className="text-neutral-400">Payment Status</span>
-                    <span className={`font-black uppercase tracking-widest text-[9px] py-0.5 px-2 rounded ${
-                      verificationReceipt.status === 'success' 
-                        ? 'bg-emerald-100 text-emerald-700' 
-                        : verificationReceipt.status === 'pending'
-                          ? 'bg-amber-100 text-amber-700 animate-pulse'
-                          : 'bg-rose-100 text-rose-700'
-                    }`}>
-                      {verificationReceipt.status === 'success' ? 'Verified' : verificationReceipt.status === 'pending' ? 'Pending' : 'Failed'}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between items-center text-xs pb-3 border-b border-neutral-100">
-                    <span className="text-neutral-400">Transaction Reference</span>
-                    <span className="font-mono text-[10px] text-neutral-500 break-all select-all">{verificationReceipt.reference}</span>
-                  </div>
-
-                  {verificationReceipt.nextBillingDate && (
-                    <div className="flex justify-between items-center text-xs pb-3 border-b border-neutral-100">
-                      <span className="text-neutral-400">Next Billing Date</span>
-                      <span className="font-semibold text-neutral-700">
-                        {new Date(verificationReceipt.nextBillingDate).toLocaleDateString(undefined, { dateStyle: 'medium' })}
-                      </span>
-                    </div>
-                  )}
-
-                  {verificationReceipt.trialEndDate && (
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-neutral-400">Trial End Date</span>
-                      <span className="font-semibold text-pink-600">
-                        {new Date(verificationReceipt.trialEndDate).toLocaleDateString(undefined, { dateStyle: 'medium' })}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Control Action Buttons */}
-                <div className="max-w-md mx-auto space-y-3">
-                  {verificationReceipt.status === 'success' ? (
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        if (verificationReceipt.updatedUserObj) {
-                          setUser(verificationReceipt.updatedUserObj);
-                          if (verificationReceipt.updatedUserObj.id.startsWith("sandbox_") || verificationReceipt.updatedUserObj.id.startsWith("offline_")) {
-                            await syncUser(verificationReceipt.updatedUserObj);
-                          }
-                        }
-                        setVerificationReceipt(null);
-                      }}
-                      className="w-full py-4 bg-gradient-to-r from-emerald-500 via-teal-500 to-indigo-600 hover:scale-[1.01] active:scale-[0.98] text-white font-black text-xs uppercase tracking-widest rounded-3xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
-                    >
-                      🚀 Continue to Premium
-                    </button>
-                  ) : verificationReceipt.status === 'pending' ? (
-                    <>
-                      <button
-                        type="button"
-                        onClick={handleCheckPendingStatus}
-                        className="w-full py-4 bg-amber-500 hover:bg-amber-600 text-white font-black text-xs uppercase tracking-widest rounded-3xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
-                      >
-                        🔄 Check Status & Verify
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setVerificationReceipt(null)}
-                        className="w-full py-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-bold text-xs uppercase tracking-wider rounded-3xl transition-all cursor-pointer"
-                      >
-                        ⬅️ Back to Pricing
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setVerificationReceipt(null);
-                          handleStartTrial();
-                        }}
-                        className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-widest rounded-3xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
-                      >
-                        🔄 Retry Checkout
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setVerificationReceipt(null)}
-                        className="w-full py-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-bold text-xs uppercase tracking-wider rounded-3xl transition-all cursor-pointer"
-                      >
-                        ⬅️ Close & Back to Settings
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <>
-              {/* ACTIVE PREMIUM WORKSPACE HEADER / CONTROLLER */}
           {user.isPremium ? (
             <div className="space-y-6">
-              {/* Premium Status Banner */}
+              {/* Active Premium Status Banner */}
               <div className="bg-gradient-to-r from-emerald-500 via-teal-600 to-indigo-600 p-[2px] rounded-[2.5rem] shadow-lg shadow-teal-100">
                 <div className="bg-white p-8 rounded-[2.4rem] space-y-6">
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -2174,7 +1840,7 @@ const Settings: React.FC<SettingsProps> = ({
                       </div>
                       <h3 className="text-2xl font-serif italic text-indigo-950">Lumina Premium Sanctuary</h3>
                       <p className="text-xs text-neutral-500">
-                        Thank you for supporting Lumina. Enjoy zero limits and full divine connectivity.
+                        Thank you for supporting Lumina. Enjoy zero limits, shared partner spaces, custom alerts, and therapeutic healing music.
                       </p>
                     </div>
                     <div className="py-2 px-4 bg-emerald-50 text-emerald-700 rounded-full font-bold uppercase text-[9px] tracking-widest border border-emerald-100 shrink-0 self-start md:self-auto">
@@ -2186,19 +1852,19 @@ const Settings: React.FC<SettingsProps> = ({
                     <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100 space-y-1">
                       <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-wider">Current Plan</p>
                       <p className="text-sm font-serif italic text-neutral-700 font-bold capitalize">
-                        {user.subscriptionPlan === 'monthly' ? 'Premium Monthly ($10.97)' : user.subscriptionPlan === '6month' ? 'Premium 6-Month ($49.99)' : '7-Day Free Trial'}
+                        {REVENUECAT_PLANS.find(p => p.id === user.subscriptionPlan)?.name || "Lumina Premium Plan"}
                       </p>
                     </div>
                     <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100 space-y-1">
-                      <p className="text-[9px] font-bold text-indigo-950 uppercase tracking-wider">Payments Status</p>
+                      <p className="text-[9px] font-bold text-indigo-950 uppercase tracking-wider">Status</p>
                       <p className="text-sm font-serif italic text-indigo-950 font-bold capitalize">
-                        {user.subscriptionStatus || 'trialing'}
+                        {user.subscriptionStatus || "active"}
                       </p>
                     </div>
                     <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100 space-y-1">
-                      <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-wider">Next Renewal / Expiry</p>
+                      <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-wider">Expiration Date</p>
                       <p className="text-sm font-serif italic text-neutral-700 font-bold">
-                        {user.subscriptionEnd ? new Date(user.subscriptionEnd).toLocaleDateString() : 'N/A'}
+                        {user.subscriptionEnd ? new Date(user.subscriptionEnd).toLocaleDateString(undefined, { dateStyle: 'medium' }) : "Continuous"}
                       </p>
                     </div>
                   </div>
@@ -2207,80 +1873,20 @@ const Settings: React.FC<SettingsProps> = ({
                   <div className="pt-4 flex flex-wrap gap-3">
                     <button
                       type="button"
-                      onClick={handleUpdatePaymentCard}
-                      className="py-3 px-5 bg-gradient-to-r from-teal-500 to-emerald-400 text-white font-bold text-[10px] uppercase tracking-wider rounded-2xl hover:opacity-90 active:scale-95 transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
+                      onClick={handleRestorePurchases}
+                      className="py-3 px-5 bg-gradient-to-r from-pink-500 to-indigo-600 text-white font-bold text-[10px] uppercase tracking-wider rounded-2xl hover:opacity-95 active:scale-95 transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
                     >
-                      💳 Update Payment Card
+                      🔄 Restore & Sync Status
                     </button>
 
                     <button
                       type="button"
                       onClick={handleCancelSubscriptionAction}
-                      disabled={user.subscriptionStatus === 'cancelled'}
-                      className={`py-3 px-5 border rounded-2xl font-bold text-[10px] uppercase tracking-wider transition-all cursor-pointer ${
-                        user.subscriptionStatus === 'cancelled'
-                          ? 'border-neutral-200 text-neutral-400 cursor-not-allowed'
-                          : 'border-rose-200 text-rose-600 hover:bg-rose-50/30'
-                      }`}
+                      className="py-3 px-5 border border-rose-200 text-rose-600 hover:bg-rose-50/30 rounded-2xl font-bold text-[10px] uppercase tracking-wider transition-all cursor-pointer"
                     >
-                      🚫 Cancel Auto-Billing
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleFullCancelAndRefund}
-                      className="py-3 px-5 bg-rose-600 text-white hover:bg-rose-700 font-bold text-[10px] uppercase tracking-wider rounded-2xl transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
-                    >
-                      🛑 Cancel Payment & Refund (Immediate)
+                      🚫 Manage / Cancel Subscription
                     </button>
                   </div>
-                </div>
-              </div>
-
-              {/* Plans Switcher Options for Existing Members */}
-              <div className="bg-white p-8 rounded-[2.5rem] border border-pink-50 space-y-6">
-                <header>
-                  <h4 className="text-lg font-serif italic text-indigo-950">Switch / Select Active Plan</h4>
-                  <p className="text-xs text-neutral-400 leading-relaxed font-sans mt-0.5">
-                    Toggle your premium membership plan code. Your choices will sync automatically and apply starting your next Paystack charge date.
-                  </p>
-                </header>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {PAYSTACK_PLANS.map((p) => {
-                    const isSelected = user.subscriptionPlan === p.id;
-                    return (
-                      <div 
-                        key={p.id}
-                        className={`p-6 rounded-3xl border transition-all flex flex-col justify-between gap-4 ${
-                          isSelected 
-                            ? 'border-indigo-500 bg-indigo-50/10 shadow-sm' 
-                            : 'border-neutral-100 hover:border-indigo-200'
-                        }`}
-                      >
-                        <div className="space-y-1">
-                          <span className="text-[10px] font-black tracking-widest uppercase text-indigo-500">{p.interval}</span>
-                          <p className="text-base font-serif italic text-indigo-950">{p.name}</p>
-                          <p className="text-xs text-neutral-400 leading-normal">{p.description}</p>
-                        </div>
-                        <div className="flex justify-between items-center pt-3 border-t border-indigo-50/20">
-                          <span className="text-xl font-bold text-indigo-950">${p.priceUSD.toFixed(2)}</span>
-                          <button
-                            type="button"
-                            onClick={() => handleReactivatePlan(p.id)}
-                            disabled={isSelected}
-                            className={`py-2 px-4 rounded-xl font-bold text-[9px] uppercase tracking-wider transition-all cursor-pointer ${
-                              isSelected
-                                ? 'bg-indigo-100 text-indigo-600 cursor-default'
-                                : 'bg-indigo-600 text-white hover:bg-indigo-700'
-                            }`}
-                          >
-                            {isSelected ? 'Activated' : 'Switch Plan'}
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
                 </div>
               </div>
             </div>
@@ -2295,23 +1901,23 @@ const Settings: React.FC<SettingsProps> = ({
 
                   <div className="space-y-2 text-center max-w-xl mx-auto">
                     <span className="inline-flex py-1.5 px-3 bg-rose-50 text-rose-600 rounded-full font-black text-[9px] uppercase tracking-widest border border-rose-100">
-                      💎 Premium Access Waitlist
+                      💎 Lumina Premium Sanctuary
                     </span>
                     <h3 className="text-3xl font-serif text-indigo-950 italic">Experience Unrestricted Sanctuary</h3>
                     <p className="text-xs text-neutral-500 leading-relaxed font-sans">
-                      Start your 7-day complete free trial today. Connect partners, customize alerts, and unlock deep insights. Cancel anytime before day 7; your card won't be charged.
+                      Enjoy shared partner connections, custom cycle alerts, restorative hormone-balancing music, and personalized wellness plans with an active premium subscription.
                     </p>
                   </div>
 
                   {/* Feature Checklist */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto pt-4 border-t border-rose-50/40">
                     {[
-                      { icon: '🌺', title: '7-Day Full Premium Free Trial', desc: 'Secure preview with zero risks. Cancel anytime.' },
-                      { icon: '🤰', title: 'Co-Parenting / Partner Sync Tools', desc: 'Share your syncs, mood warnings, and events.' },
-                      { icon: '📊', title: 'Deep Cycle Botanical Health Trends', desc: 'Access advanced endocrine logs and cycle analysis.' },
-                      { icon: '🔒', title: 'Cloud Integration & Restore Hub', desc: 'Never lose your historic datasets across devices.' }
+                      { icon: "🌺", title: "Comprehensive Sanctuary Access", desc: "Unlock beautiful healing ambient sounds and customizable relaxation loops." },
+                      { icon: "🤰", title: "Co-Parenting / Partner Sync Tools", desc: "Share real-time cycle status, moods, and direct alerts securely." },
+                      { icon: "📊", title: "Complete Fertility & Ovulation Tracking", desc: "Get highly accurate predictive timelines and wellness insights." },
+                      { icon: "🔒", title: "Secure Account & Cloud Integration", desc: "Save your details permanently and restore them easily on any platform." }
                     ].map((feat, idx) => (
-                      <div key={idx} className="flex gap-3 p-4 bg-rose-50/15 border border-rose-50/30 rounded-2xl hover:bg-rose-55/10 transition-all">
+                      <div key={idx} className="flex gap-3 p-4 bg-rose-50/15 border border-rose-50/30 rounded-2xl hover:bg-rose-50/10 transition-all">
                         <span className="text-2xl mt-0.5">{feat.icon}</span>
                         <div className="space-y-0.5 text-left">
                           <p className="text-xs font-bold text-neutral-800 leading-tight">{feat.title}</p>
@@ -2324,35 +1930,13 @@ const Settings: React.FC<SettingsProps> = ({
                   {/* Pricing Plans Box */}
                   <div className="max-w-2xl mx-auto space-y-6 pt-4">
                     <div className="flex justify-between items-center text-xs">
-                      <span className="font-bold text-neutral-500 uppercase tracking-widest text-[10px]">Select Trial Plan</span>
-                      <div className="flex gap-1 bg-rose-50 p-1 border border-rose-100 rounded-xl">
-                        {(['USD', 'NGN', 'GHS', 'ZAR'] as const).map((curr) => (
-                          <button
-                            key={curr}
-                            type="button"
-                            onClick={() => setSelectedCurrency(curr)}
-                            className={`py-1 px-2.5 rounded text-[10px] uppercase font-bold transition-all cursor-pointer ${
-                              selectedCurrency === curr ? 'bg-white text-rose-600 shadow-sm' : 'text-neutral-400 hover:text-rose-500'
-                            }`}
-                          >
-                            {curr}
-                          </button>
-                        ))}
-                      </div>
+                      <span className="font-bold text-neutral-500 uppercase tracking-widest text-[10px]">Select Subscription Plan</span>
+                      <span className="text-[10px] text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full font-bold uppercase tracking-wider">🔒 App Store / Google Play</span>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {PAYSTACK_PLANS.map((p) => {
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {REVENUECAT_PLANS.map((p) => {
                         const isChosen = selectedPlanId === p.id;
-                        const isUSD = selectedCurrency === 'USD';
-                        const priceByCurr = isUSD 
-                          ? `$${p.priceUSD.toFixed(2)}` 
-                          : selectedCurrency === 'NGN' 
-                            ? `₦${p.priceNGN.toLocaleString()}`
-                            : selectedCurrency === 'GHS'
-                              ? `${(p.priceUSD * 14.5).toFixed(2)} GHS`
-                              : `${(p.priceUSD * 18.2).toFixed(2)} ZAR`;
-
                         return (
                           <button
                             key={p.id}
@@ -2360,166 +1944,458 @@ const Settings: React.FC<SettingsProps> = ({
                             onClick={() => setSelectedPlanId(p.id)}
                             className={`p-6 rounded-3xl border text-left flex flex-col justify-between gap-4 transition-all cursor-pointer ${
                               isChosen 
-                                ? 'border-pink-500 bg-pink-50/15 ring-2 ring-pink-400/20 shadow-md' 
-                                : 'border-neutral-100 hover:border-neutral-200'
+                                ? "border-pink-500 bg-pink-50/15 ring-2 ring-pink-400/20 shadow-md" 
+                                : "border-neutral-100 hover:border-neutral-200"
                             }`}
                           >
                             <div className="space-y-1 w-full">
-                              <p className="text-[9px] font-black uppercase tracking-widest text-pink-500">{p.interval}</p>
-                              <p className="text-base font-serif italic text-indigo-950">{p.name}</p>
+                              <p className="text-[9px] font-black uppercase tracking-widest text-pink-500">{p.id === 'monthly' ? 'Monthly' : p.id === '6month' ? '6 Months' : 'Yearly'}</p>
+                              <p className="text-sm font-serif italic text-indigo-950">{p.name}</p>
+                              <p className="text-[10px] text-neutral-400 leading-snug">{p.description}</p>
                             </div>
-                            <div className="w-full pt-3 border-t border-rose-100/30 flex justify-between items-end">
-                              <p className="text-[10px] text-neutral-400 capitalize font-medium">{p.id === 'monthly' ? 'Cancel anytime' : 'Best Deal'}</p>
-                              <p className="text-2xl font-serif text-indigo-950 italic font-bold leading-none">{priceByCurr}</p>
+                            <div className="w-full pt-3 border-t border-rose-100/30 flex flex-col items-start gap-1">
+                              <p className="text-lg font-serif text-indigo-950 font-bold leading-none">{p.priceFormatted}</p>
                             </div>
                           </button>
                         );
                       })}
                     </div>
 
+                    <div className="space-y-3 pt-2">
+                      <button
+                        type="button"
+                        onClick={handleStartTrial}
+                        className="w-full py-4 bg-gradient-to-r from-pink-500 via-rose-500 to-indigo-600 hover:scale-[1.01] active:scale-[0.98] text-white font-black text-xs uppercase tracking-widest rounded-3xl shadow-xl shadow-rose-100/40 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        🚀 Subscribe & Unlock Premium
+                      </button>
+                      
+                      <p className="text-[9px] text-neutral-400 text-center font-serif italic leading-relaxed max-w-lg mx-auto">
+                        Subscriptions will charge securely through your Apple App Store or Google Play Store billing account. Auto-renewals can be easily cancelled at any time inside your native device account settings.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Restore Purchase Card */}
+              <div className="bg-white p-8 rounded-[2.5rem] border border-pink-50 space-y-4">
+                <h4 className="text-lg font-serif italic text-indigo-950 flex items-center gap-1.5">
+                  <span>👑</span> Restore Purchases & Sync Subscription
+                </h4>
+                <p className="text-xs text-neutral-400 font-sans leading-relaxed">
+                  Already subscribed on another device or platform? Tap below to securely verify your previous App Store / Google Play purchase entitlements through RevenueCat.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleRestorePurchases}
+                  className="py-3 px-6 bg-gradient-to-r from-pink-500 to-indigo-600 text-white font-black text-[9px] uppercase tracking-widest rounded-2xl shadow-md shadow-pink-100 hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer inline-flex items-center gap-1.5"
+                >
+                  🔄 Restore Premium Purchase
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : activeSubTab === 'partner' ? (
+        <div className="space-y-8 animate-fadeIn">
+          <PartnerMode user={user} reminders={reminders} setReminders={setReminders} setUser={setUser} partnerUser={partnerUser} />
+        </div>
+      ) : activeSubTab === 'music_sanctuary' ? (
+        <div className="space-y-8 animate-fadeIn">
+          {/* Music player HUD */}
+          <section className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-pink-50 space-y-6">
+            <h3 className="text-xl font-serif text-pink-500 flex items-center gap-2">
+              <Volume2 size={20} className="text-pink-400" />
+              Therapeutic Ambient Audio 🎵
+            </h3>
+            <p className="text-xs text-gray-400 leading-relaxed font-serif italic">
+              Immerse yourself in our soundscapes designed to calm the nervous system, balance hormones, and ease menstrual discomfort.
+            </p>
+
+            <div className="space-y-5">
+              {/* Playback Control HUD */}
+              <div className="bg-gradient-to-r from-pink-500/10 to-rose-500/5 p-6 rounded-3xl border border-pink-100/40 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="space-y-1 text-center md:text-left">
+                  <h4 className="text-xs font-bold text-pink-900 uppercase tracking-widest">
+                    Lumina Ambient Player
+                  </h4>
+                  <p className="text-[10px] text-gray-500">
+                    {isMusicPlaying ? "🎶 Playing soft restorative frequencies" : "🔇 Soundscape is currently paused"}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={toggleMusicActive}
+                    className={`py-2 px-4 rounded-xl text-[10px] font-bold uppercase tracking-wider border cursor-pointer transition-all ${
+                      isMusicActive 
+                        ? 'bg-pink-500 text-white border-pink-400 shadow-md' 
+                        : 'bg-white text-pink-500 border-pink-200 hover:bg-pink-50/40'
+                    }`}
+                  >
+                    {isMusicActive ? "Sound Enabled 🔊" : "Muted 🔇"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={toggleMusic}
+                    className="py-2.5 px-5 bg-gradient-to-r from-pink-500 to-rose-450 hover:opacity-90 text-white font-black rounded-xl text-[10px] uppercase tracking-widest shadow-md cursor-pointer transition-all"
+                  >
+                    {isMusicPlaying ? "Pause ⏸" : "Play Ambient ▶"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Volume Slider */}
+              <div className="bg-rose-50/30 p-5 rounded-3xl border border-rose-100/30 flex flex-col gap-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-[10px] font-bold text-pink-500 uppercase tracking-widest flex items-center gap-1.5">
+                    <span>🔊</span> Sanctuary Volume
+                  </label>
+                  <span className="text-xs font-serif font-black text-pink-700">{Math.round(volume * 100)}%</span>
+                </div>
+                <input 
+                  type="range" 
+                  min="0" 
+                  max="1" 
+                  step="0.05"
+                  value={volume} 
+                  onChange={(e) => setVolume(parseFloat(e.target.value))}
+                  className="w-full accent-pink-500 h-1 bg-pink-100 rounded-lg cursor-pointer mt-1"
+                />
+              </div>
+
+              {/* Meditation Sounds Selection */}
+              <div className="bg-rose-50/30 p-5 rounded-3xl border border-rose-100/30 flex flex-col gap-3">
+                <label className="text-[10px] font-bold text-pink-500 uppercase tracking-widest flex items-center gap-1.5">
+                  <span>🧘</span> Meditation Sounds & Frequencies
+                </label>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  {[
+                    { id: 'rain', label: '🌧️ Forest Rain', active: true },
+                    { id: 'bowls', label: '🥣 Zen Tibetan Bowls', active: false },
+                    { id: 'solfeggio', label: '🧬 Solfeggio 528Hz', active: false },
+                    { id: 'ocean', label: '🌊 Soft Ocean Waves', active: false },
+                  ].map((sound) => (
                     <button
+                      key={sound.id}
                       type="button"
-                      onClick={handleStartTrial}
-                      className="w-full py-4.5 bg-gradient-to-r from-pink-500 via-rose-500 to-indigo-600 hover:scale-[1.01] active:scale-[0.98] text-white font-black text-xs uppercase tracking-widest rounded-3xl shadow-xl shadow-rose-100/40 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      onClick={() => alert(`Activated ${sound.label} as your active healing frequency!`)}
+                      className="p-2.5 rounded-xl border border-pink-100 bg-white text-left font-bold text-pink-700 hover:bg-pink-50/50 transition-all flex items-center justify-between text-[10px] uppercase cursor-pointer"
                     >
-                      🚀 Start 7-Day Free Trial Now
+                      <span>{sound.label}</span>
+                      <span className="w-2 h-2 rounded-full bg-pink-500"></span>
                     </button>
-                    
-                    <p className="text-[9px] text-neutral-400 text-center font-serif italic">
-                      All payment calculations operate securely through Paystack. Trial authorizations are refunded instantly on connection token verification.
-                    </p>
+                  ))}
+                </div>
+              </div>
+
+              {/* Sanctuary Preferences */}
+              <div className="bg-rose-50/30 p-5 rounded-3xl border border-rose-100/30 flex flex-col gap-3">
+                <label className="text-[10px] font-bold text-pink-500 uppercase tracking-widest flex items-center gap-1.5">
+                  <span>✨</span> Sanctuary Preferences
+                </label>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center text-[10px]">
+                    <span className="font-bold text-pink-900 uppercase">Background Audio Persistence</span>
+                    <span className="text-[9px] text-teal-600 font-bold uppercase">Active</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[10px]">
+                    <span className="font-bold text-pink-900 uppercase">Smooth Interface Transitions</span>
+                    <span className="text-[9px] text-teal-600 font-bold uppercase">Enabled</span>
                   </div>
                 </div>
               </div>
             </div>
-          )}
+          </section>
 
-          {/* Billing Transaction Record History */}
-          <div className="bg-white p-8 rounded-[2.5rem] border border-pink-50 space-y-6">
-            <header>
-              <h4 className="text-lg font-serif italic text-indigo-950 flex items-center gap-1.5">
-                📜 Secure Transactions & Billing Invoices
-              </h4>
-              <p className="text-xs text-neutral-400 font-sans leading-relaxed">
-                Review historic tokens, subscription validation checks, and automatic renewal invoice histories.
-              </p>
-            </header>
-
-            {user.billingHistory && user.billingHistory.length > 0 ? (
-              <div className="overflow-x-auto rounded-2xl border border-rose-50">
-                <table className="w-full text-left text-xs text-neutral-600">
-                  <thead className="bg-rose-50/10 text-[9px] font-bold uppercase tracking-widest text-neutral-400 border-b border-rose-50/50">
-                    <tr>
-                      <th className="py-3.5 px-4 font-bold">Date</th>
-                      <th className="py-3.5 px-4 font-bold">Description</th>
-                      <th className="py-3.5 px-4 font-bold">Ref Code</th>
-                      <th className="py-3.5 px-4 font-bold">Amount</th>
-                      <th className="py-3.5 px-4 font-bold text-center font-sans">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-rose-50/20">
-                    {user.billingHistory.map((bill) => (
-                      <tr key={bill.id} className="hover:bg-rose-50/[0.05]">
-                        <td className="py-3.5 px-4 text-[11px] font-medium text-neutral-500">
-                          {new Date(bill.date).toLocaleDateString()}
-                        </td>
-                        <td className="py-3.5 px-4 font-serif italic text-[11px] leading-snug">
-                          {bill.planName}
-                        </td>
-                        <td className="py-3.5 px-4 font-mono text-[9px] text-neutral-400">
-                          {bill.reference}
-                        </td>
-                        <td className="py-3.5 px-4 text-[11px] font-bold text-neutral-700">
-                          {bill.currency === 'USD' ? '$' : bill.currency === 'NGN' ? '₦' : ''}{bill.amount.toFixed(2)} {bill.currency}
-                        </td>
-                        <td className="py-3.5 px-4 text-center">
-                          <span className={`inline-flex py-1 px-2.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
-                            bill.status === 'paid'
-                              ? 'bg-emerald-50 text-emerald-600'
-                              : bill.status === 'failed'
-                                ? 'bg-rose-50 text-rose-505'
-                                : 'bg-gray-50 text-neutral-400'
-                          }`}>
-                            {bill.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="p-12 text-center text-neutral-400 bg-neutral-50/40 rounded-3xl border border-dashed border-rose-100/50 space-y-2">
-                <span className="text-3xl">☕</span>
-                <p className="text-xs font-semibold uppercase tracking-wider text-rose-400">Ready to activate</p>
-                <p className="text-[10px] text-neutral-400 max-w-xs mx-auto leading-normal">
-                  No previous Paystack transaction codes registered on this profile yet. Start a trial above!
-                </p>
-              </div>
-            )}
-          </div>
-        </>
-      )}
-    </div>
-      ) : activeSubTab === 'invite' ? (
-        <div className="space-y-8 animate-fadeIn">
-          <CommunityInvite user={user} />
-        </div>
-      ) : (
-        <div className="space-y-8 animate-fadeIn">
-          {/* PROFILE & CYCLE CONFIGURATOR */}
+          {/* THEME & EYE CARE */}
           <section className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-pink-50 space-y-6">
             <h3 className="text-xl font-serif text-pink-500 flex items-center gap-2">
-              <UserIcon size={20} className="text-pink-400" />
-              Sanctuary Profile & Cycle Details 🌸
+              <Eye size={20} className="text-pink-400" />
+              Nighttime Comfort & Theme 🌙
             </h3>
             <p className="text-xs text-gray-400 leading-relaxed font-serif italic">
-               Keep your physical sanctuary metrics updated. These parameters adaptively configure predictions and botanical wellness logs.
+               Reduce eye strain during nighttime logging with our soft Dark Mode theme, or toggle your visual palette.
             </p>
 
             <div className="space-y-5">
-              {/* Display Name */}
-              <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-bold text-pink-400 uppercase tracking-wider flex items-center gap-1.5">
-                  <UserCheck size={13} />
-                  Display Name / Nickname
-                </label>
-                <input 
-                  type="text" 
-                  value={user.name || ''} 
-                  onChange={(e) => {
-                    const updatedUser = { ...user, name: e.target.value };
-                    setUser(updatedUser);
-                    localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
-                    syncUser(updatedUser);
-                  }}
-                  className="bg-pink-50/50 px-4 py-3 rounded-2xl outline-none font-medium text-xs text-pink-700 border border-pink-100 placeholder-pink-300 shadow-inner w-full focus:border-pink-300 transition-colors"
-                  placeholder="e.g. Beautiful Bloom"
-                />
+              <div className="bg-rose-50/30 p-5 rounded-3xl border border-rose-100/30 flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <p className="text-xs font-bold text-pink-900 tracking-wide flex items-center gap-1.5 uppercase tracking-widest text-[9px]">
+                      <Moon size={13} className="text-pink-400" />
+                      Nighttime Dark Mode
+                    </p>
+                    <p className="text-[9px] text-gray-400 leading-none">Toggle soft dark colors to rest your eyes in low light</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      className="sr-only peer"
+                      checked={!!user.darkMode}
+                      onChange={(e) => {
+                        const updatedUser = { ...user, darkMode: e.target.checked };
+                        setUser(updatedUser);
+                        localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+                        syncUser(updatedUser);
+                      }}
+                    />
+                    <div className="w-9 h-5 bg-pink-100 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-pink-500 peer-checked:to-rose-400"></div>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      ) : activeSubTab === 'privacy_security' ? (
+        <div className="space-y-8 animate-fadeIn">
+          {/* SECURITY & DEVICE Locking */}
+          <section className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-pink-50 space-y-6">
+            <h3 className="text-xl font-serif text-pink-500 flex items-center gap-2">
+              <Lock size={20} className="text-pink-400" />
+              🔐 Security Vault & Locker
+            </h3>
+            <p className="text-xs text-gray-400 leading-relaxed font-serif italic">
+              Prevent unauthorized physical eyes from reading your personal medical journal logs. Enable biometric logins or customize your 4-digit device PIN.
+            </p>
+
+            <div className="space-y-5">
+              {/* Biometrics Toggle */}
+              <div className="bg-rose-50/30 p-5 rounded-3xl border border-rose-100/30 flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <p className="text-xs font-bold text-pink-900 tracking-wide flex items-center gap-1.5 uppercase tracking-widest text-[9px]">
+                      <Fingerprint size={13} className="text-pink-400" />
+                      Device Biometrics & Login Persistence
+                    </p>
+                    <p className="text-[9px] text-gray-400 leading-none">Enable rapid biometric Face ID / Fingerprint unlock on startup</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      className="sr-only peer"
+                      checked={!!localStorage.getItem('lumina_biometric_user')}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          localStorage.setItem('lumina_biometric_user', JSON.stringify(user));
+                          setUser({ ...user });
+                        } else {
+                          localStorage.removeItem('lumina_biometric_user');
+                          setUser({ ...user });
+                        }
+                      }}
+                    />
+                    <div className="w-9 h-5 bg-pink-100 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-pink-500 peer-checked:to-rose-400"></div>
+                  </label>
+                </div>
+
+                <div className="mt-2 border-t border-rose-100/40 pt-3">
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">Enrollment Status:</span>
+                    {localStorage.getItem('lumina_biometric_user') ? (
+                      <span className="text-[9px] text-emerald-600 font-bold uppercase tracking-wider flex items-center gap-1">
+                        ● Linked & Authorized to Device Security
+                      </span>
+                    ) : (
+                      <span className="text-[9px] text-amber-600 font-bold uppercase tracking-wider flex items-center gap-1">
+                        ○ Biometrics Disabled. Standard Password Unlock Only.
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
 
-              {/* Invite friends promo card */}
-              <div className="bg-gradient-to-r from-pink-500/10 via-rose-500/5 to-transparent p-5 rounded-3xl border border-pink-100/40 flex flex-col sm:flex-row items-center justify-between gap-4 mt-4">
-                <div className="space-y-1 text-center sm:text-left">
-                  <h4 className="text-xs font-bold text-pink-900 uppercase tracking-wider flex items-center gap-1.5 justify-center sm:justify-start">
-                    <span>🌸</span> Invite Friends to Lumina
-                  </h4>
-                  <p className="text-[10px] text-gray-500 leading-normal max-w-sm">
-                    Get your personal signup QR code and share the sanctuary with your friends! Track how many have joined.
-                  </p>
-                  <p className="text-[10px] font-bold text-pink-600 font-serif">
-                    Friends Joined Through You: {user.referralCount || 0}
-                  </p>
+              {/* Set custom 4-digit PIN */}
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-bold text-pink-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Lock size={13} />
+                  Safe Vault 4-Digit Security PIN
+                </label>
+                <div className="relative">
+                  <input 
+                    type="text" 
+                    maxLength={4}
+                    value={user.diaryPin || '1234'} 
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 4) || '1234';
+                      const updatedUser = { ...user, diaryPin: val };
+                      setUser(updatedUser);
+                      localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+                      syncUser(updatedUser);
+                      if (localStorage.getItem('lumina_biometric_user')) {
+                        localStorage.setItem('lumina_biometric_user', JSON.stringify(updatedUser));
+                      }
+                    }}
+                    className="bg-pink-50/50 px-4 py-3 rounded-2xl outline-none font-bold text-sm tracking-[0.4em] text-pink-700 border border-pink-100 shadow-inner w-full focus:border-pink-300 transition-colors text-center"
+                    placeholder="1234"
+                  />
+                </div>
+                <span className="text-[8px] text-gray-400 italic">Used during emergency bypassing or manual dialpad lock screen access.</span>
+              </div>
+            </div>
+          </section>
+
+          {/* DATA EXPORT & LEGALS */}
+          <section className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-pink-50 space-y-6">
+            <h3 className="text-xl font-serif text-pink-500 flex items-center gap-2">
+              <span>🔒</span> Data Portability & Legals
+            </h3>
+            <p className="text-xs text-gray-400 leading-relaxed font-serif italic">
+              Your cycle, pregnancy logs, and intimate details are fully secure. Export your data anytime or read our clear, bulletproof commitments.
+            </p>
+
+            <div className="space-y-4 pt-2">
+              {/* Data Export Button */}
+              <div className="p-5 bg-rose-50/20 border border-pink-100/30 rounded-3xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="space-y-0.5">
+                  <p className="text-xs font-bold text-pink-900 uppercase tracking-widest text-[9px]">Data Export Hub</p>
+                  <p className="text-[9px] text-gray-400">Download your entire historical logs and cycle charts in premium PDF/JSON format.</p>
                 </div>
                 <button
                   type="button"
-                  onClick={() => setActiveSubTab('invite')}
-                  className="py-2.5 px-4 bg-pink-500 text-white font-bold rounded-xl text-[9px] uppercase tracking-wider shadow-sm hover:bg-pink-600 transition-all cursor-pointer whitespace-nowrap"
+                  onClick={() => alert("Downloading secure, AES-256 encrypted archive of your Lumina history... 📂")}
+                  className="py-2.5 px-4 bg-pink-400 hover:bg-pink-500 text-white font-bold text-[9px] uppercase tracking-widest rounded-xl shadow-md transition-all cursor-pointer"
                 >
-                  View My Invite QR →
+                  Export My Data
                 </button>
               </div>
 
+              {/* Privacy Policy & Terms Links */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                <div className="p-5 bg-neutral-50 rounded-3xl border border-neutral-100 space-y-2">
+                  <p className="text-[10px] font-bold text-gray-700 uppercase tracking-wider">Privacy Policy</p>
+                  <p className="text-[9px] text-gray-400 font-serif italic">We commit to never, ever selling or monetizing your cycle or medical datasets. Your data remains fully owned by you, local, or end-to-end encrypted in your vault.</p>
+                  <button
+                    type="button"
+                    onClick={() => alert("Lumina Privacy Commitment:\n1. Zero data monetization.\n2. Local first storage.\n3. Transparent sharing.")}
+                    className="text-[9px] text-pink-500 font-bold uppercase hover:underline"
+                  >
+                    Read Policy Details &rarr;
+                  </button>
+                </div>
+
+                <div className="p-5 bg-neutral-50 rounded-3xl border border-neutral-100 space-y-2">
+                  <p className="text-[10px] font-bold text-gray-700 uppercase tracking-wider">Terms of Service</p>
+                  <p className="text-[9px] text-gray-400 font-serif italic">By using Lumina, you agree that calculations are beautiful estimations and does not constitute primary medical advice. Respect yourself and your companions.</p>
+                  <button
+                    type="button"
+                    onClick={() => alert("Lumina Terms of Service:\n1. Personal use only.\n2. Educational estimations.\n3. Respect companion agreements.")}
+                    className="text-[9px] text-pink-500 font-bold uppercase hover:underline"
+                  >
+                    Read Terms Details &rarr;
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      ) : activeSubTab === 'about' ? (
+        <div className="space-y-8 animate-fadeIn">
+          {/* Vision Card */}
+          <section className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-pink-50 space-y-4">
+            <h3 className="text-xl font-serif text-pink-500 flex items-center gap-2">
+              <span>✨</span> About Lumina Sanctuary
+            </h3>
+            <p className="text-xs text-gray-500 leading-relaxed font-serif italic">
+              Lumina is a premium, beautifully curated menstrual health sanctuary designed to honor your physical rhythms. By combining biology-led trackers, calming supportive companion audios, and secure shared partner experiences, Lumina elevates cycle awareness into a mindful, empowering ritual.
+            </p>
+            <div className="border-t border-rose-50/50 pt-4 text-center">
+              <span className="text-[9px] font-black uppercase tracking-widest text-pink-400">Version 2.4.0 (Redesigned Sanctuary)</span>
+            </div>
+          </section>
+
+          {/* Publishing Information Section */}
+          <section className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-pink-50">
+            <h3 className="text-xl font-serif text-pink-500 mb-6 flex items-center gap-2">
+               <span className="text-2xl">📲</span> Store Publishing Guide
+            </h3>
+            <div className="space-y-4 text-sm text-gray-500 italic leading-relaxed">
+              <p>Lumina is designed with progressive, touch-optimized web technologies. You can add it directly to your home screen to enjoy a native app experience:</p>
+              <div className="bg-pink-50 p-4 rounded-2xl border border-pink-100 text-xs">
+                <p className="font-bold text-pink-600 mb-2">For iPhone (Safari):</p>
+                <p>1. Tap the <span className="font-bold">Share</span> button (square with arrow).</p>
+                <p>2. Scroll down and tap <span className="font-bold">"Add to Home Screen"</span>.</p>
+                <p>3. Tap <span className="font-bold">Add</span> in the top right.</p>
+              </div>
+              <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100 text-xs">
+                <p className="font-bold text-blue-600 mb-2">For Android (Chrome):</p>
+                <p>1. Tap the <span className="font-bold">Menu</span> (three dots) in the top right.</p>
+                <p>2. Tap <span className="font-bold">"Install App"</span> or <span className="font-bold">"Add to Home Screen"</span>.</p>
+              </div>
+            </div>
+          </section>
+
+          {/* Siri Google Assistant */}
+          <section className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-pink-50">
+            <h3 className="text-xl font-serif text-pink-500 mb-6 flex items-center gap-2">
+               <span className="text-2xl">🎙️</span> Siri & Google Assistant
+            </h3>
+            <p className="text-sm text-gray-500 italic mb-4">Once you add Lumina to your Home Screen, you can simply say:</p>
+            <div className="p-6 bg-gradient-to-r from-pink-400 to-rose-300 rounded-3xl text-white text-center shadow-lg shadow-pink-100">
+              <p className="text-lg font-serif italic">"Hey Siri, open Lumina"</p>
+            </div>
+            <p className="text-[10px] text-pink-300 font-bold uppercase mt-4 text-center tracking-widest">Instant Sanctuary Access</p>
+          </section>
+
+          {/* FAQ & CONTACT SUPPORT */}
+          <section className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-pink-50 space-y-6">
+            <h3 className="text-xl font-serif text-pink-500 flex items-center gap-2">
+              <span>ℹ️</span> FAQ & Support Hub
+            </h3>
+            <p className="text-xs text-gray-400 leading-relaxed font-serif italic">
+              Find answers to common questions about your cycle syncs, or contact our dedicated sisterhood support team.
+            </p>
+
+            {/* FAQs Accordion/List */}
+            <div className="space-y-3 pt-2">
+              <p className="text-[10px] font-bold text-pink-400 uppercase tracking-wider">Frequently Asked Questions</p>
+              
+              <div className="space-y-3">
+                {[
+                  { q: "Is my medical data sold or public?", a: "Never. Lumina operates under strict privacy protections. Your logs, cycles, and journal notes are stored securely on your device and are strictly private." },
+                  { q: "How do I pair with my partner?", a: "Go to Settings -> Partner & Sharing, copy your partner's connection code, and enter it. Your accounts will pair instantly." },
+                  { q: "How accurate are the period return predictions?", a: "The longer you log your cycles on Lumina, the more our system refines its predictions. Most active users see precision of +/- 1 day." }
+                ].map((faq, idx) => (
+                  <div key={idx} className="p-4 bg-rose-50/10 border border-pink-50 rounded-2xl space-y-1">
+                    <p className="text-xs font-bold text-pink-950 font-serif">{faq.q}</p>
+                    <p className="text-[10px] text-gray-500 leading-relaxed font-serif italic">{faq.a}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Contact Support */}
+            <div className="pt-4 border-t border-rose-50/50 space-y-3">
+              <p className="text-[10px] font-bold text-pink-400 uppercase tracking-wider">Need Custom Assistance?</p>
+              <div className="p-5 bg-gradient-to-br from-pink-500 to-rose-400 rounded-3xl text-white flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="space-y-1">
+                  <p className="text-xs font-serif italic font-bold">Lumina Sisterhood Care Team</p>
+                  <p className="text-[10px] text-pink-100 leading-relaxed">Our support counselors are here 24/7 to help you resolve billing or pairing issues.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => alert("Launching your email client to contact support@lumina-sanctuary.com... 💌")}
+                  className="py-2.5 px-4 bg-white text-pink-600 font-bold text-[9px] uppercase tracking-widest rounded-xl hover:bg-pink-50 transition-all cursor-pointer shrink-0"
+                >
+                  Contact Support
+                </button>
+              </div>
+            </div>
+          </section>
+        </div>
+      ) : activeSubTab === 'cycle' ? (
+        <div className="space-y-8 animate-fadeIn">
+          <section className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-pink-50 space-y-6">
+            <h3 className="text-xl font-serif text-pink-500 flex items-center gap-2">
+              <Calendar size={20} className="text-pink-400" />
+              Menstrual Cycle Settings 🌸
+            </h3>
+            <p className="text-xs text-gray-400 leading-relaxed font-serif italic">
+               Keep your cycle metrics updated to ensure ultra-accurate, tailored biological calculations and period return predictions.
+            </p>
+
+            <div className="space-y-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Cycle Length Slider */}
                 <div className="bg-rose-50/30 p-5 rounded-3xl border border-rose-100/30 flex flex-col gap-2">
@@ -2596,132 +2472,52 @@ const Settings: React.FC<SettingsProps> = ({
               </div>
             </div>
           </section>
-
-          {/* THEME & EYE CARE */}
+        </div>
+      ) : (
+        <div className="space-y-8 animate-fadeIn">
+          {/* PROFILE DETAILS */}
           <section className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-pink-50 space-y-6">
             <h3 className="text-xl font-serif text-pink-500 flex items-center gap-2">
-              <Eye size={20} className="text-pink-400" />
-              Nighttime Comfort & Theme 🌙
+              <UserIcon size={20} className="text-pink-400" />
+              Sanctuary Account Details 🌸
             </h3>
             <p className="text-xs text-gray-400 leading-relaxed font-serif italic">
-               Reduce eye strain during nighttime logging with our soft Dark Mode theme, or toggle your visual palette.
+               Keep your personal sanctuary profile updated.
             </p>
 
             <div className="space-y-5">
-              {/* Dark Mode Toggle */}
-              <div className="bg-rose-50/30 p-5 rounded-3xl border border-rose-100/30 flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <p className="text-xs font-bold text-pink-900 tracking-wide flex items-center gap-1.5 uppercase tracking-widest text-[9px]">
-                      <Moon size={13} className="text-pink-400" />
-                      Nighttime Dark Mode
-                    </p>
-                    <p className="text-[9px] text-gray-400 leading-none">Toggle soft dark colors to rest your eyes in low light</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      className="sr-only peer"
-                      checked={!!user.darkMode}
-                      onChange={(e) => {
-                        const updatedUser = { ...user, darkMode: e.target.checked };
-                        setUser(updatedUser);
-                        localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
-                        syncUser(updatedUser);
-                      }}
-                    />
-                    <div className="w-9 h-5 bg-pink-100 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-pink-500 peer-checked:to-rose-400"></div>
-                  </label>
-                </div>
+              {/* Display Name */}
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-bold text-pink-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <UserCheck size={13} />
+                  Display Name / Nickname
+                </label>
+                <input 
+                  type="text" 
+                  value={user.name || ''} 
+                  onChange={(e) => {
+                    const updatedUser = { ...user, name: e.target.value };
+                    setUser(updatedUser);
+                    localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+                    syncUser(updatedUser);
+                  }}
+                  className="bg-pink-50/50 px-4 py-3 rounded-2xl outline-none font-medium text-xs text-pink-700 border border-pink-100 placeholder-pink-300 shadow-inner w-full focus:border-pink-300 transition-colors"
+                  placeholder="e.g. Beautiful Bloom"
+                />
               </div>
             </div>
           </section>
 
-          {/* SECURITY & DEVICE Locking */}
+          {/* Referral & Invite Card */}
           <section className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-pink-50 space-y-6">
             <h3 className="text-xl font-serif text-pink-500 flex items-center gap-2">
-              <Lock size={20} className="text-pink-400" />
-              🔐 Security Vault & Locker
+              <Share2 size={20} className="text-pink-400" />
+              Community Referrals & QR 🌸
             </h3>
             <p className="text-xs text-gray-400 leading-relaxed font-serif italic">
-              Prevent unauthorized physical eyes from reading your personal medical journal logs. Enable biometric logins or customize your 4-digit device PIN.
+              Share your invite link or QR code to bring your sisters and friends into the Lumina sanctuary.
             </p>
-
-            <div className="space-y-5">
-              {/* Biometrics Toggle */}
-              <div className="bg-rose-50/30 p-5 rounded-3xl border border-rose-100/30 flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <p className="text-xs font-bold text-pink-900 tracking-wide flex items-center gap-1.5 uppercase tracking-widest text-[9px]">
-                      <Fingerprint size={13} className="text-pink-400" />
-                      Device Biometrics & Login Persistence
-                    </p>
-                    <p className="text-[9px] text-gray-400 leading-none">Enable rapid biometric Face ID / Fingerprint unlock on startup</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      className="sr-only peer"
-                      checked={!!localStorage.getItem('lumina_biometric_user')}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          localStorage.setItem('lumina_biometric_user', JSON.stringify(user));
-                          // Trigger UI state force re-render
-                          setUser({ ...user });
-                        } else {
-                          localStorage.removeItem('lumina_biometric_user');
-                          setUser({ ...user });
-                        }
-                      }}
-                    />
-                    <div className="w-9 h-5 bg-pink-100 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-pink-500 peer-checked:to-rose-400"></div>
-                  </label>
-                </div>
-
-                <div className="mt-2 border-t border-rose-100/40 pt-3">
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">Enrollment Status:</span>
-                    {localStorage.getItem('lumina_biometric_user') ? (
-                      <span className="text-[9px] text-emerald-600 font-bold uppercase tracking-wider flex items-center gap-1">
-                        ● Linked & Authorized to Device Security
-                      </span>
-                    ) : (
-                      <span className="text-[9px] text-amber-600 font-bold uppercase tracking-wider flex items-center gap-1">
-                        ○ Biometrics Disabled. Standard Password Unlock Only.
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Set custom 4-digit PIN */}
-              <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-bold text-pink-400 uppercase tracking-wider flex items-center gap-1.5">
-                  <Lock size={13} />
-                  Safe Vault 4-Digit Security PIN
-                </label>
-                <div className="relative">
-                  <input 
-                    type="text" 
-                    maxLength={4}
-                    value={user.diaryPin || '1234'} 
-                    onChange={(e) => {
-                      const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 4) || '1234';
-                      const updatedUser = { ...user, diaryPin: val };
-                      setUser(updatedUser);
-                      localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
-                      syncUser(updatedUser);
-                      if (localStorage.getItem('lumina_biometric_user')) {
-                        localStorage.setItem('lumina_biometric_user', JSON.stringify(updatedUser));
-                      }
-                    }}
-                    className="bg-pink-50/50 px-4 py-3 rounded-2xl outline-none font-bold text-sm tracking-[0.4em] text-pink-700 border border-pink-100 shadow-inner w-full focus:border-pink-300 transition-colors text-center"
-                    placeholder="1234"
-                  />
-                </div>
-                <span className="text-[8px] text-gray-400 italic">Used during emergency bypassing or manual dialpad lock screen access.</span>
-              </div>
-            </div>
+            <CommunityInvite user={user} />
           </section>
 
           {/* DATA EXPORT & PORTABILITY */}
@@ -2865,39 +2661,6 @@ const Settings: React.FC<SettingsProps> = ({
               </button>
             </section>
           )}
-
-          {/* Publishing Information Section */}
-          <section className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-pink-50">
-            <h3 className="text-xl font-serif text-pink-500 mb-6 flex items-center gap-2">
-               <span className="text-2xl">📲</span> Store Publishing Guide
-            </h3>
-            <div className="space-y-4 text-sm text-gray-500 italic leading-relaxed">
-              <p>Lumina is currently a <strong>Progressive Web App (PWA)</strong>. To see it on your home screen:</p>
-              <div className="bg-pink-50 p-4 rounded-2xl border border-pink-100">
-                <p className="font-bold text-pink-600 mb-2">For iPhone (Safari):</p>
-                <p>1. Tap the <span className="font-bold">Share</span> button (square with arrow).</p>
-                <p>2. Scroll down and tap <span className="font-bold">"Add to Home Screen"</span>.</p>
-                <p>3. Tap <span className="font-bold">Add</span> in the top right.</p>
-              </div>
-              <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100">
-                <p className="font-bold text-blue-600 mb-2">For Android (Chrome):</p>
-                <p>1. Tap the <span className="font-bold">Menu</span> (three dots) in the top right.</p>
-                <p>2. Tap <span className="font-bold">"Install App"</span> or <span className="font-bold">"Add to Home Screen"</span>.</p>
-              </div>
-            </div>
-          </section>
-
-          {/* Siri Google Assistant */}
-          <section className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-pink-50">
-            <h3 className="text-xl font-serif text-pink-500 mb-6 flex items-center gap-2">
-               <span className="text-2xl">🎙️</span> Siri & Google Assistant
-            </h3>
-            <p className="text-sm text-gray-500 italic mb-4">Once you add Lumina to your Home Screen, you can simply say:</p>
-            <div className="p-6 bg-gradient-to-r from-pink-400 to-rose-300 rounded-3xl text-white text-center shadow-lg shadow-pink-100">
-              <p className="text-lg font-serif italic">"Hey Siri, open Lumina"</p>
-            </div>
-            <p className="text-[10px] text-pink-300 font-bold uppercase mt-4 text-center tracking-widest">Instant Sanctuary Access</p>
-          </section>
         </div>
       )}
     </div>

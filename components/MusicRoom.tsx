@@ -126,6 +126,23 @@ const MusicRoom: React.FC<MusicRoomProps> = ({
   const [isRepeat, setIsRepeat] = useState<'off' | 'one' | 'all'>('all');
   const [lyricsVisible, setLyricsVisble] = useState(false);
 
+  const [lockedSongAttempt, setLockedSongAttempt] = useState<any | null>(null);
+
+  const isSongPremiumLocked = (song: any) => {
+    if (user.isPremium) return false;
+    const premiumTags = ["classical", "meditation", "pregnancy relaxation", "jazz", "gospel"];
+    return song.tags.some((tag: string) => premiumTags.includes(tag.toLowerCase()));
+  };
+
+  const handleSongSelect = (songIdx: number) => {
+    const song = fullLibrary[songIdx];
+    if (song && isSongPremiumLocked(song)) {
+      setLockedSongAttempt(song);
+    } else {
+      onSelectSong(songIdx);
+    }
+  };
+
   const customSongs = user.customSongs || [];
   const fullLibrary = useMemo(() => {
     // Inject album and display meta directly to augment search fidelity
@@ -674,11 +691,12 @@ const MusicRoom: React.FC<MusicRoomProps> = ({
                 const songIdx = fullLibrary.indexOf(song);
                 const isCurrent = currentSongIndex === songIdx;
                 const isFav = favorites.includes(song.id);
+                const isLocked = isSongPremiumLocked(song);
 
                 return (
                   <div 
                     key={song.id} 
-                    onClick={() => onSelectSong(songIdx)}
+                    onClick={() => handleSongSelect(songIdx)}
                     className="group relative aspect-square bg-gradient-to-br from-white to-pink-50/10 rounded-[2.2rem] border border-pink-100/40 overflow-hidden cursor-pointer hover:shadow-xl hover:shadow-pink-100/40 transition-all hover:scale-[1.03]"
                   >
                     <div className="absolute inset-0 bg-gradient-to-t from-pink-900/90 via-pink-700/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-4">
@@ -690,6 +708,11 @@ const MusicRoom: React.FC<MusicRoomProps> = ({
                     </div>
                     
                     <div className="w-full h-full flex flex-col items-center justify-center p-4">
+                      {isLocked && (
+                        <div className="absolute top-3 left-3 w-6 h-6 bg-pink-100 dark:bg-stone-800 rounded-full flex items-center justify-center text-[10px] shadow-sm z-10 text-pink-600">
+                          🔒
+                        </div>
+                      )}
                       <div className="text-4xl mb-2 transition-transform duration-300 group-hover:scale-125">
                         {song.coverEmoji}
                       </div>
@@ -751,11 +774,12 @@ const MusicRoom: React.FC<MusicRoomProps> = ({
                   const songIdx = fullLibrary.indexOf(song);
                   const isCurrent = currentSongIndex === songIdx;
                   const isFav = favorites.includes(song.id);
+                  const isLocked = isSongPremiumLocked(song);
 
                   return (
                     <div 
                       key={song.id}
-                      onClick={() => onSelectSong(songIdx)}
+                      onClick={() => handleSongSelect(songIdx)}
                       className={`group bg-white p-4.5 rounded-[2rem] border transition-all duration-300 flex items-center justify-between cursor-pointer relative ${isCurrent ? 'border-pink-300 ring-2 ring-pink-100 bg-pink-50/10' : 'border-pink-50 hover:border-pink-200'}`}
                     >
                       <div className="flex items-center gap-4.5">
@@ -763,8 +787,11 @@ const MusicRoom: React.FC<MusicRoomProps> = ({
                           {song.coverEmoji}
                         </div>
                         <div>
-                          <h5 className={`font-serif text-sm font-bold truncate leading-snug ${isCurrent ? 'text-pink-600' : 'text-gray-700'}`}>
+                          <h5 className={`font-serif text-sm font-bold truncate leading-snug flex items-center gap-1.5 ${isCurrent ? 'text-pink-600' : 'text-gray-700'}`}>
                             {song.title}
+                            {isLocked && (
+                              <span className="text-[9px] bg-pink-50 dark:bg-stone-850 border border-pink-100/40 text-pink-500 px-1.5 py-0.5 rounded-full font-black uppercase tracking-wider">🔒 Prem</span>
+                            )}
                           </h5>
                           <div className="flex items-center gap-2 mt-0.5">
                             <span className="text-[10px] font-bold text-pink-400 uppercase tracking-widest">{song.artist}</span>
@@ -1008,16 +1035,21 @@ const MusicRoom: React.FC<MusicRoomProps> = ({
                     const songIdx = fullLibrary.indexOf(found);
                     const isCurrent = currentSongIndex === songIdx;
 
+                    const isLocked = isSongPremiumLocked(found);
+
                     return (
                       <div 
                         key={songId}
-                        onClick={() => onSelectSong(songIdx)}
+                        onClick={() => handleSongSelect(songIdx)}
                         className="py-3 flex items-center justify-between group cursor-pointer hover:bg-pink-50/10 transition-colors"
                       >
                         <div className="flex items-center gap-3">
                           <span className="text-2xl">{found.coverEmoji}</span>
                           <div>
-                            <h5 className={`font-serif text-xs font-bold ${isCurrent ? 'text-pink-600' : 'text-gray-700'}`}>{found.title}</h5>
+                            <h5 className={`font-serif text-xs font-bold flex items-center gap-1.5 ${isCurrent ? 'text-pink-600' : 'text-gray-700'}`}>
+                              {found.title}
+                              {isLocked && <span className="text-[7px] bg-pink-100 text-pink-600 px-1 rounded-full uppercase tracking-wider font-bold">🔒 Limit</span>}
+                            </h5>
                             <p className="text-[9px] text-pink-300 font-bold uppercase tracking-wider">{found.artist}</p>
                           </div>
                         </div>
@@ -1061,17 +1093,21 @@ const MusicRoom: React.FC<MusicRoomProps> = ({
               {favoriteSongsCollected.map((song) => {
                 const songIdx = fullLibrary.indexOf(song);
                 const isCurrent = currentSongIndex === songIdx;
+                const isLocked = isSongPremiumLocked(song);
 
                 return (
                   <div 
                     key={song.id}
-                    onClick={() => onSelectSong(songIdx)}
+                    onClick={() => handleSongSelect(songIdx)}
                     className={`bg-white p-4 rounded-3xl border flex items-center justify-between cursor-pointer transition-all ${isCurrent ? 'border-pink-300 bg-pink-50/10' : 'border-pink-50 hover:border-pink-150'}`}
                   >
                     <div className="flex items-center gap-4">
                       <span className="text-2xl">{song.coverEmoji}</span>
                       <div>
-                        <h4 className={`font-serif text-sm font-bold ${isCurrent ? 'text-pink-700' : 'text-gray-700'}`}>{song.title}</h4>
+                        <h4 className={`font-serif text-sm font-bold flex items-center gap-1.5 ${isCurrent ? 'text-pink-700' : 'text-gray-700'}`}>
+                          {song.title}
+                          {isLocked && <span className="text-[7px] bg-pink-100 text-pink-600 px-1 rounded-full uppercase tracking-wider font-bold">🔒 Premium</span>}
+                        </h4>
                         <p className="text-[9px] text-pink-300 font-bold uppercase tracking-wider">{song.artist}</p>
                       </div>
                     </div>
@@ -1119,17 +1155,21 @@ const MusicRoom: React.FC<MusicRoomProps> = ({
               {recentSongsCollected.map((song) => {
                 const songIdx = fullLibrary.indexOf(song);
                 const isCurrent = currentSongIndex === songIdx;
+                const isLocked = isSongPremiumLocked(song);
 
                 return (
                   <div 
                     key={song.id}
-                    onClick={() => onSelectSong(songIdx)}
+                    onClick={() => handleSongSelect(songIdx)}
                     className="bg-white p-4.5 rounded-3xl border border-pink-50 flex justify-between items-center cursor-pointer hover:border-pink-200"
                   >
                     <div className="flex items-center gap-3.5">
                       <span className="text-2xl">{song.coverEmoji}</span>
                       <div>
-                        <h4 className="font-serif text-xs font-bold text-pink-900 leading-snug">{song.title}</h4>
+                        <h4 className="font-serif text-xs font-bold text-pink-900 leading-snug flex items-center gap-1.5">
+                          {song.title}
+                          {isLocked && <span className="text-[7px] bg-pink-100 text-pink-600 px-1.5 py-0.5 rounded-full uppercase tracking-wider font-bold">🔒 Prem</span>}
+                        </h4>
                         <p className="text-[9px] text-pink-300 font-bold uppercase tracking-widest">{song.artist}</p>
                       </div>
                     </div>
@@ -1188,17 +1228,21 @@ const MusicRoom: React.FC<MusicRoomProps> = ({
               {fullLibrary.filter(s => recommendationDetail.targetGenres.some(g => s.tags.includes(g))).slice(0, 5).map(song => {
                 const songIdx = fullLibrary.indexOf(song);
                 const isCurrent = currentSongIndex === songIdx;
+                const isLocked = isSongPremiumLocked(song);
 
                 return (
                   <div 
                     key={song.id}
-                    onClick={() => onSelectSong(songIdx)}
+                    onClick={() => handleSongSelect(songIdx)}
                     className="bg-white p-4.5 rounded-[2.2rem] border border-pink-50 flex items-center justify-between cursor-pointer hover:border-pink-200"
                   >
                     <div className="flex items-center gap-4">
                       <span className="text-3xl">{song.coverEmoji}</span>
                       <div>
-                        <h5 className="font-serif text-sm font-bold text-pink-900 leading-none">{song.title}</h5>
+                        <h5 className="font-serif text-sm font-bold text-pink-900 leading-none flex items-center gap-1.5">
+                          {song.title}
+                          {isLocked && <span className="text-[7px] bg-pink-100 text-pink-600 px-1.5 py-0.5 rounded-full uppercase tracking-wider font-bold">🔒 Prem</span>}
+                        </h5>
                         <p className="text-[9px] text-pink-400 font-bold uppercase tracking-widest mt-1.5">{song.artist}</p>
                       </div>
                     </div>
@@ -1351,6 +1395,47 @@ const MusicRoom: React.FC<MusicRoomProps> = ({
             <span>🛡️ COPYRIGHT NOTICE: DIRECT STREAM PROVIDED FROM OPEN LICENSED ARCHIVE.ORG / SOUNDHELIX ASSETS TO PROMPT ZERO-TRUST LICENSING VIOLATIONS.</span>
           </div>
         </fieldset>
+      )}
+
+      {/* PREMIUM SONG LOCK POPUP MODAL */}
+      {lockedSongAttempt && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-[110] animate-fadeIn">
+          <div className="bg-white dark:bg-stone-900 p-8 rounded-[2.5rem] border border-pink-100 dark:border-stone-850 max-w-sm w-full mx-4 text-center space-y-6 shadow-2xl animate-scaleUp text-gray-700 dark:text-stone-200">
+            <div className="w-20 h-20 bg-pink-50 dark:bg-stone-800 text-pink-500 rounded-full flex items-center justify-center text-4xl mx-auto shadow-inner animate-bounce">
+              🎵
+            </div>
+
+            <div className="space-y-2">
+              <h4 className="text-xl font-serif font-bold italic text-pink-600 dark:text-pink-400">
+                Unlock Premium Track
+              </h4>
+              <p className="text-xs text-gray-400 dark:text-stone-500 font-bold uppercase tracking-wider">
+                "{lockedSongAttempt.title}" • {lockedSongAttempt.artist}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-stone-405 leading-relaxed pt-2">
+                This relaxing acoustic track is part of the **Premium Sound Therapy Suite**. Access our entire library of prenatal bonding tracks, lofi cycles, classical flow enhancers, and high-frequency Gregorian chants.
+              </p>
+            </div>
+
+            <div className="space-y-2 pt-2">
+              <button
+                onClick={() => {
+                  setLockedSongAttempt(null);
+                  window.dispatchEvent(new CustomEvent('lumina-set-active-tab', { detail: { tab: 'settings', subTab: 'billing' } }));
+                }}
+                className="w-full py-4 bg-gradient-to-r from-pink-500 to-rose-450 text-white rounded-2xl text-[10px] uppercase tracking-widest font-black shadow-lg shadow-pink-100 dark:shadow-none hover:scale-[1.02] active:scale-95 transition-all cursor-pointer"
+              >
+                💎 Unlock with Paystack
+              </button>
+              <button
+                onClick={() => setLockedSongAttempt(null)}
+                className="w-full py-3 bg-gray-50 dark:bg-stone-800 hover:bg-gray-100 dark:hover:bg-stone-750 rounded-xl text-[9px] uppercase tracking-wider font-bold text-gray-400 dark:text-stone-400 transition-all cursor-pointer"
+              >
+                Maybe Later
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

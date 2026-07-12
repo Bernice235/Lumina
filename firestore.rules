@@ -108,5 +108,10 @@ service cloud.firestore {
       );
       allow delete: if isSignedIn() && (request.auth.uid == resource.data.user_id || request.auth.uid == resource.data.partner_id);
     }
+
+    match /global_config/{configId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
   }
 }

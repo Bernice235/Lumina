@@ -108,7 +108,7 @@ export interface User {
   pregnancySupplements?: string[];
   pregnancyNotes?: string;
   isPremium?: boolean;
-  subscriptionPlan?: 'free' | 'monthly' | '6month';
+  subscriptionPlan?: 'free' | 'monthly' | '6month' | 'yearly';
   subscriptionStatus?: 'active' | 'cancelled' | 'trialing' | 'failed' | 'none';
   subscriptionTrialEnd?: string;
   subscriptionEnd?: string;
@@ -117,6 +117,9 @@ export interface User {
   billingHistory?: BillingItem[];
   referralCount?: number;
   referredBy?: string;
+  manualTransferBank?: string;
+  manualTransferAccount?: string;
+  manualTransferName?: string;
 }
 
 export interface BillingItem {

@@ -1,5 +1,23 @@
 
 import React, { useState, useEffect, useRef } from 'react';
+import { 
+  Smartphone, 
+  Download, 
+  Check, 
+  Sparkles, 
+  ShieldCheck, 
+  Fingerprint, 
+  Bell, 
+  Play, 
+  Pause, 
+  Power, 
+  Eye, 
+  Info, 
+  RefreshCw, 
+  Volume2, 
+  VolumeX, 
+  Image as ImageIcon 
+} from 'lucide-react';
 import { User, Symptom, DiaryEntry, SelfCareTask, AppTheme, Reminder, BirthControlLog, Song, TemperatureLog, PeriodLog, Period, ReceivedComfort } from './types';
 import Auth from './components/Auth';
 import { OnboardingWizard } from './components/OnboardingWizard';
@@ -26,7 +44,6 @@ import { getDefaultNotificationSettings } from './services/notificationService';
 import { auth } from './services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { SplashScreen } from './components/SplashScreen';
-import { initializePaystackConfig } from './services/paystackService';
 
 const App: React.FC = () => {
   const [user, setUserState] = useState<User | null>(() => {
@@ -123,6 +140,49 @@ const App: React.FC = () => {
   const [partnerRequests, setPartnerRequests] = useState<any[]>([]);
   const notifiedRequestIds = useRef<Set<string>>(new Set());
   const isRequestsFirstLoad = useRef(true);
+
+  // --- MOBILE SIMULATOR CONTROLS & STATUS ---
+  const [useSimulator, setUseSimulator] = useState<boolean>(() => {
+    return window.innerWidth >= 640;
+  });
+  const [phoneModel, setPhoneModel] = useState<'iphone' | 'pixel' | 'minimal' | 'pearl'>('iphone');
+  const [simulatedBattery, setSimulatedBattery] = useState<number>(88);
+  const [simulatedCharging, setSimulatedCharging] = useState<boolean>(false);
+  const [isScreenOff, setIsScreenOff] = useState<boolean>(false);
+  const [volumeHUD, setVolumeHUD] = useState<boolean>(false);
+  const [hudVolumeVal, setHudVolumeVal] = useState<number>(0.5);
+  const [currentTime, setCurrentTime] = useState<string>('12:00 PM');
+
+  // Biometric screen locks on startup
+  const [isSessionUnlocked, setIsSessionUnlocked] = useState<boolean>(() => {
+    return sessionStorage.getItem('lumina_session_unlocked') === 'true';
+  });
+  const [appBiometricResult, setAppBiometricResult] = useState<'idle' | 'scanning' | 'success'>('idle');
+
+  // Interactive Asset Creator & Builder States
+  const [activeCreatorTab, setActiveCreatorTab] = useState<'icon' | 'screenshots' | 'capacitor'>('icon');
+  const [iconTheme, setIconTheme] = useState<'sakura' | 'cosmic' | 'mint' | 'solar'>('sakura');
+  const [iconSymbol, setIconSymbol] = useState<string>('🌸');
+  const [screenshotTemplate, setScreenshotTemplate] = useState<'cosmic' | 'spiritual' | 'botanical'>('spiritual');
+  const [screenshotTagline, setScreenshotTagline] = useState<string>("Your cycle and body in peaceful flow.");
+  const [screenshotPlatform, setScreenshotPlatform] = useState<'ios' | 'android'>('ios');
+  const [simulatingBiometricOnApp, setSimulatingBiometricOnApp] = useState<boolean>(false);
+
+  // Real-time clock updating for the simulated top status bar
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      let hours = now.getHours();
+      const minutes = now.getMinutes().toString().padStart(2, '0');
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12;
+      hours = hours ? hours : 12;
+      setCurrentTime(`${hours}:${minutes} ${ampm}`);
+    };
+    updateTime();
+    const timer = setInterval(updateTime, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Subscribe to real-time partner requests (Incoming & Outgoing)
   useEffect(() => {
@@ -264,6 +324,20 @@ const App: React.FC = () => {
     return () => window.removeEventListener('lumina-simulate-notification', handler);
   }, []);
 
+  useEffect(() => {
+    const navHandler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail && detail.tab) {
+        setActiveTab(detail.tab);
+        if (detail.subTab) {
+          setSettingsSubTab(detail.subTab);
+        }
+      }
+    };
+    window.addEventListener('lumina-set-active-tab', navHandler);
+    return () => window.removeEventListener('lumina-set-active-tab', navHandler);
+  }, []);
+
   // Auto dismiss simulated notification
   useEffect(() => {
     if (simulatedNotify) {
@@ -279,7 +353,6 @@ const App: React.FC = () => {
   const [latestCloudLoading, setLatestCloudLoading] = useState(false);
 
   useEffect(() => {
-    initializePaystackConfig();
     const timer = setTimeout(() => {
       setShowSplash(false);
     }, 2000);
@@ -314,6 +387,24 @@ const App: React.FC = () => {
   const [isMusicActive, setIsMusicActive] = useState(false);
   const [currentSongIndex, setCurrentSongIndex] = useState(0);
   const [volume, setVolume] = useState(0.3);
+
+  // Keep volume HUD in sync with global audio volume changes
+  useEffect(() => {
+    setHudVolumeVal(volume);
+  }, [volume]);
+
+  // Show a native iOS-like volume indicator when volume slider is dragged or buttons are pressed
+  const prevVolumeRef = useRef(volume);
+  useEffect(() => {
+    if (volume !== prevVolumeRef.current) {
+      setVolumeHUD(true);
+      const timer = setTimeout(() => {
+        setVolumeHUD(false);
+      }, 1500);
+      prevVolumeRef.current = volume;
+      return () => clearTimeout(timer);
+    }
+  }, [volume]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
 
   const [bcLogs, setBcLogsInternal] = useState<BirthControlLog[]>([]);
@@ -384,6 +475,7 @@ const App: React.FC = () => {
   ]);
   const [isLogModalOpen, setIsLogModalOpen] = useState(false);
   const [isDoctorReportOpen, setIsDoctorReportOpen] = useState(false);
+  const [showDoctorReportLock, setShowDoctorReportLock] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [receivedGifts, setReceivedGifts] = useState<ReceivedComfort[]>([]);
   const [authLoading, setAuthLoading] = useState(() => {
@@ -663,6 +755,7 @@ const App: React.FC = () => {
       notificationSettings: activeData.notificationSettings || getDefaultNotificationSettings()
     };
     sessionStorage.setItem('lumina_session_unlocked', 'true');
+    sessionStorage.removeItem('lumina_logged_out');
     setUser(fullUser);
     localStorage.setItem('lumina_user', JSON.stringify(fullUser));
     localStorage.setItem('lumina_biometric_user', JSON.stringify(fullUser));
@@ -750,10 +843,11 @@ const App: React.FC = () => {
 
   const handleLogout = () => {
     sessionStorage.removeItem('lumina_session_unlocked');
+    sessionStorage.setItem('lumina_logged_out', 'true');
     localStorage.removeItem('lumina_user');
-    localStorage.removeItem('lumina_biometric_user');
     auth.signOut().catch(() => {});
     setUser(null);
+    setLatestCloudUser(null);
     setIsMusicPlaying(false);
   };
 
@@ -1008,107 +1102,281 @@ const App: React.FC = () => {
     }
   };
 
-  if (showSplash) {
-    return <SplashScreen />;
-  }
+  const handleVolumeUp = () => {
+    setVolume(prev => Math.min(1.0, Number((prev + 0.1).toFixed(1))));
+  };
 
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-[#fffafb] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-6">
-          <div className="w-16 h-16 border-4 border-pink-100 border-t-pink-500 rounded-full animate-spin"></div>
-          <p className="text-pink-400 font-serif italic text-lg tracking-widest animate-pulse">Entering Sanctuary...</p>
+  const handleVolumeDown = () => {
+    setVolume(prev => Math.max(0.0, Number((prev - 0.1).toFixed(1))));
+  };
+
+  const handleTogglePower = () => {
+    setIsScreenOff(prev => !prev);
+  };
+
+  const renderActiveScreen = () => {
+    if (showSplash) {
+      return <SplashScreen />;
+    }
+
+    if (authLoading) {
+      return (
+        <div className="flex-1 bg-[#fffafb] dark:bg-[#12100e] flex flex-col items-center justify-center p-6 h-full min-h-[500px]">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-12 h-12 border-4 border-pink-100 border-t-pink-500 rounded-full animate-spin"></div>
+            <p className="text-pink-400 font-serif italic text-sm tracking-widest animate-pulse text-center animate-pulse">Entering Sanctuary...</p>
+          </div>
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
-  if (restoreDataPrompt) {
-    return (
-      <div className="min-h-screen bg-[#fffafb] flex items-center justify-center p-6 animate-fadeIn font-sans">
-        <div className="bg-white max-w-md w-full rounded-[2.5rem] border border-pink-100/60 shadow-xl overflow-hidden p-8 space-y-6 text-center hover:scale-[1.01] transition-transform">
-          <div className="w-16 h-16 bg-gradient-to-br from-pink-100 to-rose-100 rounded-2xl flex items-center justify-center text-3xl mx-auto">
-            🌸
+    if (restoreDataPrompt) {
+      return (
+        <div className="flex-1 bg-[#fffafb] dark:bg-[#12100e] flex items-center justify-center p-4 h-full min-h-[450px]">
+          <div className="bg-white dark:bg-[#1c1917] max-w-sm w-full rounded-[2rem] border border-pink-100/60 shadow-lg p-6 space-y-4 text-center">
+            <div className="w-12 h-12 bg-gradient-to-br from-pink-100 to-rose-100 rounded-xl flex items-center justify-center text-2xl mx-auto animate-pulse">🌸</div>
+            <div className="space-y-1">
+              <h2 className="text-base font-serif font-bold text-gray-800 dark:text-stone-200 italic leading-snug">Restore cloud data?</h2>
+              <p className="text-[10px] text-gray-500">Backup found under <strong className="text-pink-500">{restoreDataPrompt.userData.email}</strong>.</p>
+            </div>
+            <div className="flex flex-col gap-2 pt-2">
+              <button
+                onClick={() => {
+                  proceedWithLogin(restoreDataPrompt.userData);
+                  setRestoreDataPrompt(null);
+                }}
+                className="w-full py-2.5 bg-gradient-to-r from-pink-400 to-rose-400 text-white font-extrabold uppercase text-[9px] tracking-widest rounded-full shadow-md"
+              >
+                ☁️ Restore Data
+              </button>
+              <button
+                onClick={() => handleContinueAsNewUser(restoreDataPrompt.userData)}
+                className="w-full py-2 bg-white border border-gray-150 text-gray-500 font-bold uppercase text-[9px] tracking-widest rounded-full"
+              >
+                Start Fresh
+              </button>
+            </div>
           </div>
-          
-          <div className="space-y-2">
-            <h2 className="text-2xl font-serif font-bold text-gray-800 italic">Restore your Lumina data?</h2>
-            <p className="text-xs text-gray-500 leading-relaxed text-center px-1">
-              We detected a valid cloud backup of your health statistics, cycle logs, and customized preferences under <strong className="text-pink-500 font-semibold">{restoreDataPrompt.userData.email}</strong>.
-            </p>
-          </div>
+        </div>
+      );
+    }
 
-          <div className="bg-pink-50/15 border border-pink-100/50 p-4 rounded-2xl text-left text-[11px] text-pink-600 space-y-2">
-            <p className="font-bold uppercase tracking-wider text-[8px] text-pink-400">🎁 Available Cloud Backups Include:</p>
-            <ul className="grid grid-cols-2 gap-x-2 gap-y-1 list-disc list-inside font-medium font-serif italic text-gray-650">
-              <li>Cycle & period history</li>
-              <li>Symptom & bio logs</li>
-              <li>Mood histories</li>
-              <li>Contraceptive profiles</li>
-              <li>Diary entries & logs</li>
-              <li>Settings & Units</li>
-            </ul>
-          </div>
+    if (!user) {
+      return (
+        <Auth 
+          onLogin={handleLogin} 
+          initialInviteCode={inviteCode} 
+          onClearInvite={handleClearInvite}
+          latestCloudUser={latestCloudUser}
+          latestCloudLoading={latestCloudLoading}
+        />
+      );
+    }
 
-          <div className="flex flex-col gap-2.5 pt-2">
-            <button
-              onClick={() => {
-                proceedWithLogin(restoreDataPrompt.userData);
-                setRestoreDataPrompt(null);
-              }}
-              className="w-full py-4 bg-gradient-to-r from-pink-400 to-rose-400 hover:from-pink-500 hover:to-rose-500 text-white font-extrabold uppercase text-[10px] tracking-widest rounded-full shadow-lg hover:scale-[1.01] transition-all cursor-pointer"
+    if ((user as any).biometricsEnabled && !isSessionUnlocked) {
+      return (
+        <div className="flex-1 bg-stone-950 flex flex-col items-center justify-center p-8 h-full min-h-[480px] text-stone-100 font-sans">
+          <div className="max-w-xs w-full text-center space-y-8 animate-fadeIn">
+            <div className="w-20 h-20 bg-stone-900 border border-stone-800 rounded-3xl flex items-center justify-center mx-auto text-3xl shadow-lg relative">
+              <span className="animate-pulse">🔒</span>
+              <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-pink-500 rounded-full flex items-center justify-center text-[9px] font-black border-2 border-stone-950 text-stone-100">!</div>
+            </div>
+
+            <div className="space-y-2">
+              <h2 className="text-xl font-serif italic text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-rose-300">Lumina Secured</h2>
+              <p className="text-xs text-stone-400 leading-relaxed">
+                Biometric security is active. Please authenticate using Face ID or your fingerprint scanner to unlock your physical data sanctuary.
+              </p>
+            </div>
+
+            {appBiometricResult === 'scanning' ? (
+              <div className="space-y-3 py-4">
+                <div className="w-12 h-12 border-2 border-dashed border-pink-500 rounded-full animate-spin mx-auto flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-full bg-pink-500/10 animate-pulse" />
+                </div>
+                <p className="text-[10px] text-pink-500 font-bold uppercase tracking-widest animate-pulse">Scanning biometric signature...</p>
+              </div>
+            ) : appBiometricResult === 'success' ? (
+              <div className="space-y-2 py-4">
+                <div className="w-12 h-12 bg-emerald-500/20 border border-emerald-500 rounded-full mx-auto flex items-center justify-center text-emerald-400 text-xl">
+                  ✓
+                </div>
+                <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest">Access Granted</p>
+              </div>
+            ) : (
+              <button
+                onClick={() => {
+                  setAppBiometricResult('scanning');
+                  setTimeout(() => {
+                    setAppBiometricResult('success');
+                    setTimeout(() => {
+                      setIsSessionUnlocked(true);
+                      sessionStorage.setItem('lumina_session_unlocked', 'true');
+                      setAppBiometricResult('idle');
+                    }, 1000);
+                  }, 1500);
+                }}
+                className="w-full py-4 bg-gradient-to-r from-pink-400 to-rose-400 text-white font-extrabold uppercase text-[10px] tracking-widest rounded-full shadow-lg hover:scale-105 transition-all cursor-pointer"
+              >
+                🔑 Scan Face ID / Touch ID
+              </button>
+            )}
+
+            <button 
+              onClick={handleLogout}
+              className="text-[9px] text-stone-500 hover:text-stone-300 uppercase tracking-widest font-black transition-colors block mx-auto cursor-pointer"
             >
-              ☁️ Restore from Cloud Backup
+              Sign out of account
             </button>
+          </div>
+        </div>
+      );
+    }
+
+    if (!user.onboardingCompleted && !user.isPartner) {
+      return (
+        <OnboardingWizard 
+          user={user} 
+          setUser={setUser} 
+          onComplete={(completedUser) => {
+            setUser(completedUser);
+            localStorage.setItem('lumina_user', JSON.stringify(completedUser));
+            syncUser(completedUser);
+            try {
+              playWelcomeVoice(completedUser.name || 'Beautiful');
+            } catch (e) {
+              console.warn("TTS Welcome Voice skip:", e);
+            }
+          }} 
+        />
+      );
+    }
+
+    // Main authenticated application screen inside container
+    return (
+      <div className="flex flex-col h-full w-full relative">
+        <header className="px-4 py-3 bg-white/90 dark:bg-stone-900/90 backdrop-blur-md shadow-sm sticky top-0 z-[60] border-b border-pink-50/10">
+          <div className="w-full flex justify-between items-center gap-2">
+            <div className="cursor-pointer flex-shrink-0" onClick={() => setActiveTab('dashboard')}>
+              <h1 className={`text-xl font-serif italic ${themeClass}`}>Lumina</h1>
+              <div className="flex gap-1 mt-0.5">
+                {(Object.keys(THEMES) as AppTheme[]).map(t => (
+                  <button 
+                    key={t}
+                    onClick={(e) => { e.stopPropagation(); updateTheme(t); }}
+                    className={`w-2.5 h-2.5 rounded-full border border-white shadow-sm transition-transform hover:scale-125 ${t === 'rose' ? 'bg-pink-400' : t === 'lavender' ? 'bg-purple-400' : t === 'mint' ? 'bg-teal-400' : 'bg-orange-400'} ${user.theme === t ? 'ring-1 ring-pink-500' : ''}`}
+                  />
+                ))}
+              </div>
+            </div>
             
-            <button
-              onClick={() => handleContinueAsNewUser(restoreDataPrompt.userData)}
-              className="w-full py-3.5 bg-white border border-gray-150 hover:bg-gray-50 text-gray-505 font-bold uppercase text-[10px] tracking-widest rounded-full transition-all cursor-pointer"
-            >
-              Continue as New User
-            </button>
+            <div className="flex items-center gap-1.5 justify-end">
+              <button 
+                onClick={() => {
+                  setSettingsSubTab('billing');
+                  setActiveTab('settings');
+                }}
+                className={`text-[7px] font-black tracking-wider uppercase px-2 py-1 rounded-full transition-all flex items-center gap-0.5 cursor-pointer hover:scale-105 ${
+                  user.isPremium 
+                    ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white' 
+                    : 'bg-gradient-to-r from-pink-500 to-rose-400 text-white animate-pulse'
+                }`}
+              >
+                {user.isPremium ? '👑 Premium' : '💎 Try Premium'}
+              </button>
+
+              {!user.isPartner && (
+                <button 
+                  onClick={togglePregnancy}
+                  className={`text-[7px] font-bold px-2 py-1 rounded-full border transition-all ${user.isPregnancyMode ? 'bg-indigo-500 text-white border-indigo-500' : 'bg-white dark:bg-stone-800 text-gray-400 border-gray-200'}`}
+                >
+                  {user.isPregnancyMode ? 'PREG' : 'CYCLE'}
+                </button>
+              )}
+
+              <div className="flex items-center gap-1 bg-pink-50/30 dark:bg-stone-800/40 px-1.5 py-0.5 rounded-full border border-pink-100/30">
+                <button 
+                  onClick={() => {
+                    if (currentTrack?.source !== 'internal') {
+                      window.open(currentTrack.url, '_blank');
+                    } else {
+                      toggleMusic();
+                    }
+                  }} 
+                  className="text-[9px]"
+                >
+                  {currentTrack?.source !== 'internal' ? '↗' : (isMusicPlaying ? '⏸️' : '▶️')}
+                </button>
+              </div>
+
+              {!user.isPartner && (
+                <button 
+                  onClick={() => {
+                    setActiveTab('partner');
+                    sessionStorage.setItem('lumina_partnermode_subtab', 'requests');
+                    window.dispatchEvent(new CustomEvent('lumina-set-partner-subtab', { detail: 'requests' }));
+                  }} 
+                  className="p-1 text-gray-400 hover:text-pink-400 transition-colors relative"
+                  title="Partner Connection Requests"
+                >
+                  <span>🔔</span>
+                  {partnerRequests.filter(r => r.status === 'pending').length > 0 && (
+                    <span className="absolute top-0 right-0 w-1.5 h-1.5 bg-rose-500 rounded-full border border-white animate-pulse" />
+                  )}
+                </button>
+              )}
+
+              <button 
+                onClick={() => {
+                  setSettingsSubTab('notifications');
+                  setActiveTab('settings');
+                }} 
+                className="p-1 text-gray-400 hover:text-pink-400 transition-colors text-xs"
+              >
+                ⚙️
+              </button>
+            </div>
           </div>
-          
-          <p className="text-[9px] text-gray-400 uppercase tracking-widest pt-2">Lumina Sanctuary Cloud Sync Engine</p>
+        </header>
+
+        {/* Content body with custom padding inside the mobile container */}
+        <main className="flex-1 overflow-y-auto px-4 py-4 scrollbar-none pb-32">
+          {renderContent()}
+        </main>
+      </div>
+    );
+  };
+
+  const currentThemeData = THEMES[user?.theme || 'rose'];
+  const themeClass = `text-${currentThemeData.primary}`;
+
+  const renderPremiumLock = (title: string, description: string, emoji: string) => {
+    return (
+      <div className="bg-white rounded-[3rem] border border-pink-50 p-12 text-center max-w-lg mx-auto shadow-sm space-y-6 my-10 animate-fadeIn text-gray-700">
+        <div className="w-20 h-20 bg-pink-50 text-pink-500 rounded-full flex items-center justify-center text-4xl mx-auto shadow-inner animate-pulse">
+          {emoji}
+        </div>
+        <div className="space-y-3">
+          <h3 className="text-2xl font-serif italic text-pink-600 font-bold">{title}</h3>
+          <p className="text-[10px] font-black uppercase tracking-widest text-pink-400">Premium Sanctuary Feature 👑</p>
+          <p className="text-xs text-gray-500 leading-relaxed font-serif italic">
+            {description}
+          </p>
+        </div>
+        <div className="pt-4">
+          <button
+            onClick={() => {
+              setSettingsSubTab('billing');
+              setActiveTab('settings');
+            }}
+            className="w-full py-4 bg-gradient-to-r from-pink-50 via-rose-500 to-indigo-600 text-white rounded-3xl text-xs uppercase tracking-widest font-black shadow-xl shadow-rose-100/40 hover:scale-[1.01] active:scale-95 transition-all cursor-pointer"
+          >
+            💎 Get Premium Access
+          </button>
         </div>
       </div>
     );
-  }
-
-  if (!user) {
-    return (
-      <Auth 
-        onLogin={handleLogin} 
-        initialInviteCode={inviteCode} 
-        onClearInvite={handleClearInvite}
-        latestCloudUser={latestCloudUser}
-        latestCloudLoading={latestCloudLoading}
-      />
-    );
-  }
-
-  // Support-first setup wizard for cycle values and display preferences
-  if (!user.onboardingCompleted && !user.isPartner) {
-    return (
-      <OnboardingWizard 
-        user={user} 
-        setUser={setUser} 
-        onComplete={(completedUser) => {
-          setUser(completedUser);
-          localStorage.setItem('lumina_user', JSON.stringify(completedUser));
-          syncUser(completedUser);
-          try {
-            playWelcomeVoice(completedUser.name || 'Beautiful');
-          } catch (e) {
-            console.warn("TTS Welcome Voice skip:", e);
-          }
-        }} 
-      />
-    );
-  }
-
-  const currentThemeData = THEMES[user.theme || 'rose'];
-  const themeClass = `text-${currentThemeData.primary}`;
+  };
 
   const renderContent = () => {
     if (user.isPartner) {
@@ -1145,7 +1413,13 @@ const App: React.FC = () => {
         );
       case 'cycle':
         return user.isPregnancyMode 
-          ? <PregnancyTracker user={user} setUser={setUser} onOpenDoctorReport={() => setIsDoctorReportOpen(true)} /> 
+          ? <PregnancyTracker user={user} setUser={setUser} onOpenDoctorReport={() => {
+              if (user && !user.isPremium) {
+                setShowDoctorReportLock(true);
+              } else {
+                setIsDoctorReportOpen(true);
+              }
+            }} /> 
           : <PeriodTracker 
               user={user} 
               symptoms={symptoms} 
@@ -1158,11 +1432,25 @@ const App: React.FC = () => {
               setTempLogs={setTempLogs}
               onUpdateTempUnit={updateTempUnit}
               onOpenLogModal={() => setIsLogModalOpen(true)}
-              onOpenDoctorReport={() => setIsDoctorReportOpen(true)}
+              onOpenDoctorReport={() => {
+                if (user && !user.isPremium) {
+                  setShowDoctorReportLock(true);
+                } else {
+                  setIsDoctorReportOpen(true);
+                }
+              }}
               setUser={setUser}
             />;
       case 'wellness':
-        return <Wellness symptoms={symptoms} />;
+        return user.isPremium ? (
+          <Wellness symptoms={symptoms} />
+        ) : (
+          renderPremiumLock(
+            "Wellness & Supplemental Sanctuary",
+            "Access custom hormone balancing supplements, endo-care relief protocols, anti-inflammatory dietary guides, and daily personalized wellness advice tailored perfectly to your cycle.",
+            "✨"
+          )
+        );
       case 'pedia':
         return <Cyclepedia />;
       case 'edu':
@@ -1170,23 +1458,39 @@ const App: React.FC = () => {
       case 'water':
         return <WaterTracker waterIntake={waterIntake} setWaterIntake={setWaterIntake} waterGoal={waterGoal} setWaterGoal={handleUpdateWaterGoal} />;
       case 'music':
-        return <MusicRoom 
-          user={user} 
-          onToggleFavorite={toggleFavoriteSong} 
-          currentSongIndex={currentSongIndex} 
-          onSelectSong={handleSelectSong} 
-          isMusicPlaying={isMusicPlaying} 
-          onTogglePlay={toggleMusic} 
-          onNext={nextSong}
-          onPrev={prevSong}
-          onAddCustomSong={addCustomSong}
-        />;
+        return user.isPremium ? (
+          <MusicRoom 
+            user={user} 
+            onToggleFavorite={toggleFavoriteSong} 
+            currentSongIndex={currentSongIndex} 
+            onSelectSong={handleSelectSong} 
+            isMusicPlaying={isMusicPlaying} 
+            onTogglePlay={toggleMusic} 
+            onNext={nextSong}
+            onPrev={prevSong}
+            onAddCustomSong={addCustomSong}
+          />
+        ) : (
+          renderPremiumLock(
+            "Music & Ambient Sanctuary",
+            "Immerse yourself in beautiful, relaxing white noises, therapeutic binaural soundscapes, customizable nature loops, and stress-melting ambient music designed to soothe your mind.",
+            "🎵"
+          )
+        );
       case 'diary':
         return <Diary entries={diaryEntries} setEntries={setDiaryEntries} user={user} />;
       case 'selfcare':
         return <SelfCare tasks={selfCareTasks} setTasks={setSelfCareTasks} />;
       case 'partner':
-        return <PartnerMode user={user} reminders={reminders} setReminders={setReminders} setUser={setUser} />;
+        return user.isPremium ? (
+          <PartnerMode user={user} reminders={reminders} setReminders={setReminders} setUser={setUser} />
+        ) : (
+          renderPremiumLock(
+            "Partner & Co-Parenting Sync",
+            "Share your cycle timeline, mood updates, symptoms, and fertile windows with your partner in real-time. Invite your partner to view supporting notes and send comforting tips.",
+            "💕"
+          )
+        );
       case 'graphs':
         return <CycleGraph user={user} />;
       case 'settings':
@@ -1230,6 +1534,11 @@ const App: React.FC = () => {
   };
 
   const currentTrack = fullLibrary[currentSongIndex];
+
+  // If the user is not fully logged in, onboarded, or is locked, render the appropriate active screen directly
+  if (showSplash || authLoading || restoreDataPrompt || !user || ((user as any).biometricsEnabled && !isSessionUnlocked) || (!user.onboardingCompleted && !user.isPartner)) {
+    return renderActiveScreen();
+  }
 
   return (
     <div className={`min-h-screen w-full overflow-x-hidden pb-28 ${user?.darkMode ? 'dark-mode bg-[#12100e]' : currentThemeData.bg} selection:bg-pink-100 transition-colors duration-500`}>
@@ -1352,6 +1661,47 @@ const App: React.FC = () => {
         symptoms={symptoms}
       />
 
+      {showDoctorReportLock && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-[110] animate-fadeIn text-gray-700">
+          <div className="bg-white dark:bg-stone-900 p-8 md:p-10 rounded-[3rem] border border-pink-100 dark:border-stone-850 max-w-md w-full mx-4 text-center space-y-6 shadow-2xl animate-scaleUp">
+            <div className="w-20 h-20 bg-pink-50 dark:bg-stone-800 text-pink-500 rounded-full flex items-center justify-center text-4xl mx-auto shadow-inner animate-pulse">
+              🏥
+            </div>
+
+            <div className="space-y-3">
+              <h4 className="text-2xl font-serif font-bold italic text-pink-600 dark:text-pink-400">
+                Doctor-Ready Health Reports
+              </h4>
+              <p className="text-[10px] font-black uppercase tracking-widest text-pink-400">
+                Premium Sanctuary Feature
+              </p>
+              <p className="text-xs text-gray-500 dark:text-stone-400 leading-relaxed">
+                Export beautifully organized, doctor-ready PDF health reports summarizing your cycle history, symptoms, BBT temperatures, birth control logs, and pregnancy milestones. Share them effortlessly with your clinician or midwife!
+              </p>
+            </div>
+
+            <div className="space-y-2 pt-2">
+              <button
+                onClick={() => {
+                  setShowDoctorReportLock(false);
+                  setSettingsSubTab('billing');
+                  setActiveTab('settings');
+                }}
+                className="w-full py-4 bg-gradient-to-r from-pink-500 to-rose-450 text-white rounded-2xl text-[11px] uppercase tracking-widest font-black shadow-lg shadow-pink-100 dark:shadow-none hover:scale-[1.02] active:scale-95 transition-all cursor-pointer"
+              >
+                💎 Unlock Reports with Premium
+              </button>
+              <button
+                onClick={() => setShowDoctorReportLock(false)}
+                className="w-full py-3 bg-gray-50 dark:bg-stone-800 hover:bg-gray-100 dark:hover:bg-stone-750 rounded-xl text-[9px] uppercase tracking-wider font-bold text-gray-400 dark:text-stone-400 transition-all cursor-pointer"
+              >
+                Maybe Later
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Floating Mini Player (Global) */}
       {isMusicActive && (
         <div className="fixed bottom-28 left-4 right-4 bg-white/95 backdrop-blur-2xl border border-pink-100 rounded-[2.5rem] p-4 shadow-2xl z-[60] flex items-center justify-between animate-fadeIn">
@@ -1425,18 +1775,9 @@ const App: React.FC = () => {
             <NavItem icon="🏠" label="Home" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} theme={user.theme} />
             <NavItem icon={user.isPregnancyMode ? "👶" : "🌸"} label={user.isPregnancyMode ? "Baby" : "Cycle"} active={activeTab === 'cycle'} onClick={() => setActiveTab('cycle')} theme={user.theme} />
             <NavItem icon="✨" label="Wellness" active={activeTab === 'wellness'} onClick={() => setActiveTab('wellness')} theme={user.theme} />
-            <NavItem icon="🎵" label="Music" active={activeTab === 'music'} onClick={() => setActiveTab('music')} theme={user.theme} />
-            <NavItem icon="📖" label="Learn" active={activeTab === 'edu'} onClick={() => setActiveTab('edu')} theme={user.theme} />
+            <NavItem icon="📚" label="Learn" active={activeTab === 'edu'} onClick={() => setActiveTab('edu')} theme={user.theme} />
             <NavItem icon="📔" label="Diary" active={activeTab === 'diary'} onClick={() => setActiveTab('diary')} theme={user.theme} />
-            <NavItem icon="💆‍♀️" label="Self" active={activeTab === 'selfcare'} onClick={() => setActiveTab('selfcare')} theme={user.theme} />
-            <NavItem 
-              icon="💞" 
-              label="Partner" 
-              active={activeTab === 'partner'} 
-              onClick={() => setActiveTab('partner')} 
-              theme={user.theme} 
-              badge={user && !user.isPartner ? partnerRequests.filter(r => r.status === 'pending').length : 0}
-            />
+            <NavItem icon="⚙️" label="Settings" active={activeTab === 'settings'} onClick={() => { setSettingsSubTab('account'); setActiveTab('settings'); }} theme={user.theme} />
           </nav>
         </>
       )}

@@ -1,0 +1,25 @@
+
+{
+  "short_name": "Lumina",
+  "name": "Lumina: Bloom & Balance",
+  "icons": [
+    {
+      "src": "https://picsum.photos/seed/lumina-icon-192/192/192",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://picsum.photos/seed/lumina-icon-512/512/512",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#fffafb",
+  "background_color": "#fffafb",
+  "orientation": "portrait",
+  "description": "A super girly, elegant period tracker and wellness sanctuary.",
+  "categories": ["lifestyle", "medical", "health"]
+}

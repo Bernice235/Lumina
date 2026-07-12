@@ -1,4 +1,7 @@
 import { User, NotificationSettings } from '../types';
+import { Capacitor } from '@capacitor/core';
+import { LocalNotifications } from '@capacitor/local-notifications';
+import { PushNotifications } from '@capacitor/push-notifications';
 
 export interface CyclePredictions {
   nextPeriod: string;
@@ -471,3 +474,82 @@ export function generatePregnancyNotificationText(
     }
   }
 }
+
+// --- NATIVE MOBILE PUSH & LOCAL NOTIFICATION INTEGRATION (CAPACITOR) ---
+
+export const registerNativePush = async (): Promise<boolean> => {
+  if (!Capacitor.isNativePlatform()) {
+    console.log('Push notification registration is only available on native Android/iOS devices.');
+    return false;
+  }
+  try {
+    let perm = await PushNotifications.checkPermissions();
+    if (perm.receive !== 'granted') {
+      perm = await PushNotifications.requestPermissions();
+    }
+    if (perm.receive === 'granted') {
+      await PushNotifications.register();
+      return true;
+    }
+    return false;
+  } catch (err) {
+    console.error('Failed to register native push notifications:', err);
+    return false;
+  }
+};
+
+export const scheduleNativeLocalNotification = async (
+  id: number,
+  title: string,
+  body: string,
+  triggerAt: Date
+): Promise<boolean> => {
+  if (!Capacitor.isNativePlatform()) {
+    console.log('Local notification scheduling is only available on native Android/iOS devices.');
+    return false;
+  }
+  try {
+    let perm = await LocalNotifications.checkPermissions();
+    if (perm.display !== 'granted') {
+      perm = await LocalNotifications.requestPermissions();
+    }
+    if (perm.display === 'granted') {
+      // Clear previous matching notification
+      try {
+        await LocalNotifications.cancel({ notifications: [{ id }] });
+      } catch (e) {
+        // Safe to ignore if not exists
+      }
+      await LocalNotifications.schedule({
+        notifications: [
+          {
+            id,
+            title,
+            body,
+            schedule: { at: triggerAt },
+            sound: 'beep.wav',
+            smallIcon: 'ic_stat_icon_config_sample',
+            actionTypeId: 'OPEN_LUMINA'
+          }
+        ]
+      });
+      return true;
+    }
+    return false;
+  } catch (err) {
+    console.error('Failed to schedule native local notification:', err);
+    return false;
+  }
+};
+
+export const clearAllNativeLocalNotifications = async (): Promise<void> => {
+  if (!Capacitor.isNativePlatform()) return;
+  try {
+    const pending = await LocalNotifications.getPending();
+    if (pending.notifications.length > 0) {
+      await LocalNotifications.cancel({ notifications: pending.notifications });
+    }
+  } catch (err) {
+    console.error('Failed to clear local notifications:', err);
+  }
+};

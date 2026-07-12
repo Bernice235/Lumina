@@ -80,7 +80,7 @@ export async function playWelcomeVoice(name: string): Promise<void> {
 export async function getGiftIdeas(phase: string): Promise<string[]> {
   try {
     const data = await fetchGeminiProxy("gift-ideas", { phase });
-    return data.items || [];
+    return data.items || data.ideas || [];
   } catch (error) {
     console.error("Failed to fetch gift ideas from proxy:", error);
     return ["A bouquet of flowers", "Soft silk pajamas", "A handwritten letter", "Luxury chocolates", "A relaxing foot rub"];
@@ -90,7 +90,7 @@ export async function getGiftIdeas(phase: string): Promise<string[]> {
 export async function getSupportMission(phase: string): Promise<string[]> {
   try {
     const data = await fetchGeminiProxy("support-mission", { phase });
-    return data.items || [];
+    return data.items || data.mission || [];
   } catch (error) {
     console.error("Failed to fetch support missions from proxy:", error);
     return ["Clean the kitchen", "Prepare a warm bath", "Get her favorite snacks", "Light a scented candle", "Take care of dinner tonight"];
@@ -110,7 +110,7 @@ export async function getCommunicationTips(phase: string): Promise<string> {
 export async function getLoveNoteIdeas(phase: string): Promise<string[]> {
   try {
     const data = await fetchGeminiProxy("love-note-ideas", { phase });
-    return data.items || [];
+    return data.items || data.ideas || [];
   } catch (error) {
     console.error("Failed to fetch love note ideas from proxy:", error);
     return ["Just thinking about you and how amazing you are. ✨", "I'm here for whatever you need today, my love.", "You're doing so much, don't forget how much you're appreciated."];

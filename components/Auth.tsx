@@ -78,21 +78,25 @@ const defaultReturningUser: User = {
 
 const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, latestCloudUser, latestCloudLoading }) => {
   const [connectionMode, setConnectionMode] = useState<'cloud' | 'offline'>('cloud');
-  const [screen, setScreen] = useState<'returning' | 'welcome' | 'email_login' | 'email_signup' | 'partner_invite' | 'scan_welcome'>('returning');
+  const [screen, setScreen] = useState<'returning' | 'welcome' | 'email_login' | 'email_signup' | 'partner_invite' | 'scan_welcome'>(() => {
+    if (initialInviteCode) {
+      return 'partner_invite';
+    }
+    const loggedOut = sessionStorage.getItem('lumina_logged_out') === 'true';
+    if (loggedOut) {
+      return 'welcome';
+    }
+    const hasBiometric = !!localStorage.getItem('lumina_biometric_user');
+    const hasSavedEmail = !!localStorage.getItem('lumina_saved_email');
+    if (hasBiometric || hasSavedEmail) {
+      return 'returning';
+    }
+    return 'welcome';
+  });
   const [welcomeStep, setWelcomeStep] = useState<'choose_experience' | 'auth_creation'>('choose_experience');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [pendingRestoreUser, setPendingRestoreUser] = useState<User | null>(null);
-
-  // Auto-trigger biometric authentication if in returning screen
-  useEffect(() => {
-    if (screen === 'returning' && biometricScanning === 'none') {
-      const autoAuthTimer = setTimeout(() => {
-        handleBiometricAuth('face');
-      }, 750);
-      return () => clearTimeout(autoAuthTimer);
-    }
-  }, [screen]);
   
   // Custom Apple Sign-In sheet simulator
   const [isAppleSheetOpen, setIsAppleSheetOpen] = useState(false);
@@ -158,12 +162,17 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
       });
       return;
     }
-    const hasBiometric = !!localStorage.getItem('lumina_biometric_user');
-    const hasSavedEmail = !!localStorage.getItem('lumina_saved_email');
-    if (hasBiometric || hasSavedEmail) {
-      setScreen('returning');
-    } else {
+    const loggedOut = sessionStorage.getItem('lumina_logged_out') === 'true';
+    if (loggedOut) {
       setScreen('welcome');
+    } else {
+      const hasBiometric = !!localStorage.getItem('lumina_biometric_user');
+      const hasSavedEmail = !!localStorage.getItem('lumina_saved_email');
+      if (hasBiometric || hasSavedEmail) {
+        setScreen('returning');
+      } else {
+        setScreen('welcome');
+      }
     }
   }, [initialInviteCode]);
 
@@ -991,7 +1000,17 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
               </div>
 
               {/* Reset view fallback */}
-              <div className="text-center pt-2">
+              <div className="text-center pt-2 flex flex-col gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setScreen('email_login');
+                    setError('');
+                  }}
+                  className="text-[10px] font-sans font-bold uppercase tracking-widest text-pink-500 hover:text-pink-600 transition-colors cursor-pointer"
+                >
+                  Sign In with Email / Password
+                </button>
                 <button
                   type="button"
                   onClick={() => {
@@ -1038,7 +1057,12 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
                   type="button"
                   id="btn-welcome-signin"
                   onClick={() => {
-                    setScreen('email_login');
+                    const hasBiometric = !!localStorage.getItem('lumina_biometric_user');
+                    if (hasBiometric) {
+                      setScreen('returning');
+                    } else {
+                      setScreen('email_login');
+                    }
                     setError('');
                   }}
                   className="w-full py-4.5 bg-white border border-pink-150 rounded-2xl hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-3 text-pink-850 font-bold text-[10px] uppercase tracking-[0.15em] cursor-pointer shadow-sm hover:bg-rose-50/20 transition-all"

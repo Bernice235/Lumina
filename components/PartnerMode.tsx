@@ -75,7 +75,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
   const [generatingLink, setGeneratingLink] = useState(false);
   const [showQRCode, setShowQRCode] = useState(false);
   const [inviteSuccess, setInviteSuccess] = useState(false);
-  const [subTab, setSubTab] = useState<'partners' | 'requests' | 'invitations' | 'invite_friends' | 'privacy' | 'permissions'>('partners');
+  const [subTab, setSubTab] = useState<'partners' | 'requests' | 'invitations' | 'privacy' | 'permissions'>('partners');
   const [isCustomizingSharing, setIsCustomizingSharing] = useState(false);
 
   const [incomingRequests, setIncomingRequests] = useState<any[]>([]);
@@ -1297,13 +1297,6 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
           </button>
           <button 
             type="button"
-            onClick={() => { setSubTab('invite_friends'); }}
-            className={`px-5 py-3 rounded-full text-[10px] font-black uppercase tracking-wider whitespace-nowrap shrink-0 transition-all cursor-pointer ${subTab === 'invite_friends' ? 'bg-pink-500 text-white shadow-md' : 'bg-white border border-pink-150/40 text-pink-500 hover:bg-pink-50/20'}`}
-          >
-            🌸 Invite Friends to Lumina
-          </button>
-          <button 
-            type="button"
             onClick={() => { setSubTab('privacy'); }}
             className={`px-5 py-3 rounded-full text-[10px] font-black uppercase tracking-wider whitespace-nowrap shrink-0 transition-all cursor-pointer ${subTab === 'privacy' ? 'bg-pink-500 text-white shadow-md' : 'bg-white border border-pink-150/40 text-pink-500 hover:bg-pink-50/20'}`}
           >
@@ -1798,6 +1791,53 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
             ← Back to My Account
           </button>
         </section>
+      </div>
+    );
+  }
+
+  if (!user.isPremium) {
+    return (
+      <div className="max-w-md mx-auto bg-white/70 dark:bg-stone-900/80 backdrop-blur-2xl rounded-[3rem] p-8 md:p-12 border border-pink-100/60 dark:border-stone-800 shadow-2xl space-y-8 text-center animate-fadeIn my-10 text-gray-700 dark:text-stone-200">
+        <div className="w-20 h-20 bg-indigo-50 dark:bg-stone-800 text-indigo-600 dark:text-indigo-400 rounded-full flex items-center justify-center text-4xl mx-auto shadow-inner animate-pulse">
+          💞
+        </div>
+        
+        <div className="space-y-3">
+          <h2 className="text-2xl md:text-3xl font-serif italic text-indigo-950 dark:text-stone-100">Partner Synclinks</h2>
+          <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500">Premium Sanctuary Feature</p>
+          <p className="text-xs text-gray-500 dark:text-stone-450 leading-relaxed">
+            Bridging your physical data sanctuary with your partner. Lumina Partner Synclinks is a premium feature that safely synchronizes:
+          </p>
+        </div>
+
+        <ul className="text-left text-xs text-indigo-900/80 dark:text-stone-300 space-y-2.5 max-w-xs mx-auto font-medium">
+          <li className="flex items-center gap-2.5">
+            <span className="text-lg">🌸</span> Cycle Phase & Fertile Window Alerts
+          </li>
+          <li className="flex items-center gap-2.5">
+            <span className="text-lg">📊</span> Daily Symptom, Flow & Craving Synclinks
+          </li>
+          <li className="flex items-center gap-2.5">
+            <span className="text-lg">💖</span> Custom Sound Healing & Gift Suggestions
+          </li>
+          <li className="flex items-center gap-2.5">
+            <span className="text-lg">🌿</span> Trimester & Baby Development Checkups
+          </li>
+        </ul>
+
+        <div className="pt-4">
+          <button
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('lumina-set-active-tab', { detail: { tab: 'settings', subTab: 'billing' } }));
+            }}
+            className="w-full py-4.5 bg-gradient-to-r from-indigo-600 to-indigo-800 text-white rounded-2xl text-[11px] uppercase tracking-widest font-black shadow-lg shadow-indigo-100 dark:shadow-none hover:scale-[1.02] active:scale-95 transition-all cursor-pointer"
+          >
+            💎 Upgrade with Paystack
+          </button>
+          <p className="text-[9px] text-gray-400 dark:text-stone-500 mt-3 font-semibold uppercase tracking-wider">
+            Secure, HIPAA-Separated Data Encryptions
+          </p>
+        </div>
       </div>
     );
   }

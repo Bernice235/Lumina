@@ -500,4 +500,36 @@ export const getSanctuaryTitle = (userOrPartner: { name?: string; email?: string
   return `${name}'s Sanctuary 🌸`;
 };
 
+// --- GLOBAL PAYMENT CONFIGURATION FOR SIMULATOR TRANSFERS ---
+export interface GlobalBankConfig {
+  bankName: string;
+  accountNumber: string;
+  accountName: string;
+}
+
+export const saveGlobalBankDetails = async (config: GlobalBankConfig) => {
+  try {
+    await setDoc(doc(db, "global_config", "payment"), config, { merge: true });
+    localStorage.setItem("lumina_global_bank_config", JSON.stringify(config));
+  } catch (err) {
+    console.warn("Failed to save global bank config to Firestore:", err);
+    localStorage.setItem("lumina_global_bank_config", JSON.stringify(config));
+  }
+};
+
+export const getGlobalBankDetails = async (): Promise<GlobalBankConfig | null> => {
+  try {
+    const docSnap = await getDoc(doc(db, "global_config", "payment"));
+    if (docSnap.exists()) {
+      const data = docSnap.data() as GlobalBankConfig;
+      localStorage.setItem("lumina_global_bank_config", JSON.stringify(data));
+      return data;
+    }
+  } catch (err) {
+    console.warn("Failed to fetch global bank config from Firestore:", err);
+  }
+  const cached = localStorage.getItem("lumina_global_bank_config");
+  return cached ? JSON.parse(cached) : null;
+};
+
 
