@@ -138,9 +138,20 @@ const PregnancyTracker: React.FC<PregnancyTrackerProps> = ({ user, setUser, onOp
 
   return (
     <div className="space-y-8 animate-fadeIn pb-12 font-sans placeholder:text-indigo-250 select-none">
-      <header className="text-center">
-        <h2 className="text-4xl font-serif text-indigo-500 italic mb-1">Divine Journey</h2>
-        <p className="text-sm text-indigo-300 italic font-medium">Nurturing your little sprout, week by week</p>
+      {/* Redesigned Glassmorphic Screen Header */}
+      <header className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 text-center md:text-left bg-white/40 backdrop-blur-xl p-6 md:p-8 rounded-[2.5rem] border border-white/60 shadow-[inset_0_2px_4px_rgba(255,255,255,0.6),_0_12px_36px_rgba(244,114,182,0.03)]">
+        <div>
+          <h2 className="text-3xl font-serif text-pink-600 font-bold tracking-tight">Calendar</h2>
+          <p className="text-xs text-stone-500 font-serif italic mt-1">Track your cycle and important dates</p>
+        </div>
+        {onOpenDoctorReport && (
+          <button
+            onClick={onOpenDoctorReport}
+            className="px-6 py-3 bg-gradient-to-r from-pink-500 to-rose-450 text-white rounded-2xl font-bold text-[9px] uppercase tracking-widest shadow-md flex items-center justify-center gap-2 transition-all self-center md:self-auto hover:scale-[1.02] active:scale-95 cursor-pointer"
+          >
+            <span>Generate Doctor Report</span>
+          </button>
+        )}
       </header>
 
       {/* Main Weekly Card */}

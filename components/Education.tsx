@@ -53,15 +53,15 @@ const Education: React.FC = () => {
       </header>
 
       {/* Navigation Tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide sticky top-0 bg-[#fffafb]/80 backdrop-blur-md z-20 py-2">
+      <div className="flex gap-2.5 overflow-x-auto pb-3 scrollbar-hide sticky top-0 bg-[#fffafb]/85 backdrop-blur-md z-20 py-2 px-1">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`flex items-center gap-2 px-6 py-3 rounded-full whitespace-nowrap transition-all font-bold text-[11px] uppercase tracking-widest ${
+            className={`flex items-center gap-2 px-5 py-3 rounded-full whitespace-nowrap transition-all duration-300 font-bold text-[10px] uppercase tracking-widest cursor-pointer ${
               activeTab === tab.id 
-                ? 'bg-pink-500 text-white shadow-lg shadow-pink-100' 
-                : 'bg-white text-pink-300 border border-pink-50 hover:border-pink-200'
+                ? 'bg-gradient-to-br from-pink-400 to-rose-400 text-white shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),_inset_0_-2px_4px_rgba(0,0,0,0.15),_0_6px_15px_rgba(244,114,182,0.25)] scale-[1.02]' 
+                : 'bg-white/80 backdrop-blur-sm text-pink-300 border border-pink-100/50 hover:border-pink-300 shadow-sm'
             }`}
           >
             {tab.icon}

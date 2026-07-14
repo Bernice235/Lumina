@@ -27,7 +27,10 @@ import {
   Download,
   CreditCard,
   ShieldCheck,
-  Share2
+  Share2,
+  ChevronLeft,
+  ChevronRight,
+  MoreHorizontal
 } from 'lucide-react';
 import { 
   getCyclePredictions, 
@@ -67,6 +70,7 @@ interface SettingsProps {
   toggleMusic?: () => void;
   isMusicActive?: boolean;
   toggleMusicActive?: () => void;
+  setActiveTab?: (tab: any) => void;
 }
 
 export const NIGERIAN_BANKS = [
@@ -101,25 +105,22 @@ const Settings: React.FC<SettingsProps> = ({
   isMusicPlaying = false,
   toggleMusic = () => {},
   isMusicActive = false,
-  toggleMusicActive = () => {}
+  toggleMusicActive = () => {},
+  setActiveTab
 }) => {
-  const getMappedTab = (tab: any): 'account' | 'cycle' | 'notifications' | 'music_sanctuary' | 'partner' | 'premium' | 'privacy_security' | 'invite_friends' => {
-    if (tab === 'general') return 'account';
-    if (tab === 'billing') return 'premium';
-    if (tab === 'invite') return 'invite_friends';
-    if (tab === 'mobile') return 'privacy_security';
+  const getMappedTab = (tab: any): 'account' | 'cycle' | 'notifications' | 'music_sanctuary' | 'partner' | 'premium' | 'privacy_security' | 'about' => {
+    if (tab === 'general' || tab === 'account') return 'account';
+    if (tab === 'cycle') return 'cycle';
     if (tab === 'notifications') return 'notifications';
-    if (tab === 'music') return 'music_sanctuary';
-    if (tab === 'music_sanctuary') return 'music_sanctuary';
-    if (tab === 'privacy') return 'privacy_security';
-    if (tab === 'privacy_security') return 'privacy_security';
-    if (tab === 'invite_friends') return 'invite_friends';
-    if (tab === 'about') return 'invite_friends';
-    if (!tab) return 'account';
-    return tab;
+    if (tab === 'music' || tab === 'music_sanctuary') return 'music_sanctuary';
+    if (tab === 'partner') return 'partner';
+    if (tab === 'premium' || tab === 'billing') return 'premium';
+    if (tab === 'privacy' || tab === 'privacy_security' || tab === 'mobile') return 'privacy_security';
+    if (tab === 'about' || tab === 'about_lumina' || tab === 'help_support') return 'about';
+    return 'account';
   };
 
-  const [activeSubTab, setActiveSubTab] = useState<'account' | 'cycle' | 'notifications' | 'music_sanctuary' | 'partner' | 'premium' | 'privacy_security' | 'invite_friends'>(getMappedTab(initialSubTab));
+  const [activeSubTab, setActiveSubTab] = useState<'account' | 'cycle' | 'notifications' | 'music_sanctuary' | 'partner' | 'premium' | 'privacy_security' | 'about'>(getMappedTab(initialSubTab));
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
 
@@ -579,105 +580,126 @@ const Settings: React.FC<SettingsProps> = ({
   };
 
   return (
-    <div className="space-y-8 animate-fadeIn pb-16">
-      <header className="text-center">
-        <h2 className="text-3xl font-serif text-pink-500 italic">App Sanctuary Settings</h2>
-        <p className="text-sm text-pink-300 italic">Configure notifications, companion tones, and device layouts</p>
+    <div className="space-y-6 animate-fadeIn pb-16">
+      {/* Custom Header */}
+      <header className="flex items-center justify-between px-5 py-4 bg-white/45 backdrop-blur-xl border border-white/60 shadow-[0_8px_32px_rgba(244,114,182,0.02)] rounded-3xl sticky top-2 z-40">
+        <button 
+          onClick={() => {
+            if (activeSubTab === 'menu') {
+              if (setActiveTab) setActiveTab('dashboard');
+            } else {
+              setActiveSubTab('menu');
+            }
+          }}
+          className="p-2.5 rounded-2xl bg-white hover:bg-pink-50/20 text-pink-500 transition-all duration-200 border border-pink-100/50 cursor-pointer flex items-center justify-center active:scale-95"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+
+        <h1 className="font-serif italic font-black text-xl text-stone-800">
+          {activeSubTab === 'menu' ? 'Settings' : 
+           activeSubTab === 'cycle' ? 'My Cycle' :
+           activeSubTab === 'notifications' ? 'Reminders' :
+           activeSubTab === 'partner' ? 'Partner Sync' :
+           activeSubTab === 'music_sanctuary' ? 'Music & Sanctuary' :
+           activeSubTab === 'premium' ? 'Premium' :
+           activeSubTab === 'privacy_security' ? 'Privacy & Security' :
+           activeSubTab === 'account' ? 'Account Profile' :
+           activeSubTab === 'help_support' ? 'Help & Support' :
+           activeSubTab === 'about_lumina' ? 'About Lumina' : 'Settings'}
+        </h1>
+
+        <button 
+          className="p-2.5 rounded-2xl bg-white hover:bg-pink-50/20 text-pink-400 cursor-pointer flex items-center justify-center active:scale-95"
+          onClick={() => alert("Lumina Sanctuary Version 2.4.0")}
+        >
+          <MoreHorizontal className="w-5 h-5" />
+        </button>
       </header>
 
-      {/* Tabs Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 bg-rose-50/50 p-1.5 rounded-3xl w-full border border-rose-100 max-w-5xl mx-auto gap-1.5 shadow-inner">
-        <button 
-          onClick={() => setActiveSubTab('account')}
-          className={`py-3 px-2 text-[9px] font-black uppercase tracking-widest rounded-2xl transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 cursor-pointer ${
-            activeSubTab === 'account' 
-              ? 'bg-gradient-to-r from-pink-500 to-rose-400 text-white shadow-md' 
-              : 'text-pink-400 hover:text-pink-600 hover:bg-rose-50/40'
-          }`}
-        >
-          <UserIcon size={12} />
-          Account
-        </button>
-        <button 
-          onClick={() => setActiveSubTab('cycle')}
-          className={`py-3 px-2 text-[9px] font-black uppercase tracking-widest rounded-2xl transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 cursor-pointer ${
-            activeSubTab === 'cycle' 
-              ? 'bg-gradient-to-r from-pink-500 to-rose-400 text-white shadow-md' 
-              : 'text-pink-400 hover:text-pink-600 hover:bg-rose-50/40'
-          }`}
-        >
-          <Calendar size={12} />
-          Cycle
-        </button>
-        <button 
-          onClick={() => setActiveSubTab('notifications')}
-          className={`py-3 px-2 text-[9px] font-black uppercase tracking-widest rounded-2xl transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 cursor-pointer ${
-            activeSubTab === 'notifications' 
-              ? 'bg-gradient-to-r from-pink-500 to-rose-400 text-white shadow-md' 
-              : 'text-pink-400 hover:text-pink-600 hover:bg-rose-50/40'
-          }`}
-        >
-          <Bell size={12} />
-          Notifications
-        </button>
-        <button 
-          onClick={() => setActiveSubTab('music_sanctuary')}
-          className={`py-3 px-2 text-[9px] font-black uppercase tracking-widest rounded-2xl transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 cursor-pointer ${
-            activeSubTab === 'music_sanctuary' 
-              ? 'bg-gradient-to-r from-pink-500 to-rose-400 text-white shadow-md' 
-              : 'text-pink-400 hover:text-pink-600 hover:bg-rose-50/40'
-          }`}
-        >
-          <Volume2 size={12} />
-          Music & Sanctuary
-        </button>
-        <button 
-          onClick={() => setActiveSubTab('partner')}
-          className={`py-3 px-2 text-[9px] font-black uppercase tracking-widest rounded-2xl transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 cursor-pointer ${
-            activeSubTab === 'partner' 
-              ? 'bg-gradient-to-r from-pink-500 to-rose-400 text-white shadow-md' 
-              : 'text-pink-400 hover:text-pink-600 hover:bg-rose-50/40'
-          }`}
-        >
-          <Heart size={12} />
-          Partner
-        </button>
-        <button 
-          onClick={() => setActiveSubTab('premium')}
-          className={`py-3 px-2 text-[9px] font-black uppercase tracking-widest rounded-2xl transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 cursor-pointer ${
-            activeSubTab === 'premium' 
-              ? 'bg-gradient-to-r from-pink-500 to-rose-400 text-white shadow-md' 
-              : 'text-pink-400 hover:text-pink-600 hover:bg-rose-50/40'
-          }`}
-        >
-          <Sparkles size={12} />
-          Premium
-        </button>
-        <button 
-          onClick={() => setActiveSubTab('privacy_security')}
-          className={`py-3 px-2 text-[9px] font-black uppercase tracking-widest rounded-2xl transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 cursor-pointer ${
-            activeSubTab === 'privacy_security' 
-              ? 'bg-gradient-to-r from-pink-500 to-rose-400 text-white shadow-md' 
-              : 'text-pink-400 hover:text-pink-600 hover:bg-rose-50/40'
-          }`}
-        >
-          <ShieldCheck size={12} />
-          Privacy & Security
-        </button>
-        <button 
-          onClick={() => setActiveSubTab('invite_friends')}
-          className={`py-3 px-2 text-[9px] font-black uppercase tracking-widest rounded-2xl transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 cursor-pointer ${
-            activeSubTab === 'invite_friends' 
-              ? 'bg-gradient-to-r from-pink-500 to-rose-400 text-white shadow-md' 
-              : 'text-pink-400 hover:text-pink-600 hover:bg-rose-50/40'
-          }`}
-        >
-          <Share2 size={12} />
-          Invite Friends
-        </button>
-      </div>
+      {activeSubTab === 'menu' ? (
+        <div className="space-y-6 animate-fadeIn">
+          {/* Redesigned Glassmorphic Screen Header */}
+          <header className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 text-center md:text-left bg-white/40 backdrop-blur-xl p-6 md:p-8 rounded-[2.5rem] border border-white/60 shadow-[inset_0_2px_4px_rgba(255,255,255,0.6),_0_12px_36px_rgba(244,114,182,0.03)]">
+            <div>
+              <h2 className="text-3xl font-serif text-pink-600 font-bold tracking-tight">Settings</h2>
+              <p className="text-xs text-stone-500 font-serif italic mt-1">Manage your experience</p>
+            </div>
+          </header>
 
-      {(activeSubTab === 'notifications' || activeSubTab === 'cycle') ? (
+          {/* Beautiful list menu inside a claymorphic card container */}
+          <div className="bg-white/80 backdrop-blur-md rounded-[2.5rem] border border-pink-100/40 shadow-[inset_0_2px_4px_rgba(255,255,255,0.8),_0_12px_36px_rgba(244,114,182,0.03)] p-4 space-y-1.5 overflow-hidden">
+            {[
+              {
+                id: 'cycle' as const,
+                label: 'My Cycle',
+                color: 'bg-rose-50 text-pink-500',
+                emoji: '😊',
+              },
+              {
+                id: 'notifications' as const,
+                label: 'Reminders & Notifications',
+                color: 'bg-purple-50 text-purple-500',
+                emoji: '🔔',
+              },
+              {
+                id: 'partner' as const,
+                label: 'Partner',
+                color: 'bg-rose-50 text-rose-500',
+                emoji: '🧸',
+              },
+              {
+                id: 'music_sanctuary' as const,
+                label: 'Music & Sanctuary',
+                color: 'bg-blue-50 text-blue-500',
+                emoji: '🎵',
+              },
+              {
+                id: 'privacy_security' as const,
+                label: 'Privacy & Security',
+                color: 'bg-indigo-50 text-indigo-500',
+                emoji: '🛡️',
+              },
+              {
+                id: 'account' as const,
+                label: 'Account',
+                color: 'bg-teal-50 text-teal-600',
+                emoji: '👤',
+              },
+              {
+                id: 'help_support' as const,
+                label: 'Help & Support',
+                color: 'bg-sky-50 text-sky-500',
+                emoji: '❓',
+              },
+              {
+                id: 'about_lumina' as const,
+                label: 'About Lumina',
+                color: 'bg-violet-50 text-violet-500',
+                emoji: 'ℹ️',
+              }
+            ].map((item) => (
+              <button
+                key={item.id}
+                onClick={() => {
+                  setActiveSubTab(item.id);
+                }}
+                className="w-full flex items-center justify-between py-4 px-4 hover:bg-pink-50/20 active:scale-[0.99] transition-all duration-200 border-b border-pink-50/20 last:border-0 text-left group rounded-2xl"
+              >
+                <div className="flex items-center gap-4">
+                  <div className={`w-11 h-11 rounded-2xl ${item.color} flex items-center justify-center text-xl shadow-[inset_0_2px_4px_rgba(255,255,255,0.6),_0_4px_12px_rgba(0,0,0,0.03)] shrink-0 group-hover:scale-110 transition-transform`}>
+                    {item.emoji}
+                  </div>
+                  <span className="text-sm font-semibold text-stone-700 group-hover:text-pink-600 transition-colors">
+                    {item.label}
+                  </span>
+                </div>
+                <ChevronRight className="w-5 h-5 text-pink-200 group-hover:text-pink-500 group-hover:translate-x-0.5 transition-all" />
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : (activeSubTab === 'notifications' || activeSubTab === 'cycle') ? (
         <div className="space-y-8">
           {activeSubTab === 'cycle' && (
             <div className="bg-gradient-to-r from-pink-500 via-rose-500 to-amber-400 p-[2px] rounded-[2.5rem] shadow-lg shadow-rose-100/40">
@@ -1790,212 +1812,14 @@ const Settings: React.FC<SettingsProps> = ({
           )}
         </div>
       ) : activeSubTab === 'premium' ? (
-        <div className="space-y-8 animate-fadeIn">
-          {/* Progress / Error / Success Alerts */}
-          {billingProgress && (
-            <div className="p-4 bg-teal-50 border border-teal-100 rounded-2xl text-xs text-teal-700 italic font-serif flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 animate-fadeIn">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-teal-400 animate-pulse shrink-0"></span>
-                <span>{billingProgress}</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setBillingProgress(null);
-                  setBillingError("Transaction was canceled by the user.");
-                }}
-                className="py-1 px-3 bg-white hover:bg-neutral-50 border border-neutral-200 text-neutral-600 rounded-lg text-[9px] font-bold uppercase tracking-wider cursor-pointer transition-colors shrink-0 self-start sm:self-auto"
-              >
-                ✕ Cancel & Go Back
-              </button>
-            </div>
-          )}
-
-          {billingError && (
-            <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl text-xs text-rose-600 font-serif flex flex-col gap-1">
-              <span className="font-bold flex items-center gap-1.5 text-rose-700">⚠️ Billing Issue</span>
-              <p>{billingError}</p>
-            </div>
-          )}
-
-          {billingSuccess && (
-            <div className="p-4 bg-teal-50 border border-teal-100 rounded-2xl text-xs text-teal-800 font-serif flex flex-col gap-1">
-              <span className="font-bold flex items-center gap-1.5 text-teal-900">✨ Success</span>
-              <p>{billingSuccess}</p>
-            </div>
-          )}
-
-          {user.isPremium ? (
-            <div className="space-y-6">
-              {/* Active Premium Status Banner */}
-              <div className="bg-gradient-to-r from-emerald-500 via-teal-600 to-indigo-600 p-[2px] rounded-[2.5rem] shadow-lg shadow-teal-100">
-                <div className="bg-white p-8 rounded-[2.4rem] space-y-6">
-                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-2xl">⚡</span>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600 flex items-center gap-1 justify-center md:justify-start">
-                          <ShieldCheck size={12} /> Active Premium Member
-                        </p>
-                      </div>
-                      <h3 className="text-2xl font-serif italic text-indigo-950">Lumina Premium Sanctuary</h3>
-                      <p className="text-xs text-neutral-500">
-                        Thank you for supporting Lumina. Enjoy zero limits, shared partner spaces, custom alerts, and therapeutic healing music.
-                      </p>
-                    </div>
-                    <div className="py-2 px-4 bg-emerald-50 text-emerald-700 rounded-full font-bold uppercase text-[9px] tracking-widest border border-emerald-100 shrink-0 self-start md:self-auto">
-                      Active
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t border-rose-50/50">
-                    <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100 space-y-1">
-                      <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-wider">Current Plan</p>
-                      <p className="text-sm font-serif italic text-neutral-700 font-bold capitalize">
-                        {REVENUECAT_PLANS.find(p => p.id === user.subscriptionPlan)?.name || "Lumina Premium Plan"}
-                      </p>
-                    </div>
-                    <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100 space-y-1">
-                      <p className="text-[9px] font-bold text-indigo-950 uppercase tracking-wider">Status</p>
-                      <p className="text-sm font-serif italic text-indigo-950 font-bold capitalize">
-                        {user.subscriptionStatus || "active"}
-                      </p>
-                    </div>
-                    <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100 space-y-1">
-                      <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-wider">Expiration Date</p>
-                      <p className="text-sm font-serif italic text-neutral-700 font-bold">
-                        {user.subscriptionEnd ? new Date(user.subscriptionEnd).toLocaleDateString(undefined, { dateStyle: 'medium' }) : "Continuous"}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Actions Row */}
-                  <div className="pt-4 flex flex-wrap gap-3">
-                    <button
-                      type="button"
-                      onClick={handleRestorePurchases}
-                      className="py-3 px-5 bg-gradient-to-r from-pink-500 to-indigo-600 text-white font-bold text-[10px] uppercase tracking-wider rounded-2xl hover:opacity-95 active:scale-95 transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
-                    >
-                      🔄 Restore & Sync Status
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleCancelSubscriptionAction}
-                      className="py-3 px-5 border border-rose-200 text-rose-600 hover:bg-rose-50/30 rounded-2xl font-bold text-[10px] uppercase tracking-wider transition-all cursor-pointer"
-                    >
-                      🚫 Manage / Cancel Subscription
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-8">
-              {/* Premium Checkout Prompt Card */}
-              <div className="bg-gradient-to-br from-pink-500 via-rose-500 to-indigo-600 p-[2px] rounded-[2.5rem] shadow-xl shadow-rose-100/40">
-                <div className="bg-white p-8 md:p-12 rounded-[2.4rem] space-y-8 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 p-8 leading-none pointer-events-none opacity-[0.03]">
-                    <Sparkles size={250} />
-                  </div>
-
-                  <div className="space-y-2 text-center max-w-xl mx-auto">
-                    <span className="inline-flex py-1.5 px-3 bg-rose-50 text-rose-600 rounded-full font-black text-[9px] uppercase tracking-widest border border-rose-100">
-                      💎 Lumina Premium Sanctuary
-                    </span>
-                    <h3 className="text-3xl font-serif text-indigo-950 italic">Experience Unrestricted Sanctuary</h3>
-                    <p className="text-xs text-neutral-500 leading-relaxed font-sans">
-                      Enjoy shared partner connections, custom cycle alerts, restorative hormone-balancing music, and personalized wellness plans with an active premium subscription.
-                    </p>
-                  </div>
-
-                  {/* Feature Checklist */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto pt-4 border-t border-rose-50/40">
-                    {[
-                      { icon: "🌺", title: "Comprehensive Sanctuary Access", desc: "Unlock beautiful healing ambient sounds and customizable relaxation loops." },
-                      { icon: "🤰", title: "Co-Parenting / Partner Sync Tools", desc: "Share real-time cycle status, moods, and direct alerts securely." },
-                      { icon: "📊", title: "Complete Fertility & Ovulation Tracking", desc: "Get highly accurate predictive timelines and wellness insights." },
-                      { icon: "🔒", title: "Secure Account & Cloud Integration", desc: "Save your details permanently and restore them easily on any platform." }
-                    ].map((feat, idx) => (
-                      <div key={idx} className="flex gap-3 p-4 bg-rose-50/15 border border-rose-50/30 rounded-2xl hover:bg-rose-50/10 transition-all">
-                        <span className="text-2xl mt-0.5">{feat.icon}</span>
-                        <div className="space-y-0.5 text-left">
-                          <p className="text-xs font-bold text-neutral-800 leading-tight">{feat.title}</p>
-                          <p className="text-[10px] text-neutral-400 font-sans leading-normal">{feat.desc}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Pricing Plans Box */}
-                  <div className="max-w-2xl mx-auto space-y-6 pt-4">
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="font-bold text-neutral-500 uppercase tracking-widest text-[10px]">Select Subscription Plan</span>
-                      <span className="text-[10px] text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full font-bold uppercase tracking-wider">🔒 App Store / Google Play</span>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {REVENUECAT_PLANS.map((p) => {
-                        const isChosen = selectedPlanId === p.id;
-                        return (
-                          <button
-                            key={p.id}
-                            type="button"
-                            onClick={() => setSelectedPlanId(p.id)}
-                            className={`p-6 rounded-3xl border text-left flex flex-col justify-between gap-4 transition-all cursor-pointer ${
-                              isChosen 
-                                ? "border-pink-500 bg-pink-50/15 ring-2 ring-pink-400/20 shadow-md" 
-                                : "border-neutral-100 hover:border-neutral-200"
-                            }`}
-                          >
-                            <div className="space-y-1 w-full">
-                              <p className="text-[9px] font-black uppercase tracking-widest text-pink-500">{p.id === 'monthly' ? 'Monthly' : p.id === '6month' ? '6 Months' : 'Yearly'}</p>
-                              <p className="text-sm font-serif italic text-indigo-950">{p.name}</p>
-                              <p className="text-[10px] text-neutral-400 leading-snug">{p.description}</p>
-                            </div>
-                            <div className="w-full pt-3 border-t border-rose-100/30 flex flex-col items-start gap-1">
-                              <p className="text-lg font-serif text-indigo-950 font-bold leading-none">{p.priceFormatted}</p>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    <div className="space-y-3 pt-2">
-                      <button
-                        type="button"
-                        onClick={handleStartTrial}
-                        className="w-full py-4 bg-gradient-to-r from-pink-500 via-rose-500 to-indigo-600 hover:scale-[1.01] active:scale-[0.98] text-white font-black text-xs uppercase tracking-widest rounded-3xl shadow-xl shadow-rose-100/40 transition-all flex items-center justify-center gap-2 cursor-pointer"
-                      >
-                        🚀 Subscribe & Unlock Premium
-                      </button>
-                      
-                      <p className="text-[9px] text-neutral-400 text-center font-serif italic leading-relaxed max-w-lg mx-auto">
-                        Subscriptions will charge securely through your Apple App Store or Google Play Store billing account. Auto-renewals can be easily cancelled at any time inside your native device account settings.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Restore Purchase Card */}
-              <div className="bg-white p-8 rounded-[2.5rem] border border-pink-50 space-y-4">
-                <h4 className="text-lg font-serif italic text-indigo-950 flex items-center gap-1.5">
-                  <span>👑</span> Restore Purchases & Sync Subscription
-                </h4>
-                <p className="text-xs text-neutral-400 font-sans leading-relaxed">
-                  Already subscribed on another device or platform? Tap below to securely verify your previous App Store / Google Play purchase entitlements through RevenueCat.
-                </p>
-                <button
-                  type="button"
-                  onClick={handleRestorePurchases}
-                  className="py-3 px-6 bg-gradient-to-r from-pink-500 to-indigo-600 text-white font-black text-[9px] uppercase tracking-widest rounded-2xl shadow-md shadow-pink-100 hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer inline-flex items-center gap-1.5"
-                >
-                  🔄 Restore Premium Purchase
-                </button>
-              </div>
-            </div>
-          )}
+        <div className="space-y-8 animate-fadeIn text-center">
+          <div className="bg-white p-8 rounded-[2.5rem] border border-pink-50 space-y-4 max-w-md mx-auto">
+            <span className="text-4xl">👑</span>
+            <h3 className="text-xl font-serif text-indigo-950 italic">Premium Sanctuary Active</h3>
+            <p className="text-xs text-neutral-500 font-sans leading-relaxed">
+              Lumina Sanctuary is fully free. All advanced syncs, doctor reports, supplementary guides, and ambient soundscapes are unlocked for you! ✨
+            </p>
+          </div>
         </div>
       ) : activeSubTab === 'partner' ? (
         <div className="space-y-8 animate-fadeIn">
@@ -2003,6 +1827,14 @@ const Settings: React.FC<SettingsProps> = ({
         </div>
       ) : activeSubTab === 'music_sanctuary' ? (
         <div className="space-y-8 animate-fadeIn">
+          {/* Redesigned Glassmorphic Screen Header */}
+          <header className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 text-center md:text-left bg-white/40 backdrop-blur-xl p-6 md:p-8 rounded-[2.5rem] border border-white/60 shadow-[inset_0_2px_4px_rgba(255,255,255,0.6),_0_12px_36px_rgba(244,114,182,0.03)]">
+            <div>
+              <h2 className="text-3xl font-serif text-pink-600 font-bold tracking-tight">Sanctuary</h2>
+              <p className="text-xs text-stone-500 font-serif italic mt-1">Relax, heal, and recharge</p>
+            </div>
+          </header>
+
           {/* Music player HUD */}
           <section className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-pink-50 space-y-6">
             <h3 className="text-xl font-serif text-pink-500 flex items-center gap-2">
@@ -2104,45 +1936,6 @@ const Settings: React.FC<SettingsProps> = ({
                     <span className="font-bold text-pink-900 uppercase">Smooth Interface Transitions</span>
                     <span className="text-[9px] text-teal-600 font-bold uppercase">Enabled</span>
                   </div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* THEME & EYE CARE */}
-          <section className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-pink-50 space-y-6">
-            <h3 className="text-xl font-serif text-pink-500 flex items-center gap-2">
-              <Eye size={20} className="text-pink-400" />
-              Nighttime Comfort & Theme 🌙
-            </h3>
-            <p className="text-xs text-gray-400 leading-relaxed font-serif italic">
-               Reduce eye strain during nighttime logging with our soft Dark Mode theme, or toggle your visual palette.
-            </p>
-
-            <div className="space-y-5">
-              <div className="bg-rose-50/30 p-5 rounded-3xl border border-rose-100/30 flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <p className="text-xs font-bold text-pink-900 tracking-wide flex items-center gap-1.5 uppercase tracking-widest text-[9px]">
-                      <Moon size={13} className="text-pink-400" />
-                      Nighttime Dark Mode
-                    </p>
-                    <p className="text-[9px] text-gray-400 leading-none">Toggle soft dark colors to rest your eyes in low light</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      className="sr-only peer"
-                      checked={!!user.darkMode}
-                      onChange={(e) => {
-                        const updatedUser = { ...user, darkMode: e.target.checked };
-                        setUser(updatedUser);
-                        localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
-                        syncUser(updatedUser);
-                      }}
-                    />
-                    <div className="w-9 h-5 bg-pink-100 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-pink-500 peer-checked:to-rose-400"></div>
-                  </label>
                 </div>
               </div>
             </div>

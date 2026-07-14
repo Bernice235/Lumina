@@ -2117,16 +2117,17 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
 
   return (
     <div className="space-y-10 pb-20">
-      <header className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 text-center md:text-left bg-gradient-to-r from-pink-500/5 via-rose-500/10 to-indigo-500/5 p-6 rounded-[2rem] border border-pink-100/20">
+      {/* Redesigned Glassmorphic Screen Header */}
+      <header className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 text-center md:text-left bg-white/40 backdrop-blur-xl p-6 md:p-8 rounded-[2.5rem] border border-white/60 shadow-[inset_0_2px_4px_rgba(255,255,255,0.6),_0_12px_36px_rgba(244,114,182,0.03)]">
         <div>
-          <h2 className="text-3xl font-serif text-pink-500 italic">Cycle Sanctuary</h2>
-          <p className="text-sm text-pink-300 italic">Your body, your rhythm, your power</p>
+          <h2 className="text-3xl font-serif text-pink-600 font-bold tracking-tight">Calendar</h2>
+          <p className="text-xs text-stone-500 font-serif italic mt-1">Track your cycle and important dates</p>
         </div>
         <button
           onClick={onOpenDoctorReport}
-          className="px-6 py-3.5 bg-gradient-to-r from-pink-500 to-indigo-500 hover:from-pink-600 hover:to-indigo-600 text-white rounded-full font-bold text-[10px] uppercase tracking-widest shadow-md shadow-pink-100/40 flex items-center justify-center gap-2 transition-all self-center md:self-auto hover:scale-[1.02] active:scale-95 cursor-pointer"
+          className="px-6 py-3 bg-gradient-to-r from-pink-500 to-rose-450 text-white rounded-2xl font-bold text-[9px] uppercase tracking-widest shadow-md flex items-center justify-center gap-2 transition-all self-center md:self-auto hover:scale-[1.02] active:scale-95 cursor-pointer"
         >
-          <FileText size={14} />
+          <FileText size={13} />
           <span>Generate Doctor Report</span>
         </button>
       </header>
@@ -2215,8 +2216,6 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
           </div>
         )}
       </section>
-
-      <TemperatureTracker user={user} logs={tempLogs} setLogs={setTempLogs} onUpdateUnit={onUpdateTempUnit} />
 
       <div className="p-8 bg-gradient-to-br from-pink-500 to-rose-400 rounded-[2.5rem] text-white shadow-xl shadow-pink-200 relative overflow-hidden">
         <div className="relative z-10">

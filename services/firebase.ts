@@ -1,7 +1,10 @@
 import { initializeApp } from 'firebase/app';
 import { initializeAuth, indexedDBLocalPersistence, browserLocalPersistence, browserSessionPersistence } from 'firebase/auth';
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, getDocFromServer } from 'firebase/firestore';
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, getDocFromServer, setLogLevel } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
+
+// Suppress transient warnings (like "Could not reach Cloud Firestore backend") from cluttering console logs
+setLogLevel('error');
 
 const app = initializeApp(firebaseConfig);
 
@@ -88,6 +91,7 @@ async function testConnection() {
   }
 }
 
-testConnection();
+// Delay the initial connection check to allow sandbox network environment to stabilize first
+setTimeout(testConnection, 2000);
 
 export { OperationType };

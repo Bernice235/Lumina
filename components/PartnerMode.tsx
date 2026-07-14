@@ -1264,9 +1264,12 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
 
     return (
       <div className="space-y-8 animate-fadeIn pb-24 font-sans select-none">
-        <header className="bg-gradient-to-br from-pink-500 to-rose-500 p-10 rounded-[3rem] shadow-xl text-white text-center">
-          <h2 className="text-4xl font-serif italic mb-2">Partner Sanctuary</h2>
-          <p className="text-sm opacity-90">Manage connection and privacy controls seamlessly</p>
+        {/* Redesigned Glassmorphic Screen Header */}
+        <header className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 text-center md:text-left bg-white/40 backdrop-blur-xl p-6 md:p-8 rounded-[2.5rem] border border-white/60 shadow-[inset_0_2px_4px_rgba(255,255,255,0.6),_0_12px_36px_rgba(244,114,182,0.03)]">
+          <div>
+            <h2 className="text-3xl font-serif text-pink-600 font-bold tracking-tight">Partner</h2>
+            <p className="text-xs text-stone-500 font-serif italic mt-1">Build understanding and grow together</p>
+          </div>
         </header>
 
         {/* Sub-Navigation tabs */}

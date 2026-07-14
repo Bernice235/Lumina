@@ -23,7 +23,11 @@ import {
   Music,
   Zap,
   Clock,
-  UserCheck
+  UserCheck,
+  Menu,
+  Bell,
+  X,
+  LogOut
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -49,12 +53,16 @@ interface DashboardProps {
   toggleMusicActive: () => void;
   volume: number;
   setVolume: (v: number) => void;
+  togglePregnancy?: () => void;
+  partnerRequests?: any[];
+  handleLogout?: () => void;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ 
   user, 
   setUser,
   partnerUser,
+  symptoms = [],
   waterIntake, 
   setWaterIntake, 
   waterGoal, 
@@ -72,10 +80,15 @@ const Dashboard: React.FC<DashboardProps> = ({
   isMusicActive,
   toggleMusicActive,
   volume,
-  setVolume
+  setVolume,
+  togglePregnancy,
+  partnerRequests = [],
+  handleLogout
 }) => {
   const [affirmation, setAffirmation] = useState("Loading your daily inspiration...");
   const [selectedMood, setSelectedMood] = useState('Happy');
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
   // Pregnancy and Postpartum Custom states
   const [exerciseTrimester, setExerciseTrimester] = useState<1 | 2 | 3>(1);
@@ -1076,351 +1089,251 @@ const Dashboard: React.FC<DashboardProps> = ({
   // RENDER: STANDARD CYCLE TRACKER DASHBOARD
   // ==========================================
   const renderStandardDashboard = () => {
+    // Determine dynamic values for Today's Summary
+    const loggedToday = symptoms.some(s => s.date === today.toDateString());
+    const flowToday = loggedToday ? "Light" : "None";
+    const moodToday = loggedToday ? "Calm" : "Good";
+    const energyToday = loggedToday ? "Good" : "Normal";
+    const sleepToday = "7h 30m";
+
     return (
-      <div className="space-y-8 animate-fadeIn pb-12">
-        {/* 0. Personalized Greeting & Affirmation */}
-        <section className="px-2 pt-4 space-y-6">
-          <div className="flex flex-col md:flex-row justify-between items-start gap-4">
-            <div className="space-y-2 flex-1">
-              <h1 className="text-3xl md:text-4xl font-serif italic text-pink-600">
-                {getGreeting()}, {user.name} 💖
-              </h1>
-              <div className="bg-white/40 backdrop-blur-sm p-4 rounded-[2rem] border border-pink-50/50 shadow-sm inline-block">
-                <p className="text-sm text-pink-500 font-medium italic leading-relaxed">
-                  "{affirmation}"
-                </p>
+      <div className="space-y-8 animate-fadeIn pb-12 text-gray-800">
+        {/* Dynamic Gift / Comfort Alerts from Partner */}
+        {receivedGifts.length > 0 && (
+          <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide py-1">
+            {receivedGifts.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).map((gift) => (
+              <div 
+                key={gift.id}
+                className="flex-shrink-0 bg-white/75 backdrop-blur-xl p-[2px] rounded-3xl shadow-sm border border-pink-100/50 animate-fadeIn"
+              >
+                <div className="px-5 py-3 rounded-3xl flex items-center gap-3">
+                   <div className="w-10 h-10 bg-pink-50 rounded-2xl flex items-center justify-center text-2xl shadow-inner animate-bounce shrink-0">
+                     {gift.type === 'hug' ? '🌸' : gift.type === 'tea' ? '🍵' : gift.type === 'flower' ? '💐' : gift.type === 'chocolate' ? '🍫' : '✨'}
+                   </div>
+                   <div className="min-w-[120px]">
+                      <p className="text-[9px] font-bold text-pink-300 uppercase tracking-wider">Surprise from {gift.senderName}</p>
+                      <p className="text-xs font-serif italic text-pink-600">Sent you a {gift.type}!</p>
+                   </div>
+                </div>
               </div>
+            ))}
+          </div>
+        )}
+
+        {/* Large Beautiful Cycle Phase Card */}
+        <section className="relative overflow-hidden bg-gradient-to-tr from-pink-100/40 via-rose-50/60 to-amber-50/40 rounded-[2.5rem] border border-white/80 p-8 shadow-[0_15px_30px_rgba(244,114,182,0.05)] backdrop-blur-xl flex flex-col md:flex-row justify-between items-center gap-8 group">
+          {/* Decorative floating blurred gradient balls */}
+          <div className="absolute top-[-20%] right-[-10%] w-48 h-48 bg-gradient-to-tr from-pink-300/20 to-rose-400/20 rounded-full blur-3xl group-hover:scale-110 transition-transform duration-[4s]"></div>
+          <div className="absolute bottom-[-10%] left-[-10%] w-36 h-36 bg-gradient-to-tr from-amber-200/10 to-pink-300/15 rounded-full blur-2xl"></div>
+
+          <div className="space-y-4 z-10 w-full md:max-w-[60%] text-center md:text-left">
+            <div className="space-y-1">
+              <span className="text-[10px] font-black uppercase tracking-[0.25em] text-pink-400 block">Current Phase</span>
+              <h2 className="text-3xl md:text-4xl font-serif italic text-pink-600 font-bold leading-none">
+                {currentPhase} Phase
+              </h2>
+              <span className="text-xs font-serif italic text-pink-400/80 block pt-1">
+                {currentPhase === 'Menstrual' && "A time for quiet sunset reflection and deep physical rest."}
+                {currentPhase === 'Follicular' && "A time of rising physical energy, creativity, and new beginnings."}
+                {currentPhase === 'Ovulatory' && "Your peak biological glow. Social, radiant, and fertile."}
+                {currentPhase === 'Luteal' && "Turning gently inward. High emotional intuition and cozy comfort."}
+              </span>
             </div>
-            <div className="flex items-center gap-3 bg-white/85 backdrop-blur-md p-3.5 rounded-[2rem] border border-pink-100 shadow-sm self-end md:self-start">
-               {/* 1. Music ON/OFF Switch */}
-               <div className="flex items-center gap-2 px-1">
-                 <span className="text-[10px] font-bold text-pink-500 uppercase tracking-wider select-none">Music</span>
-                 <button
-                   type="button"
-                   onClick={toggleMusicActive}
-                   className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 focus:outline-none cursor-pointer ${
-                     isMusicActive ? 'bg-pink-500' : 'bg-rose-100'
-                   }`}
-                   title={isMusicActive ? "Turn Music OFF" : "Turn Music ON"}
-                 >
-                   <span
-                     className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform duration-200 ${
-                       isMusicActive ? 'translate-x-5' : 'translate-x-1'
-                     }`}
-                   />
-                 </button>
-               </div>
-               
-               <div className="h-6 w-[1px] bg-pink-100/60" />
 
-               {/* 2. Play/Pause Slider */}
-               <button 
-                 type="button"
-                 onClick={toggleMusic} 
-                 className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-                   isMusicPlaying ? 'bg-pink-200/60 text-pink-600' : 'bg-gray-100 text-gray-400'
-                 }`}
-                 title={isMusicPlaying ? "Pause (Keeps player open)" : "Play / Resume"}
-               >
-                 {isMusicPlaying ? '⏸' : '▶'}
-               </button>
-
-               <div className="h-6 w-[1px] bg-pink-100/60" />
-
-               {/* 3. Volume Control */}
-               <div className="flex flex-col gap-0.5">
-                 <span className="text-[7.5px] font-bold text-pink-450 uppercase tracking-widest ml-1">Volume</span>
-                 <input 
-                   type="range" min="0" max="1" step="0.01" value={volume} 
-                   onChange={(e) => setVolume(parseFloat(e.target.value))}
-                   className="w-16 h-1 accent-pink-500 cursor-pointer"
-                 />
-               </div>
+            <div className="pt-2">
+              <div className="flex justify-between items-center text-[10px] font-bold text-pink-500 uppercase tracking-widest mb-1.5">
+                <span>Cycle day {cycleDay} of {cycleLen}</span>
+                <span className="font-serif italic font-black text-pink-700">{cycleStatusText}</span>
+              </div>
+              
+              {/* Progress Bar Container */}
+              <div className="w-full h-3 bg-pink-100/50 rounded-full overflow-hidden p-[2px] border border-pink-100/30">
+                <div 
+                  className="h-full bg-gradient-to-r from-pink-400 via-rose-400 to-amber-300 rounded-full transition-all duration-1000 ease-out shadow-[0_1px_3px_rgba(244,114,182,0.2)]"
+                  style={{ width: `${Math.min(100, (cycleDay / cycleLen) * 100)}%` }}
+                ></div>
+              </div>
             </div>
           </div>
 
-          {/* Gift Notifications */}
-          {receivedGifts.length > 0 && (
-            <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide py-2">
-              {receivedGifts.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).map((gift) => (
+          {/* Elegant Illustration Artwork Area */}
+          <div className="relative z-10 w-44 h-44 rounded-full bg-white/60 border border-white/80 shadow-md backdrop-blur-md flex items-center justify-center transition-transform hover:scale-105 duration-500">
+            {/* Ambient pulse circle */}
+            <div className="absolute inset-2 bg-gradient-to-br from-pink-200/50 via-rose-100/40 to-amber-100/30 rounded-full animate-pulse"></div>
+            <div className="absolute inset-6 bg-white/85 rounded-full flex flex-col items-center justify-center text-center p-3 shadow-inner">
+              <span className="text-4xl animate-bounce mb-1">
+                {currentPhase === 'Menstrual' && "🩸"}
+                {currentPhase === 'Follicular' && "🌱"}
+                {currentPhase === 'Ovulatory' && "✨"}
+                {currentPhase === 'Luteal' && "🌙"}
+              </span>
+              <p className="text-[8px] font-black text-pink-400 uppercase tracking-widest">{currentPhase}</p>
+              <p className="text-xs font-serif font-black text-pink-700">Day {cycleDay}</p>
+            </div>
+          </div>
+        </section>
+
+        {/* Quick Action Cards */}
+        <section className="grid grid-cols-4 gap-3">
+          {[
+            { id: 'cycle', label: 'Calendar', icon: '📅', action: () => setActiveTab('cycle') },
+            { id: 'symptoms', label: 'Symptoms', icon: '💖', action: onOpenLogModal },
+            { id: 'mood', label: 'Mood', icon: '😊', action: onOpenLogModal },
+            { id: 'insights', label: 'Insights', icon: '📊', action: () => setActiveTab('wellness') }
+          ].map((act) => (
+            <button
+              key={act.id}
+              onClick={act.action}
+              className="bg-gradient-to-br from-white/90 to-pink-50/20 backdrop-blur-md p-4 rounded-[2rem] border border-white/90 shadow-[inset_0_2.5px_4px_rgba(255,255,255,0.8),_0_8px_24px_rgba(244,114,182,0.03)] hover:scale-[1.03] active:scale-[0.97] cursor-pointer group transition-all duration-300 flex flex-col items-center justify-center gap-2"
+            >
+              <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-pink-50 to-rose-100/40 flex items-center justify-center text-xl shadow-[inset_0_2px_3px_rgba(255,255,255,0.75),_inset_0_-1px_2px_rgba(0,0,0,0.02),_0_4px_10px_rgba(244,114,182,0.04)] group-hover:scale-110 transition-transform duration-300">
+                {act.icon}
+              </div>
+              <span className="text-[9px] font-black text-gray-500 uppercase tracking-wider group-hover:text-pink-600 transition-colors leading-none">{act.label}</span>
+            </button>
+          ))}
+        </section>
+
+        {/* Two-Column Middle Layout: Today's Summary & Water Intake */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Today's Summary Section */}
+          <section className="bg-white/75 backdrop-blur-md p-6 rounded-[2.5rem] border border-pink-50 shadow-sm flex flex-col justify-between space-y-4">
+            <div className="flex justify-between items-center pb-2 border-b border-pink-50/50">
+              <h3 className="font-serif text-lg text-pink-600 italic font-bold">Today's Summary</h3>
+              <button 
+                onClick={onOpenLogModal}
+                className="text-[9px] font-bold text-pink-400 uppercase tracking-widest hover:text-pink-600"
+              >
+                View All
+              </button>
+            </div>
+
+            <div className="divide-y divide-pink-50/50">
+              {[
+                { label: 'Flow', value: flowToday, icon: '🩸' },
+                { label: 'Mood', value: moodToday, icon: '😊' },
+                { label: 'Energy', value: energyToday, icon: '⚡' },
+                { label: 'Sleep', value: sleepToday, icon: '🌙' },
+                { label: 'Water', value: `${waterIntake}/8 glasses`, icon: '💧' }
+              ].map((item, index) => (
                 <div 
-                  key={gift.id}
-                  className="flex-shrink-0 bg-gradient-to-br from-pink-400 to-rose-400 p-1 rounded-[2.5rem] shadow-xl shadow-pink-100 animate-fadeIn"
+                  key={index} 
+                  onClick={onOpenLogModal}
+                  className="py-3 flex items-center justify-between text-xs cursor-pointer hover:bg-pink-50/20 px-2 rounded-xl transition-colors"
                 >
-                  <div className="bg-white/95 backdrop-blur-md px-6 py-4 rounded-[2.4rem] flex items-center gap-4 border border-white/50">
-                     <div className="w-12 h-12 bg-pink-50 rounded-full flex items-center justify-center text-3xl animate-bounce">
-                       {gift.type === 'hug' ? '🌸' : gift.type === 'tea' ? '🍵' : gift.type === 'flower' ? '💐' : gift.type === 'chocolate' ? '🍫' : '✨'}
-                     </div>
-                     <div className="min-w-[120px]">
-                        <p className="text-[10px] font-bold text-pink-300 uppercase tracking-widest">Surprise from {gift.senderName}</p>
-                        <p className="text-sm font-serif italic text-pink-600">Sent you a {gift.type}!</p>
-                     </div>
-                     <div className="text-xl">✨</div>
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-base">{item.icon}</span>
+                    <span className="font-bold text-gray-500 uppercase tracking-wider text-[10px]">{item.label}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="font-serif italic font-bold text-pink-600">{item.value}</span>
+                    <ChevronRight size={12} className="text-pink-300" />
                   </div>
                 </div>
               ))}
             </div>
-          )}
-        </section>
+          </section>
 
-        {/* 1. Top: Cycle Status */}
-        <section className="text-center space-y-4">
-          <div className="inline-block px-6 py-2 bg-pink-50 rounded-full border border-pink-100">
-            <p className="text-[10px] font-bold text-pink-400 uppercase tracking-[0.2em]">Current Status</p>
-          </div>
-          <h2 className="text-4xl md:text-5xl font-serif italic text-pink-600 leading-tight">
-            {cycleStatusText}
-          </h2>
-          
-          <button 
-            onClick={onOpenLogModal}
-            className="mt-4 px-10 py-5 bg-gradient-to-r from-pink-400 to-rose-400 text-white rounded-full font-bold text-lg shadow-xl shadow-pink-200 hover:scale-105 active:scale-95 transition-all flex items-center gap-3 mx-auto"
-          >
-            <span>🩸</span> Log Period
-          </button>
-        </section>
-
-        {/* 2. Middle: Calendar Preview */}
-        <section className="bg-white p-8 rounded-[3rem] shadow-sm border border-pink-50">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="font-serif text-xl text-pink-500 italic">{monthName} {year}</h3>
-            <button onClick={() => onTabChange?.('cycle')} className="text-[10px] font-bold text-pink-300 uppercase tracking-widest hover:text-pink-500 transition-colors">
-              View Full Calendar →
-            </button>
-          </div>
-          <div className="grid grid-cols-7 gap-2">
-            {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
-              <div key={`${d}-${i}`} className="text-center text-[10px] font-bold text-pink-200 uppercase py-2">{d}</div>
-            ))}
-            {Array.from({ length: adjustedFirstDay }).map((_, i) => <div key={`empty-${i}`} />)}
-            {Array.from({ length: daysInMonth }).map((_, i) => {
-              const day = i + 1;
-              const date = new Date(year, today.getMonth(), day);
-              const status = getDayStatus(date);
-              const isToday = date.toDateString() === today.toDateString();
-              
-              return (
-                <div
-                  key={day}
-                  className={`aspect-square rounded-2xl flex items-center justify-center text-sm transition-all relative ${dayStyles[status as keyof typeof dayStyles]} ${isToday ? 'ring-2 ring-pink-400 ring-offset-2' : ''}`}
-                >
-                  {day}
-                  {isToday && <div className="absolute -top-1 -right-1 w-2 h-2 bg-pink-400 rounded-full border border-white"></div>}
-                </div>
-              );
-            })}
-          </div>
-          <div className="mt-6 flex flex-wrap gap-4 justify-center border-t border-pink-50 pt-6">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-pink-400"></div>
-              <span className="text-[10px] font-bold text-gray-400 uppercase">Period</span>
+          {/* Claymorphic Water Intake Tracker Card */}
+          <section className="bg-white/75 backdrop-blur-md p-6 rounded-[2.5rem] border border-pink-50 shadow-sm flex flex-col justify-between space-y-5">
+            <div className="space-y-1">
+              <h3 className="font-serif text-lg text-pink-600 italic font-bold">Water Intake</h3>
+              <p className="text-[10px] text-gray-400">Track and meet your daily cellular hydration goal</p>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-pink-50 border border-pink-200 border-dashed"></div>
-              <span className="text-[10px] font-bold text-gray-400 uppercase">Predicted</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-teal-50 border border-teal-100"></div>
-              <span className="text-[10px] font-bold text-gray-400 uppercase">Fertile Window</span>
-            </div>
-          </div>
-        </section>
 
-        {/* 3. Bottom: Quick Stats */}
-        <section className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-white p-6 rounded-[2.5rem] border border-pink-50 shadow-sm text-center">
-            <p className="text-[10px] font-bold text-pink-300 uppercase tracking-widest mb-1">Cycle Length</p>
-            <p className="text-2xl font-serif text-pink-600 italic">{user.cycleLength || 28} <span className="text-xs">days</span></p>
-          </div>
-          <div className="bg-white p-6 rounded-[2.5rem] border border-pink-50 shadow-sm text-center">
-            <p className="text-[10px] font-bold text-pink-300 uppercase tracking-widest mb-1">Last Period</p>
-            <p className="text-2xl font-serif text-pink-600 italic">
-              {lastStart ? lastStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'None'}
-            </p>
-          </div>
-          <div className="bg-white p-6 rounded-[2.5rem] border border-pink-50 shadow-sm text-center">
-            <p className="text-[10px] font-bold text-pink-300 uppercase tracking-widest mb-1">Period Length</p>
-            <p className="text-2xl font-serif text-pink-600 italic">{user.periodLength || 5} <span className="text-xs">days</span></p>
-          </div>
-          <button
-            onClick={() => setActiveTab('graphs')}
-            className="bg-gradient-to-tr from-pink-50 to-white hover:from-pink-100 p-6 rounded-[2.5rem] border border-pink-100 shadow-sm text-center flex flex-col items-center justify-center transition-all hover:scale-102 active:scale-98 cursor-pointer"
-          >
-            <p className="text-[10px] font-bold text-pink-500 uppercase tracking-widest mb-1">Interactive Charts</p>
-            <p className="text-lg font-serif text-pink-600 italic font-black flex items-center justify-center gap-1.5">
-              Cycle Graphs 📈
-            </p>
-          </button>
-        </section>
+            {/* Individual glass/cup indicators with claymorphic fill effect */}
+            <div className="grid grid-cols-8 gap-1.5 py-2">
+              {Array.from({ length: 8 }).map((_, idx) => {
+                const isFilled = idx < waterIntake;
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => setWaterIntake(idx + 1)}
+                    className={`h-14 rounded-2xl border-2 transition-all duration-500 relative flex items-end justify-center overflow-hidden cursor-pointer ${
+                      isFilled
+                        ? 'border-sky-400/80 bg-sky-50/30 shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),_0_2px_8px_rgba(56,189,248,0.15)] scale-[1.03]'
+                        : 'border-pink-100 bg-pink-50/15 hover:border-pink-300 shadow-[inset_0_-1px_3px_rgba(244,114,182,0.05)]'
+                    }`}
+                  >
+                    {/* Fill animated wave */}
+                    {isFilled && (
+                      <div className="absolute inset-x-0 bottom-0 top-[20%] bg-gradient-to-t from-sky-400/80 to-indigo-400/70 animate-pulse transition-all duration-500 rounded-b-[10px]">
+                        {/* Tiny bubble/sparkle effect */}
+                        <div className="absolute top-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-white/40 rounded-full animate-bounce"></div>
+                      </div>
+                    )}
+                    <span className="text-[8px] font-bold text-gray-400 pb-1 z-10 select-none">
+                      {idx + 1}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
 
-        {/* Secondary Features (Mood, Water, etc.) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Blooming Water Tracker */}
-          <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-pink-50 flex flex-col items-center justify-center text-center group">
-            <h3 className="text-xl font-serif text-pink-500 mb-6 flex items-center gap-2 italic">
-              <span className="text-2xl">💧</span> Hydration Bloom
-            </h3>
-            <div className="relative w-32 h-32 mb-6">
-              <div className="absolute inset-0 border-4 border-pink-50 rounded-full"></div>
-              <div 
-                className="absolute inset-0 border-4 border-pink-400 rounded-full transition-all duration-1000 ease-out" 
-                style={{ clipPath: `inset(${100 - waterPercentage}% 0 0 0)` }}
-              ></div>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-3xl animate-pulse">🌸</span>
-                <span className="text-[10px] font-bold text-pink-400 mt-1 uppercase">{waterPercentage.toFixed(0)}%</span>
+            {/* Controls with Claymorphic buttons */}
+            <div className="flex items-center justify-between gap-4 pt-1">
+              <div className="text-left">
+                <p className="text-[10px] font-bold text-pink-400 uppercase tracking-widest">Hydration Progress</p>
+                <p className="text-base font-serif italic text-pink-700 font-bold leading-none">{waterIntake} of 8 glasses</p>
               </div>
-            </div>
-            <div className="flex gap-3">
-              <button 
-                onClick={() => setWaterIntake(Math.max(0, waterIntake - 1))}
-                className="w-10 h-10 rounded-full bg-pink-50 text-pink-500 flex items-center justify-center shadow-sm hover:bg-pink-100"
-              >
-                -
-              </button>
-              <button 
-                onClick={() => setWaterIntake(Math.min(waterGoal, waterIntake + 1))}
-                className="px-6 h-10 rounded-full bg-pink-500 text-white font-bold text-[10px] uppercase tracking-widest shadow-md hover:scale-105 transition-transform"
-              >
-                Add Drop
-              </button>
-              <button 
-                onClick={() => setWaterIntake(waterGoal)}
-                className="w-10 h-10 rounded-full bg-pink-50 text-pink-500 flex items-center justify-center shadow-sm hover:bg-pink-100"
-              >
-                ✨
-              </button>
-            </div>
-          </div>
 
-          {/* Dynamic Mini View */}
-          <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-pink-50 flex flex-col justify-between">
-            <div className="space-y-6">
-              <div className="flex justify-between items-start">
-                <h3 className="text-xl font-serif text-pink-500 flex items-center gap-2 italic">
-                  <span className="text-2xl">🌙</span> Divine Rhythm
-                </h3>
-                <button 
-                  onClick={onOpenLogModal}
-                  className="p-3 bg-pink-50 text-pink-500 rounded-2xl hover:bg-pink-100 transition-colors"
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setWaterIntake(Math.max(0, waterIntake - 1))}
+                  className="w-10 h-10 rounded-full bg-white border border-pink-100 hover:bg-pink-50 text-pink-500 flex items-center justify-center shadow-sm active:scale-90 transition-transform cursor-pointer"
+                  title="Remove 1 glass"
                 >
-                  <span className="text-[10px] font-bold uppercase tracking-widest">Log Period</span>
+                  -
+                </button>
+                <button
+                  onClick={() => setWaterIntake(Math.min(8, waterIntake + 1))}
+                  className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-400 to-rose-400 text-white flex items-center justify-center shadow-[inset_0_2px_4px_rgba(255,255,255,0.3),_0_4px_10px_rgba(244,114,182,0.2)] hover:scale-105 active:scale-90 transition-transform font-bold text-lg cursor-pointer"
+                  title="Add 1 glass"
+                >
+                  +
                 </button>
               </div>
-              
-              <div className="flex items-center gap-6">
-                <div className="relative w-24 h-24 flex-shrink-0">
-                  <svg className="w-full h-full -rotate-90 transform">
-                    <circle
-                      cx="48"
-                      cy="48"
-                      r="40"
-                      fill="none"
-                      stroke="#fdf2f8"
-                      strokeWidth="8"
-                    />
-                    <circle
-                      cx="48"
-                      cy="48"
-                      r="40"
-                      fill="none"
-                      stroke="#f472b6"
-                      strokeWidth="8"
-                      strokeDasharray={2 * Math.PI * 40}
-                      strokeDashoffset={2 * Math.PI * 40 * (1 - (cycleDay / cycleLen))}
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-lg font-bold text-pink-600 leading-none">{cycleDay}</span>
-                    <span className="text-[8px] font-bold text-pink-300 uppercase">Day</span>
-                  </div>
-                </div>
-                
-                <div className="flex-1 space-y-3">
-                  <div className="bg-pink-50/50 p-3 rounded-2xl">
-                    <p className="text-[8px] font-bold text-pink-400 uppercase tracking-widest mb-1">Current Phase</p>
-                    <p className="text-sm font-serif italic text-pink-600">{currentPhase} Bloom</p>
-                  </div>
-                  <div className="bg-teal-50/50 p-3 rounded-2xl">
-                    <p className="text-[8px] font-bold text-teal-400 uppercase tracking-widest mb-1">Next Period In</p>
-                    <p className="text-sm font-serif italic text-teal-600">{daysUntilNext || '??'} Days</p>
-                  </div>
-                </div>
-              </div>
             </div>
-            <button 
-              onClick={() => setActiveTab('cycle')}
-              className="mt-8 w-full py-4 rounded-3xl text-[10px] font-bold uppercase tracking-widest shadow-lg hover:scale-[1.02] transition-transform bg-gradient-to-r from-pink-400 to-rose-400 text-white shadow-pink-100"
-            >
-              Log Your Feelings
-            </button>
-          </div>
+          </section>
         </div>
 
-        {/* Featured Music Hub Teaser */}
-        <section className="bg-white p-8 rounded-[3rem] shadow-sm border border-pink-50 overflow-hidden relative group">
-          <div className="flex flex-col md:flex-row items-center gap-8">
-            <div className="relative w-40 h-40 flex-shrink-0">
-              <div className={`absolute inset-0 bg-gradient-to-br from-pink-200 to-rose-300 rounded-full shadow-2xl transition-all duration-1000 ${isMusicPlaying ? 'rotate-[360deg] animate-[spin_12s_linear_infinite]' : ''}`}>
-                 <div className="absolute inset-4 bg-white/30 backdrop-blur-sm rounded-full border border-white/40 flex items-center justify-center text-6xl">
+        {/* Serenading Ambient Player Card */}
+        <section className="bg-white/75 backdrop-blur-md p-6 rounded-[2.5rem] border border-pink-50 shadow-sm overflow-hidden relative group">
+          <div className="flex flex-col md:flex-row items-center gap-6">
+            <div className="relative w-28 h-28 flex-shrink-0">
+              <div className={`absolute inset-0 bg-gradient-to-br from-pink-100 to-rose-200 rounded-full shadow-md transition-all duration-[8s] ${isMusicPlaying ? 'rotate-[360deg] animate-[spin_10s_linear_infinite]' : ''}`}>
+                 <div className="absolute inset-2 bg-white/45 backdrop-blur-sm rounded-full border border-white/60 flex items-center justify-center text-4xl">
                    {currentSong.coverEmoji}
                  </div>
               </div>
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-inner z-10"></div>
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-inner z-10"></div>
             </div>
             
-            <div className="flex-1 text-center md:text-left space-y-2">
+            <div className="flex-1 text-center md:text-left space-y-1">
               <div className="flex justify-between items-start">
-                <p className="text-[10px] font-bold text-pink-300 uppercase tracking-widest mb-1 flex items-center justify-center md:justify-start gap-2">
-                  <span className="w-4 h-[1px] bg-pink-100"></span> Now Serenading <span className="w-4 h-[1px] bg-pink-100"></span>
+                <p className="text-[9px] font-bold text-pink-300 uppercase tracking-widest flex items-center justify-center md:justify-start gap-1.5">
+                  <span className="w-3 h-[1px] bg-pink-100"></span> Now Serenading <span className="w-3 h-[1px] bg-pink-100"></span>
                 </p>
                 <button 
                   onClick={() => onTabChange?.('music')}
-                  className="hidden md:block text-[10px] font-bold text-pink-400 uppercase tracking-widest hover:underline"
+                  className="hidden md:block text-[9px] font-bold text-pink-400 uppercase tracking-widest hover:underline"
                 >
                   Open Music Hub ↗
                 </button>
               </div>
-              <h3 className="text-3xl font-serif text-pink-600 italic leading-tight">{currentSong.title}</h3>
-              <p className="text-sm text-pink-400 font-bold uppercase tracking-widest mb-6">{currentSong.artist}</p>
+              <h3 className="text-xl font-serif text-pink-600 italic leading-tight font-bold">{currentSong.title}</h3>
+              <p className="text-[9px] text-pink-400 font-bold uppercase tracking-widest pb-3">{currentSong.artist}</p>
               
-              <div className="flex items-center justify-center md:justify-start gap-6 pt-4">
-                <button onClick={prevSong} className="text-3xl text-pink-200 hover:text-pink-400 transition-colors">⏮</button>
+              <div className="flex items-center justify-center md:justify-start gap-5 pt-1">
+                <button onClick={prevSong} className="text-2xl text-pink-200 hover:text-pink-400 transition-colors">⏮</button>
                 <button 
                   onClick={toggleMusic}
-                  className="w-14 h-14 bg-pink-500 text-white rounded-full flex items-center justify-center shadow-xl shadow-pink-200 hover:scale-110 active:scale-95 transition-all text-xl"
+                  className="w-10 h-10 bg-gradient-to-br from-pink-400 to-rose-400 text-white rounded-full flex items-center justify-center shadow-lg shadow-pink-100 hover:scale-110 active:scale-95 transition-all text-sm font-bold cursor-pointer"
                 >
                   {isMusicPlaying ? '⏸' : '▶'}
                 </button>
-                <button onClick={nextSong} className="text-3xl text-pink-200 hover:text-pink-400 transition-colors">⏭</button>
+                <button onClick={nextSong} className="text-2xl text-pink-200 hover:text-pink-400 transition-colors">⏭</button>
               </div>
-            </div>
-          </div>
-
-          {/* Trending Mini List */}
-          <div className="mt-8 pt-8 border-t border-pink-50">
-            <div className="flex justify-between items-center mb-4">
-              <h4 className="text-sm font-serif italic text-pink-500">Trending for your {currentPhase} phase</h4>
-              <button onClick={() => onTabChange?.('music')} className="text-[9px] font-bold text-pink-300 uppercase tracking-widest">View All</button>
-            </div>
-            <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-              {SONGS.filter(s => s.tags.includes(currentPhase.toLowerCase()) || s.tags.includes('energy')).slice(0, 3).map((song) => (
-                <div 
-                  key={song.id}
-                  onClick={() => {
-                    const idx = SONGS.indexOf(song);
-                    if (idx !== -1) setCurrentSongIndex(idx);
-                  }}
-                  className="flex-shrink-0 flex items-center gap-3 bg-pink-50/30 p-3 rounded-2xl border border-pink-50/50 cursor-pointer hover:bg-pink-50 transition-colors"
-                >
-                  <span className="text-2xl">{song.coverEmoji}</span>
-                  <div className="min-w-0 max-w-[100px]">
-                    <p className="text-[10px] font-serif italic text-pink-600 truncate">{song.title}</p>
-                    <p className="text-[8px] font-bold text-pink-300 uppercase truncate">{song.artist}</p>
-                  </div>
-                </div>
-              ))}
             </div>
           </div>
         </section>
@@ -1430,6 +1343,245 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   return (
     <div className="space-y-8 pb-12">
+      {/* Top Header Section with Hamburger (left), Logo (center), Notification (right) */}
+      <header className="flex items-center justify-between px-4 py-3 bg-white/40 backdrop-blur-2xl border border-white/60 shadow-[inset_0_2px_4px_rgba(255,255,255,0.6),_0_8px_32px_rgba(244,114,182,0.03)] rounded-3xl sticky top-2 z-40">
+        <button 
+          onClick={() => setIsMenuOpen(true)}
+          className="p-2.5 rounded-2xl bg-white/60 hover:bg-white/90 text-pink-600 transition-all duration-300 shadow-[inset_0_1.5px_2.5px_rgba(255,255,255,0.7),_0_4px_12px_rgba(244,114,182,0.05)] border border-pink-50/50 cursor-pointer flex items-center justify-center active:scale-90"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+
+        <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => setActiveTab('dashboard')}>
+          <span className="text-xl animate-pulse">🌸</span>
+          <span className="font-serif italic font-black text-2xl bg-gradient-to-r from-pink-500 to-rose-400 bg-clip-text text-transparent drop-shadow-sm">
+            Lumina
+          </span>
+        </div>
+
+        <button 
+          onClick={() => setIsNotificationsOpen(true)}
+          className="p-2.5 rounded-2xl bg-white/60 hover:bg-white/90 text-pink-600 transition-all duration-300 shadow-[inset_0_1.5px_2.5px_rgba(255,255,255,0.7),_0_4px_12px_rgba(244,114,182,0.05)] border border-pink-50/50 cursor-pointer flex items-center justify-center relative active:scale-90"
+        >
+          <Bell className="w-5 h-5" />
+          {/* Active Notifications dot if any partner requests or alerts are active */}
+          {((partnerUser?.partnerRequest?.status === 'pending') || receivedGifts.length > 0 || reminders.filter(r => !r.isCompleted).length > 0) && (
+            <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-gradient-to-r from-rose-500 to-pink-500 rounded-full border-2 border-white animate-pulse" />
+          )}
+        </button>
+      </header>
+
+      {/* Personalized Greeting & Short Inspirational Message Section */}
+      <section className="bg-gradient-to-br from-white/80 via-pink-50/20 to-amber-50/10 backdrop-blur-md p-6 md:p-8 rounded-[2.5rem] border border-white/90 shadow-[inset_0_3px_5px_rgba(255,255,255,0.85),_0_12px_36px_rgba(244,114,182,0.04)] relative overflow-hidden transition-all duration-500">
+        {/* Claymorphic blobs inside greeting for fluid background */}
+        <div className="absolute -top-12 -left-12 w-32 h-32 bg-gradient-to-tr from-pink-300/10 to-rose-300/10 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute -bottom-16 -right-16 w-36 h-36 bg-gradient-to-tr from-amber-200/10 to-pink-300/10 rounded-full blur-2xl pointer-events-none" />
+        
+        <div className="relative z-10 space-y-2">
+          <p className="text-[10px] font-black uppercase tracking-widest text-pink-400">Welcome to your sanctuary</p>
+          <h1 className="text-3xl md:text-4xl font-serif italic text-pink-600 font-black leading-tight">
+            {getGreeting()}, {user.firstName || user.name || "Ella"} ✨
+          </h1>
+          <p className="text-xs md:text-sm text-stone-500 leading-relaxed italic font-serif">
+            "{affirmation || 'You are not just your cycle, you are the whole universe in motion.'}"
+          </p>
+        </div>
+      </section>
+
+      {/* Slide-out side menu (Hamburger drawer) */}
+      {isMenuOpen && (
+        <>
+          <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-[150] transition-opacity" onClick={() => setIsMenuOpen(false)} />
+          <div className="fixed inset-y-0 left-0 max-w-xs w-full bg-[#fffafb]/95 backdrop-blur-3xl shadow-2xl z-[160] p-6 flex flex-col justify-between border-r border-pink-100/40 animate-slideRight">
+            <div className="space-y-6">
+              {/* Title Header with Close */}
+              <div className="flex items-center justify-between border-b border-pink-100/30 pb-4">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xl">🌸</span>
+                  <span className="font-serif italic font-black text-xl text-pink-600">Lumina Menu</span>
+                </div>
+                <button 
+                  onClick={() => setIsMenuOpen(false)}
+                  className="p-1.5 rounded-xl bg-pink-50 text-pink-500 hover:bg-pink-100 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Menu List */}
+              <div className="space-y-4">
+                {/* Mode Select Card with Claymorphic style */}
+                <div className="bg-white/80 backdrop-blur-md p-4 rounded-3xl border border-pink-100/50 shadow-[inset_0_2px_4px_rgba(255,255,255,0.8),_0_6px_15px_rgba(244,114,182,0.03)]">
+                  <p className="text-[9px] font-black uppercase tracking-wider text-pink-400 mb-2">Sanctuary Mode</p>
+                  <div className="flex flex-col gap-2">
+                    <button 
+                      onClick={() => {
+                        if (togglePregnancy) togglePregnancy();
+                        setIsMenuOpen(false);
+                      }}
+                      className={`w-full py-2.5 px-4 rounded-2xl text-[10px] font-bold uppercase tracking-widest transition-all cursor-pointer ${user.isPregnancyMode ? 'bg-indigo-500 text-white shadow-md' : 'bg-pink-50 text-pink-500 border border-pink-100 hover:bg-pink-100/50'}`}
+                    >
+                      🤰 {user.isPregnancyMode ? 'Pregnancy Mode: ON' : 'Switch to Pregnancy'}
+                    </button>
+                    {user.isPostpartumMode && (
+                      <div className="w-full py-2.5 px-4 rounded-2xl bg-[#4f46e5]/10 text-[#4f46e5] text-[10px] font-bold uppercase tracking-widest text-center">
+                        👶 Postpartum Active
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Themes Card with Claymorphic style */}
+                <div className="bg-white/80 backdrop-blur-md p-4 rounded-3xl border border-pink-100/50 shadow-[inset_0_2px_4px_rgba(255,255,255,0.8),_0_6px_15px_rgba(244,114,182,0.03)]">
+                  <p className="text-[9px] font-black uppercase tracking-wider text-pink-400 mb-2">Sanctuary Theme</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {['rose', 'lavender', 'mint', 'peach'].map(t => {
+                      const isActive = user.theme === t;
+                      return (
+                        <button 
+                          key={t}
+                          onClick={() => {
+                            if (setUser) {
+                              setUser((prev: any) => prev ? { ...prev, theme: t } : null);
+                            }
+                          }}
+                          className={`py-2 px-3 rounded-2xl text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-between border ${isActive ? 'bg-gradient-to-br from-pink-400 to-rose-400 text-white shadow-md border-pink-300' : 'bg-pink-50/50 text-pink-400 border-pink-100/50 hover:bg-pink-100/20'}`}
+                        >
+                          <span className="capitalize">{t}</span>
+                          <span className={`w-3 h-3 rounded-full border border-white ${t === 'rose' ? 'bg-pink-400' : t === 'lavender' ? 'bg-purple-400' : t === 'mint' ? 'bg-teal-400' : 'bg-orange-400'}`} />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Logout Button */}
+            <div className="border-t border-pink-100/30 pt-4">
+              <button 
+                onClick={() => {
+                  if (handleLogout) handleLogout();
+                  setIsMenuOpen(false);
+                }}
+                className="w-full py-3 rounded-2xl bg-rose-50 text-rose-500 hover:bg-rose-100 transition-colors duration-300 font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <LogOut className="w-4 h-4" />
+                Sign Out of Sanctuary
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Slide-out notifications pane (Right drawer) */}
+      {isNotificationsOpen && (
+        <>
+          <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-[150] transition-opacity" onClick={() => setIsNotificationsOpen(false)} />
+          <div className="fixed inset-y-0 right-0 max-w-xs w-full bg-[#fffafb]/95 backdrop-blur-3xl shadow-2xl z-[160] p-6 flex flex-col border-l border-pink-100/40 animate-slideLeft">
+            {/* Title Header with Close */}
+            <div className="flex items-center justify-between border-b border-pink-100/30 pb-4 mb-6">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xl">🔔</span>
+                <span className="font-serif italic font-black text-xl text-pink-600">Notifications</span>
+              </div>
+              <button 
+                onClick={() => setIsNotificationsOpen(false)}
+                className="p-1.5 rounded-xl bg-pink-50 text-pink-500 hover:bg-pink-100 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Notifications Content */}
+            <div className="flex-1 overflow-y-auto space-y-4 scrollbar-hide">
+              {/* Partner connection request notification */}
+              {partnerUser?.partnerRequest?.status === 'pending' && (
+                <div className="bg-gradient-to-br from-indigo-50 to-purple-50 p-4 rounded-3xl border border-indigo-100 shadow-[inset_0_2px_4px_rgba(255,255,255,0.8),_0_6px_15px_rgba(244,114,182,0.03)] space-y-3 animate-fadeIn">
+                  <div className="flex gap-2">
+                    <span className="text-xl shrink-0">💕</span>
+                    <div>
+                      <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Companion Link</p>
+                      <p className="text-xs text-indigo-900 font-bold mt-0.5">{partnerUser.name} requested to link accounts!</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      setIsNotificationsOpen(false);
+                    }}
+                    className="w-full py-2 bg-indigo-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-md hover:bg-indigo-700 transition-all text-center block"
+                  >
+                    Review Request Below
+                  </button>
+                </div>
+              )}
+
+              {/* Gift Notifications */}
+              {receivedGifts.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-[9px] font-black uppercase tracking-wider text-pink-400 px-1">Comfort Gifts</p>
+                  {receivedGifts.slice(0, 3).map(gift => (
+                    <div key={gift.id} className="bg-white/80 p-3 rounded-2xl border border-pink-100/30 shadow-sm flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-pink-50 flex items-center justify-center text-lg shadow-inner">
+                        {gift.type === 'hug' ? '🌸' : gift.type === 'tea' ? '🍵' : gift.type === 'flower' ? '💐' : gift.type === 'chocolate' ? '🍫' : '✨'}
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-gray-700">{gift.senderName} sent a {gift.type}!</p>
+                        <p className="text-[8px] text-gray-400">{new Date(gift.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Active Reminders */}
+              <div className="space-y-2">
+                <p className="text-[9px] font-black uppercase tracking-wider text-pink-400 px-1">Active Reminders</p>
+                {reminders.filter(r => !r.isCompleted).length === 0 ? (
+                  <div className="p-4 bg-white/40 border border-dashed border-pink-100/50 rounded-2xl text-center">
+                    <p className="text-[10px] text-gray-400 italic">All sanctuary routines are completed today 🌸</p>
+                  </div>
+                ) : (
+                  reminders.filter(r => !r.isCompleted).map(rem => (
+                    <div key={rem.id} className="bg-white/80 p-3 rounded-2xl border border-pink-100/30 shadow-sm flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-base">⏰</span>
+                        <div>
+                          <p className="text-[10px] font-bold text-gray-700 leading-tight">{rem.title}</p>
+                          <p className="text-[8px] text-gray-400 mt-0.5">{rem.time}</p>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          if (setUser) {
+                            setUser((prev: any) => {
+                              if (!prev) return null;
+                              const updated = (prev.reminders || []).map((r: any) => r.id === rem.id ? { ...r, isCompleted: true } : r);
+                              return { ...prev, reminders: updated };
+                            });
+                          }
+                        }}
+                        className="p-1 rounded-lg bg-pink-50 text-pink-500 hover:bg-pink-100 transition-colors text-[9px] font-bold cursor-pointer"
+                      >
+                        Done
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* General cycle suggestions */}
+              <div className="bg-pink-50/30 p-4 rounded-3xl border border-pink-100/30 space-y-2">
+                <p className="text-[9px] font-black uppercase tracking-wider text-pink-400">Sanctuary Intelligence</p>
+                <p className="text-[11px] text-stone-500 leading-relaxed font-serif italic">
+                  "Synchronize your heavy workloads with your peak follicular and ovulatory energies to protect your mental sanctuary."
+                </p>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
       {/* Step 3 (Partner Connection Request) & Step 4 (Privacy Controls) */}
       {partnerUser?.partnerRequest?.status === 'pending' && (
         <section className="bg-gradient-to-br from-purple-50 to-pink-50 p-8 rounded-[2.5rem] border border-pink-100 shadow-sm space-y-6 animate-fadeIn">
