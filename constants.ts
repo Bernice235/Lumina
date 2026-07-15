@@ -161,7 +161,19 @@ export const SONGS: Song[] = [
   { id: "preg2", title: "Sweet Embryo Waves", artist: "Cosmic Motherhood", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3", tags: ["pregnancy relaxation", "calm", "pregnancy", "sleep"], coverEmoji: "🍼", source: "internal" },
 
   // Postpartum Wellness Category 🌸
-  { id: "post1", title: "Motherhood Recovery (Soft Flute)", artist: "Womb Healing Society", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3", tags: ["postpartum wellness", "postpartum", "calm", "period", "cramps"], coverEmoji: "🪷", source: "internal" }
+  { id: "post1", title: "Motherhood Recovery (Soft Flute)", artist: "Womb Healing Society", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3", tags: ["postpartum wellness", "postpartum", "calm", "period", "cramps"], coverEmoji: "🪷", source: "internal" },
+
+  // Lofi Chill Category ☕
+  { id: "lf1", title: "Sunset Cozy Chill", artist: "Lumina Lofi Beats", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3", tags: ["lofi chill", "calm", "relax", "dreamy"], coverEmoji: "☕", source: "internal" },
+  { id: "lf2", title: "Rainy Cafe Study", artist: "Nostalgia Vibes", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3", tags: ["lofi chill", "calm", "sleep", "background"], coverEmoji: "🌧️", source: "internal" },
+
+  // Acoustic Category 🎸
+  { id: "ac1", title: "Warm Fireplace Acoustic", artist: "Acoustic Whispers", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3", tags: ["acoustic", "calm", "happy", "vocals"], coverEmoji: "🎸", source: "internal" },
+  { id: "ac2", title: "Gentle Morning Breeze", artist: "Folk & Harmony", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3", tags: ["acoustic", "calm", "dreamy", "relax"], coverEmoji: "🍃", source: "internal" },
+
+  // Nature Soundscapes Category 🍃
+  { id: "ns1", title: "Forest Birds & Gentle Stream", artist: "Earth Sanctuary", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-11.mp3", tags: ["nature soundscapes", "calm", "sleep", "meditation"], coverEmoji: "🍃", source: "internal" },
+  { id: "ns2", title: "Deep Space Ocean Waves", artist: "Zen Sound Healing", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3", tags: ["nature soundscapes", "calm", "sleep", "meditation"], coverEmoji: "🌊", source: "internal" }
 ];
 
 export const MOODS = [

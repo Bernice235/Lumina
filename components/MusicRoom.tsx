@@ -60,6 +60,9 @@ const CATEGORIES = [
   { id: 'meditation', label: 'Meditation 🧘', emoji: '🧘' },
   { id: 'pregnancy relaxation', label: 'Pregnancy Relaxation 🤰', emoji: '🤰' },
   { id: 'postpartum wellness', label: 'Postpartum Wellness 🌸', emoji: '🌸' },
+  { id: 'lofi chill', label: 'Lofi Chill ☕', emoji: '☕' },
+  { id: 'acoustic', label: 'Acoustic 🎸', emoji: '🎸' },
+  { id: 'nature soundscapes', label: 'Nature Soundscapes 🍃', emoji: '🍃' },
 ];
 
 const MusicRoom: React.FC<MusicRoomProps> = ({ 
@@ -129,9 +132,7 @@ const MusicRoom: React.FC<MusicRoomProps> = ({
   const [lockedSongAttempt, setLockedSongAttempt] = useState<any | null>(null);
 
   const isSongPremiumLocked = (song: any) => {
-    if (user.isPremium) return false;
-    const premiumTags = ["classical", "meditation", "pregnancy relaxation", "jazz", "gospel"];
-    return song.tags.some((tag: string) => premiumTags.includes(tag.toLowerCase()));
+    return false;
   };
 
   const handleSongSelect = (songIdx: number) => {

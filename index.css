@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+@theme {
+  --variant-dark: class;
+}
+
 @keyframes slideDownWithCentering {
   from {
     transform: translate(-50%, -20px);

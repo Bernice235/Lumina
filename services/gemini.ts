@@ -71,9 +71,36 @@ export async function playWelcomeVoice(name: string): Promise<void> {
       source.buffer = audioBuffer;
       source.connect(audioContext.destination);
       source.start();
+      return;
     }
   } catch (error: any) {
-    console.warn("Welcome Voice could not be played:", error?.message || error);
+    console.warn("Welcome Voice proxy could not be played, falling back to Web Speech Synthesis:", error?.message || error);
+  }
+
+  // Fallback using native Web Speech Synthesis
+  try {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const text = `Welcome back to your sanctuary, ${name || 'beautiful'}. You are safe, and you are exactly where you need to be.`;
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 0.9; // Gently slower rate
+      utterance.pitch = 1.0;
+      
+      const voices = window.speechSynthesis.getVoices();
+      const sweetVoice = voices.find(v => 
+        v.name.includes('Google US English') || 
+        v.name.includes('Natural') || 
+        v.name.includes('Samantha') || 
+        v.name.includes('Zira') ||
+        v.lang.startsWith('en-')
+      );
+      if (sweetVoice) {
+        utterance.voice = sweetVoice;
+      }
+      window.speechSynthesis.speak(utterance);
+    }
+  } catch (synthError) {
+    console.error("Web speech synthesis failed:", synthError);
   }
 }
 

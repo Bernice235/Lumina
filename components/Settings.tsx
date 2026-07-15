@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { User, NotificationSettings, Symptom, DiaryEntry, BirthControlLog, TemperatureLog, SharingSettings, BillingItem, Reminder } from '../types';
-import { CommunityInvite } from './CommunityInvite';
 import PartnerMode from './PartnerMode';
 import { 
   Bell, 
@@ -50,7 +49,8 @@ import {
   syncActiveSubscriptionStatus 
 } from '../services/revenueCatService';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../services/firebase';
+import { db, auth } from '../services/firebase';
+import { updateEmail, updatePassword } from 'firebase/auth';
 
 interface SettingsProps {
   user: User;
@@ -179,6 +179,88 @@ const Settings: React.FC<SettingsProps> = ({
   const [localFeedback, setLocalFeedback] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [cloudFeedback, setCloudFeedback] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [isImportDragging, setIsImportDragging] = useState(false);
+
+  // Profile Edit States
+  const [profileName, setProfileName] = useState(user.name || '');
+  const [profileAge, setProfileAge] = useState(user.age ? String(user.age) : '');
+  const [profileEmail, setProfileEmail] = useState(user.email || '');
+  const [profilePassword, setProfilePassword] = useState('');
+  const [profileFeedback, setProfileFeedback] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+
+  React.useEffect(() => {
+    setProfileName(user.name || '');
+    setProfileAge(user.age ? String(user.age) : '');
+    setProfileEmail(user.email || '');
+  }, [user]);
+
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setProfileFeedback(null);
+    setProfileLoading(true);
+    try {
+      let updatedUser = { ...user };
+      updatedUser.name = profileName.trim();
+      if (profileAge.trim()) {
+        updatedUser.age = parseInt(profileAge) || undefined;
+      } else {
+        delete updatedUser.age;
+      }
+
+      // 1. Firebase Auth Update (Email)
+      const currentUser = auth.currentUser;
+      if (currentUser) {
+        if (profileEmail.trim() && profileEmail.trim() !== currentUser.email) {
+          try {
+            await updateEmail(currentUser, profileEmail.trim());
+            updatedUser.email = profileEmail.trim();
+          } catch (err: any) {
+            if (err?.code === 'auth/requires-recent-login' || String(err?.message || '').includes('requires-recent-login')) {
+              throw new Error("Changing your email requires a recent login. Please log out and log in again, then retry.");
+            }
+            throw err;
+          }
+        }
+
+        // 2. Firebase Auth Update (Password)
+        if (profilePassword.trim()) {
+          try {
+            await updatePassword(currentUser, profilePassword.trim());
+            localStorage.setItem('lumina_saved_password', profilePassword.trim());
+          } catch (err: any) {
+            if (err?.code === 'auth/requires-recent-login' || String(err?.message || '').includes('requires-recent-login')) {
+              throw new Error("Changing your password requires a recent login. Please log out and log in again, then retry.");
+            }
+            throw err;
+          }
+        }
+      } else {
+        // Fallback or offline mode: just update local properties
+        if (profileEmail.trim()) {
+          updatedUser.email = profileEmail.trim();
+        }
+        if (profilePassword.trim()) {
+          localStorage.setItem('lumina_saved_password', profilePassword.trim());
+        }
+      }
+
+      // Save user state
+      setUser(updatedUser);
+      localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+      await syncUser(updatedUser);
+
+      setProfileFeedback({ type: 'success', text: 'Sanctuary profile updated successfully! ✨' });
+      setProfilePassword(''); // Clear password field after success
+    } catch (err: any) {
+      console.error("Error updating profile:", err);
+      setProfileFeedback({ 
+        type: 'error', 
+        text: err instanceof Error ? err.message : 'An error occurred while updating your sanctuary profile.' 
+      });
+    } finally {
+      setProfileLoading(false);
+    }
+  };
 
   const handleCloudBackupNow = async () => {
     setCloudFeedback(null);
@@ -2275,10 +2357,18 @@ const Settings: React.FC<SettingsProps> = ({
               Sanctuary Account Details 🌸
             </h3>
             <p className="text-xs text-gray-400 leading-relaxed font-serif italic">
-               Keep your personal sanctuary profile updated.
+               Keep your personal sanctuary profile updated (Name, Age, Password, and Email).
             </p>
 
-            <div className="space-y-5">
+            {profileFeedback && (
+              <div className={`p-4 rounded-xl text-xs font-serif italic border ${
+                profileFeedback.type === 'success' ? 'bg-teal-50 text-teal-600 border-teal-100' : 'bg-rose-50 text-rose-500 border-rose-100'
+              }`}>
+                {profileFeedback.text}
+              </div>
+            )}
+
+            <form onSubmit={handleUpdateProfile} className="space-y-5">
               {/* Display Name */}
               <div className="flex flex-col gap-2">
                 <label className="text-[10px] font-bold text-pink-400 uppercase tracking-wider flex items-center gap-1.5">
@@ -2287,30 +2377,75 @@ const Settings: React.FC<SettingsProps> = ({
                 </label>
                 <input 
                   type="text" 
-                  value={user.name || ''} 
-                  onChange={(e) => {
-                    const updatedUser = { ...user, name: e.target.value };
-                    setUser(updatedUser);
-                    localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
-                    syncUser(updatedUser);
-                  }}
+                  value={profileName} 
+                  onChange={(e) => setProfileName(e.target.value)}
                   className="bg-pink-50/50 px-4 py-3 rounded-2xl outline-none font-medium text-xs text-pink-700 border border-pink-100 placeholder-pink-300 shadow-inner w-full focus:border-pink-300 transition-colors"
                   placeholder="e.g. Beautiful Bloom"
+                  required
                 />
               </div>
-            </div>
-          </section>
 
-          {/* Referral & Invite Card */}
-          <section className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-pink-50 space-y-6">
-            <h3 className="text-xl font-serif text-pink-500 flex items-center gap-2">
-              <Share2 size={20} className="text-pink-400" />
-              Community Referrals & QR 🌸
-            </h3>
-            <p className="text-xs text-gray-400 leading-relaxed font-serif italic">
-              Share your invite link or QR code to bring your sisters and friends into the Lumina sanctuary.
-            </p>
-            <CommunityInvite user={user} />
+              {/* Age */}
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-bold text-pink-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Calendar size={13} />
+                  Age
+                </label>
+                <input 
+                  type="number" 
+                  value={profileAge} 
+                  onChange={(e) => setProfileAge(e.target.value)}
+                  className="bg-pink-50/50 px-4 py-3 rounded-2xl outline-none font-medium text-xs text-pink-700 border border-pink-100 placeholder-pink-300 shadow-inner w-full focus:border-pink-300 transition-colors"
+                  placeholder="e.g. 28"
+                  min="1"
+                  max="120"
+                />
+              </div>
+
+              {/* Email Address */}
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-bold text-pink-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <span>✉️</span>
+                  Email Address
+                </label>
+                <input 
+                  type="email" 
+                  value={profileEmail} 
+                  onChange={(e) => setProfileEmail(e.target.value)}
+                  className="bg-pink-50/50 px-4 py-3 rounded-2xl outline-none font-medium text-xs text-pink-700 border border-pink-100 placeholder-pink-300 shadow-inner w-full focus:border-pink-300 transition-colors"
+                  placeholder="e.g. you@example.com"
+                  required
+                />
+              </div>
+
+              {/* New Password */}
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-bold text-pink-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Lock size={13} />
+                  New Password
+                </label>
+                <input 
+                  type="password" 
+                  value={profilePassword} 
+                  onChange={(e) => setProfilePassword(e.target.value)}
+                  className="bg-pink-50/50 px-4 py-3 rounded-2xl outline-none font-medium text-xs text-pink-700 border border-pink-100 placeholder-pink-300 shadow-inner w-full focus:border-pink-300 transition-colors"
+                  placeholder="••••••••"
+                  minLength={6}
+                />
+                <span className="text-[9px] text-gray-400 font-sans italic">Leave blank if you do not wish to change your password. Must be at least 6 characters.</span>
+              </div>
+
+              {/* Submit Button */}
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={profileLoading}
+                  className="w-full py-4 bg-gradient-to-r from-pink-400 to-rose-450 hover:scale-[1.01] active:scale-95 text-white font-bold rounded-2xl text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {profileLoading ? 'Updating Profile...' : 'Save Profile Details'}
+                </button>
+              </div>
+            </form>
           </section>
 
           {/* DATA EXPORT & PORTABILITY */}

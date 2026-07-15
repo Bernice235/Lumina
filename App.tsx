@@ -494,7 +494,6 @@ const App: React.FC = () => {
   ]);
   const [isLogModalOpen, setIsLogModalOpen] = useState(false);
   const [isDoctorReportOpen, setIsDoctorReportOpen] = useState(false);
-  const [showDoctorReportLock, setShowDoctorReportLock] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [receivedGifts, setReceivedGifts] = useState<ReceivedComfort[]>([]);
   const [authLoading, setAuthLoading] = useState(() => {
@@ -1561,7 +1560,7 @@ const App: React.FC = () => {
                 />
               </div>
 
-              {!user.isPartner && (
+              {!user.isPartner && !['cycle', 'wellness', 'edu', 'pedia', 'settings'].includes(activeTab) && (
                 <button 
                   onClick={() => {
                     setActiveTab('partner');
@@ -1578,15 +1577,17 @@ const App: React.FC = () => {
                 </button>
               )}
 
-              <button 
-                onClick={() => {
-                  setSettingsSubTab('notifications');
-                  setActiveTab('settings');
-                }} 
-                className="p-1 md:p-2 text-gray-400 hover:text-pink-400 transition-colors"
-              >
-                ⚙️
-              </button>
+              {!['cycle', 'wellness', 'edu', 'pedia', 'settings'].includes(activeTab) && (
+                <button 
+                  onClick={() => {
+                    setSettingsSubTab('notifications');
+                    setActiveTab('settings');
+                  }} 
+                  className="p-1 md:p-2 text-gray-400 hover:text-pink-400 transition-colors"
+                >
+                  ⚙️
+                </button>
+              )}
             </div>
           </div>
         </header>
@@ -1614,47 +1615,6 @@ const App: React.FC = () => {
         user={user}
         symptoms={symptoms}
       />
-
-      {showDoctorReportLock && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-[110] animate-fadeIn text-gray-700">
-          <div className="bg-white dark:bg-stone-900 p-8 md:p-10 rounded-[3rem] border border-pink-100 dark:border-stone-850 max-w-md w-full mx-4 text-center space-y-6 shadow-2xl animate-scaleUp">
-            <div className="w-20 h-20 bg-pink-50 dark:bg-stone-800 text-pink-500 rounded-full flex items-center justify-center text-4xl mx-auto shadow-inner animate-pulse">
-              🏥
-            </div>
-
-            <div className="space-y-3">
-              <h4 className="text-2xl font-serif font-bold italic text-pink-600 dark:text-pink-400">
-                Doctor-Ready Health Reports
-              </h4>
-              <p className="text-[10px] font-black uppercase tracking-widest text-pink-400">
-                Premium Sanctuary Feature
-              </p>
-              <p className="text-xs text-gray-500 dark:text-stone-400 leading-relaxed">
-                Export beautifully organized, doctor-ready PDF health reports summarizing your cycle history, symptoms, BBT temperatures, birth control logs, and pregnancy milestones. Share them effortlessly with your clinician or midwife!
-              </p>
-            </div>
-
-            <div className="space-y-2 pt-2">
-              <button
-                onClick={() => {
-                  setShowDoctorReportLock(false);
-                  setSettingsSubTab('billing');
-                  setActiveTab('settings');
-                }}
-                className="w-full py-4 bg-gradient-to-r from-pink-500 to-rose-450 text-white rounded-2xl text-[11px] uppercase tracking-widest font-black shadow-lg shadow-pink-100 dark:shadow-none hover:scale-[1.02] active:scale-95 transition-all cursor-pointer"
-              >
-                💎 Unlock Reports with Premium
-              </button>
-              <button
-                onClick={() => setShowDoctorReportLock(false)}
-                className="w-full py-3 bg-gray-50 dark:bg-stone-800 hover:bg-gray-100 dark:hover:bg-stone-750 rounded-xl text-[9px] uppercase tracking-wider font-bold text-gray-400 dark:text-stone-400 transition-all cursor-pointer"
-              >
-                Maybe Later
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Floating Mini Player (Global) */}
       {isMusicActive && (

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, AppTheme, Symptom, BillingItem, NotificationSettings } from '../types';
+import { User, AppTheme, Symptom, NotificationSettings } from '../types';
 import { THEMES } from '../constants';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -9,8 +9,6 @@ import {
   ChevronLeft, 
   Heart, 
   Check, 
-  Baby, 
-  Award, 
   User as UserIcon, 
   Smile, 
   Bell, 
@@ -18,13 +16,13 @@ import {
   RefreshCw, 
   Sparkle, 
   ShieldCheck, 
-  Flame, 
   Activity, 
-  Info,
-  HelpCircle,
-  TrendingUp,
-  Brain,
-  Droplets
+  Droplets,
+  Music,
+  Moon,
+  PenTool,
+  Wind,
+  Plus
 } from 'lucide-react';
 
 interface OnboardingWizardProps {
@@ -35,11 +33,11 @@ interface OnboardingWizardProps {
 
 export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUser, onComplete }) => {
   const [step, setStep] = useState(1);
-  const totalSteps = 13; // 12 questions + 1 final summary screen
+  const totalSteps = 6;
 
   // Local values prefilled with user defaults if available
-  const [firstName, setFirstName] = useState(user.firstName || user.name || '');
-  const [age, setAge] = useState<number>(user.age || 25);
+  const [name, setName] = useState(user.firstName || user.name || '');
+  const [dob, setDob] = useState(user.dob || '');
   
   const [lastPeriodStart, setLastPeriodStart] = useState(() => {
     if (user.lastPeriodStart) {
@@ -48,59 +46,45 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
     return new Date().toISOString().split('T')[0];
   });
 
-  // average cycle length options
-  const [cycleLengthOption, setCycleLengthOption] = useState<string>(() => {
-    if (user.cycleLength) {
-      return [21, 24, 28, 30, 35].includes(user.cycleLength) ? String(user.cycleLength) : '28';
-    }
-    return '28';
-  });
-  const [customCycleLength, setCustomCycleLength] = useState<number>(28);
+  const [cycleLength, setCycleLength] = useState<number>(user.cycleLength || 28);
+  const [periodLength, setPeriodLength] = useState<number>(user.periodLength || 5);
 
-  // average period length options
-  const [periodLengthOption, setPeriodLengthOption] = useState<string>('4-5');
-
-  // pregnancy status: Yes, No, Trying
-  const [pregnancyStatus, setPregnancyStatus] = useState<'yes' | 'no' | 'trying'>(
-    user.isPregnancyMode ? 'yes' : 'no'
-  );
-
-  // goals / what they want help with
-  const [helpsSelected, setHelpsSelected] = useState<string[]>([
-    'Track my period',
-    'Understand my symptoms',
-    'Improve wellness'
+  // Wellness goals
+  const [wellnessGoals, setWellnessGoals] = useState<string[]>([
+    'Understanding my cycle',
+    'Period tracking'
   ]);
 
-  // symptoms commonly experienced
-  const [symptomsSelected, setSymptomsSelected] = useState<string[]>(['Cramps']);
+  // Reminders preferences
+  const [reminders, setReminders] = useState<string[]>([
+    'Period reminders',
+    'Ovulation reminders'
+  ]);
 
-  // reminders settings
-  const [periodReminders, setPeriodReminders] = useState<boolean>(true);
-  const [ovulationReminders, setOvulationReminders] = useState<boolean>(true);
-  const [wellnessReminders, setWellnessReminders] = useState<boolean>(true);
-  
-  // partner setting
-  const [connectPartner, setConnectPartner] = useState<boolean>(true);
+  // Partner mode preference
+  const [partnerMode, setPartnerMode] = useState<'yes' | 'no' | null>(null);
 
-  // selected theme - default is 'rose'
-  const [selectedTheme, setSelectedTheme] = useState<AppTheme>(user.theme || 'rose');
+  // Sanctuary preferences
+  const [sanctuaryPrefs, setSanctuaryPrefs] = useState<string[]>([
+    'Music',
+    'Meditation',
+    'Breathing exercises'
+  ]);
+
+  // Notification permissions
+  const [notificationsAllowed, setNotificationsAllowed] = useState<boolean | null>(null);
 
   // error state
   const [validationError, setValidationError] = useState<string | null>(null);
 
   const handleNext = () => {
-    // Validation
-    if (step === 1 && !firstName.trim()) {
-      setValidationError("Please enter your name to personalize your sanctuary.");
+    // Validation for Step 2
+    if (step === 2 && !name.trim()) {
+      setValidationError("Please share your name so we can personalize your experience.");
       return;
     }
-    if (step === 2 && (age < 12 || age > 99)) {
-      setValidationError("Please specify a valid age between 12 and 99.");
-      return;
-    }
-
     setValidationError(null);
+
     if (step < totalSteps) {
       setStep(step + 1);
     } else {
@@ -115,73 +99,53 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
     }
   };
 
-  const getCycleLengthValue = (): number => {
-    if (cycleLengthOption === 'not_sure') return 28;
-    return parseInt(cycleLengthOption) || customCycleLength || 28;
-  };
-
-  const getPeriodLengthValue = (): number => {
-    if (periodLengthOption === '2-3') return 3;
-    if (periodLengthOption === '4-5') return 5;
-    if (periodLengthOption === '6-7') return 6;
-    if (periodLengthOption === '8+') return 8;
-    return 5; // default/not sure
-  };
-
   const handleFinish = () => {
-    const finalCycleLength = getCycleLengthValue();
-    const finalPeriodLength = getPeriodLengthValue();
-    const isPregnancyMode = pregnancyStatus === 'yes';
+    // Calculate age from DOB if present
+    let calculatedAge = user.age || 25;
+    if (dob) {
+      const birthDate = new Date(dob);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      if (age > 0 && age < 120) {
+        calculatedAge = age;
+      }
+    }
 
-    // Map symptoms selected to actual Symptom array to pre-populate logs
-    const initialSymptoms: Symptom[] = symptomsSelected
-      .filter(s => s !== 'None of these')
-      .map((s, idx) => {
-        let type: Symptom['type'] = 'cramps';
-        if (s === 'Cramps') type = 'cramps';
-        else if (s === 'Headaches') type = 'headache';
-        else if (s === 'Acne') type = 'acne';
-        else if (s === 'Bloating') type = 'bloating';
-        else if (s === 'Fatigue') type = 'fatigue';
-        else if (s === 'Mood swings') type = 'moody';
-        else if (s === 'Tender breasts') type = 'tender_breasts';
+    // Populate notification settings based on choices
+    const finalRemindersEnabled = notificationsAllowed === true;
 
-        return {
-          id: `sym_init_${idx}_${Date.now()}`,
-          date: new Date(lastPeriodStart).toISOString().split('T')[0],
-          type,
-          intensity: 2
-        };
-      });
-
-    // Commit the values to the user object
+    // Create updated user object
     const updatedUser: User = {
       ...user,
-      firstName: firstName.trim(),
-      displayName: firstName.trim(),
-      name: firstName.trim(),
-      age: age,
-      cycleLength: finalCycleLength,
-      periodLength: finalPeriodLength,
+      name: name.trim(),
+      firstName: name.trim(),
+      displayName: name.trim(),
+      dob: dob || undefined,
+      age: calculatedAge,
+      cycleLength: cycleLength,
+      periodLength: periodLength,
       lastPeriodStart: new Date(lastPeriodStart).toISOString(),
-      isPregnancyMode: isPregnancyMode,
-      wellnessPreferences: helpsSelected,
-      symptoms: initialSymptoms,
+      wellnessPreferences: [...new Set([...wellnessGoals, ...sanctuaryPrefs])],
+      onboardingCompleted: true,
       notificationSettings: {
-        enabled: periodReminders || ovulationReminders || wellnessReminders,
-        toneStyle: 'supportive',
+        enabled: finalRemindersEnabled,
+        toneStyle: 'aesthetic',
         reminderDaysBefore: 2,
         quietHours: { enabled: false, startTime: '22:00', endTime: '07:00' },
         types: {
-          periodStarting: periodReminders,
-          periodStarted: periodReminders,
-          periodEnding: periodReminders,
-          ovulation: ovulationReminders,
-          fertileWindow: ovulationReminders,
+          periodStarting: reminders.includes('Period reminders'),
+          periodStarted: reminders.includes('Period reminders'),
+          periodEnding: reminders.includes('Period reminders'),
+          ovulation: reminders.includes('Ovulation reminders'),
+          fertileWindow: reminders.includes('Ovulation reminders'),
           lutealPhase: true,
           pregnancyRisk: true
         },
-        partnerNotificationsEnabled: connectPartner,
+        partnerNotificationsEnabled: partnerMode === 'yes',
         partnerReceiveTypes: {
           periodStarting: true,
           periodStarted: true,
@@ -190,16 +154,16 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
           fertileWindow: true,
           pregnancyRisk: true
         },
-        pregnancyEnabled: isPregnancyMode,
-        partnerPregnancyEnabled: isPregnancyMode,
+        pregnancyEnabled: false,
+        partnerPregnancyEnabled: false,
         pregnancyReminderTime: '09:00',
         pregnancyTypes: {
           welcome: true,
           weeklyBabyDev: true,
           babySizeUpdate: true,
           appointment: true,
-          medicationVitamin: true,
-          hydration: true,
+          medicationVitamin: reminders.includes('Medication reminders'),
+          hydration: reminders.includes('Water reminders'),
           rest: true,
           kickCounter: true,
           symptomCheck: true,
@@ -222,9 +186,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
           laborNear: true,
           encouragement: true
         }
-      },
-      theme: selectedTheme,
-      onboardingCompleted: true,
+      }
     };
 
     setUser(updatedUser);
@@ -232,119 +194,95 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
     onComplete(updatedUser);
   };
 
-  const toggleHelpGoal = (goal: string) => {
-    if (helpsSelected.includes(goal)) {
-      setHelpsSelected(helpsSelected.filter(g => g !== goal));
+  const toggleGoal = (goal: string) => {
+    if (wellnessGoals.includes(goal)) {
+      setWellnessGoals(wellnessGoals.filter(g => g !== goal));
     } else {
-      setHelpsSelected([...helpsSelected, goal]);
+      setWellnessGoals([...wellnessGoals, goal]);
     }
   };
 
-  const toggleSymptom = (symptom: string) => {
-    if (symptom === 'None of these') {
-      setSymptomsSelected(['None of these']);
-      return;
-    }
-
-    let updated = symptomsSelected.filter(s => s !== 'None of these');
-    if (updated.includes(symptom)) {
-      updated = updated.filter(s => s !== symptom);
-      if (updated.length === 0) {
-        updated = ['None of these'];
-      }
+  const toggleReminder = (reminder: string) => {
+    if (reminders.includes(reminder)) {
+      setReminders(reminders.filter(r => r !== reminder));
     } else {
-      updated = [...updated, symptom];
+      setReminders([...reminders, reminder]);
     }
-    setSymptomsSelected(updated);
   };
 
-  const currentThemeInfo = THEMES[selectedTheme] || THEMES['rose'];
+  const toggleSanctuary = (pref: string) => {
+    if (sanctuaryPrefs.includes(pref)) {
+      setSanctuaryPrefs(sanctuaryPrefs.filter(p => p !== pref));
+    } else {
+      setSanctuaryPrefs([...sanctuaryPrefs, pref]);
+    }
+  };
+
+  const currentThemeInfo = THEMES[user.theme || 'rose'];
 
   const slideVariants = {
     enter: (direction: number) => ({
-      x: direction > 0 ? 120 : -120,
+      x: direction > 0 ? 100 : -100,
       opacity: 0,
-      scale: 0.96
+      scale: 0.98
     }),
     center: {
       x: 0,
       opacity: 1,
       scale: 1,
       transition: {
-        x: { type: 'spring', stiffness: 300, damping: 30 },
-        opacity: { duration: 0.25 },
-        scale: { duration: 0.25 }
+        x: { type: 'spring', stiffness: 350, damping: 35 },
+        opacity: { duration: 0.2 },
+        scale: { duration: 0.2 }
       }
     },
     exit: (direction: number) => ({
-      x: direction < 0 ? 120 : -120,
+      x: direction < 0 ? 100 : -100,
       opacity: 0,
-      scale: 0.96,
+      scale: 0.98,
       transition: {
-        x: { type: 'spring', stiffness: 300, damping: 30 },
-        opacity: { duration: 0.2 },
-        scale: { duration: 0.2 }
+        x: { type: 'spring', stiffness: 350, damping: 35 },
+        opacity: { duration: 0.15 },
+        scale: { duration: 0.15 }
       }
     })
   };
 
-  const helpsList = [
-    { name: 'Track my period', desc: 'Predict flow calendars with accuracy.', emoji: '🩸' },
-    { name: 'Predict ovulation', desc: 'Find fertile windows and ovulation peaks.', emoji: '✨' },
-    { name: 'Improve fertility awareness', desc: 'Track conception windows & bio logs.', emoji: '🌱' },
-    { name: 'Understand my symptoms', desc: 'Log cravings, cramps, and energy levels.', emoji: '📊' },
-    { name: 'Improve wellness', desc: 'Supplements & nutritional guidance.', emoji: '🧘' },
-    { name: 'Mood tracking', desc: 'Understand physical & mental correlations.', emoji: '💭' },
-    { name: 'Partner support', desc: 'Sync timelines to keep loved ones close.', emoji: '💕' },
-    { name: 'Pregnancy tracking', desc: 'Baby size benchmarks & trimester updates.', emoji: '🍼' }
-  ];
-
-  const commonSymptomsList = [
-    { name: 'Cramps', emoji: '⚡' },
-    { name: 'Headaches', emoji: '🤕' },
-    { name: 'Acne', emoji: '✨' },
-    { name: 'Bloating', emoji: '🎈' },
-    { name: 'Fatigue', emoji: '😴' },
-    { name: 'Mood swings', emoji: '🎭' },
-    { name: 'Tender breasts', emoji: '🌸' },
-    { name: 'None of these', emoji: '✅' }
-  ];
-
   return (
-    <div className={`min-h-screen ${currentThemeInfo.bg} flex items-center justify-center p-4 relative overflow-hidden transition-colors duration-500 font-sans`}>
-      {/* Visual Ambient Blur Spheres */}
-      <div className="absolute top-[-15%] left-[-15%] w-[50%] h-[50%] rounded-full blur-[140px] opacity-30 bg-pink-300 dark:bg-pink-900/10 transition-all duration-700 animate-pulse"></div>
-      <div className="absolute bottom-[-15%] right-[-15%] w-[50%] h-[50%] rounded-full blur-[140px] opacity-25 bg-indigo-300 dark:bg-indigo-900/10 transition-all duration-700 animate-pulse"></div>
+    <div id="onboarding_container" className={`min-h-screen ${currentThemeInfo?.bg || 'bg-gradient-to-br from-pink-50 to-indigo-50/30'} flex items-center justify-center p-4 relative overflow-hidden transition-colors duration-500 font-sans`}>
+      {/* Soft background glow circles */}
+      <div className="absolute top-[-10%] left-[-10%] w-[45%] h-[45%] rounded-full blur-[120px] opacity-25 bg-pink-300 dark:bg-pink-900/10 transition-all duration-700 animate-pulse"></div>
+      <div className="absolute bottom-[-10%] right-[-10%] w-[45%] h-[45%] rounded-full blur-[120px] opacity-20 bg-indigo-300 dark:bg-indigo-900/10 transition-all duration-700 animate-pulse"></div>
 
-      <div className="bg-white/70 dark:bg-[#1a1615]/85 backdrop-blur-2xl px-6 py-10 md:px-10 md:py-12 rounded-[2.5rem] shadow-[0_20px_50px_rgba(244,63,94,0.06)] border border-white/50 dark:border-stone-800/50 w-full max-w-xl z-10 flex flex-col justify-between min-h-[580px] relative transition-all">
+      <div id="onboarding_card" className="bg-white/80 dark:bg-stone-900/90 backdrop-blur-2xl px-6 py-8 md:px-10 md:py-10 rounded-[2.5rem] shadow-[0_20px_50px_rgba(244,63,94,0.04)] border border-white/50 dark:border-stone-800/50 w-full max-w-lg z-10 flex flex-col justify-between min-h-[580px] relative transition-all">
         
-        {/* Upper Setup Banner & Progress Bar */}
-        <div className="space-y-4">
-          <div className="flex justify-between items-center text-[10px] font-black tracking-widest uppercase text-rose-500 transition-colors">
-            <span className="flex items-center gap-1.5 font-bold tracking-widest text-[9px]">
-              <Sparkles size={11} className="text-rose-500 animate-pulse" />
-              Lumina Sanctuary Setup
+        {/* Step progress header */}
+        <div className="space-y-3">
+          <div className="flex justify-between items-center text-[10px] font-black tracking-widest uppercase text-pink-500 transition-colors">
+            <span className="flex items-center gap-1.5 font-bold tracking-widest">
+              <Sparkles size={12} className="text-pink-500 animate-pulse" />
+              LUMINA ONBOARDING FLOW
             </span>
             <span className="font-serif italic font-bold">
-              {step === totalSteps ? 'Complete 🌸' : `Step ${step} of ${totalSteps - 1}`}
+              Step {step} of {totalSteps}
             </span>
           </div>
           
-          <div className="w-full h-1 bg-gray-100 dark:bg-stone-800 rounded-full overflow-hidden">
+          <div className="w-full h-1 bg-gray-100 dark:bg-stone-850 rounded-full overflow-hidden">
             <motion.div 
-              className="h-full bg-gradient-to-r from-rose-400 via-pink-500 to-indigo-500"
+              className="h-full bg-gradient-to-r from-pink-400 via-rose-450 to-indigo-500"
               initial={{ width: '0%' }}
-              animate={{ width: `${((step - 1) / (totalSteps - 1)) * 100}%` }}
-              transition={{ type: 'spring', stiffness: 90 }}
+              animate={{ width: `${(step / totalSteps) * 100}%` }}
+              transition={{ type: 'spring', stiffness: 100 }}
             ></motion.div>
           </div>
         </div>
 
-        {/* Core Question Content Stage */}
+        {/* Step display container */}
         <div className="my-6 flex-grow flex flex-col justify-center min-h-[350px]">
           <AnimatePresence mode="wait" custom={step}>
             
-            {/* Step 1: First Name */}
+            {/* STEP 1: Welcome */}
             {step === 1 && (
               <motion.div
                 key="step1"
@@ -353,45 +291,26 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                 exit="exit"
                 custom={1}
                 variants={slideVariants}
-                className="space-y-6"
+                className="space-y-6 text-center"
+                id="onboarding_step_1"
               >
-                <div className="space-y-2">
-                  <div className="w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-950/20 flex items-center justify-center text-rose-500 mb-2">
-                    <UserIcon size={20} />
+                <div className="flex justify-center">
+                  <div className="w-20 h-20 rounded-full bg-pink-50 dark:bg-pink-950/20 flex items-center justify-center text-rose-500 shadow-inner">
+                    <Sparkles size={36} className="text-pink-500 animate-spin-slow" />
                   </div>
-                  <h2 className="text-2xl font-serif italic text-stone-900 dark:text-stone-100 font-bold leading-tight">
-                    What’s your first name?
-                  </h2>
-                  <p className="text-xs text-stone-400 dark:text-stone-500 leading-relaxed font-serif italic">
-                    Use: Personalizes the app and sanctuary greetings.
-                  </p>
                 </div>
-
                 <div className="space-y-3">
-                  <input
-                    type="text"
-                    value={firstName}
-                    onChange={(e) => {
-                      setFirstName(e.target.value);
-                      if (validationError) setValidationError(null);
-                    }}
-                    placeholder="e.g., Sarah"
-                    className="w-full bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 px-6 py-4 rounded-3xl text-sm font-bold text-stone-800 dark:text-stone-100 outline-none focus:border-rose-400 dark:focus:border-rose-500 transition-colors shadow-inner text-center"
-                    autoFocus
-                  />
-                  {validationError && (
-                    <p className="text-[10px] text-rose-500 font-bold tracking-wide animate-pulse text-center">
-                      ⚠️ {validationError}
-                    </p>
-                  )}
-                  <p className="text-[10px] text-stone-400 text-center">
-                    ✨ Your name resides strictly on your private, secure vault.
+                  <h1 className="text-3xl md:text-4xl font-serif italic text-stone-900 dark:text-stone-100 font-bold leading-tight">
+                    Welcome to Lumina 🌸
+                  </h1>
+                  <p className="text-base text-stone-500 dark:text-stone-400 font-serif italic">
+                    Your cycle, your sanctuary.
                   </p>
                 </div>
               </motion.div>
             )}
 
-            {/* Step 2: Age */}
+            {/* STEP 2: Personal Information */}
             {step === 2 && (
               <motion.div
                 key="step2"
@@ -400,48 +319,57 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                 exit="exit"
                 custom={1}
                 variants={slideVariants}
-                className="space-y-6"
+                className="space-y-5"
+                id="onboarding_step_2"
               >
-                <div className="space-y-2">
-                  <div className="w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-950/20 flex items-center justify-center text-rose-500 mb-2">
-                    <Smile size={20} />
+                <div className="space-y-2 text-center md:text-left">
+                  <div className="inline-flex w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-950/20 items-center justify-center text-pink-500 mb-1">
+                    <UserIcon size={20} />
                   </div>
-                  <h2 className="text-2xl font-serif italic text-stone-900 dark:text-stone-100 font-bold leading-tight">
-                    How old are you, {firstName || 'Beautiful'}?
+                  <h2 className="text-2xl font-serif italic text-stone-900 dark:text-stone-100 font-bold">
+                    What should we call you?
                   </h2>
-                  <p className="text-xs text-stone-400 dark:text-stone-500 leading-relaxed font-serif italic">
-                    Use: Helps provide age-appropriate cycle and health predictions.
+                  <p className="text-xs text-stone-400 dark:text-stone-500">
+                    Tell us your name and optionally your birthday to tailor predictions.
                   </p>
                 </div>
 
-                <div className="flex flex-col items-center gap-4 py-2">
-                  <div className="flex items-center gap-6">
-                    <button
-                      type="button"
-                      onClick={() => setAge(Math.max(12, age - 1))}
-                      className="w-12 h-12 bg-rose-50 dark:bg-stone-900 border border-rose-100 dark:border-stone-800 rounded-full flex items-center justify-center text-xl font-bold text-rose-600 hover:scale-105 active:scale-95 transition-all cursor-pointer"
-                    >
-                      -
-                    </button>
-                    <span className="text-4xl font-serif italic font-bold text-rose-600 w-16 text-center">
-                      {age}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setAge(Math.min(99, age + 1))}
-                      className="w-12 h-12 bg-rose-50 dark:bg-stone-900 border border-rose-100 dark:border-stone-800 rounded-full flex items-center justify-center text-xl font-bold text-rose-600 hover:scale-105 active:scale-95 transition-all cursor-pointer"
-                    >
-                      +
-                    </button>
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black tracking-widest uppercase text-pink-400">Name</label>
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => {
+                        setName(e.target.value);
+                        if (validationError) setValidationError(null);
+                      }}
+                      placeholder="e.g. Sarah"
+                      className="w-full bg-white dark:bg-stone-950 border border-stone-200 dark:border-stone-850 px-5 py-3.5 rounded-2xl text-sm font-bold text-stone-800 dark:text-stone-100 outline-none focus:border-pink-400 dark:focus:border-pink-500 transition-colors shadow-inner"
+                      autoFocus
+                    />
                   </div>
-                  <p className="text-[10px] text-stone-400">
-                    Use buttons to adjust or specify your age.
-                  </p>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black tracking-widest uppercase text-stone-400">Date of Birth <span className="text-stone-300 font-normal font-sans tracking-normal italic">(Optional)</span></label>
+                    <input
+                      type="date"
+                      value={dob}
+                      onChange={(e) => setDob(e.target.value)}
+                      className="w-full bg-white dark:bg-stone-950 border border-stone-200 dark:border-stone-850 px-5 py-3.5 rounded-2xl text-sm font-bold text-stone-800 dark:text-stone-100 outline-none focus:border-pink-400 dark:focus:border-pink-500 transition-colors shadow-inner"
+                    />
+                  </div>
+
+                  {validationError && (
+                    <p className="text-[10px] text-rose-500 font-bold tracking-wide animate-pulse">
+                      ⚠️ {validationError}
+                    </p>
+                  )}
                 </div>
               </motion.div>
             )}
 
-            {/* Step 3: Last Period Start Date */}
+            {/* STEP 3: Cycle Information */}
             {step === 3 && (
               <motion.div
                 key="step3"
@@ -450,38 +378,37 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                 exit="exit"
                 custom={1}
                 variants={slideVariants}
-                className="space-y-6"
+                className="space-y-5 text-center md:text-left"
+                id="onboarding_step_3"
               >
                 <div className="space-y-2">
-                  <div className="w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-950/20 flex items-center justify-center text-rose-500 mb-2">
+                  <div className="inline-flex w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-950/20 items-center justify-center text-pink-500 mb-1">
                     <Calendar size={20} />
                   </div>
-                  <h2 className="text-2xl font-serif italic text-stone-900 dark:text-stone-100 font-bold leading-tight">
+                  <h2 className="text-2xl font-serif italic text-stone-900 dark:text-stone-100 font-bold">
                     When did your last period start?
                   </h2>
-                  <p className="text-xs text-stone-400 dark:text-stone-500 leading-relaxed font-serif italic">
-                    Use: Begins cycle predictions and phase calculations.
+                  <p className="text-xs text-stone-400 dark:text-stone-500">
+                    Your previous period starting date is the foundation of your cycle forecasting.
                   </p>
                 </div>
 
-                <div className="space-y-4">
-                  <div className="bg-rose-50/10 dark:bg-stone-900/30 p-5 rounded-[2rem] border border-rose-100/10 flex flex-col gap-3">
-                    <input
-                      type="date"
-                      max={new Date().toISOString().split('T')[0]}
-                      value={lastPeriodStart}
-                      onChange={(e) => setLastPeriodStart(e.target.value)}
-                      className="w-full bg-white dark:bg-stone-900 px-5 py-4 border border-rose-100 dark:border-stone-800 rounded-2xl text-xs font-bold text-rose-600 outline-none text-center shadow-inner"
-                    />
-                  </div>
-                  <p className="text-[10px] text-center text-stone-400 italic">
-                    💖 Select the exact or approximate starting date of your most recent flow.
+                <div className="p-5 bg-pink-50/10 dark:bg-stone-950/20 rounded-3xl border border-pink-100/10 space-y-3">
+                  <input
+                    type="date"
+                    max={new Date().toISOString().split('T')[0]}
+                    value={lastPeriodStart}
+                    onChange={(e) => setLastPeriodStart(e.target.value)}
+                    className="w-full bg-white dark:bg-stone-950 px-5 py-3.5 border border-pink-100 dark:border-stone-850 rounded-2xl text-sm font-bold text-pink-600 outline-none text-center shadow-inner cursor-pointer"
+                  />
+                  <p className="text-[10px] text-stone-400 italic font-serif">
+                    🌸 Tap to select the calendar date your last flow began.
                   </p>
                 </div>
               </motion.div>
             )}
 
-            {/* Step 4: Average Cycle Length */}
+            {/* STEP 4: Cycle Length */}
             {step === 4 && (
               <motion.div
                 key="step4"
@@ -490,44 +417,36 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                 exit="exit"
                 custom={1}
                 variants={slideVariants}
-                className="space-y-6"
+                className="space-y-5"
+                id="onboarding_step_4"
               >
-                <div className="space-y-2">
-                  <div className="w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-950/20 flex items-center justify-center text-rose-500 mb-2">
+                <div className="space-y-2 text-center md:text-left">
+                  <div className="inline-flex w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-950/20 items-center justify-center text-pink-500 mb-1">
                     <RefreshCw size={20} />
                   </div>
-                  <h2 className="text-2xl font-serif italic text-stone-900 dark:text-stone-100 font-bold leading-tight">
-                    How long is your cycle on average?
+                  <h2 className="text-2xl font-serif italic text-stone-900 dark:text-stone-100 font-bold">
+                    How long is your average cycle?
                   </h2>
-                  <p className="text-xs text-stone-400 dark:text-stone-500 leading-relaxed font-serif italic">
-                    Use: Improves period and ovulation forecasts.
+                  <p className="text-xs text-stone-400 dark:text-stone-500">
+                    The number of days between the start of one period and the start of the next.
                   </p>
                 </div>
 
-                <div className="space-y-3 max-h-[250px] overflow-y-auto pr-1">
-                  {[
-                    { value: '21', label: '21 days' },
-                    { value: '24', label: '24 days' },
-                    { value: '28', label: '28 days (Typical)' },
-                    { value: '30', label: '30 days' },
-                    { value: '35', label: '35 days' },
-                    { value: 'not_sure', label: 'Not sure' }
-                  ].map((opt) => (
+                <div className="grid grid-cols-3 gap-2.5 max-h-[250px] overflow-y-auto pr-1 pb-1">
+                  {Array.from({ length: 15 }, (_, i) => 21 + i).map((days) => (
                     <button
-                      key={opt.value}
+                      key={days}
                       type="button"
-                      onClick={() => setCycleLengthOption(opt.value)}
-                      className={`w-full p-4 border rounded-2xl flex items-center justify-between text-left transition-all ${
-                        cycleLengthOption === opt.value
-                          ? 'border-rose-400 bg-rose-50/20 text-rose-950 dark:text-rose-100 font-bold'
-                          : 'border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900 text-stone-600 dark:text-stone-300 hover:border-rose-200'
+                      onClick={() => setCycleLength(days)}
+                      className={`p-3 border rounded-2xl flex flex-col items-center justify-center text-center transition-all cursor-pointer ${
+                        cycleLength === days
+                          ? 'border-pink-400 bg-pink-50/20 text-pink-950 dark:text-pink-100 font-bold shadow-sm'
+                          : 'border-stone-100 dark:border-stone-850 bg-white dark:bg-stone-950 text-stone-600 dark:text-stone-300 hover:border-pink-200'
                       }`}
                     >
-                      <span className="text-xs">{opt.label}</span>
-                      {cycleLengthOption === opt.value && (
-                        <div className="w-4 h-4 rounded-full bg-rose-500 text-white flex items-center justify-center">
-                          <Check size={10} strokeWidth={4} />
-                        </div>
+                      <span className="text-xs font-bold font-sans">{days} Days</span>
+                      {days === 28 && (
+                        <span className="text-[8px] text-pink-400 font-mono tracking-tight uppercase mt-0.5">Default</span>
                       )}
                     </button>
                   ))}
@@ -535,7 +454,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
               </motion.div>
             )}
 
-            {/* Step 5: Flow Duration */}
+            {/* STEP 5: Period Length */}
             {step === 5 && (
               <motion.div
                 key="step5"
@@ -544,51 +463,41 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                 exit="exit"
                 custom={1}
                 variants={slideVariants}
-                className="space-y-6"
+                className="space-y-5"
+                id="onboarding_step_5"
               >
-                <div className="space-y-2">
-                  <div className="w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-950/20 flex items-center justify-center text-rose-500 mb-2">
+                <div className="space-y-2 text-center md:text-left">
+                  <div className="inline-flex w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-950/20 items-center justify-center text-pink-500 mb-1">
                     <Droplets size={20} />
                   </div>
-                  <h2 className="text-2xl font-serif italic text-stone-900 dark:text-stone-100 font-bold leading-tight">
+                  <h2 className="text-2xl font-serif italic text-stone-900 dark:text-stone-100 font-bold">
                     How many days does your period usually last?
                   </h2>
-                  <p className="text-xs text-stone-400 dark:text-stone-500 leading-relaxed font-serif italic">
-                    Use: Improves cycle layouts and prediction duration.
+                  <p className="text-xs text-stone-400 dark:text-stone-500">
+                    Typical bleeding flow lasts between 2 and 10 days.
                   </p>
                 </div>
 
-                <div className="space-y-3 max-h-[250px] overflow-y-auto pr-1">
-                  {[
-                    { value: '2-3', label: '2–3 days' },
-                    { value: '4-5', label: '4–5 days (Typical)' },
-                    { value: '6-7', label: '6–7 days' },
-                    { value: '8+', label: '8+ days' },
-                    { value: 'not_sure', label: 'Not sure' }
-                  ].map((opt) => (
+                <div className="grid grid-cols-3 gap-2.5 max-h-[250px] overflow-y-auto pr-1 pb-1">
+                  {Array.from({ length: 9 }, (_, i) => 2 + i).map((days) => (
                     <button
-                      key={opt.value}
+                      key={days}
                       type="button"
-                      onClick={() => setPeriodLengthOption(opt.value)}
-                      className={`w-full p-4 border rounded-2xl flex items-center justify-between text-left transition-all ${
-                        periodLengthOption === opt.value
-                          ? 'border-rose-400 bg-rose-50/20 text-rose-950 dark:text-rose-100 font-bold'
-                          : 'border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900 text-stone-600 dark:text-stone-300 hover:border-rose-200'
+                      onClick={() => setPeriodLength(days)}
+                      className={`p-4 border rounded-2xl flex flex-col items-center justify-center text-center transition-all cursor-pointer ${
+                        periodLength === days
+                          ? 'border-pink-400 bg-pink-50/20 text-pink-950 dark:text-pink-100 font-bold shadow-sm'
+                          : 'border-stone-100 dark:border-stone-850 bg-white dark:bg-stone-950 text-stone-600 dark:text-stone-300 hover:border-pink-200'
                       }`}
                     >
-                      <span className="text-xs">{opt.label}</span>
-                      {periodLengthOption === opt.value && (
-                        <div className="w-4 h-4 rounded-full bg-rose-500 text-white flex items-center justify-center">
-                          <Check size={10} strokeWidth={4} />
-                        </div>
-                      )}
+                      <span className="text-xs font-bold font-sans">{days} Days</span>
                     </button>
                   ))}
                 </div>
               </motion.div>
             )}
 
-            {/* Step 6: Are you currently pregnant? */}
+            {/* STEP 6: Wellness Goals */}
             {step === 6 && (
               <motion.div
                 key="step6"
@@ -597,53 +506,60 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                 exit="exit"
                 custom={1}
                 variants={slideVariants}
-                className="space-y-6"
+                className="space-y-5"
+                id="onboarding_step_6"
               >
-                <div className="space-y-2">
-                  <div className="w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-950/20 flex items-center justify-center text-rose-500 mb-2">
-                    <Baby size={20} />
+                <div className="space-y-2 text-center md:text-left">
+                  <div className="inline-flex w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-950/20 items-center justify-center text-pink-500 mb-1">
+                    <Activity size={20} />
                   </div>
-                  <h2 className="text-2xl font-serif italic text-stone-900 dark:text-stone-100 font-bold leading-tight">
-                    Are you currently pregnant?
+                  <h2 className="text-2xl font-serif italic text-stone-900 dark:text-stone-100 font-bold">
+                    What would you like help with?
                   </h2>
-                  <p className="text-xs text-stone-400 dark:text-stone-500 leading-relaxed font-serif italic">
-                    Use: Activates specialized Pregnancy Mode or conception predictions.
+                  <p className="text-xs text-stone-400 dark:text-stone-500">
+                    Select all that apply to help customize your sanctuary journey.
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 gap-3">
+                <div className="grid grid-cols-2 gap-2 max-h-[240px] overflow-y-auto pr-1 pb-1">
                   {[
-                    { value: 'yes', label: 'Yes', desc: 'Enables specialized trimester tools and baby size milestones.', emoji: '🍼' },
-                    { value: 'no', label: 'No', desc: 'Provides cycle tracking and symptom maps.', emoji: '🌸' },
-                    { value: 'trying', label: 'Trying to conceive', desc: 'Tailors predictive charts to fertile windows.', emoji: '🌱' }
-                  ].map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => setPregnancyStatus(opt.value as any)}
-                      className={`w-full p-5 border rounded-[1.8rem] flex items-start gap-4 text-left transition-all ${
-                        pregnancyStatus === opt.value
-                          ? 'border-indigo-400 bg-indigo-50/10 text-indigo-950 dark:text-indigo-100 font-bold'
-                          : 'border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900 text-stone-600 dark:text-stone-300 hover:border-indigo-200'
-                      }`}
-                    >
-                      <span className="text-2xl">{opt.emoji}</span>
-                      <div className="space-y-0.5 flex-grow">
-                        <span className="text-xs font-bold font-serif italic">{opt.label}</span>
-                        <p className="text-[10px] text-stone-400 dark:text-stone-500 leading-normal font-medium">{opt.desc}</p>
-                      </div>
-                      {pregnancyStatus === opt.value && (
-                        <div className="w-4 h-4 rounded-full bg-indigo-500 text-white flex items-center justify-center self-center flex-shrink-0">
-                          <Check size={10} strokeWidth={4} />
+                    'Understanding my cycle',
+                    'Period tracking',
+                    'Fertility awareness',
+                    'Symptom tracking',
+                    'Mood tracking',
+                    'Better sleep',
+                    'Drinking more water',
+                    'Exercise consistency',
+                    'Stress management',
+                    'Self-care'
+                  ].map((goal) => {
+                    const isSel = wellnessGoals.includes(goal);
+                    return (
+                      <button
+                        key={goal}
+                        type="button"
+                        onClick={() => toggleGoal(goal)}
+                        className={`p-3 border rounded-2xl flex items-center justify-between text-left transition-all cursor-pointer ${
+                          isSel
+                            ? 'border-pink-300 bg-pink-50/15 text-pink-950 dark:text-pink-100 font-bold'
+                            : 'border-stone-100 dark:border-stone-850 bg-white dark:bg-stone-950 text-stone-600 dark:text-stone-300 hover:border-pink-200'
+                        }`}
+                      >
+                        <span className="text-[10px] font-bold pr-1">{goal}</span>
+                        <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
+                          isSel ? 'bg-pink-500 border-pink-500 text-white' : 'border-gray-200 dark:border-stone-700'
+                        }`}>
+                          {isSel && <Check size={10} strokeWidth={4} />}
                         </div>
-                      )}
-                    </button>
-                  ))}
+                      </button>
+                    );
+                  })}
                 </div>
               </motion.div>
             )}
 
-            {/* Step 7: What would you like help with? */}
+            {/* STEP 7: Reminder Preferences */}
             {step === 7 && (
               <motion.div
                 key="step7"
@@ -652,45 +568,47 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                 exit="exit"
                 custom={1}
                 variants={slideVariants}
-                className="space-y-6 animate-fadeIn"
+                className="space-y-5"
+                id="onboarding_step_7"
               >
-                <div className="space-y-2">
-                  <div className="w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-950/20 flex items-center justify-center text-rose-500 mb-2">
-                    <Sparkles size={20} />
+                <div className="space-y-2 text-center md:text-left">
+                  <div className="inline-flex w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-950/20 items-center justify-center text-pink-500 mb-1">
+                    <Bell size={20} />
                   </div>
-                  <h2 className="text-2xl font-serif italic text-stone-900 dark:text-stone-100 font-bold leading-tight">
-                    What would you like help with?
+                  <h2 className="text-2xl font-serif italic text-stone-900 dark:text-stone-100 font-bold">
+                    Which reminders would you like to receive?
                   </h2>
-                  <p className="text-xs text-stone-400 dark:text-stone-500 leading-relaxed font-serif italic">
-                    Select all that apply: Customizes your dashboard features.
+                  <p className="text-xs text-stone-400 dark:text-stone-500">
+                    Select your preferred gentle nudges. You can edit these anytime.
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2.5 max-h-[250px] overflow-y-auto pr-1 pb-1">
-                  {helpsList.map((goal) => {
-                    const isSel = helpsSelected.includes(goal.name);
+                <div className="grid grid-cols-2 gap-2 max-h-[240px] overflow-y-auto pr-1 pb-1">
+                  {[
+                    'Period reminders',
+                    'Ovulation reminders',
+                    'Water reminders',
+                    'Medication reminders',
+                    'Contraception reminders',
+                    'Meditation reminders'
+                  ].map((rem) => {
+                    const isSel = reminders.includes(rem);
                     return (
                       <button
-                        key={goal.name}
+                        key={rem}
                         type="button"
-                        onClick={() => toggleHelpGoal(goal.name)}
-                        className={`p-3 border rounded-2xl flex flex-col justify-between text-left transition-all ${
+                        onClick={() => toggleReminder(rem)}
+                        className={`p-3.5 border rounded-2xl flex items-center justify-between text-left transition-all cursor-pointer ${
                           isSel
-                            ? 'border-rose-300 bg-rose-50/20 text-rose-950 dark:text-rose-100 font-bold'
-                            : 'border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900 text-stone-600 dark:text-stone-300 hover:border-rose-200'
+                            ? 'border-pink-300 bg-pink-50/15 text-pink-950 dark:text-pink-100 font-bold'
+                            : 'border-stone-100 dark:border-stone-850 bg-white dark:bg-stone-950 text-stone-600 dark:text-stone-300 hover:border-pink-200'
                         }`}
                       >
-                        <div className="flex justify-between items-start w-full">
-                          <span className="text-lg">{goal.emoji}</span>
-                          <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
-                            isSel ? 'bg-rose-500 border-rose-500 text-white' : 'border-gray-200 dark:border-stone-700'
-                          }`}>
-                            {isSel && <Check size={8} strokeWidth={4} />}
-                          </div>
-                        </div>
-                        <div className="mt-2">
-                          <p className="text-[10px] font-bold tracking-tight">{goal.name}</p>
-                          <p className="text-[8px] text-stone-400 dark:text-stone-500 leading-tight mt-0.5 font-medium">{goal.desc}</p>
+                        <span className="text-[10px] font-bold">{rem}</span>
+                        <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
+                          isSel ? 'bg-pink-500 border-pink-500 text-white' : 'border-gray-200 dark:border-stone-700'
+                        }`}>
+                          {isSel && <Check size={10} strokeWidth={4} />}
                         </div>
                       </button>
                     );
@@ -699,7 +617,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
               </motion.div>
             )}
 
-            {/* Step 8: What symptoms do you commonly experience? */}
+            {/* STEP 8: Partner Mode */}
             {step === 8 && (
               <motion.div
                 key="step8"
@@ -708,51 +626,62 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                 exit="exit"
                 custom={1}
                 variants={slideVariants}
-                className="space-y-6 animate-fadeIn"
+                className="space-y-5"
+                id="onboarding_step_8"
               >
-                <div className="space-y-2">
-                  <div className="w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-950/20 flex items-center justify-center text-rose-500 mb-2">
-                    <Activity size={20} />
+                <div className="space-y-2 text-center md:text-left">
+                  <div className="inline-flex w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-950/20 items-center justify-center text-pink-500 mb-1">
+                    <Heart size={20} className="text-pink-500" />
                   </div>
-                  <h2 className="text-2xl font-serif italic text-stone-900 dark:text-stone-100 font-bold leading-tight">
-                    Common symptoms
+                  <h2 className="text-2xl font-serif italic text-stone-900 dark:text-stone-100 font-bold">
+                    Would you like to use Partner Mode?
                   </h2>
-                  <p className="text-xs text-stone-400 dark:text-stone-500 leading-relaxed font-serif italic">
-                    Select all that apply: Helps us recommend tailored symptom relief guides.
+                  <p className="text-xs text-stone-400 dark:text-stone-500">
+                    Share your calendar, symptoms, and self-care comfort items with your trusted person.
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 max-h-[250px] overflow-y-auto pr-1 pb-1">
-                  {commonSymptomsList.map((s) => {
-                    const isSel = symptomsSelected.includes(s.name);
-                    return (
-                      <button
-                        key={s.name}
-                        type="button"
-                        onClick={() => toggleSymptom(s.name)}
-                        className={`p-3.5 border rounded-2xl flex items-center justify-between text-left transition-all ${
-                          isSel
-                            ? 'border-rose-300 bg-rose-50/20 text-rose-950 dark:text-rose-100 font-bold'
-                            : 'border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900 text-stone-600 dark:text-stone-300 hover:border-rose-200'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="text-base">{s.emoji}</span>
-                          <span className="text-[10px] font-bold">{s.name}</span>
-                        </div>
-                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center flex-shrink-0 ${
-                          isSel ? 'bg-rose-500 border-rose-500 text-white' : 'border-gray-200 dark:border-stone-700'
-                        }`}>
-                          {isSel && <Check size={8} strokeWidth={4} />}
-                        </div>
-                      </button>
-                    );
-                  })}
+                <div className="space-y-3.5">
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setPartnerMode('yes')}
+                      className={`p-5 border-2 rounded-2xl flex flex-col items-center justify-center text-center transition-all cursor-pointer ${
+                        partnerMode === 'yes'
+                          ? 'border-pink-400 bg-pink-50/20 font-bold text-pink-950 dark:text-pink-100'
+                          : 'border-stone-100 dark:border-stone-850 bg-white dark:bg-stone-950 text-stone-500'
+                      }`}
+                    >
+                      <span className="text-2xl mb-1">💞</span>
+                      <span className="text-xs font-bold">Yes</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPartnerMode('no')}
+                      className={`p-5 border-2 rounded-2xl flex flex-col items-center justify-center text-center transition-all cursor-pointer ${
+                        partnerMode === 'no'
+                          ? 'border-stone-400 bg-stone-50/10 font-bold text-stone-950 dark:text-stone-100'
+                          : 'border-stone-100 dark:border-stone-850 bg-white dark:bg-stone-950 text-stone-500'
+                      }`}
+                    >
+                      <span className="text-2xl mb-1">🕊️</span>
+                      <span className="text-xs font-bold">Not Right Now</span>
+                    </button>
+                  </div>
+
+                  {partnerMode === 'yes' && (
+                    <div className="p-4 bg-pink-50/30 dark:bg-stone-950/20 border border-pink-100/30 rounded-2xl animate-fadeIn">
+                      <p className="text-center text-xs text-pink-600 font-serif italic">
+                        "You can connect a trusted partner later in Settings."
+                      </p>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             )}
 
-            {/* Step 9: Period reminders? */}
+            {/* STEP 9: Sanctuary Preferences */}
             {step === 9 && (
               <motion.div
                 key="step9"
@@ -761,63 +690,59 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                 exit="exit"
                 custom={1}
                 variants={slideVariants}
-                className="space-y-6"
+                className="space-y-5"
+                id="onboarding_step_9"
               >
-                <div className="space-y-2">
-                  <div className="w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-950/20 flex items-center justify-center text-rose-500 mb-2">
-                    <Bell size={20} />
+                <div className="space-y-2 text-center md:text-left">
+                  <div className="inline-flex w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-950/20 items-center justify-center text-pink-500 mb-1">
+                    <Sparkle size={20} />
                   </div>
-                  <h2 className="text-2xl font-serif italic text-stone-900 dark:text-stone-100 font-bold leading-tight">
-                    Would you like period reminders?
+                  <h2 className="text-2xl font-serif italic text-stone-900 dark:text-stone-100 font-bold">
+                    What helps you relax?
                   </h2>
-                  <p className="text-xs text-stone-400 dark:text-stone-500 leading-relaxed font-serif italic">
-                    Use: Enables comforting, non-intrusive notifications before your flow starts.
+                  <p className="text-xs text-stone-400 dark:text-stone-500">
+                    Select all that apply. We will seed custom items into your sanctuary space.
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setPeriodReminders(true)}
-                    className={`p-6 border-2 rounded-3xl flex flex-col justify-center items-center text-center min-h-[140px] relative transition-all ${
-                      periodReminders
-                        ? 'border-rose-400 bg-rose-50/20 shadow-md shadow-rose-100/30'
-                        : 'border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900 text-stone-400'
-                    }`}
-                  >
-                    <span className="text-3xl mb-2">🔔</span>
-                    <span className="text-xs font-bold font-serif italic text-rose-950 dark:text-rose-100">Yes, please</span>
-                    <p className="text-[8px] text-stone-400 mt-1">Gently reminds 2 days prior</p>
-                    {periodReminders && (
-                      <div className="absolute top-3 right-3 w-4 h-4 rounded-full bg-rose-500 text-white flex items-center justify-center">
-                        <Check size={8} strokeWidth={4} />
-                      </div>
-                    )}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setPeriodReminders(false)}
-                    className={`p-6 border-2 rounded-3xl flex flex-col justify-center items-center text-center min-h-[140px] relative transition-all ${
-                      !periodReminders
-                        ? 'border-stone-400 bg-stone-50/10 text-stone-950 dark:text-stone-100 font-bold'
-                        : 'border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900 text-stone-400'
-                    }`}
-                  >
-                    <span className="text-3xl mb-2">🔕</span>
-                    <span className="text-xs font-bold font-serif italic">No, thanks</span>
-                    <p className="text-[8px] text-stone-400 mt-1">I will monitor inside app</p>
-                    {!periodReminders && (
-                      <div className="absolute top-3 right-3 w-4 h-4 rounded-full bg-stone-500 text-white flex items-center justify-center">
-                        <Check size={8} strokeWidth={4} />
-                      </div>
-                    )}
-                  </button>
+                <div className="grid grid-cols-2 gap-2 max-h-[240px] overflow-y-auto pr-1 pb-1">
+                  {[
+                    { label: 'Music', icon: <Music size={13} className="text-pink-400" /> },
+                    { label: 'Meditation', icon: <Wind size={13} className="text-indigo-400" /> },
+                    { label: 'Sleep sounds', icon: <Moon size={13} className="text-blue-400" /> },
+                    { label: 'Journaling', icon: <PenTool size={13} className="text-amber-400" /> },
+                    { label: 'Breathing exercises', icon: <Wind size={13} className="text-teal-400" /> },
+                    { label: 'Wellness tips', icon: <Sparkles size={13} className="text-purple-400" /> }
+                  ].map((item) => {
+                    const isSel = sanctuaryPrefs.includes(item.label);
+                    return (
+                      <button
+                        key={item.label}
+                        type="button"
+                        onClick={() => toggleSanctuary(item.label)}
+                        className={`p-3 border rounded-2xl flex items-center justify-between text-left transition-all cursor-pointer ${
+                          isSel
+                            ? 'border-pink-300 bg-pink-50/15 text-pink-950 dark:text-pink-100 font-bold'
+                            : 'border-stone-100 dark:border-stone-850 bg-white dark:bg-stone-950 text-stone-600 dark:text-stone-300 hover:border-pink-200'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          {item.icon}
+                          <span className="text-[10px] font-bold">{item.label}</span>
+                        </div>
+                        <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
+                          isSel ? 'bg-pink-500 border-pink-500 text-white' : 'border-gray-200 dark:border-stone-700'
+                        }`}>
+                          {isSel && <Check size={10} strokeWidth={4} />}
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </motion.div>
             )}
 
-            {/* Step 10: Ovulation reminders? */}
+            {/* STEP 10: Notifications Permission */}
             {step === 10 && (
               <motion.div
                 key="step10"
@@ -826,63 +751,49 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                 exit="exit"
                 custom={1}
                 variants={slideVariants}
-                className="space-y-6"
+                className="space-y-5"
+                id="onboarding_step_10"
               >
-                <div className="space-y-2">
-                  <div className="w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-950/20 flex items-center justify-center text-rose-500 mb-2">
-                    <Sparkle size={20} />
+                <div className="space-y-2 text-center md:text-left">
+                  <div className="inline-flex w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-950/20 items-center justify-center text-pink-500 mb-1">
+                    <ShieldCheck size={20} />
                   </div>
-                  <h2 className="text-2xl font-serif italic text-stone-900 dark:text-stone-100 font-bold leading-tight">
-                    Would you like ovulation reminders?
+                  <h2 className="text-2xl font-serif italic text-stone-900 dark:text-stone-100 font-bold">
+                    Allow Lumina to send reminders and wellness updates?
                   </h2>
-                  <p className="text-xs text-stone-400 dark:text-stone-500 leading-relaxed font-serif italic">
-                    Use: Enables notifications about fertile windows and ovulation days.
+                  <p className="text-xs text-stone-400 dark:text-stone-500">
+                    Stay closely synchronized with daily self-care goals and phase predictions.
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-3">
                   <button
                     type="button"
-                    onClick={() => setOvulationReminders(true)}
-                    className={`p-6 border-2 rounded-3xl flex flex-col justify-center items-center text-center min-h-[140px] relative transition-all ${
-                      ovulationReminders
-                        ? 'border-rose-400 bg-rose-50/20 shadow-md shadow-rose-100/30'
-                        : 'border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900 text-stone-400'
-                    }`}
+                    onClick={() => {
+                      setNotificationsAllowed(true);
+                      handleNext();
+                    }}
+                    className="w-full py-4.5 bg-gradient-to-r from-pink-500 to-rose-450 hover:opacity-95 active:scale-98 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
                   >
-                    <span className="text-3xl mb-2">✨</span>
-                    <span className="text-xs font-bold font-serif italic text-rose-950 dark:text-rose-100">Yes, please</span>
-                    <p className="text-[8px] text-stone-400 mt-1">Stay updated on fertile peak</p>
-                    {ovulationReminders && (
-                      <div className="absolute top-3 right-3 w-4 h-4 rounded-full bg-rose-500 text-white flex items-center justify-center">
-                        <Check size={8} strokeWidth={4} />
-                      </div>
-                    )}
+                    <Bell size={14} />
+                    Allow Notifications
                   </button>
 
                   <button
                     type="button"
-                    onClick={() => setOvulationReminders(false)}
-                    className={`p-6 border-2 rounded-3xl flex flex-col justify-center items-center text-center min-h-[140px] relative transition-all ${
-                      !ovulationReminders
-                        ? 'border-stone-400 bg-stone-50/10 text-stone-950 dark:text-stone-100 font-bold'
-                        : 'border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900 text-stone-400'
-                    }`}
+                    onClick={() => {
+                      setNotificationsAllowed(false);
+                      handleNext();
+                    }}
+                    className="w-full py-4 bg-gray-100 hover:bg-gray-200/70 text-gray-500 rounded-2xl text-xs font-bold uppercase tracking-widest transition-all cursor-pointer"
                   >
-                    <span className="text-3xl mb-2">🔕</span>
-                    <span className="text-xs font-bold font-serif italic">No, thanks</span>
-                    <p className="text-[8px] text-stone-400 mt-1">Keep notifications muted</p>
-                    {!ovulationReminders && (
-                      <div className="absolute top-3 right-3 w-4 h-4 rounded-full bg-rose-500 text-white flex items-center justify-center">
-                        <Check size={8} strokeWidth={4} />
-                      </div>
-                    )}
+                    Maybe Later
                   </button>
                 </div>
               </motion.div>
             )}
 
-            {/* Step 11: Wellness reminders? */}
+            {/* STEP 11: Complete */}
             {step === 11 && (
               <motion.div
                 key="step11"
@@ -891,187 +802,21 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                 exit="exit"
                 custom={1}
                 variants={slideVariants}
-                className="space-y-6"
+                className="space-y-6 text-center"
+                id="onboarding_step_11"
               >
-                <div className="space-y-2">
-                  <div className="w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-950/20 flex items-center justify-center text-rose-500 mb-2">
-                    <Heart size={20} />
+                <div className="flex justify-center">
+                  <div className="w-20 h-20 rounded-full bg-pink-100 dark:bg-pink-950/30 flex items-center justify-center text-3xl animate-bounce">
+                    🌸
                   </div>
-                  <h2 className="text-2xl font-serif italic text-stone-900 dark:text-stone-100 font-bold leading-tight">
-                    Would you like wellness reminders?
-                  </h2>
-                  <p className="text-xs text-stone-400 dark:text-stone-500 leading-relaxed font-serif italic">
-                    Use: Encourages daily self-care habits, hydration, and supplement logging.
+                </div>
+                <div className="space-y-3">
+                  <h1 className="text-3xl font-serif italic text-stone-900 dark:text-stone-100 font-bold leading-tight">
+                    You're all set 🌸
+                  </h1>
+                  <p className="text-base text-stone-500 dark:text-stone-400 font-serif italic">
+                    Lumina is ready to become your sanctuary.
                   </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setWellnessReminders(true)}
-                    className={`p-6 border-2 rounded-3xl flex flex-col justify-center items-center text-center min-h-[140px] relative transition-all ${
-                      wellnessReminders
-                        ? 'border-rose-400 bg-rose-50/20 shadow-md shadow-rose-100/30'
-                        : 'border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900 text-stone-400'
-                    }`}
-                  >
-                    <span className="text-3xl mb-2">🧘</span>
-                    <span className="text-xs font-bold font-serif italic text-rose-950 dark:text-rose-100">Yes, please</span>
-                    <p className="text-[8px] text-stone-400 mt-1">Hydration & self-care prompts</p>
-                    {wellnessReminders && (
-                      <div className="absolute top-3 right-3 w-4 h-4 rounded-full bg-rose-500 text-white flex items-center justify-center">
-                        <Check size={8} strokeWidth={4} />
-                      </div>
-                    )}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setWellnessReminders(false)}
-                    className={`p-6 border-2 rounded-3xl flex flex-col justify-center items-center text-center min-h-[140px] relative transition-all ${
-                      !wellnessReminders
-                        ? 'border-stone-400 bg-stone-50/10 text-stone-950 dark:text-stone-100 font-bold'
-                        : 'border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900 text-stone-400'
-                    }`}
-                  >
-                    <span className="text-3xl mb-2">🔕</span>
-                    <span className="text-xs font-bold font-serif italic">No, thanks</span>
-                    <p className="text-[8px] text-stone-400 mt-1">Disable wellness popups</p>
-                    {!wellnessReminders && (
-                      <div className="absolute top-3 right-3 w-4 h-4 rounded-full bg-rose-500 text-white flex items-center justify-center">
-                        <Check size={8} strokeWidth={4} />
-                      </div>
-                    )}
-                  </button>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Step 12: Connect a partner later? */}
-            {step === 12 && (
-              <motion.div
-                key="step12"
-                initial="enter"
-                animate="center"
-                exit="exit"
-                custom={1}
-                variants={slideVariants}
-                className="space-y-6"
-              >
-                <div className="space-y-2">
-                  <div className="w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-950/20 flex items-center justify-center text-rose-500 mb-2">
-                    <Heart size={20} className="text-rose-500" />
-                  </div>
-                  <h2 className="text-2xl font-serif italic text-stone-900 dark:text-stone-100 font-bold leading-tight">
-                    Would you like to connect a partner later?
-                  </h2>
-                  <p className="text-xs text-stone-400 dark:text-stone-500 leading-relaxed font-serif italic">
-                    Use: Introduces Partner Mode without forcing it right now.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setConnectPartner(true)}
-                    className={`p-6 border-2 rounded-3xl flex flex-col justify-center items-center text-center min-h-[140px] relative transition-all ${
-                      connectPartner
-                        ? 'border-indigo-400 bg-indigo-50/20 shadow-md shadow-indigo-100/30'
-                        : 'border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900 text-stone-400'
-                    }`}
-                  >
-                    <span className="text-3xl mb-2">💞</span>
-                    <span className="text-xs font-bold font-serif italic text-indigo-950 dark:text-indigo-100">Yes, absolutely</span>
-                    <p className="text-[8px] text-stone-400 mt-1">Synchronize timeline later</p>
-                    {connectPartner && (
-                      <div className="absolute top-3 right-3 w-4 h-4 rounded-full bg-indigo-500 text-white flex items-center justify-center">
-                        <Check size={8} strokeWidth={4} />
-                      </div>
-                    )}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setConnectPartner(false)}
-                    className={`p-6 border-2 rounded-3xl flex flex-col justify-center items-center text-center min-h-[140px] relative transition-all ${
-                      !connectPartner
-                        ? 'border-stone-400 bg-stone-50/10 text-stone-950 dark:text-stone-100 font-bold'
-                        : 'border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900 text-stone-400'
-                    }`}
-                  >
-                    <span className="text-3xl mb-2">🔒</span>
-                    <span className="text-xs font-bold font-serif italic">Not now</span>
-                    <p className="text-[8px] text-stone-400 mt-1">Keep tracking strictly private</p>
-                    {!connectPartner && (
-                      <div className="absolute top-3 right-3 w-4 h-4 rounded-full bg-indigo-500 text-white flex items-center justify-center">
-                        <Check size={8} strokeWidth={4} />
-                      </div>
-                    )}
-                  </button>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Step 13: Final Summary Screen */}
-            {step === 13 && (
-              <motion.div
-                key="step13"
-                initial="enter"
-                animate="center"
-                exit="exit"
-                custom={1}
-                variants={slideVariants}
-                className="space-y-6 animate-fadeIn"
-              >
-                <div className="space-y-2 text-center">
-                  <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-pink-50 dark:bg-pink-950/20 text-rose-500 mb-2 shadow-inner">
-                    <Award size={28} className="animate-bounce" />
-                  </div>
-                  <h2 className="text-3xl font-serif italic text-stone-900 dark:text-stone-100 leading-tight font-bold">
-                    Your Lumina profile is ready!
-                  </h2>
-                  <p className="text-xs text-stone-400 dark:text-stone-500 leading-relaxed font-serif italic max-w-sm mx-auto">
-                    Your cycle sanctuary has been beautifully initialized. Here is your customized setup.
-                  </p>
-                </div>
-
-                <div className="bg-rose-50/20 dark:bg-stone-900/40 border border-rose-100/30 dark:border-stone-800 p-5 rounded-3xl space-y-3.5 text-xs">
-                  <div className="flex justify-between items-center bg-white dark:bg-[#1f1b1a] px-4 py-3 rounded-2xl shadow-sm border border-stone-100/50 dark:border-stone-800/80">
-                    <span className="text-stone-400 dark:text-stone-500 font-serif italic">Name</span>
-                    <span className="font-bold text-rose-600 dark:text-rose-400">{firstName}</span>
-                  </div>
-
-                  <div className="flex justify-between items-center bg-white dark:bg-[#1f1b1a] px-4 py-3 rounded-2xl shadow-sm border border-stone-100/50 dark:border-stone-800/80">
-                    <span className="text-stone-400 dark:text-stone-500 font-serif italic">Cycle Length</span>
-                    <span className="font-bold text-stone-700 dark:text-stone-300">
-                      {getCycleLengthValue()} Days
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between items-center bg-white dark:bg-[#1f1b1a] px-4 py-3 rounded-2xl shadow-sm border border-stone-100/50 dark:border-stone-800/80">
-                    <span className="text-stone-400 dark:text-stone-500 font-serif italic">Period Length</span>
-                    <span className="font-bold text-stone-700 dark:text-stone-300">
-                      {getPeriodLengthValue()} Days
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between items-center bg-white dark:bg-[#1f1b1a] px-4 py-3 rounded-2xl shadow-sm border border-stone-100/50 dark:border-stone-800/80">
-                    <span className="text-stone-400 dark:text-stone-500 font-serif italic">Pregnancy Mode</span>
-                    <span className="font-bold text-indigo-600 dark:text-indigo-400">
-                      {pregnancyStatus === 'yes' 
-                        ? 'On 🍼' 
-                        : pregnancyStatus === 'trying' 
-                        ? 'Trying to Conceive 🌱' 
-                        : 'Off 🌸'}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between items-center bg-white dark:bg-[#1f1b1a] px-4 py-3 rounded-2xl shadow-sm border border-stone-100/50 dark:border-stone-800/80">
-                    <span className="text-stone-400 dark:text-stone-500 font-serif italic">Notifications</span>
-                    <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                      {periodReminders || ovulationReminders || wellnessReminders ? 'Enabled 🔔' : 'Disabled 🔕'}
-                    </span>
-                  </div>
                 </div>
               </motion.div>
             )}
@@ -1079,51 +824,39 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
           </AnimatePresence>
         </div>
 
-        {/* Lower Navigation Controller */}
-        <div className="flex justify-between items-center pt-6 border-t border-stone-100 dark:border-stone-800/80 mt-4">
-          <button
-            type="button"
-            onClick={handleBack}
-            disabled={step === 1 || step === totalSteps}
-            className={`px-5 py-3 cursor-pointer select-none rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all ${
-              step === 1 || step === totalSteps
-                ? 'opacity-0 pointer-events-none' 
-                : 'text-stone-400 hover:text-stone-600 dark:hover:text-stone-200'
-            }`}
-          >
-            <ChevronLeft size={13} />
-            Back
-          </button>
+        {/* Navigation bottom bar */}
+        <div className="border-t border-stone-100 dark:border-stone-850 pt-5 mt-4 flex items-center justify-between gap-4">
+          {step > 1 ? (
+            <button
+              type="button"
+              onClick={handleBack}
+              className="flex items-center gap-1 text-xs font-bold text-stone-400 hover:text-pink-500 uppercase tracking-wider transition-colors cursor-pointer shrink-0"
+            >
+              <ChevronLeft size={16} />
+              Back
+            </button>
+          ) : (
+            <div></div>
+          )}
 
-          <button
-            type="button"
-            onClick={handleNext}
-            className={`px-6 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest text-white shadow-lg flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-95 ${
-              step === totalSteps
-                ? 'bg-gradient-to-r from-emerald-500 to-teal-500 shadow-emerald-200/40'
-                : 'bg-gradient-to-r from-rose-500 to-indigo-600 shadow-rose-100/40'
-            }`}
-            style={{
-              backgroundImage: step === totalSteps
-                ? 'linear-gradient(to right, #10b981, #14b8a6)'
-                : 'linear-gradient(to right, #ec4899, #f43f5e)',
-              boxShadow: step === totalSteps
-                ? '0 10px 25px rgba(16, 185, 129, 0.25)'
-                : '0 10px 25px rgba(244, 63, 94, 0.25)'
-            }}
-          >
-            {step === totalSteps ? (
-              <>
-                <Sparkles size={11} className="animate-spin-slow" />
-                Enter My Sanctuary
-              </>
-            ) : (
-              <>
-                Continue
-                <ChevronRight size={13} />
-              </>
-            )}
-          </button>
+          {step < totalSteps ? (
+            <button
+              type="button"
+              onClick={handleNext}
+              className="flex items-center gap-1.5 px-6 py-3 bg-pink-500 text-white rounded-2xl text-xs font-black uppercase tracking-wider shadow-md hover:bg-pink-600 active:scale-95 transition-all cursor-pointer"
+            >
+              {step === 1 ? 'Get Started' : 'Continue'}
+              <ChevronRight size={14} />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleNext}
+              className="px-8 py-3 bg-gradient-to-r from-pink-500 to-indigo-500 hover:opacity-95 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg active:scale-98 transition-all cursor-pointer"
+            >
+              Enter Lumina
+            </button>
+          )}
         </div>
 
       </div>

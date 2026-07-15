@@ -186,8 +186,7 @@ export const disconnectPartner = async (userId: string, partnerId: string) => {
         ...u,
         partnerId: undefined,
         partnerName: '',
-        isPartnerLinked: false,
-        isPartner: false
+        isPartnerLinked: false
       });
     }
     if (partnerId) {
@@ -208,8 +207,7 @@ export const disconnectPartner = async (userId: string, partnerId: string) => {
     await updateDoc(doc(db, "users", userId), {
       partnerId: null,
       partnerName: '',
-      isPartnerLinked: false,
-      isPartner: false
+      isPartnerLinked: false
     });
     if (partnerId) {
       await updateDoc(doc(db, "users", partnerId), {
