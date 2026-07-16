@@ -113,6 +113,12 @@ const Dashboard: React.FC<DashboardProps> = ({
   });
   const [checkinSuccess, setCheckinSuccess] = useState(false);
 
+  const unreadSystemNotifications = user.notifications?.filter(n => !n.isRead) || [];
+  const hasUnreadAlerts = (partnerUser?.partnerRequest?.status === 'pending') || 
+                          (receivedGifts.length > 0) || 
+                          (reminders.filter(r => !r.isCompleted).length > 0) ||
+                          (unreadSystemNotifications.length > 0);
+
   // --- Partner connection request permission setup states & helpers (Steps 3 & 4) ---
   const [isCustomizingSharing, setIsCustomizingSharing] = useState(false);
   const [sharingPrefs, setSharingPrefs] = useState({
@@ -1316,9 +1322,10 @@ const Dashboard: React.FC<DashboardProps> = ({
                 </p>
                 <button 
                   onClick={() => onTabChange?.('music')}
-                  className="hidden md:block text-[9px] font-bold text-pink-400 uppercase tracking-widest hover:underline"
+                  className="text-[9px] font-black text-pink-500 hover:text-pink-600 bg-pink-50 hover:bg-pink-100/80 px-2.5 py-1 rounded-full uppercase tracking-wider transition-all duration-300 active:scale-95 cursor-pointer flex items-center gap-1 shrink-0"
                 >
-                  Open Music Hub ↗
+                  <span>🎵 Open Music Hub</span>
+                  <span className="text-[7px] opacity-70">↗</span>
                 </button>
               </div>
               <h3 className="text-xl font-serif text-pink-600 italic leading-tight font-bold">{currentSong.title}</h3>
@@ -1363,9 +1370,9 @@ const Dashboard: React.FC<DashboardProps> = ({
           onClick={() => setIsNotificationsOpen(true)}
           className="p-2.5 rounded-2xl bg-white/60 hover:bg-white/90 text-pink-600 transition-all duration-300 shadow-[inset_0_1.5px_2.5px_rgba(255,255,255,0.7),_0_4px_12px_rgba(244,114,182,0.05)] border border-pink-50/50 cursor-pointer flex items-center justify-center relative active:scale-90"
         >
-          <Bell className="w-5 h-5" />
+          <Bell className={`w-5 h-5 ${hasUnreadAlerts ? 'animate-shake' : ''}`} />
           {/* Active Notifications dot if any partner requests or alerts are active */}
-          {((partnerUser?.partnerRequest?.status === 'pending') || receivedGifts.length > 0 || reminders.filter(r => !r.isCompleted).length > 0) && (
+          {hasUnreadAlerts && (
             <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-gradient-to-r from-rose-500 to-pink-500 rounded-full border-2 border-white animate-pulse" />
           )}
         </button>
@@ -1410,6 +1417,21 @@ const Dashboard: React.FC<DashboardProps> = ({
 
               {/* Menu List */}
               <div className="space-y-4">
+                {/* Music Sanctuary Quick Access */}
+                <div className="bg-gradient-to-br from-pink-500/10 to-rose-400/10 p-4 rounded-3xl border border-pink-100 shadow-[0_4px_15px_rgba(244,114,182,0.04)]">
+                  <p className="text-[9px] font-black uppercase tracking-wider text-pink-500 mb-2">Sound & Serenity</p>
+                  <button 
+                    onClick={() => {
+                      onTabChange?.('music');
+                      setIsMenuOpen(false);
+                    }}
+                    className="w-full py-2.5 px-4 bg-white hover:bg-pink-50/50 border border-pink-200/50 rounded-2xl text-[10px] font-black uppercase tracking-widest text-pink-600 transition-all active:scale-[0.98] shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <span>🎵 Enter Music Sanctuary</span>
+                    <span className="text-xs">➔</span>
+                  </button>
+                </div>
+
                 {/* Mode Select Card with Claymorphic style */}
                 <div className="bg-white/80 backdrop-blur-md p-4 rounded-3xl border border-pink-100/50 shadow-[inset_0_2px_4px_rgba(255,255,255,0.8),_0_6px_15px_rgba(244,114,182,0.03)]">
                   <p className="text-[9px] font-black uppercase tracking-wider text-pink-400 mb-2">Sanctuary Mode</p>
@@ -1495,6 +1517,64 @@ const Dashboard: React.FC<DashboardProps> = ({
 
             {/* Notifications Content */}
             <div className="flex-1 overflow-y-auto space-y-4 scrollbar-hide">
+              {/* User Persistent System Notifications */}
+              {user.notifications && user.notifications.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center px-1">
+                    <p className="text-[9px] font-black uppercase tracking-wider text-pink-400">System Notifications</p>
+                    <button 
+                      onClick={async () => {
+                        const updatedUser = {
+                          ...user,
+                          notifications: (user.notifications || []).map(n => ({ ...n, isRead: true }))
+                        };
+                        setUser(updatedUser);
+                        await syncUser(updatedUser);
+                      }}
+                      className="text-[8px] font-black text-indigo-500 hover:underline uppercase tracking-wider cursor-pointer"
+                    >
+                      Clear All Unread
+                    </button>
+                  </div>
+                  <div className="space-y-1.5 max-h-[220px] overflow-y-auto pr-1 scrollbar-thin">
+                    {user.notifications.map(notif => (
+                      <div 
+                        key={notif.id} 
+                        onClick={async () => {
+                          if (!notif.isRead) {
+                            const updatedUser = {
+                              ...user,
+                              notifications: (user.notifications || []).map(n => n.id === notif.id ? { ...n, isRead: true } : n)
+                            };
+                            setUser(updatedUser);
+                            await syncUser(updatedUser);
+                          }
+                        }}
+                        className={`p-3 rounded-2xl border transition-all flex flex-col gap-1 cursor-pointer ${
+                          notif.isRead 
+                            ? 'bg-white/40 border-pink-100/10 opacity-70 hover:opacity-100' 
+                            : 'bg-gradient-to-br from-pink-50 to-indigo-50/50 border-pink-100/40 shadow-sm hover:scale-[1.01]'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-1">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="text-sm shrink-0">{notif.emoji || '🔔'}</span>
+                            <p className="text-[10px] font-black uppercase tracking-wider text-indigo-950 truncate">{notif.title}</p>
+                          </div>
+                          {!notif.isRead && (
+                            <span className="w-1.5 h-1.5 bg-rose-500 rounded-full shrink-0" />
+                          )}
+                        </div>
+                        <p className="text-[10px] text-gray-500 leading-normal font-medium break-words">{notif.body}</p>
+                        <p className="text-[7.5px] text-gray-400 font-bold self-end tracking-wider">
+                          {new Date(notif.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Partner connection request notification */}
               {partnerUser?.partnerRequest?.status === 'pending' && (
                 <div className="bg-gradient-to-br from-indigo-50 to-purple-50 p-4 rounded-3xl border border-indigo-100 shadow-[inset_0_2px_4px_rgba(255,255,255,0.8),_0_6px_15px_rgba(244,114,182,0.03)] space-y-3 animate-fadeIn">
@@ -1697,7 +1777,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       {/* "Mark Delivered" Birth modal */}
       {isDeliveredModalOpen && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[300] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[3rem] p-8 max-w-md w-full space-y-6 shadow-2xl border border-pink-100 animate-slideDown">
+          <div className="bg-white rounded-[3rem] p-8 max-w-md w-full space-y-6 shadow-2xl border border-pink-100 animate-slideDownBlock">
             <div className="text-center space-y-2">
               <span className="text-5xl animate-bounce">🎉🐣</span>
               <h3 className="text-2xl font-serif italic text-indigo-950">Congratulations Mama!</h3>

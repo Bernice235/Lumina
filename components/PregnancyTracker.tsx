@@ -267,7 +267,7 @@ const PregnancyTracker: React.FC<PregnancyTrackerProps> = ({ user, setUser, onOp
           </div>
 
           {isEditingDueDate && (
-            <div className="bg-indigo-50/10 border border-indigo-100/50 p-6 rounded-2xl space-y-4 animate-slideDown">
+            <div className="bg-indigo-50/10 border border-indigo-100/50 p-6 rounded-2xl space-y-4 animate-slideDownBlock">
               <label className="block text-[10px] font-bold text-indigo-400 uppercase">Select Clinician Estimated Due Date</label>
               <div className="flex flex-col sm:flex-row gap-3">
                 <input 
@@ -306,7 +306,7 @@ const PregnancyTracker: React.FC<PregnancyTrackerProps> = ({ user, setUser, onOp
           </div>
 
           {isAddingAppointment && (
-            <div className="bg-indigo-50/10 border border-indigo-100/50 p-6 rounded-2xl space-y-4 animate-slideDown text-left">
+            <div className="bg-indigo-50/10 border border-indigo-100/50 p-6 rounded-2xl space-y-4 animate-slideDownBlock text-left">
               <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Add Prenatal Appointment</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">

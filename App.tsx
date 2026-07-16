@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Smartphone, 
   Download, 
@@ -38,7 +38,7 @@ import LogModal from './components/LogModal';
 import DoctorReport from './components/DoctorReport';
 import { CycleGraph } from './components/CycleGraph';
 import { playWelcomeVoice } from './services/gemini';
-import { THEMES, SONGS } from './constants';
+import { THEMES, SONGS, THEME_PALETTES } from './constants';
 import { syncUser, subscribeToGifts, subscribeToUser, acceptInvite, subscribeToPartnerRequests, getCleanName } from './services/firebaseService';
 import { getDefaultNotificationSettings } from './services/notificationService';
 import { auth } from './services/firebase';
@@ -203,6 +203,54 @@ const App: React.FC = () => {
     }
   }, [user]);
 
+  // Synchronize CSS custom properties with the selected theme color palette
+  useEffect(() => {
+    const selectedTheme = user?.theme || 'rose';
+    const palette = THEME_PALETTES[selectedTheme];
+    if (palette) {
+      const root = document.documentElement;
+      Object.entries(palette).forEach(([shade, hex]) => {
+        root.style.setProperty(`--brand-${shade}`, hex as string);
+      });
+    }
+  }, [user?.theme]);
+
+  const triggerFullNotification = (title: string, body: string, emoji: string = '🔔') => {
+    if ('Notification' in window) {
+      if (window.Notification.permission === 'granted') {
+        try {
+          new window.Notification(`${emoji} ${title}`, { body });
+        } catch (e) {
+          console.warn("Native Notification trigger failed:", e);
+        }
+      } else if (window.Notification.permission !== 'denied') {
+        window.Notification.requestPermission();
+      }
+    }
+
+    if (userRef.current) {
+      const currentUser = userRef.current;
+      const newAlert = {
+        id: Math.random().toString(),
+        title,
+        body,
+        emoji,
+        timestamp: new Date().toISOString(),
+        isRead: false
+      };
+      const existingAlerts = currentUser.notifications || [];
+      const updatedAlerts = [newAlert, ...existingAlerts].slice(0, 20);
+      const updatedUser = {
+        ...currentUser,
+        notifications: updatedAlerts
+      };
+      setUser(updatedUser);
+      syncUser(updatedUser);
+      localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+      localStorage.setItem('lumina_biometric_user', JSON.stringify(updatedUser));
+    }
+  };
+
   // Subscribe to real-time partner requests (Incoming & Outgoing)
   useEffect(() => {
     if (user?.id) {
@@ -243,11 +291,15 @@ const App: React.FC = () => {
             .map((p: string) => `✓ ${p}`)
             .join('\n');
 
+          const title = "💕 New Partner Request";
+          const body = `${getCleanName(req.partnerName, req.partnerEmail || '')} wants to connect with you.\n\nRequested Access:\n${requestedText}`;
+          const emoji = "💕";
+
           setSimulatedNotify({
             id: req.id,
-            title: "💕 New Partner Request",
-            body: `${getCleanName(req.partnerName, req.partnerEmail || '')} wants to connect with you.\n\nRequested Access:\n${requestedText}`,
-            emoji: "💕",
+            title,
+            body,
+            emoji,
             isPartner: true,
             action: () => {
               setActiveTab('partner');
@@ -255,6 +307,7 @@ const App: React.FC = () => {
               window.dispatchEvent(new CustomEvent('lumina-set-partner-subtab', { detail: 'requests' }));
             }
           });
+          triggerFullNotification(title, body, emoji);
         }
       });
     } else {
@@ -265,24 +318,32 @@ const App: React.FC = () => {
           notifiedRequestIds.current.add(key);
 
           if (req.status === 'approved') {
+            const title = "💕 Connection Approved";
+            const body = `${getCleanName(req.partnerName, req.partnerEmail || '')} approved your request.`;
+            const emoji = "💕";
             setSimulatedNotify({
               id: req.id,
-              title: "💕 Connection Approved",
-              body: `${getCleanName(req.partnerName, req.partnerEmail || '')} approved your request.`,
-              emoji: "💕",
+              title,
+              body,
+              emoji,
               isPartner: true,
               action: () => {
                 window.location.reload();
               }
             });
+            triggerFullNotification(title, body, emoji);
           } else if (req.status === 'declined') {
+            const title = "💔 Connection Declined";
+            const body = `Your connection request has been declined or unlinked.`;
+            const emoji = "💔";
             setSimulatedNotify({
               id: req.id,
-              title: "💔 Connection Declined",
-              body: `Your connection request has been declined or unlinked.`,
-              emoji: "💔",
+              title,
+              body,
+              emoji,
               isPartner: true
             });
+            triggerFullNotification(title, body, emoji);
           }
         }
       });
@@ -336,6 +397,7 @@ const App: React.FC = () => {
           action: detail.action
         });
         playChime();
+        triggerFullNotification(detail.title, detail.body, detail.emoji || '🔔');
       }
     };
 
@@ -405,6 +467,7 @@ const App: React.FC = () => {
   const [isMusicPlaying, setIsMusicPlaying] = useState(false);
   const [isMusicActive, setIsMusicActive] = useState(false);
   const [currentSongIndex, setCurrentSongIndex] = useState(0);
+  const [activeMusicGenre, setActiveMusicGenre] = useState<string>('all');
   const [volume, setVolume] = useState(0.3);
 
   // Keep volume HUD in sync with global audio volume changes
@@ -1065,12 +1128,61 @@ const App: React.FC = () => {
 
   const fullLibrary = [...SONGS, ...(user?.customSongs || [])];
 
+  const activeQueue = useMemo(() => {
+    return fullLibrary.filter(song => {
+      if (activeMusicGenre === 'all') return true;
+      const isLofi = activeMusicGenre === 'lo-fi' || activeMusicGenre === 'lofi chill';
+      const isNature = activeMusicGenre === 'nature sounds' || activeMusicGenre === 'nature soundscapes';
+      const isAmbient = activeMusicGenre === 'ambient' || activeMusicGenre === 'cosmic';
+      
+      if (isLofi) return song.tags.includes('lo-fi') || song.tags.includes('lofi chill');
+      if (isNature) return song.tags.includes('nature sounds') || song.tags.includes('nature soundscapes');
+      if (isAmbient) return song.tags.includes('ambient') || song.tags.includes('cosmic');
+      
+      return song.tags.includes(activeMusicGenre);
+    });
+  }, [fullLibrary, activeMusicGenre]);
+
   const nextSong = () => {
-    setCurrentSongIndex((prev) => (prev + 1) % fullLibrary.length);
+    if (activeQueue.length === 0) return;
+    const currentSong = fullLibrary[currentSongIndex];
+    const currentQueueIdx = activeQueue.findIndex(s => s.id === currentSong?.id);
+    
+    let nextTrack;
+    if (currentQueueIdx === -1) {
+      nextTrack = activeQueue[0];
+    } else {
+      const nextQueueIdx = (currentQueueIdx + 1) % activeQueue.length;
+      nextTrack = activeQueue[nextQueueIdx];
+    }
+    
+    if (nextTrack) {
+      const globalIdx = fullLibrary.findIndex(s => s.id === nextTrack.id);
+      if (globalIdx !== -1) {
+        setCurrentSongIndex(globalIdx);
+      }
+    }
   };
 
   const prevSong = () => {
-    setCurrentSongIndex((prev) => (prev - 1 + fullLibrary.length) % fullLibrary.length);
+    if (activeQueue.length === 0) return;
+    const currentSong = fullLibrary[currentSongIndex];
+    const currentQueueIdx = activeQueue.findIndex(s => s.id === currentSong?.id);
+    
+    let prevTrack;
+    if (currentQueueIdx === -1) {
+      prevTrack = activeQueue[activeQueue.length - 1];
+    } else {
+      const prevQueueIdx = (currentQueueIdx - 1 + activeQueue.length) % activeQueue.length;
+      prevTrack = activeQueue[prevQueueIdx];
+    }
+    
+    if (prevTrack) {
+      const globalIdx = fullLibrary.findIndex(s => s.id === prevTrack.id);
+      if (globalIdx !== -1) {
+        setCurrentSongIndex(globalIdx);
+      }
+    }
   };
 
   useEffect(() => {
@@ -1084,7 +1196,19 @@ const App: React.FC = () => {
         }
       }
     }
-  }, [isMusicPlaying, currentSongIndex, user?.customSongs]);
+  }, [isMusicPlaying]);
+
+  useEffect(() => {
+    if (audioRef.current) {
+      const currentTrack = fullLibrary[currentSongIndex];
+      if (currentTrack?.source === 'internal') {
+        audioRef.current.load(); // Force load the new track src!
+        if (isMusicPlaying) {
+          audioRef.current.play().catch(e => console.log("Playback interaction required", e));
+        }
+      }
+    }
+  }, [currentSongIndex, user?.customSongs]);
 
   useEffect(() => {
     if (audioRef.current) {
@@ -1106,7 +1230,10 @@ const App: React.FC = () => {
     setIsMusicPlaying(nextActiveState);
   };
 
-  const handleSelectSong = (index: number) => {
+  const handleSelectSong = (index: number, genre: string = 'all') => {
+    if (genre && genre !== 'all') {
+      setActiveMusicGenre(genre);
+    }
     if (index === currentSongIndex) {
       const nextPlayingState = !isMusicPlaying;
       setIsMusicPlaying(nextPlayingState);
@@ -1282,7 +1409,9 @@ const App: React.FC = () => {
                   <button 
                     key={t}
                     onClick={(e) => { e.stopPropagation(); updateTheme(t); }}
-                    className={`w-2.5 h-2.5 rounded-full border border-white shadow-sm transition-transform hover:scale-125 ${t === 'rose' ? 'bg-pink-400' : t === 'lavender' ? 'bg-purple-400' : t === 'mint' ? 'bg-teal-400' : 'bg-orange-400'} ${user.theme === t ? 'ring-1 ring-pink-500' : ''}`}
+                    className={`w-2.5 h-2.5 rounded-full border border-white shadow-sm transition-transform hover:scale-125 ${user.theme === t ? 'ring-2 ring-offset-1 ring-pink-500 scale-110' : ''}`}
+                    style={{ backgroundColor: THEME_PALETTES[t][500] }}
+                    title={t}
                   />
                 ))}
               </div>
@@ -1442,6 +1571,8 @@ const App: React.FC = () => {
             onNext={nextSong}
             onPrev={prevSong}
             onAddCustomSong={addCustomSong}
+            activeMusicGenre={activeMusicGenre}
+            setActiveMusicGenre={setActiveMusicGenre}
           />
         );
       case 'diary':
@@ -1524,7 +1655,9 @@ const App: React.FC = () => {
                   <button 
                     key={t}
                     onClick={(e) => { e.stopPropagation(); updateTheme(t); }}
-                    className={`w-2.5 h-2.5 md:w-3 md:h-3 rounded-full border border-white shadow-sm transition-transform hover:scale-125 ${t === 'rose' ? 'bg-pink-400' : t === 'lavender' ? 'bg-purple-400' : t === 'mint' ? 'bg-teal-400' : 'bg-orange-400'} ${user.theme === t ? 'ring-2 ring-offset-2 ring-gray-300' : ''}`}
+                    className={`w-2.5 h-2.5 md:w-3 md:h-3 rounded-full border border-white shadow-sm transition-transform hover:scale-125 ${user.theme === t ? 'ring-2 ring-offset-1 ring-pink-500 scale-110' : ''}`}
+                    style={{ backgroundColor: THEME_PALETTES[t][500] }}
+                    title={t}
                   />
                 ))}
               </div>
@@ -1623,9 +1756,50 @@ const App: React.FC = () => {
             <div className={`w-12 h-12 rounded-full bg-pink-100 flex items-center justify-center text-2xl ${isMusicPlaying ? 'animate-[spin_10s_linear_infinite]' : ''}`}>
               {currentTrack?.coverEmoji || '🎵'}
             </div>
-            <div className="min-w-0">
-              <h4 className="text-sm font-serif italic text-pink-600 truncate">{currentTrack?.title || 'No Song Selected'}</h4>
-              <p className="text-[9px] font-bold text-pink-300 uppercase truncate">{currentTrack?.artist || 'Unknown'}</p>
+            <div className="min-w-0 flex flex-col justify-center">
+              <h4 className="text-sm font-serif italic text-pink-600 truncate leading-tight">{currentTrack?.title || 'No Song Selected'}</h4>
+              <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
+                <p className="text-[9px] font-bold text-pink-300 uppercase truncate leading-none shrink-0">{currentTrack?.artist || 'Unknown'}</p>
+                <span className="text-pink-200 text-[8px] leading-none shrink-0">•</span>
+                <select
+                  value={activeMusicGenre}
+                  onChange={(e) => {
+                    const newGenre = e.target.value;
+                    setActiveMusicGenre(newGenre);
+                    // Find first track in the new genre
+                    const tempQueue = fullLibrary.filter(s => {
+                      if (newGenre === 'all') return true;
+                      const isLofi = newGenre === 'lo-fi' || newGenre === 'lofi chill';
+                      const isNature = newGenre === 'nature sounds' || newGenre === 'nature soundscapes';
+                      const isAmbient = newGenre === 'ambient' || newGenre === 'cosmic';
+                      
+                      if (isLofi) return s.tags.includes('lo-fi') || s.tags.includes('lofi chill');
+                      if (isNature) return s.tags.includes('nature sounds') || s.tags.includes('nature soundscapes');
+                      if (isAmbient) return s.tags.includes('ambient') || s.tags.includes('cosmic');
+                      
+                      return s.tags.includes(newGenre);
+                    });
+                    if (tempQueue.length > 0) {
+                      const globalIdx = fullLibrary.findIndex(s => s.id === tempQueue[0].id);
+                      if (globalIdx !== -1) {
+                        setCurrentSongIndex(globalIdx);
+                        setIsMusicPlaying(true);
+                        setIsMusicActive(true);
+                      }
+                    }
+                  }}
+                  className="text-[8px] font-black text-pink-500 bg-pink-50 hover:bg-pink-100 rounded-full px-2 py-0.5 border-none outline-none cursor-pointer uppercase tracking-wider leading-none focus:ring-1 focus:ring-pink-200"
+                >
+                  <option value="all">🌈 All</option>
+                  <option value="lo-fi">☕ Lo-Fi</option>
+                  <option value="classical">🎻 Classical</option>
+                  <option value="ambient">🌌 Ambient</option>
+                  <option value="nature sounds">🍃 Nature</option>
+                  <option value="jazz">🎷 Jazz</option>
+                  <option value="pop">🎤 Pop</option>
+                  <option value="afrobeats">🌍 Afro</option>
+                </select>
+              </div>
             </div>
           </div>
           
@@ -1689,6 +1863,7 @@ const App: React.FC = () => {
               <span className="text-xl font-black leading-none">+</span>
             </button>
 
+            <NavItem icon="🎵" label="Music" active={activeTab === 'music'} onClick={() => setActiveTab('music')} theme={user.theme} />
             <NavItem icon="📚" label="Learn" active={activeTab === 'edu'} onClick={() => setActiveTab('edu')} theme={user.theme} />
             <NavItem icon="👤" label="Settings" active={activeTab === 'settings'} onClick={() => { setSettingsSubTab('account'); setActiveTab('settings'); }} theme={user.theme} />
           </nav>

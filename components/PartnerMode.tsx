@@ -1,5 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { User, Reminder, ReceivedComfort } from '../types';
 import { getGiftIdeas, getCommunicationTips, getLoveNoteIdeas, getSupportMission } from '../services/gemini';
 import { 
@@ -35,7 +36,9 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
   const [loading, setLoading] = useState(true);
   const [newReminderText, setNewReminderText] = useState('');
   const [newReminderTime, setNewReminderTime] = useState('');
-  const [activeTab, setActiveTab] = useState<'mission' | 'ideas' | 'notes' | 'reminders' | 'calendar'>('mission');
+  const [activeTab, setActiveTab] = useState<'mission' | 'ideas' | 'notes' | 'reminders' | 'calendar' | 'education'>('mission');
+  const [expandedPhase, setExpandedPhase] = useState<string | null>(null);
+  const [selectedQuickCard, setSelectedQuickCard] = useState<string | null>(null);
   const [partnerCodeInput, setPartnerCodeInput] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [connectionRequest, setConnectionRequest] = useState<any | null>(null);
@@ -1017,7 +1020,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                       </button>
 
                       {showQRCode && (
-                        <div className="bg-amber-50/10 border border-amber-100/50 p-4 sm:p-6 rounded-3xl text-center space-y-4 animate-slideDown flex flex-col items-center justify-center w-full">
+                        <div className="bg-amber-50/10 border border-amber-100/50 p-4 sm:p-6 rounded-3xl text-center space-y-4 animate-slideDownBlock flex flex-col items-center justify-center w-full">
                           <p className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">Lumina Scan Invitation</p>
                           <div className="qr-code-container bg-white p-4 rounded-2xl border border-amber-100 shadow-md w-full max-w-[260px] aspect-square flex items-center justify-center overflow-hidden mx-auto">
                             <img 
@@ -1646,7 +1649,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
               </div>
 
               {showQRCode && (
-                <div className="bg-amber-50/10 border border-amber-100/50 p-4 sm:p-6 rounded-3xl text-center space-y-4 animate-slideDown flex flex-col items-center justify-center w-full">
+                <div className="bg-amber-50/10 border border-amber-100/50 p-4 sm:p-6 rounded-3xl text-center space-y-4 animate-slideDownBlock flex flex-col items-center justify-center w-full">
                   <p className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">Lumina Scan Invitation</p>
                   <div className="qr-code-container bg-white p-4 rounded-2xl border border-amber-100 shadow-md w-full max-w-[260px] aspect-square flex items-center justify-center overflow-hidden mx-auto">
                     <img 
@@ -1942,12 +1945,13 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
       </section>
 
       {/* Dashboard Navigation */}
-      <nav className="flex bg-white/50 p-1.5 rounded-3xl border border-indigo-100/50 shadow-sm sticky top-24 z-40 backdrop-blur-md">
+      <nav className="flex bg-white/50 p-1.5 rounded-3xl border border-indigo-100/50 shadow-sm sticky top-24 z-40 backdrop-blur-md overflow-x-auto whitespace-nowrap scrollbar-none gap-1">
         <NavItem active={activeTab === 'mission'} onClick={() => setActiveTab('mission')} label="Support Mission" icon="⚔️" />
         <NavItem active={activeTab === 'ideas'} onClick={() => setActiveTab('ideas')} label="Gift Ideas" icon="🎁" />
         <NavItem active={activeTab === 'notes'} onClick={() => setActiveTab('notes')} label="Love Notes" icon="✉️" />
         <NavItem active={activeTab === 'reminders'} onClick={() => setActiveTab('reminders')} label="Tasks" icon="⏰" />
         <NavItem active={activeTab === 'calendar'} onClick={() => setActiveTab('calendar')} label="Calendar" icon="📅" />
+        <NavItem active={activeTab === 'education'} onClick={() => setActiveTab('education')} label="Education" icon="🎓" />
       </nav>
 
       {activeTab === 'mission' && (

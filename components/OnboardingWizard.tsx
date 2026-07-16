@@ -33,7 +33,7 @@ interface OnboardingWizardProps {
 
 export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUser, onComplete }) => {
   const [step, setStep] = useState(1);
-  const totalSteps = 6;
+  const totalSteps = 11;
 
   // Local values prefilled with user defaults if available
   const [name, setName] = useState(user.firstName || user.name || '');

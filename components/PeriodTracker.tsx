@@ -87,6 +87,7 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
     intensity: 'spotting' | 'light' | 'medium' | 'heavy';
   } | null>(null);
   const [isAddingPeriod, setIsAddingPeriod] = useState<boolean>(false);
+  const [isViewingTrends, setIsViewingTrends] = useState<boolean>(false);
   const [newPeriodData, setNewPeriodData] = useState({
     startDate: new Date().toISOString().split('T')[0],
     endDate: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -873,17 +874,25 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
 
     return (
       <div className="space-y-6 animate-fadeIn pb-12 font-sans">
-        <div className="flex justify-between items-center px-1">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 px-1">
           <div>
             <h3 className="text-2xl font-serif text-pink-600 font-bold italic">Cycle History</h3>
             <p className="text-[11px] text-gray-400 italic">Review, expand dynamic forecasts, and manage your documented cycle history.</p>
           </div>
-          <button 
-            onClick={() => setIsAddingPeriod(!isAddingPeriod)}
-            className="px-4 py-2 bg-gradient-to-r from-pink-400 to-rose-400 hover:from-pink-500 hover:to-rose-500 text-white font-extrabold uppercase text-[9px] tracking-widest rounded-full shadow-md transition-all cursor-pointer flex items-center gap-1.5"
-          >
-            {isAddingPeriod ? '✕ Close Form' : '➕ Add Past Cycle'}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button 
+              onClick={() => setIsViewingTrends(true)}
+              className="px-4 py-2 bg-pink-50 hover:bg-pink-100 text-pink-600 border border-pink-100 font-extrabold uppercase text-[9px] tracking-widest rounded-full shadow-sm transition-all cursor-pointer flex items-center gap-1.5"
+            >
+              📈 Cycle Trends
+            </button>
+            <button 
+              onClick={() => setIsAddingPeriod(!isAddingPeriod)}
+              className="px-4 py-2 bg-gradient-to-r from-pink-400 to-rose-400 hover:from-pink-500 hover:to-rose-500 text-white font-extrabold uppercase text-[9px] tracking-widest rounded-full shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+            >
+              {isAddingPeriod ? '✕ Close Form' : '➕ Add Past Cycle'}
+            </button>
+          </div>
         </div>
 
         {/* Inline Add Past Cycle Form */}
@@ -1003,7 +1012,7 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
 
                   {/* VIEW DETAILS DRAWER */}
                   {isViewing && (
-                    <div className="border-t border-pink-100/30 p-6 bg-pink-50/5 space-y-6 animate-slideDown">
+                    <div className="border-t border-pink-100/30 p-6 bg-pink-50/5 space-y-6 animate-slideDownBlock">
                       <p className="text-[10px] font-bold text-pink-400 uppercase tracking-widest mb-2">📊 Recalculated Health Sanctuary Parameters</p>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-xs font-serif italic text-gray-650">
                         <div className="bg-white p-3.5 rounded-xl border border-pink-50/40">
@@ -1066,7 +1075,7 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
 
                   {/* EDIT PANEL */}
                   {isEditing && editingPeriodData && (
-                    <div className="border-t border-pink-100 p-6 bg-rose-50/10 space-y-4 animate-slideDown">
+                    <div className="border-t border-pink-100 p-6 bg-rose-50/10 space-y-4 animate-slideDownBlock">
                       <p className="text-[10px] font-bold text-rose-400 uppercase tracking-widest mb-2">🛠 Edit Cycle Parameters</p>
                       
                       {deletePeriodConfirmId === period.id ? (
@@ -2115,8 +2124,280 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
     );
   };
 
+  const renderCycleTrendsModal = () => {
+    if (!isViewingTrends) return null;
+
+    // Get the trend data chronologically (oldest to newest)
+    const sortedPeriods = [...(user.periods || [])].sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+    
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+    const trendsData = sortedPeriods.map((period, idx) => {
+      const start = new Date(period.startDate);
+      const end = new Date(period.endDate);
+      const periodLength = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+      
+      let cycleLength = user.cycleLength || 28;
+      // Chronological next starting date is at idx + 1
+      if (idx < sortedPeriods.length - 1 && sortedPeriods[idx + 1]) {
+        const nextStart = new Date(sortedPeriods[idx + 1].startDate);
+        const diff = Math.round((nextStart.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+        if (diff > 15 && diff < 50) {
+          cycleLength = diff;
+        }
+      }
+
+      return {
+        id: period.id,
+        startDate: period.startDate,
+        start,
+        formattedDate: start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+        cycleLength,
+        periodLength,
+        isBaseline: false
+      };
+    }).filter(p => p.start >= sixMonthsAgo);
+
+    const hasRealData = trendsData.length > 0;
+    const realLoggedCount = trendsData.length;
+
+    // Fallback data generation for beautiful visualization if empty or too small
+    let displayData = [...trendsData];
+    if (displayData.length === 0) {
+      for (let i = 4; i >= 1; i--) {
+        const d = new Date();
+        d.setMonth(d.getMonth() - i);
+        displayData.push({
+          id: `fallback-${i}`,
+          startDate: d.toISOString().split('T')[0],
+          start: d,
+          formattedDate: d.toLocaleDateString(undefined, { month: 'short' }),
+          cycleLength: user.cycleLength || 28,
+          periodLength: user.periodLength || 5,
+          isBaseline: true
+        });
+      }
+    } else if (displayData.length === 1) {
+      // Add a baseline point preceding it so line chart is beautiful
+      const d = new Date(displayData[0].start);
+      d.setMonth(d.getMonth() - 2);
+      displayData.unshift({
+        id: 'fallback-pre',
+        startDate: d.toISOString().split('T')[0],
+        start: d,
+        formattedDate: d.toLocaleDateString(undefined, { month: 'short' }),
+        cycleLength: user.cycleLength || 28,
+        periodLength: user.periodLength || 5,
+        isBaseline: true
+      });
+    }
+
+    // Calculations based on real logged cycles in the last 6 months
+    const loggedCycles = trendsData;
+    const avgCycleLength = loggedCycles.length > 0
+      ? Math.round(loggedCycles.reduce((acc, curr) => acc + curr.cycleLength, 0) / loggedCycles.length)
+      : user.cycleLength || 28;
+
+    const minCycle = loggedCycles.length > 0
+      ? Math.min(...loggedCycles.map(d => d.cycleLength))
+      : user.cycleLength || 28;
+
+    const maxCycle = loggedCycles.length > 0
+      ? Math.max(...loggedCycles.map(d => d.cycleLength))
+      : user.cycleLength || 28;
+
+    const variation = maxCycle - minCycle;
+    let regularityText = 'Highly Regular';
+    let regularityDesc = 'Minimal variation in cycle length.';
+    let regularityColor = 'text-green-600 bg-green-50';
+
+    if (loggedCycles.length < 2) {
+      regularityText = 'Awaiting Logs';
+      regularityDesc = 'Add more past periods to compute regularity.';
+      regularityColor = 'text-gray-500 bg-gray-50';
+    } else if (variation > 6) {
+      regularityText = 'Variable';
+      regularityDesc = 'More than 6 days difference between cycles.';
+      regularityColor = 'text-amber-600 bg-amber-50';
+    } else if (variation > 3) {
+      regularityText = 'Regular';
+      regularityDesc = 'Healthy and stable monthly rhythm.';
+      regularityColor = 'text-pink-600 bg-pink-50';
+    }
+
+    return (
+      <div className="fixed inset-0 bg-black/40 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95, y: 15 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          className="bg-white rounded-[2.5rem] w-full max-w-2xl overflow-hidden shadow-2xl relative border border-pink-100 flex flex-col max-h-[90vh]"
+        >
+          {/* Header */}
+          <div className="p-6 md:p-8 border-b border-pink-50 flex justify-between items-start">
+            <div className="text-left">
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-pink-400">Analytics Sanctuary</span>
+              <h3 className="text-2xl font-serif text-pink-600 font-bold italic mt-1">Cycle Trends</h3>
+              <p className="text-[11px] text-gray-400 italic">6-Month Historical Cycle Length Analysis</p>
+            </div>
+            <button 
+              onClick={() => setIsViewingTrends(false)}
+              className="w-10 h-10 rounded-full bg-pink-50 hover:bg-pink-100 text-pink-500 flex items-center justify-center transition-all cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+
+          <div className="p-6 md:p-8 overflow-y-auto space-y-6 flex-1">
+            {/* Status Alert if showing simulated baseline */}
+            {!hasRealData && (
+              <div className="bg-pink-50/40 border border-pink-100/60 p-4 rounded-2xl flex items-start gap-3">
+                <span className="text-xl">📈</span>
+                <div className="text-left">
+                  <h4 className="text-xs font-bold text-pink-700">Displaying Configured Baseline</h4>
+                  <p className="text-[10.5px] text-pink-600/80 leading-relaxed">
+                    You haven't logged enough periods in the last 6 months yet. We are displaying your onboarding configured default cycle length of <span className="font-extrabold">{user.cycleLength || 28} days</span> as a reference. Add more past cycles to begin plotting real trends!
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Recharts Line Graph */}
+            <div className="bg-pink-50/10 border border-pink-50/40 rounded-3xl p-4 md:p-6 shadow-sm">
+              <div className="flex justify-between items-center mb-4">
+                <span className="text-[10px] font-bold text-pink-400 uppercase tracking-wider">Cycle Duration (Days)</span>
+                <span className="text-[10px] text-gray-400 font-bold italic">
+                  {hasRealData ? `${realLoggedCount} Logged Cycles` : 'Configured Reference'}
+                </span>
+              </div>
+
+              <div className="h-64 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={displayData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#fdf2f8" />
+                    <XAxis 
+                      dataKey="formattedDate" 
+                      tick={{ fontSize: 10, fill: '#f472b6' }} 
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis 
+                      domain={['dataMin - 3', 'dataMax + 3']} 
+                      tick={{ fontSize: 10, fill: '#f472b6' }} 
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip 
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const data = payload[0].payload;
+                          return (
+                            <div className="bg-white/95 backdrop-blur-sm border border-pink-100 p-3 rounded-2xl shadow-xl text-left">
+                              <p className="text-[10px] text-pink-400 font-bold uppercase">{data.formattedDate}</p>
+                              <p className="text-xs font-serif italic text-pink-600 font-bold mt-1">
+                                Cycle Length: <span className="text-sm font-sans font-extrabold">{data.cycleLength} days</span>
+                              </p>
+                              <p className="text-[10px] text-gray-400 italic">
+                                Period Bleeding: {data.periodLength} days
+                              </p>
+                              {data.isBaseline && (
+                                <span className="inline-block mt-1 px-1.5 py-0.5 bg-pink-100 text-pink-600 font-extrabold text-[8px] rounded uppercase tracking-wider">
+                                  Default Baseline
+                                </span>
+                              )}
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <ReferenceLine 
+                      y={user.cycleLength || 28} 
+                      stroke="#ec4899" 
+                      strokeDasharray="5 5" 
+                      label={{ 
+                        value: `Baseline (${user.cycleLength || 28}d)`, 
+                        fill: '#db2777', 
+                        fontSize: 9, 
+                        position: 'insideBottomRight',
+                        offset: 10
+                      }} 
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="cycleLength" 
+                      stroke="#f472b6" 
+                      strokeWidth={3} 
+                      dot={{ r: 5, fill: '#ec4899', stroke: '#fff', strokeWidth: 2 }} 
+                      activeDot={{ r: 8, fill: '#db2777', stroke: '#fff', strokeWidth: 2 }} 
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Analytics Summary Statistics Cards */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-white border border-pink-100 p-4 rounded-3xl text-left space-y-1 shadow-sm">
+                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Average Cycle</span>
+                <p className="text-2xl font-serif text-pink-600 font-extrabold italic">
+                  {avgCycleLength} <span className="text-xs font-sans not-italic font-bold text-gray-400">days</span>
+                </p>
+                <p className="text-[9.5px] text-gray-400 italic">
+                  {hasRealData ? 'Computed from last 6 months' : 'From your onboarding baseline'}
+                </p>
+              </div>
+
+              <div className="bg-white border border-pink-100 p-4 rounded-3xl text-left space-y-1 shadow-sm">
+                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Cycle Regularity</span>
+                <p className={`text-[10px] font-bold uppercase tracking-wider ${regularityColor} px-2.5 py-1 rounded-full inline-block mt-1`}>
+                  {regularityText}
+                </p>
+                <p className="text-[9.5px] text-gray-400 italic mt-1 leading-tight">
+                  {regularityDesc}
+                </p>
+              </div>
+
+              <div className="bg-white border border-pink-100 p-4 rounded-3xl text-left space-y-1 shadow-sm">
+                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Shortest Cycle</span>
+                <p className="text-xl font-serif text-pink-600 font-extrabold italic">
+                  {minCycle} <span className="text-xs font-sans not-italic font-bold text-gray-400">days</span>
+                </p>
+                <p className="text-[9.5px] text-gray-400 italic">
+                  {hasRealData ? 'Minimum logged length' : 'Configured baseline'}
+                </p>
+              </div>
+
+              <div className="bg-white border border-pink-100 p-4 rounded-3xl text-left space-y-1 shadow-sm">
+                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Longest Cycle</span>
+                <p className="text-xl font-serif text-pink-600 font-extrabold italic">
+                  {maxCycle} <span className="text-xs font-sans not-italic font-bold text-gray-400">days</span>
+                </p>
+                <p className="text-[9.5px] text-gray-400 italic">
+                  {hasRealData ? 'Maximum logged length' : 'Configured baseline'}
+                </p>
+              </div>
+            </div>
+
+            {/* Wisdom card inside modal */}
+            <div className="p-6 bg-gradient-to-br from-pink-500 to-rose-400 rounded-3xl text-white text-left relative overflow-hidden shadow-md">
+              <div className="relative z-10 space-y-1">
+                <h4 className="text-[10px] uppercase font-bold tracking-widest opacity-80">Maternal Wisdom</h4>
+                <p className="text-sm font-serif italic leading-relaxed">
+                  "Understanding your cycle regularity helps tune into your body's unique monthly rhythm, promoting holistic wellness and harmony."
+                </p>
+              </div>
+              <span className="absolute -bottom-8 -right-8 text-8xl opacity-10">✨</span>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-10 pb-20">
+      {renderCycleTrendsModal()}
       {/* Redesigned Glassmorphic Screen Header */}
       <header className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 text-center md:text-left bg-white/40 backdrop-blur-xl p-6 md:p-8 rounded-[2.5rem] border border-white/60 shadow-[inset_0_2px_4px_rgba(255,255,255,0.6),_0_12px_36px_rgba(244,114,182,0.03)]">
         <div>

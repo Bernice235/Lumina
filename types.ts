@@ -1,5 +1,5 @@
 
-export type AppTheme = 'rose' | 'lavender' | 'mint' | 'peach';
+export type AppTheme = 'rose' | 'lavender' | 'mint' | 'peach' | 'sky' | 'emerald' | 'amber' | 'sunset' | 'lilac' | 'sage' | 'coral' | 'ocean' | 'orchid' | 'gold' | 'latte' | 'periwinkle';
 
 export interface PeriodLog {
   date: string;
@@ -120,6 +120,7 @@ export interface User {
   manualTransferBank?: string;
   manualTransferAccount?: string;
   manualTransferName?: string;
+  notifications?: { id: string; title: string; body: string; emoji: string; timestamp: string; isRead: boolean }[];
 }
 
 export interface BillingItem {

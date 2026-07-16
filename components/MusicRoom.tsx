@@ -33,12 +33,14 @@ interface MusicRoomProps {
   user: User;
   onToggleFavorite: (songId: string) => void;
   currentSongIndex: number;
-  onSelectSong: (index: number) => void;
+  onSelectSong: (index: number, genre?: string) => void;
   isMusicPlaying: boolean;
   onTogglePlay: () => void;
   onNext: () => void;
   onPrev: () => void;
   onAddCustomSong: (song: Song) => void;
+  activeMusicGenre: string;
+  setActiveMusicGenre: (genre: string) => void;
 }
 
 interface CustomPlaylist {
@@ -50,19 +52,20 @@ interface CustomPlaylist {
 
 const CATEGORIES = [
   { id: 'all', label: 'All', emoji: '🌈' },
-  { id: 'jazz', label: 'Jazz 🎷', emoji: '🎷' },
-  { id: 'pop', label: 'Pop 🎤', emoji: '🎤' },
-  { id: 'afrobeats', label: 'Afrobeats 🌍', emoji: '🌍' },
-  { id: 'r&b', label: 'R&B 🎶', emoji: '🎶' },
-  { id: 'classical', label: 'Classical 🎻', emoji: '🎻' },
-  { id: 'gospel', label: 'Gospel ✨', emoji: '✨' },
-  { id: 'relaxation & sleep', label: 'Relaxation & Sleep 😴', emoji: '😴' },
-  { id: 'meditation', label: 'Meditation 🧘', emoji: '🧘' },
-  { id: 'pregnancy relaxation', label: 'Pregnancy Relaxation 🤰', emoji: '🤰' },
-  { id: 'postpartum wellness', label: 'Postpartum Wellness 🌸', emoji: '🌸' },
-  { id: 'lofi chill', label: 'Lofi Chill ☕', emoji: '☕' },
-  { id: 'acoustic', label: 'Acoustic 🎸', emoji: '🎸' },
-  { id: 'nature soundscapes', label: 'Nature Soundscapes 🍃', emoji: '🍃' },
+  { id: 'lo-fi', label: 'Lo-Fi Chill', emoji: '☕' },
+  { id: 'classical', label: 'Classical', emoji: '🎻' },
+  { id: 'ambient', label: 'Ambient Space', emoji: '🌌' },
+  { id: 'nature sounds', label: 'Nature Sounds', emoji: '🍃' },
+  { id: 'meditation', label: 'Meditation', emoji: '🧘' },
+  { id: 'jazz', label: 'Jazz', emoji: '🎷' },
+  { id: 'pop', label: 'Pop', emoji: '🎤' },
+  { id: 'afrobeats', label: 'Afrobeats', emoji: '🌍' },
+  { id: 'r&b', label: 'R&B', emoji: '🎶' },
+  { id: 'gospel', label: 'Gospel', emoji: '✨' },
+  { id: 'relaxation & sleep', label: 'Relaxation & Sleep', emoji: '😴' },
+  { id: 'pregnancy relaxation', label: 'Pregnancy Relaxation', emoji: '🤰' },
+  { id: 'postpartum wellness', label: 'Postpartum Wellness', emoji: '🌸' },
+  { id: 'acoustic', label: 'Acoustic', emoji: '🎸' },
 ];
 
 const MusicRoom: React.FC<MusicRoomProps> = ({ 
@@ -74,14 +77,27 @@ const MusicRoom: React.FC<MusicRoomProps> = ({
   onTogglePlay,
   onNext,
   onPrev,
-  onAddCustomSong
+  onAddCustomSong,
+  activeMusicGenre,
+  setActiveMusicGenre
 }) => {
   // Navigation Tabs
   const [activeTab, setActiveTab] = useState<'discover' | 'playlists' | 'favorites' | 'recent' | 'mood'>('discover');
   
   // Search & Filters
-  const [activeCategory, setActiveCategory] = useState('all');
+  const [activeCategory, setActiveCategory] = useState(activeMusicGenre || 'all');
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    if (activeMusicGenre) {
+      setActiveCategory(activeMusicGenre);
+    }
+  }, [activeMusicGenre]);
+
+  const handleCategoryChange = (catId: string) => {
+    setActiveCategory(catId);
+    setActiveMusicGenre(catId);
+  };
   
   // Custom Song Dialog state
   const [showAddForm, setShowAddForm] = useState(false);
@@ -140,7 +156,7 @@ const MusicRoom: React.FC<MusicRoomProps> = ({
     if (song && isSongPremiumLocked(song)) {
       setLockedSongAttempt(song);
     } else {
-      onSelectSong(songIdx);
+      onSelectSong(songIdx, activeCategory);
     }
   };
 
@@ -599,10 +615,10 @@ const MusicRoom: React.FC<MusicRoomProps> = ({
 
       {/* CREATE CUSTOM SONG TRACK EXPANDABLE PANEL */}
       {showAddForm && (
-        <fieldset className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-pink-100 animate-slideDown space-y-4">
-          <legend className="px-4 py-1 text-[9px] font-black bg-pink-500 text-white rounded-full uppercase tracking-widest">
+        <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-pink-100 animate-slideDownBlock space-y-4 w-full">
+          <div className="inline-block px-4 py-1 text-[9px] font-black bg-pink-500 text-white rounded-full uppercase tracking-widest">
             Add Custom Sovereign Track
-          </legend>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
               <span className="text-[9px] font-bold text-pink-400 uppercase tracking-wider pl-1 font-sans">Song Title</span>
@@ -667,7 +683,7 @@ const MusicRoom: React.FC<MusicRoomProps> = ({
           >
             Add To Sanctuary Soundbank 📥
           </button>
-        </fieldset>
+        </div>
       )}
 
       {/* TAB CONTENTS */}
@@ -745,7 +761,7 @@ const MusicRoom: React.FC<MusicRoomProps> = ({
                 <button
                   key={cat.id}
                   type="button"
-                  onClick={() => setActiveCategory(cat.id)}
+                  onClick={() => handleCategoryChange(cat.id)}
                   className={`flex items-center gap-2.5 px-5 py-3 rounded-2xl border transition-all whitespace-nowrap text-xs font-black uppercase tracking-wider shrink-0 cursor-pointer ${activeCategory === cat.id ? 'bg-gradient-to-r from-pink-500 to-rose-450 text-white border-pink-500 shadow-md shadow-pink-100' : 'bg-white text-pink-400 border-pink-50 hover:border-pink-200'}`}
                 >
                   <span className="text-sm">{cat.emoji}</span>

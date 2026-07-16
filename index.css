@@ -1,7 +1,87 @@
 @import "tailwindcss";
 
+:root {
+  /* Default to Rose theme colors */
+  --brand-50: #fdf2f8;
+  --brand-100: #fce7f3;
+  --brand-200: #fbcfe8;
+  --brand-300: #f9a8d4;
+  --brand-400: #f472b6;
+  --brand-500: #ec4899;
+  --brand-600: #db2777;
+  --brand-700: #be185d;
+  --brand-800: #9d174d;
+  --brand-900: #831843;
+  --brand-950: #500724;
+}
+
 @theme {
   --variant-dark: class;
+
+  /* Redefine pink shades to map to brand variable */
+  --color-pink-50: var(--brand-50);
+  --color-pink-100: var(--brand-100);
+  --color-pink-200: var(--brand-200);
+  --color-pink-300: var(--brand-300);
+  --color-pink-400: var(--brand-400);
+  --color-pink-500: var(--brand-500);
+  --color-pink-600: var(--brand-600);
+  --color-pink-700: var(--brand-700);
+  --color-pink-800: var(--brand-800);
+  --color-pink-900: var(--brand-900);
+  --color-pink-950: var(--brand-950);
+
+  /* Redefine rose shades to map to brand variable */
+  --color-rose-50: var(--brand-50);
+  --color-rose-100: var(--brand-100);
+  --color-rose-200: var(--brand-200);
+  --color-rose-300: var(--brand-300);
+  --color-rose-400: var(--brand-400);
+  --color-rose-500: var(--brand-500);
+  --color-rose-600: var(--brand-600);
+  --color-rose-700: var(--brand-700);
+  --color-rose-800: var(--brand-800);
+  --color-rose-900: var(--brand-900);
+  --color-rose-950: var(--brand-950);
+
+  /* Redefine purple shades to map to brand variable */
+  --color-purple-50: var(--brand-50);
+  --color-purple-100: var(--brand-100);
+  --color-purple-200: var(--brand-200);
+  --color-purple-300: var(--brand-300);
+  --color-purple-400: var(--brand-400);
+  --color-purple-500: var(--brand-500);
+  --color-purple-600: var(--brand-600);
+  --color-purple-700: var(--brand-700);
+  --color-purple-800: var(--brand-800);
+  --color-purple-900: var(--brand-900);
+  --color-purple-950: var(--brand-950);
+
+  /* Redefine teal shades to map to brand variable */
+  --color-teal-50: var(--brand-50);
+  --color-teal-100: var(--brand-100);
+  --color-teal-200: var(--brand-200);
+  --color-teal-300: var(--brand-300);
+  --color-teal-400: var(--brand-400);
+  --color-teal-500: var(--brand-500);
+  --color-teal-600: var(--brand-600);
+  --color-teal-700: var(--brand-700);
+  --color-teal-800: var(--brand-800);
+  --color-teal-900: var(--brand-900);
+  --color-teal-950: var(--brand-950);
+
+  /* Redefine indigo shades to map to brand variable */
+  --color-indigo-50: var(--brand-50);
+  --color-indigo-100: var(--brand-100);
+  --color-indigo-200: var(--brand-200);
+  --color-indigo-300: var(--brand-300);
+  --color-indigo-400: var(--brand-400);
+  --color-indigo-500: var(--brand-500);
+  --color-indigo-600: var(--brand-600);
+  --color-indigo-700: var(--brand-700);
+  --color-indigo-800: var(--brand-800);
+  --color-indigo-900: var(--brand-900);
+  --color-indigo-950: var(--brand-950);
 }
 
 @keyframes slideDownWithCentering {
@@ -24,6 +104,21 @@
     transform: translateY(0);
     opacity: 1;
   }
+}
+
+@keyframes slideDownBlock {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slideDownBlock {
+  animation: slideDownBlock 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .notification-drawer {
@@ -285,6 +380,21 @@ img, video, canvas, svg, iframe, table {
 
 .animate-slideLeft {
   animation: slideLeft 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes shake {
+  0%, 100% { transform: rotate(0deg); }
+  15% { transform: rotate(15deg); }
+  30% { transform: rotate(-15deg); }
+  45% { transform: rotate(10deg); }
+  60% { transform: rotate(-10deg); }
+  75% { transform: rotate(4deg); }
+  85% { transform: rotate(-4deg); }
+}
+
+.animate-shake {
+  animation: shake 0.8s ease-in-out infinite;
+  transform-origin: top center;
 }
 
 
