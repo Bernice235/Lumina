@@ -388,12 +388,20 @@ const App: React.FC = () => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail;
       if (detail) {
+        const isNotifForPartner = !!detail.isPartner;
+        const currentUserIsPartner = userRef.current ? userRef.current.isPartner : false;
+        
+        // Isolate notifications: partner notifications only in partner mode, user notifications only in user mode
+        if (currentUserIsPartner !== isNotifForPartner) {
+          return; // Ignore this notification as it's not meant for the current mode
+        }
+
         setSimulatedNotify({
           id: Math.random().toString(),
           title: detail.title,
           body: detail.body,
           emoji: detail.emoji || '🔔',
-          isPartner: !!detail.isPartner,
+          isPartner: isNotifForPartner,
           action: detail.action
         });
         playChime();

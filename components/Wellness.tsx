@@ -3,6 +3,7 @@ import { Symptom, User } from '../types';
 import { SUPPLEMENTS } from '../constants';
 import { getSupplementAdvice } from '../services/gemini';
 import { HealthService } from '../services/healthService';
+import YogaTutorials from './YogaTutorials';
 import { 
   Activity, 
   Heart, 
@@ -30,7 +31,7 @@ interface WellnessProps {
 }
 
 const Wellness: React.FC<WellnessProps> = ({ symptoms, user, setUser, waterIntake, setWaterIntake }) => {
-  const [activeTab, setActiveTab] = useState<'trackers' | 'rituals' | 'bridge'>('trackers');
+  const [activeTab, setActiveTab] = useState<'trackers' | 'rituals' | 'yoga' | 'bridge'>('trackers');
   const [ritualSubTab, setRitualSubTab] = useState<'supplements' | 'endo'>('supplements');
   
   // Daily wellness tracker state (persisted locally per user session)
@@ -164,10 +165,10 @@ const Wellness: React.FC<WellnessProps> = ({ symptoms, user, setUser, waterIntak
       </header>
 
       {/* Glassmorphic Top Tab Navigation */}
-      <div className="flex bg-pink-100/30 p-1.5 rounded-[2rem] border border-white/60 shadow-[inset_0_2px_4px_rgba(255,255,255,0.5),_0_4px_15px_rgba(244,114,182,0.03)] backdrop-blur-md">
+      <div className="flex flex-wrap md:flex-nowrap bg-pink-100/30 p-1.5 rounded-[2rem] border border-white/60 shadow-[inset_0_2px_4px_rgba(255,255,255,0.5),_0_4px_15px_rgba(244,114,182,0.03)] backdrop-blur-md gap-1 md:gap-0">
         <button 
           onClick={() => setActiveTab('trackers')}
-          className={`flex-1 py-3 rounded-[1.8rem] text-[10px] font-black uppercase tracking-widest transition-all duration-300 cursor-pointer ${
+          className={`flex-1 py-3 rounded-[1.8rem] text-[10px] font-black uppercase tracking-widest transition-all duration-300 cursor-pointer min-w-[120px] ${
             activeTab === 'trackers' 
               ? 'bg-gradient-to-br from-pink-400 to-rose-400 text-white shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),_inset_0_-2px_4px_rgba(0,0,0,0.15),_0_6px_15px_rgba(244,114,182,0.25)] scale-[1.01]' 
               : 'text-pink-400 hover:text-pink-600'
@@ -177,7 +178,7 @@ const Wellness: React.FC<WellnessProps> = ({ symptoms, user, setUser, waterIntak
         </button>
         <button 
           onClick={() => setActiveTab('rituals')}
-          className={`flex-1 py-3 rounded-[1.8rem] text-[10px] font-black uppercase tracking-widest transition-all duration-300 cursor-pointer ${
+          className={`flex-1 py-3 rounded-[1.8rem] text-[10px] font-black uppercase tracking-widest transition-all duration-300 cursor-pointer min-w-[120px] ${
             activeTab === 'rituals' 
               ? 'bg-gradient-to-br from-pink-400 to-rose-400 text-white shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),_inset_0_-2px_4px_rgba(0,0,0,0.15),_0_6px_15px_rgba(244,114,182,0.25)] scale-[1.01]' 
               : 'text-pink-400 hover:text-pink-600'
@@ -186,8 +187,18 @@ const Wellness: React.FC<WellnessProps> = ({ symptoms, user, setUser, waterIntak
           Divine Rituals
         </button>
         <button 
+          onClick={() => setActiveTab('yoga')}
+          className={`flex-1 py-3 rounded-[1.8rem] text-[10px] font-black uppercase tracking-widest transition-all duration-300 cursor-pointer min-w-[120px] ${
+            activeTab === 'yoga' 
+              ? 'bg-gradient-to-br from-pink-400 to-rose-400 text-white shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),_inset_0_-2px_4px_rgba(0,0,0,0.15),_0_6px_15px_rgba(244,114,182,0.25)] scale-[1.01]' 
+              : 'text-pink-400 hover:text-pink-600'
+          }`}
+        >
+          Yoga Guide
+        </button>
+        <button 
           onClick={() => setActiveTab('bridge')}
-          className={`flex-1 py-3 rounded-[1.8rem] text-[10px] font-black uppercase tracking-widest transition-all duration-300 cursor-pointer ${
+          className={`flex-1 py-3 rounded-[1.8rem] text-[10px] font-black uppercase tracking-widest transition-all duration-300 cursor-pointer min-w-[120px] ${
             activeTab === 'bridge' 
               ? 'bg-gradient-to-br from-pink-400 to-rose-400 text-white shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),_inset_0_-2px_4px_rgba(0,0,0,0.15),_0_6px_15px_rgba(244,114,182,0.25)] scale-[1.01]' 
               : 'text-pink-400 hover:text-pink-600'
@@ -678,6 +689,15 @@ const Wellness: React.FC<WellnessProps> = ({ symptoms, user, setUser, waterIntak
             )}
           </section>
         </div>
+      )}
+
+      {/* TAB 4: AI YOGA GUIDE */}
+      {activeTab === 'yoga' && (
+        <YogaTutorials 
+          user={user} 
+          setUser={setUser}
+          todaysSymptoms={todaysSymptoms} 
+        />
       )}
     </div>
   );

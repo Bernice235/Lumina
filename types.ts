@@ -120,7 +120,9 @@ export interface User {
   manualTransferBank?: string;
   manualTransferAccount?: string;
   manualTransferName?: string;
+  manualTransferName_?: string; // keeping compatible
   notifications?: { id: string; title: string; body: string; emoji: string; timestamp: string; isRead: boolean }[];
+  yogaLogs?: { id: string; date: string; poseName: string; duration: number; benefit: string }[];
 }
 
 export interface BillingItem {

@@ -1,6 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Bell, X } from 'lucide-react';
 import { User, Reminder, ReceivedComfort } from '../types';
 import { getGiftIdeas, getCommunicationTips, getLoveNoteIdeas, getSupportMission } from '../services/gemini';
 import { 
@@ -29,6 +30,10 @@ interface PartnerModeProps {
 }
 
 const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders, setUser, partnerUser }) => {
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const unreadPartnerNotifications = user.notifications?.filter(n => !n.isRead) || [];
+  const hasUnreadPartnerAlerts = unreadPartnerNotifications.length > 0;
+
   const [giftIdeas, setGiftIdeas] = useState<string[]>([]);
   const [supportMission, setSupportMission] = useState<string[]>([]);
   const [commTips, setCommTips] = useState<string>('');
@@ -1776,6 +1781,38 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
   if (targetUser?.isSharingPaused) {
     return (
       <div className="space-y-8 animate-fadeIn pb-24 font-sans">
+        {/* Top Header Section for Partner Mode */}
+        <header className="flex items-center justify-between px-4 py-3 bg-white/40 backdrop-blur-2xl border border-white/60 shadow-[inset_0_2px_4px_rgba(255,255,255,0.6),_0_8px_32px_rgba(99,102,241,0.03)] rounded-3xl sticky top-2 z-40">
+          <div className="flex items-center gap-1.5 cursor-pointer">
+            <span className="text-xl animate-pulse">🤝</span>
+            <span className="font-serif italic font-black text-2xl bg-gradient-to-r from-indigo-500 to-purple-400 bg-clip-text text-transparent drop-shadow-sm">
+              Lumina Partner
+            </span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button 
+              type="button"
+              onClick={() => setUser({ ...user, isPartner: false })}
+              className="px-4 py-2 text-[10px] font-bold text-indigo-600 bg-indigo-50/50 hover:bg-indigo-100/50 rounded-2xl border border-indigo-100/50 transition-all active:scale-95 cursor-pointer"
+            >
+              ← Back to My Account
+            </button>
+            
+            <button 
+              type="button"
+              onClick={() => setIsNotificationsOpen(true)}
+              className="p-2.5 rounded-2xl bg-white/60 hover:bg-white/90 text-indigo-600 transition-all duration-300 shadow-[inset_0_1.5px_2.5px_rgba(255,255,255,0.7),_0_4px_12px_rgba(99,102,241,0.05)] border border-indigo-50/50 cursor-pointer flex items-center justify-center relative active:scale-90"
+            >
+              <Bell className={`w-5 h-5 ${hasUnreadPartnerAlerts ? 'animate-shake' : ''}`} />
+              {/* Active Notifications dot if any partner notifications are unread */}
+              {hasUnreadPartnerAlerts && (
+                <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-gradient-to-r from-indigo-500 to-purple-550 rounded-full border-2 border-white animate-pulse" />
+              )}
+            </button>
+          </div>
+        </header>
+
         <header className="relative bg-gradient-to-br from-indigo-700 to-purple-800 p-12 rounded-[3.5rem] shadow-2xl text-white text-center overflow-hidden">
           <div className="relative z-10 space-y-4">
             <span className="text-5xl block animate-bounce">⏸️</span>
@@ -1809,12 +1846,132 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
             ← Back to My Account
           </button>
         </section>
+
+        {/* Slide-out notifications pane (Right drawer) */}
+        {isNotificationsOpen && (
+          <>
+            <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-[150] transition-opacity" onClick={() => setIsNotificationsOpen(false)} />
+            <div className="fixed inset-y-0 right-0 max-w-xs w-full bg-[#fffafb]/95 backdrop-blur-3xl shadow-2xl z-[160] p-6 flex flex-col border-l border-indigo-100/40 animate-slideLeft text-left">
+              {/* Title Header with Close */}
+              <div className="flex items-center justify-between border-b border-indigo-100/30 pb-4 mb-6">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xl">🔔</span>
+                  <span className="font-serif italic font-black text-xl text-indigo-650">Notifications</span>
+                </div>
+                <button 
+                  type="button"
+                  onClick={() => setIsNotificationsOpen(false)}
+                  className="p-1.5 rounded-xl bg-indigo-50 text-indigo-500 hover:bg-indigo-100 transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Notifications Content */}
+              <div className="flex-1 overflow-y-auto space-y-4 scrollbar-hide">
+                {/* Partner Persistent System Notifications */}
+                {user.notifications && user.notifications.length > 0 ? (
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center px-1">
+                      <p className="text-[9px] font-black uppercase tracking-wider text-indigo-400">System Notifications</p>
+                      <button 
+                        type="button"
+                        onClick={async () => {
+                          const updatedUser = {
+                            ...user,
+                            notifications: (user.notifications || []).map(n => ({ ...n, isRead: true }))
+                          };
+                          setUser(updatedUser);
+                          await syncUser(updatedUser);
+                        }}
+                        className="text-[8px] font-black text-indigo-500 hover:underline uppercase tracking-wider cursor-pointer"
+                      >
+                        Clear All Unread
+                      </button>
+                    </div>
+                    <div className="space-y-1.5 max-h-[400px] overflow-y-auto pr-1 scrollbar-thin">
+                      {user.notifications.map(notif => (
+                        <div 
+                          key={notif.id} 
+                          onClick={async () => {
+                            if (!notif.isRead) {
+                              const updatedUser = {
+                                ...user,
+                                notifications: (user.notifications || []).map(n => n.id === notif.id ? { ...n, isRead: true } : n)
+                              };
+                              setUser(updatedUser);
+                              await syncUser(updatedUser);
+                            }
+                          }}
+                          className={`p-3 rounded-2xl border transition-all flex flex-col gap-1 cursor-pointer ${
+                            notif.isRead 
+                              ? 'bg-white/40 border-indigo-100/10 opacity-70 hover:opacity-100' 
+                              : 'bg-gradient-to-br from-indigo-50 to-purple-50 border-indigo-100/40 shadow-sm hover:scale-[1.01]'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-1">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="text-sm shrink-0">{notif.emoji || '🔔'}</span>
+                              <p className="text-[10px] font-black uppercase tracking-wider text-indigo-95 truncate">{notif.title}</p>
+                            </div>
+                            {!notif.isRead && (
+                              <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full shrink-0" />
+                            )}
+                          </div>
+                          <p className="text-[10px] text-gray-500 leading-normal font-medium break-words">{notif.body}</p>
+                          <p className="text-[7.5px] text-gray-400 font-bold self-end tracking-wider">
+                            {new Date(notif.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-stone-400 font-serif italic text-xs">
+                    No notifications yet.
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        )}
       </div>
     );
   }
 
   return (
     <div className="space-y-8 animate-fadeIn pb-24">
+      {/* Top Header Section for Partner Mode */}
+      <header className="flex items-center justify-between px-4 py-3 bg-white/40 backdrop-blur-2xl border border-white/60 shadow-[inset_0_2px_4px_rgba(255,255,255,0.6),_0_8px_32px_rgba(99,102,241,0.03)] rounded-3xl sticky top-2 z-40">
+        <div className="flex items-center gap-1.5 cursor-pointer">
+          <span className="text-xl animate-pulse">🤝</span>
+          <span className="font-serif italic font-black text-2xl bg-gradient-to-r from-indigo-500 to-purple-400 bg-clip-text text-transparent drop-shadow-sm">
+            Lumina Partner
+          </span>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button 
+            type="button"
+            onClick={() => setUser({ ...user, isPartner: false })}
+            className="px-4 py-2 text-[10px] font-bold text-indigo-600 bg-indigo-50/50 hover:bg-indigo-100/50 rounded-2xl border border-indigo-100/50 transition-all active:scale-95 cursor-pointer"
+          >
+            ← Back to My Account
+          </button>
+          
+          <button 
+            type="button"
+            onClick={() => setIsNotificationsOpen(true)}
+            className="p-2.5 rounded-2xl bg-white/60 hover:bg-white/90 text-indigo-600 transition-all duration-300 shadow-[inset_0_1.5px_2.5px_rgba(255,255,255,0.7),_0_4px_12px_rgba(99,102,241,0.05)] border border-indigo-50/50 cursor-pointer flex items-center justify-center relative active:scale-90"
+          >
+            <Bell className={`w-5 h-5 ${hasUnreadPartnerAlerts ? 'animate-shake' : ''}`} />
+            {/* Active Notifications dot if any partner notifications are unread */}
+            {hasUnreadPartnerAlerts && (
+              <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-gradient-to-r from-indigo-500 to-purple-550 rounded-full border-2 border-white animate-pulse" />
+            )}
+          </button>
+        </div>
+      </header>
       {/* Header with Linked User Profile */}
       <header className="relative bg-gradient-to-br from-indigo-600 to-indigo-800 p-10 rounded-[3rem] shadow-2xl shadow-indigo-200 text-white border border-indigo-400 overflow-hidden">
         <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
@@ -2136,6 +2293,95 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
             <ComfortButton icon="✨" label="Sparkle" onClick={() => sendDigitalComfort('sparkle')} />
          </div>
       </section>
+
+      {/* Slide-out notifications pane (Right drawer) */}
+      {isNotificationsOpen && (
+        <>
+          <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-[150] transition-opacity" onClick={() => setIsNotificationsOpen(false)} />
+          <div className="fixed inset-y-0 right-0 max-w-xs w-full bg-[#fffafb]/95 backdrop-blur-3xl shadow-2xl z-[160] p-6 flex flex-col border-l border-indigo-100/40 animate-slideLeft text-left">
+            {/* Title Header with Close */}
+            <div className="flex items-center justify-between border-b border-indigo-100/30 pb-4 mb-6">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xl">🔔</span>
+                <span className="font-serif italic font-black text-xl text-indigo-650">Notifications</span>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setIsNotificationsOpen(false)}
+                className="p-1.5 rounded-xl bg-indigo-50 text-indigo-500 hover:bg-indigo-100 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Notifications Content */}
+            <div className="flex-1 overflow-y-auto space-y-4 scrollbar-hide">
+              {/* Partner Persistent System Notifications */}
+              {user.notifications && user.notifications.length > 0 ? (
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center px-1">
+                    <p className="text-[9px] font-black uppercase tracking-wider text-indigo-400">System Notifications</p>
+                    <button 
+                      type="button"
+                      onClick={async () => {
+                        const updatedUser = {
+                          ...user,
+                          notifications: (user.notifications || []).map(n => ({ ...n, isRead: true }))
+                        };
+                        setUser(updatedUser);
+                        await syncUser(updatedUser);
+                      }}
+                      className="text-[8px] font-black text-indigo-500 hover:underline uppercase tracking-wider cursor-pointer"
+                    >
+                      Clear All Unread
+                    </button>
+                  </div>
+                  <div className="space-y-1.5 max-h-[400px] overflow-y-auto pr-1 scrollbar-thin">
+                    {user.notifications.map(notif => (
+                      <div 
+                        key={notif.id} 
+                        onClick={async () => {
+                          if (!notif.isRead) {
+                            const updatedUser = {
+                              ...user,
+                              notifications: (user.notifications || []).map(n => n.id === notif.id ? { ...n, isRead: true } : n)
+                            };
+                            setUser(updatedUser);
+                            await syncUser(updatedUser);
+                          }
+                        }}
+                        className={`p-3 rounded-2xl border transition-all flex flex-col gap-1 cursor-pointer ${
+                          notif.isRead 
+                            ? 'bg-white/40 border-indigo-100/10 opacity-70 hover:opacity-100' 
+                            : 'bg-gradient-to-br from-indigo-50 to-purple-50 border-indigo-100/40 shadow-sm hover:scale-[1.01]'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-1">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="text-sm shrink-0">{notif.emoji || '🔔'}</span>
+                            <p className="text-[10px] font-black uppercase tracking-wider text-indigo-95 truncate">{notif.title}</p>
+                          </div>
+                          {!notif.isRead && (
+                            <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full shrink-0" />
+                          )}
+                        </div>
+                        <p className="text-[10px] text-gray-500 leading-normal font-medium break-words">{notif.body}</p>
+                        <p className="text-[7.5px] text-gray-400 font-bold self-end tracking-wider">
+                          {new Date(notif.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-stone-400 font-serif italic text-xs">
+                  No notifications yet.
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };

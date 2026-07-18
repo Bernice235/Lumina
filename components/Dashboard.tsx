@@ -93,10 +93,20 @@ const Dashboard: React.FC<DashboardProps> = ({
   // Pregnancy and Postpartum Custom states
   const [exerciseTrimester, setExerciseTrimester] = useState<1 | 2 | 3>(1);
   const [selectedWeekTab, setSelectedWeekTab] = useState<number>(12);
-  const [simulatedVideo, setSimulatedVideo] = useState<{ name: string; duration: string } | null>(null);
+  const [simulatedVideo, setSimulatedVideo] = useState<{ name: string; duration: string; mp4Url: string; youtubeUrl: string } | null>(null);
   const [videoLoading, setVideoLoading] = useState(false);
   const [videoTimer, setVideoTimer] = useState(10);
   const [isDeliveredModalOpen, setIsDeliveredModalOpen] = useState(false);
+
+  // AI Video Coach States
+  const [coachMode, setCoachMode] = useState<'ai' | 'classic'>('ai');
+  const [simulatedHeartRate, setSimulatedHeartRate] = useState(72);
+  const [simulatedAlignment, setSimulatedAlignment] = useState(95);
+  const [coachInstructionIndex, setCoachInstructionIndex] = useState(0);
+  const [videoTick, setVideoTick] = useState(0);
+  const [dashBreathTime, setDashBreathTime] = useState(0);
+  const [dashBreathState, setDashBreathState] = useState<'Inhale' | 'Hold' | 'Exhale'>('Inhale');
+  const [dashBreathScale, setDashBreathScale] = useState(1.0);
   const [deliveryDateInput, setDeliveryDateInput] = useState(new Date().toISOString().split('T')[0]);
 
   // Postpartum healing checkin states
@@ -324,11 +334,336 @@ const Dashboard: React.FC<DashboardProps> = ({
       ? `Next period in ${daysUntilNext} days` 
       : "Log a period to see status";
 
+  const getYouTubeId = (url: string): string => {
+    const match = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
+    return match ? match[1] : '';
+  };
+
   // Video Demo Simulation
+  const getVideoDetails = (name: string): { mp4Url: string; youtubeUrl: string } => {
+    switch (name) {
+      // Trimester 1
+      case "Light Pelvic Stretch":
+        return {
+          mp4Url: "https://assets.mixkit.co/videos/preview/mixkit-woman-doing-yoga-stretches-on-a-mat-40292-large.mp4",
+          youtubeUrl: "https://www.youtube.com/watch?v=0719gXz2E3U"
+        };
+      case "Focus Breathing":
+        return {
+          mp4Url: "https://assets.mixkit.co/videos/preview/mixkit-meditating-woman-in-a-beautiful-park-42289-large.mp4",
+          youtubeUrl: "https://www.youtube.com/watch?v=gAkbHe-j2h8"
+        };
+      case "Beginner Pregnancy Yoga":
+        return {
+          mp4Url: "https://assets.mixkit.co/videos/preview/mixkit-young-woman-doing-yoga-on-a-sunny-day-41662-large.mp4",
+          youtubeUrl: "https://www.youtube.com/watch?v=H7t6fUqWnQ8"
+        };
+
+      // Trimester 2
+      case "Mama Glow Yoga Flow":
+        return {
+          mp4Url: "https://assets.mixkit.co/videos/preview/mixkit-young-woman-doing-yoga-on-a-sunny-day-41662-large.mp4",
+          youtubeUrl: "https://www.youtube.com/watch?v=gT8wNlC2n7Q"
+        };
+      case "Pelvic Girdle Kegels":
+        return {
+          mp4Url: "https://assets.mixkit.co/videos/preview/mixkit-woman-doing-yoga-stretches-on-a-mat-40292-large.mp4",
+          youtubeUrl: "https://www.youtube.com/watch?v=A_coXl7f-2Y"
+        };
+      case "Safe Moderate Walking":
+        return {
+          mp4Url: "https://assets.mixkit.co/videos/preview/mixkit-woman-meditating-in-nature-32545-large.mp4",
+          youtubeUrl: "https://www.youtube.com/watch?v=tI8bN_f9WkE"
+        };
+
+      // Trimester 3
+      case "Nesting Gentle Yoga":
+        return {
+          mp4Url: "https://assets.mixkit.co/videos/preview/mixkit-young-woman-doing-yoga-on-a-sunny-day-41662-large.mp4",
+          youtubeUrl: "https://www.youtube.com/watch?v=g2rE90kO8C4"
+        };
+      case "Hip-Opening preparation":
+        return {
+          mp4Url: "https://assets.mixkit.co/videos/preview/mixkit-woman-doing-yoga-stretches-on-a-mat-40292-large.mp4",
+          youtubeUrl: "https://www.youtube.com/watch?v=3n-vY5Isc6U"
+        };
+      case "Interactive Breathing for Labor":
+        return {
+          mp4Url: "https://assets.mixkit.co/videos/preview/mixkit-meditating-woman-in-a-beautiful-park-42289-large.mp4",
+          youtubeUrl: "https://www.youtube.com/watch?v=vV95L4N3P1U"
+        };
+
+      // Postpartum
+      case "Deep Diaphragmatic Breath":
+        return {
+          mp4Url: "https://assets.mixkit.co/videos/preview/mixkit-meditating-woman-in-a-beautiful-park-42289-large.mp4",
+          youtubeUrl: "https://www.youtube.com/watch?v=gAkbHe-j2h8"
+        };
+      case "Early Pelvic Floor Rehab (Kegels)":
+        return {
+          mp4Url: "https://assets.mixkit.co/videos/preview/mixkit-woman-doing-yoga-stretches-on-a-mat-40292-large.mp4",
+          youtubeUrl: "https://www.youtube.com/watch?v=s0K6s0fCj8E"
+        };
+      case "Shoulder Chest Openers":
+        return {
+          mp4Url: "https://assets.mixkit.co/videos/preview/mixkit-woman-doing-yoga-stretches-on-a-mat-40292-large.mp4",
+          youtubeUrl: "https://www.youtube.com/watch?v=pAnV94lS_1A"
+        };
+      case "Supportive Child's Pose":
+        return {
+          mp4Url: "https://assets.mixkit.co/videos/preview/mixkit-young-woman-doing-yoga-on-a-sunny-day-41662-large.mp4",
+          youtubeUrl: "https://www.youtube.com/watch?v=r_v2bLg_eQ8"
+        };
+
+      default:
+        return {
+          mp4Url: "https://assets.mixkit.co/videos/preview/mixkit-young-woman-doing-yoga-on-a-sunny-day-41662-large.mp4",
+          youtubeUrl: "https://www.youtube.com/watch?v=0719gXz2E3U"
+        };
+    }
+  };
+
+  const renderPregnancyPostpartumExerciseSVG = (exerciseName: string) => {
+    const isStretch = exerciseName.includes("Stretch") || exerciseName.includes("Openers");
+    const isBreathing = exerciseName.includes("Breathing") || exerciseName.includes("Breath") || exerciseName.includes("Focus");
+    const isYoga = exerciseName.includes("Yoga") || exerciseName.includes("Flow");
+    const isKegels = exerciseName.includes("Kegels") || exerciseName.includes("Rehab");
+    const isWalking = exerciseName.includes("Walking");
+    const isChilds = exerciseName.includes("Child's") || exerciseName.includes("Nesting");
+    const isHipPrep = exerciseName.includes("Hip-Opening") || exerciseName.includes("Circles");
+
+    const osc = Math.sin(videoTick * 0.05);
+    const oscFast = Math.sin(videoTick * 0.1);
+    const scale = dashBreathScale || 1.0;
+
+    // Standard styling & glow gradients
+    const gradients = (
+      <defs>
+        <linearGradient id="dbBodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#f472b6" />
+          <stop offset="100%" stopColor="#818cf8" />
+        </linearGradient>
+        <linearGradient id="dbGlowGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="rgba(244,114,182,0.3)" />
+          <stop offset="100%" stopColor="rgba(129,140,248,0.02)" />
+        </linearGradient>
+        <linearGradient id="ballGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#818cf8" />
+          <stop offset="100%" stopColor="#4f46e5" />
+        </linearGradient>
+        <filter id="dbGlow">
+          <feGaussianBlur stdDeviation="3" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+    );
+
+    const floor = (
+      <line x1="20" y1="170" x2="300" y2="170" stroke="#f472b6" strokeWidth="2" strokeDasharray="4 4" className="opacity-35" />
+    );
+
+    if (isChilds) {
+      // Kneeling position resting on a support cushion
+      const hipsX = 210 + (scale - 1.0) * 8;
+      const hipsY = 145 + (scale - 1.0) * 4;
+      const headX = 85;
+      const headY = 152;
+      return (
+        <svg viewBox="0 0 320 220" className="w-full h-full">
+          {gradients}
+          {floor}
+          {/* Support Cushion */}
+          <ellipse cx="120" cy="165" rx="35" ry="12" fill="#818cf8" className="opacity-70" />
+          {/* Kneeling Body */}
+          <path d={`M ${hipsX} ${hipsY} Q 150 115 ${headX + 10} ${headY - 10}`} fill="none" stroke="url(#dbBodyGrad)" strokeWidth="6" strokeLinecap="round" filter="url(#dbGlow)" />
+          <circle cx={headX} cy={headY} r="9" fill="#f472b6" filter="url(#dbGlow)" />
+          <path d={`M ${headX + 8} ${headY - 8} Q 95 150 45 165`} fill="none" stroke="url(#dbBodyGrad)" strokeWidth="4" strokeLinecap="round" />
+          <path d={`M ${hipsX} ${hipsY} L 180 166 L 235 166`} fill="none" stroke="url(#dbBodyGrad)" strokeWidth="5" strokeLinecap="round" />
+          <circle cx={hipsX} cy={hipsY} r="4" fill="#60a5fa" />
+          {/* Heart pulse center */}
+          <circle cx="150" cy="130" r={4 + (scale - 1.0) * 12} fill="#ec4899" className="opacity-50" />
+        </svg>
+      );
+    }
+
+    if (isBreathing) {
+      // Seated cross-legged posture with glowing aura
+      return (
+        <svg viewBox="0 0 320 220" className="w-full h-full">
+          {gradients}
+          {floor}
+          {/* Glow backdrop */}
+          <circle cx="160" cy="110" r={30 + (scale - 1.0) * 60} fill="url(#dbGlowGrad)" className="transition-all duration-300" />
+          {/* Torso & Head */}
+          <line x1="160" y1="160" x2="160" y2="90" stroke="url(#dbBodyGrad)" strokeWidth="6" strokeLinecap="round" filter="url(#dbGlow)" />
+          <circle cx="160" cy="72" r="11" fill="#f472b6" filter="url(#dbGlow)" />
+          {/* Seated crossed legs */}
+          <path d="M 115 160 Q 160 178 205 160" fill="none" stroke="url(#dbBodyGrad)" strokeWidth="6" strokeLinecap="round" />
+          {/* Hands on knees */}
+          <path d="M 160 110 Q 130 130 120 155" fill="none" stroke="url(#dbBodyGrad)" strokeWidth="4" strokeLinecap="round" />
+          <path d="M 160 110 Q 190 130 200 155" fill="none" stroke="url(#dbBodyGrad)" strokeWidth="4" strokeLinecap="round" />
+          {/* Expanding lung center */}
+          <circle cx="160" cy="120" r={10 + (scale - 1.0) * 35} fill="#ec4899" className="opacity-60" />
+          <circle cx="160" cy="120" r="4" fill="#fff" />
+        </svg>
+      );
+    }
+
+    if (isKegels) {
+      // Side lying/semi-reclined with active energy in pelvic zone
+      const hipX = 180;
+      const hipY = 150;
+      const kneeX = 135;
+      const kneeY = 100 - (scale - 1.0) * 10; // moving knee gently
+      return (
+        <svg viewBox="0 0 320 220" className="w-full h-full">
+          {gradients}
+          {floor}
+          {/* Soft support wedge */}
+          <path d="M 220 168 L 260 100 L 260 168 Z" fill="#818cf8" className="opacity-40" />
+          {/* Body line */}
+          <path d={`M 240 110 Q 190 145 ${hipX} ${hipY}`} fill="none" stroke="url(#dbBodyGrad)" strokeWidth="6" strokeLinecap="round" filter="url(#dbGlow)" />
+          <circle cx="250" cy="95" r="9" fill="#f472b6" filter="url(#dbGlow)" />
+          {/* Legs bent up */}
+          <path d={`M ${hipX} ${hipY} L ${kneeX} ${kneeY} L 90 160`} fill="none" stroke="url(#dbBodyGrad)" strokeWidth="5" strokeLinecap="round" />
+          {/* Pelvic contraction radiating lines */}
+          <circle cx={hipX - 10} cy={hipY - 10} r={12 + (scale - 1.0) * 30} fill="none" stroke="#ec4899" strokeWidth="2" strokeDasharray="4 4" className="opacity-80" />
+          <circle cx={hipX - 10} cy={hipY - 10} r={4} fill="#60a5fa" />
+        </svg>
+      );
+    }
+
+    if (isYoga) {
+      // Elegant standing or kneeling yoga pose (Cat-Cow / Glow flow)
+      const isCatCow = exerciseName.includes("Cat-Cow") || exerciseName.includes("Pregnancy Yoga") || exerciseName.includes("Stretch");
+      if (isCatCow) {
+        // Cat-cow spine curves up & down based on osc
+        const curveY = 115 + osc * 15;
+        return (
+          <svg viewBox="0 0 320 220" className="w-full h-full">
+            {gradients}
+            {floor}
+            {/* Ground support */}
+            <path d={`M 220 168 L 150 ${curveY} Q 110 110 75 168`} fill="none" stroke="url(#dbBodyGrad)" strokeWidth="6" strokeLinecap="round" filter="url(#dbGlow)" />
+            <circle cx="65" cy="115" r="9" fill="#f472b6" filter="url(#dbGlow)" />
+            {/* Arms & Thighs */}
+            <line x1="80" y1="130" x2="80" y2="168" stroke="url(#dbBodyGrad)" strokeWidth="5" />
+            <line x1="205" y1="140" x2="205" y2="168" stroke="url(#dbBodyGrad)" strokeWidth="5" />
+            {/* Core energy baby glow */}
+            <circle cx="145" cy={curveY + 12} r={18} fill="url(#dbGlowGrad)" className="opacity-80" />
+            <circle cx="145" cy={curveY + 12} r="6" fill="#fb923c" className="animate-ping" />
+          </svg>
+        );
+      } else {
+        // Standing flow warrior/reach
+        const armY = 70 + osc * 20;
+        return (
+          <svg viewBox="0 0 320 220" className="w-full h-full">
+            {gradients}
+            {floor}
+            {/* Legs wide */}
+            <path d="M 110 168 L 150 115 L 190 168" fill="none" stroke="url(#dbBodyGrad)" strokeWidth="5" strokeLinecap="round" />
+            {/* Spine */}
+            <line x1="150" y1="115" x2="150" y2="65" stroke="url(#dbBodyGrad)" strokeWidth="6" strokeLinecap="round" filter="url(#dbGlow)" />
+            <circle cx="150" cy="50" r="10" fill="#f472b6" filter="url(#dbGlow)" />
+            {/* Reaching arms */}
+            <path d={`M 110 ${armY} Q 150 75 190 ${armY}`} fill="none" stroke="url(#dbBodyGrad)" strokeWidth="4" strokeLinecap="round" />
+            {/* Belly center (pregnant bump) */}
+            <path d="M 150 100 Q 132 115 150 130" fill="none" stroke="#fb923c" strokeWidth="5" strokeLinecap="round" />
+            <circle cx="150" cy="115" r={8} fill="#f472b6" className="opacity-30" />
+          </svg>
+        );
+      }
+    }
+
+    if (isWalking) {
+      // Walking motion simulation
+      const step = osc * 15;
+      return (
+        <svg viewBox="0 0 320 220" className="w-full h-full">
+          {gradients}
+          {floor}
+          {/* Walking legs */}
+          <line x1="160" y1="115" x2={160 + step} y2="168" stroke="url(#dbBodyGrad)" strokeWidth="5" strokeLinecap="round" />
+          <line x1="160" y1="115" x2={160 - step} y2="168" stroke="url(#dbBodyGrad)" strokeWidth="5" strokeLinecap="round" />
+          {/* Spine & Head */}
+          <line x1="160" y1="115" x2="160" y2="60" stroke="url(#dbBodyGrad)" strokeWidth="6" strokeLinecap="round" filter="url(#dbGlow)" />
+          <circle cx="160" cy="46" r="9" fill="#f472b6" filter="url(#dbGlow)" />
+          {/* Swing Arms */}
+          <line x1="160" y1="75" x2={160 - step} y2="110" stroke="url(#dbBodyGrad)" strokeWidth="4" strokeLinecap="round" />
+          <line x1="160" y1="75" x2={160 + step} y2="110" stroke="url(#dbBodyGrad)" strokeWidth="4" strokeLinecap="round" />
+          {/* Cute energy circle around feet */}
+          <ellipse cx="160" cy="168" rx="25" ry="5" fill="none" stroke="#60a5fa" strokeWidth="1.5" className="opacity-50" />
+        </svg>
+      );
+    }
+
+    if (isHipPrep) {
+      // Seated on birth ball or butterflies rocking
+      const isBall = exerciseName.includes("Ball") || exerciseName.includes("Circles");
+      if (isBall) {
+        // Rotational offset
+        const rotX = Math.cos(videoTick * 0.1) * 8;
+        const rotY = Math.sin(videoTick * 0.1) * 4;
+        return (
+          <svg viewBox="0 0 320 220" className="w-full h-full">
+            {gradients}
+            {floor}
+            {/* Birth ball */}
+            <circle cx="160" cy="148" r="32" fill="url(#ballGrad)" className="opacity-80" />
+            {/* Seated Figure on ball */}
+            <line x1={160 + rotX} y1={116 + rotY} x2={160 + rotX} y2="60" stroke="url(#dbBodyGrad)" strokeWidth="6" strokeLinecap="round" filter="url(#dbGlow)" />
+            <circle cx={160 + rotX} cy="46" r="9" fill="#f472b6" filter="url(#dbGlow)" />
+            {/* Sitting legs on side of ball */}
+            <path d={`M ${160 + rotX} ${116 + rotY} L 120 135 L 120 168`} fill="none" stroke="url(#dbBodyGrad)" strokeWidth="4" strokeLinecap="round" />
+            <path d={`M ${160 + rotX} ${116 + rotY} L 200 135 L 200 168`} fill="none" stroke="url(#dbBodyGrad)" strokeWidth="4" strokeLinecap="round" />
+          </svg>
+        );
+      } else {
+        // Butterfly sitting pose
+        const flap = Math.abs(oscFast) * 12;
+        return (
+          <svg viewBox="0 0 320 220" className="w-full h-full">
+            {gradients}
+            {floor}
+            {/* Spine & Head */}
+            <line x1="160" y1="150" x2="160" y2="80" stroke="url(#dbBodyGrad)" strokeWidth="6" strokeLinecap="round" filter="url(#dbGlow)" />
+            <circle cx="160" cy="64" r="10" fill="#f472b6" filter="url(#dbGlow)" />
+            {/* Flapping butterfly legs */}
+            <path d={`M 160 150 Q 120 ${130 - flap} 140 160`} fill="none" stroke="url(#dbBodyGrad)" strokeWidth="5" strokeLinecap="round" />
+            <path d={`M 160 150 Q 200 ${130 - flap} 180 160`} fill="none" stroke="url(#dbBodyGrad)" strokeWidth="5" strokeLinecap="round" />
+            {/* Golden light in pelvic core */}
+            <circle cx="160" cy="148" r={12 + (scale - 1.0) * 30} fill="url(#dbGlowGrad)" className="opacity-85" />
+          </svg>
+        );
+      }
+    }
+
+    // Default fallback (Gentle stretch stretch pose)
+    return (
+      <svg viewBox="0 0 320 220" className="w-full h-full">
+        {gradients}
+        {floor}
+        <line x1="160" y1="160" x2="160" y2="90" stroke="url(#dbBodyGrad)" strokeWidth="6" strokeLinecap="round" filter="url(#dbGlow)" />
+        <circle cx="160" cy="72" r="11" fill="#f472b6" filter="url(#dbGlow)" />
+        <path d={`M 120 160 L 160 120 L 200 160`} fill="none" stroke="url(#dbBodyGrad)" strokeWidth="5" strokeLinecap="round" />
+        <circle cx="160" cy="115" r={6 + osc * 6} fill="#fb923c" className="opacity-70 animate-pulse" />
+      </svg>
+    );
+  };
+
   const startVideoSimulation = (exerciseName: string, duration: string) => {
-    setSimulatedVideo({ name: exerciseName, duration });
+    const details = getVideoDetails(exerciseName);
+    setSimulatedVideo({
+      name: exerciseName,
+      duration,
+      mp4Url: details.mp4Url,
+      youtubeUrl: details.youtubeUrl
+    });
     setVideoLoading(true);
-    setVideoTimer(10);
   };
 
   useEffect(() => {
@@ -336,23 +671,193 @@ const Dashboard: React.FC<DashboardProps> = ({
     if (simulatedVideo && videoLoading) {
       timer = setTimeout(() => {
         setVideoLoading(false);
-      }, 2500);
-    } else if (simulatedVideo && !videoLoading && videoTimer > 0) {
-      timer = setInterval(() => {
-        setVideoTimer(prev => {
-          if (prev <= 1) {
-            setSimulatedVideo(null);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+      }, 1500);
     }
     return () => {
       clearTimeout(timer);
-      clearInterval(timer);
     };
-  }, [simulatedVideo, videoLoading, videoTimer]);
+  }, [simulatedVideo, videoLoading]);
+
+  // AI Video Coach Simulation Logic & Effects
+  useEffect(() => {
+    if (!simulatedVideo || coachMode !== 'ai') return;
+
+    const interval = setInterval(() => {
+      setSimulatedHeartRate(prev => {
+        const delta = Math.floor(Math.random() * 3) - 1;
+        const next = prev + delta;
+        return Math.max(65, Math.min(85, next));
+      });
+
+      setSimulatedAlignment(prev => {
+        const delta = Math.floor(Math.random() * 3) - 1;
+        const next = prev + delta;
+        return Math.max(90, Math.min(100, next));
+      });
+    }, 1500);
+
+    const instructionInterval = setInterval(() => {
+      setCoachInstructionIndex(prev => (prev + 1) % 5);
+    }, 5000);
+
+    return () => {
+      clearInterval(interval);
+      clearInterval(instructionInterval);
+    };
+  }, [simulatedVideo, coachMode]);
+
+  useEffect(() => {
+    let frameId: number;
+    const update = () => {
+      setVideoTick(prev => prev + 1);
+      frameId = requestAnimationFrame(update);
+    };
+    if (simulatedVideo) {
+      frameId = requestAnimationFrame(update);
+    }
+    return () => cancelAnimationFrame(frameId);
+  }, [simulatedVideo]);
+
+  useEffect(() => {
+    if (!simulatedVideo) return;
+
+    const interval = setInterval(() => {
+      setDashBreathTime(prev => {
+        const next = (prev + 0.1) % 6.0;
+        
+        if (next < 2.0) {
+          setDashBreathState('Inhale');
+          setDashBreathScale(1.0 + (next / 2.0) * 0.4);
+        } else if (next < 4.0) {
+          setDashBreathState('Hold');
+          setDashBreathScale(1.4);
+        } else {
+          setDashBreathState('Exhale');
+          setDashBreathScale(1.4 - ((next - 4.0) / 2.0) * 0.4);
+        }
+        return next;
+      });
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [simulatedVideo]);
+
+  const getCoachInstructions = (exerciseName: string): string[] => {
+    switch (exerciseName) {
+      case "Light Pelvic Stretch":
+        return [
+          "Keep your spine straight and rest your hands on your knees.",
+          "Gently tilt your pelvis forward, breathing in deeply.",
+          "Hold the stretch and feel the gentle release in your lower back.",
+          "Tilt backward as you exhale slowly, contracting your core.",
+          "Repeat the movement smoothly. Let the AI track your balance."
+        ];
+      case "Focus Breathing":
+        return [
+          "Sit comfortably, cross-legged, with shoulders dropped.",
+          "Inhale through your nose, expanding your abdomen fully.",
+          "Hold the life-giving breath for 3 seconds.",
+          "Exhale slowly through your mouth, letting all tension melt.",
+          "Lumina Coach AI is monitoring your deep diaphragmatic rhythm."
+        ];
+      case "Beginner Pregnancy Yoga":
+        return [
+          "Move slowly into a gentle Cat-Cow pose.",
+          "Inhale to arch your back slightly. Don't overextend your belly.",
+          "Exhale as you round your spine, pressing away from the floor.",
+          "Keep your knees wide to give your baby plenty of room.",
+          "Balance looks perfect! Hold the pose and breathe."
+        ];
+      case "Mama Glow Yoga Flow":
+        return [
+          "Stand tall in Mountain Pose with feet wider than hip-width.",
+          "Reach arms up gently, letting your chest open to the sky.",
+          "Exhale and lower into a soft, safe half-squat.",
+          "Lumina Pose Estimator: Hips and knees aligned correctly.",
+          "Inhale back to standing. Feel your strength and energy flow."
+        ];
+      case "Pelvic Girdle Kegels":
+        return [
+          "Lie on your back with knees bent and feet flat.",
+          "Squeeze your pelvic floor muscles as if stopping urine flow.",
+          "Hold the squeeze tightly for 5 full seconds.",
+          "Release slowly and rest for 5 seconds.",
+          "Inhale deeply to prepare for the next contraction."
+        ];
+      case "Safe Moderate Walking":
+        return [
+          "Maintain a steady, upright posture with chest lifted.",
+          "Swing your arms naturally to assist your momentum.",
+          "Keep a relaxed, conversational pace. No breathlessness.",
+          "Lumina Step Analytics: Pace and stride are perfectly balanced.",
+          "Land on your heels and roll smoothly through to your toes."
+        ];
+      case "Nesting Gentle Yoga":
+        return [
+          "Inhale and sweep arms wide, opening your ribcage.",
+          "Exhale and bring hands to your heart, centering your energy.",
+          "Take a gentle, wide-legged child's pose to relax.",
+          "Allow your forehead to rest softly on a block or mat.",
+          "Lumina Spine Tracker: Perfect alignment of back and neck."
+        ];
+      case "Hip-Opening preparation":
+        return [
+          "Sit down with soles of feet together in Butterfly Pose.",
+          "Gently flutter your knees down to release tension.",
+          "Inhale to lift and elongate your spine.",
+          "Exhale and hinge forward slightly from your hips.",
+          "Keep breathing smoothly. Do not force any stretch."
+        ];
+      case "Interactive Breathing for Labor":
+        return [
+          "Adopt a comfortable kneeling or resting posture.",
+          "Use a slow, deep breath in for 4 seconds.",
+          "Exhale slowly for 4 seconds, humming gently if it helps.",
+          "Focus on relaxing all facial muscles and your jaw.",
+          "Breathing rhythm synced perfectly. Excellent focus, mama!"
+        ];
+      case "Deep Diaphragmatic Breath":
+        return [
+          "Place one hand on your chest and one on your abdomen.",
+          "Inhale to expand the belly without lifting your chest.",
+          "Breathe in slow, rich oxygen to nurture your recovery.",
+          "Exhale slowly, feeling your belly contract naturally.",
+          "Excellent breath depth detected. Restoring core balance."
+        ];
+      case "Early Pelvic Floor Rehab (Kegels)":
+        return [
+          "Find a comfortable laying down or seated position.",
+          "Gently engage the deep muscles of your pelvic floor.",
+          "Hold the engagement with a steady breath. Avoid bracing.",
+          "Relax fully. Feel the support in your lower pelvis.",
+          "AI tracking confirms optimal muscle activation rhythm."
+        ];
+      case "Shoulder Chest Openers":
+        return [
+          "Sit tall and interlace your fingers behind your back.",
+          "Gently pull your shoulders back to expand your chest.",
+          "Breathe deeply into the front of your heart.",
+          "Exhale to drop your shoulders further away from your ears.",
+          "Releasing desk and nursing tension. Alignment is great!"
+        ];
+      case "Supportive Child's Pose":
+        return [
+          "Spread your knees wide apart on the yoga mat.",
+          "Walk your hands forward, lowering your chest to the earth.",
+          "Let your spine stretch out and rest your hips back.",
+          "Take slow, cleansing breaths into your lower back.",
+          "Deep recovery mode active. Stay here as long as needed."
+        ];
+      default:
+        return [
+          "Sit comfortably, focusing on slow, regular breaths.",
+          "Inhale peace and clarity, expand your ribcage.",
+          "Hold gently for a moment to center yourself.",
+          "Exhale all tightness, stress, or weariness.",
+          "AI Coach active: Balance, posture, and rhythm synced."
+        ];
+    }
+  };
 
   // Transition to Postpartum Mode Actions
   const handleMarkDelivered = () => {
@@ -607,39 +1112,101 @@ const Dashboard: React.FC<DashboardProps> = ({
 
         {/* Simulated Tutorial Video Modal */}
         {simulatedVideo && (
-          <div className="fixed inset-0 bg-indigo-950/80 backdrop-blur-md z-[300] flex items-center justify-center p-4">
-            <div className="bg-white rounded-[3rem] p-8 max-w-sm w-full space-y-6 text-center shadow-2xl border border-indigo-100">
-              <span className="text-4xl animate-bounce">🧘‍♀️</span>
-              <div>
-                <h4 className="text-xl font-serif italic text-indigo-600">{simulatedVideo.name}</h4>
-                <p className="text-[10px] font-black uppercase tracking-widest text-indigo-300">Sanctuary Exercise Simulation ({simulatedVideo.duration})</p>
+          <div className="fixed inset-0 bg-stone-950/85 backdrop-blur-xl z-[300] flex items-center justify-center p-4 animate-fadeIn overflow-y-auto">
+            <div className="bg-slate-900 rounded-[2.5rem] p-6 md:p-8 max-w-2xl w-full space-y-5 shadow-2xl border border-slate-800 overflow-y-auto max-h-[95vh] flex flex-col text-white">
+              
+              {/* Header Info */}
+              <div className="flex justify-between items-start gap-4">
+                <div className="flex items-center gap-3 text-left">
+                  <span className="text-3xl text-pink-400">🧘‍♀️</span>
+                  <div>
+                    <h4 className="text-lg md:text-xl font-serif italic text-pink-300 font-bold">{simulatedVideo.name}</h4>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Pregnancy & Postpartum Guided Sanctuary • {simulatedVideo.duration}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSimulatedVideo(null)}
+                  className="p-2 hover:bg-slate-800 rounded-full text-slate-400 hover:text-white transition-colors text-sm font-bold"
+                  title="Close player"
+                >
+                  ✕
+                </button>
               </div>
 
-              {videoLoading ? (
-                <div className="space-y-4 py-6">
-                  <div className="w-12 h-12 border-4 border-indigo-100 border-t-indigo-500 rounded-full animate-spin mx-auto"></div>
-                  <p className="text-xs text-indigo-500 italic font-semibold leading-none animate-pulse">Buffering tutorial stream, mama...</p>
-                </div>
-              ) : (
-                <div className="space-y-6 py-4 animate-fadeIn">
-                  <div className="w-24 h-24 rounded-full bg-indigo-50 border-4 border-indigo-400 flex items-center justify-center mx-auto animate-ping">
-                    <span className="text-3xl">✨</span>
+              {/* Video Area / Procedural AI Video Player */}
+              <div className="relative w-full aspect-video bg-stone-950 rounded-2xl overflow-hidden shadow-inner flex flex-col items-center justify-center border border-slate-800">
+                {videoLoading ? (
+                  <div className="space-y-4 text-center py-12">
+                    <div className="w-12 h-12 border-4 border-indigo-500/20 border-t-pink-500 rounded-full animate-spin mx-auto"></div>
+                    <p className="text-xs text-pink-300 italic font-semibold animate-pulse">Initializing AI Somatic Guide, mama...</p>
                   </div>
-                  <p className="text-[11px] text-indigo-600 font-bold tracking-tight">
-                    Inhale deeply... repeat slowly. Focus on the core... 🌸
-                  </p>
-                  <div className="text-[10px] font-black text-indigo-400 uppercase">
-                    Ends in {videoTimer} seconds
+                ) : (
+                  <div className="w-full h-full p-4 flex flex-col items-center justify-between relative">
+                    {/* Live procedural graphic */}
+                    <div className="flex-1 w-full flex items-center justify-center min-h-[160px]">
+                      {renderPregnancyPostpartumExerciseSVG(simulatedVideo.name)}
+                    </div>
+
+                    {/* Floating HUD Indicators */}
+                    <div className="absolute top-3 left-3 bg-slate-900/90 border border-slate-700/50 px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-md">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                      <span className="text-[9px] font-mono font-bold text-slate-300">LIVE AI PROCEDURAL COACHING</span>
+                    </div>
+
+                    <div className="absolute top-3 right-3 bg-slate-900/90 border border-slate-700/50 px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-md">
+                      <span className="text-[9px] font-mono font-bold text-pink-400">💨 {dashBreathState}...</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Dynamic Biofeedback HUD Controls */}
+              {!videoLoading && (
+                <div className="grid grid-cols-3 gap-3 w-full text-left">
+                  <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800 flex items-center gap-2">
+                    <Heart size={16} className="text-rose-400 animate-pulse shrink-0" />
+                    <div>
+                      <p className="text-[8px] uppercase text-stone-500 font-bold tracking-widest">Somatic Heart</p>
+                      <p className="text-xs font-mono font-bold text-slate-200">{simulatedHeartRate} bpm</p>
+                    </div>
+                  </div>
+                  <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800 flex items-center gap-2">
+                    <Activity size={16} className="text-emerald-400 shrink-0" />
+                    <div>
+                      <p className="text-[8px] uppercase text-stone-500 font-bold tracking-widest">Pelvic Alignment</p>
+                      <p className="text-xs font-mono font-bold text-slate-200">{simulatedAlignment}%</p>
+                    </div>
+                  </div>
+                  <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800 flex items-center gap-2">
+                    <span className="text-sm shrink-0">⏳</span>
+                    <div>
+                      <p className="text-[8px] uppercase text-stone-500 font-bold tracking-widest">Rhythm Pacing</p>
+                      <p className="text-xs font-mono font-bold text-slate-200">{(dashBreathTime).toFixed(1)}s</p>
+                    </div>
                   </div>
                 </div>
               )}
 
-              <button
-                onClick={() => setSimulatedVideo(null)}
-                className="w-full py-3 bg-indigo-500 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-indigo-600"
-              >
-                Close tutorial
-              </button>
+              {/* Instructions / Safety Check bottom pane */}
+              <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-800 text-left space-y-1.5">
+                <p className="text-[10px] font-black uppercase tracking-widest text-amber-400 flex items-center gap-1">
+                  <span>💡</span> Sanctuary Guide Instructions & Safety
+                </p>
+                <p className="text-xs text-stone-300 font-serif italic leading-relaxed">
+                  {getCoachInstructions(simulatedVideo.name)[coachInstructionIndex % getCoachInstructions(simulatedVideo.name).length] || 
+                    "Focus on your breathing, inhale deeply through your nose, expand your abdomen, and exhale completely. Discontinue immediately if you feel dizzy."}
+                </p>
+              </div>
+
+              {/* Bottom Actions */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setSimulatedVideo(null)}
+                  className="flex-1 py-3 bg-indigo-500 hover:bg-indigo-600 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl transition-colors shadow-md text-center cursor-pointer"
+                >
+                  Complete practice & close
+                </button>
+              </div>
             </div>
           </div>
         )}
