@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 
 interface AuthProps {
-  onLogin: (user: User) => void;
+  onLogin: (user: User, rememberMe?: boolean) => void;
   initialInviteCode?: string | null;
   onClearInvite?: () => void;
   latestCloudUser?: User | null;
@@ -84,7 +84,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
     }
     const loggedOut = sessionStorage.getItem('lumina_logged_out') === 'true';
     if (loggedOut) {
-      return 'welcome';
+      return 'email_login';
     }
     const hasBiometric = !!localStorage.getItem('lumina_biometric_user');
     const hasSavedEmail = !!localStorage.getItem('lumina_saved_email');
@@ -164,7 +164,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
     }
     const loggedOut = sessionStorage.getItem('lumina_logged_out') === 'true';
     if (loggedOut) {
-      setScreen('welcome');
+      setScreen('email_login');
     } else {
       const hasBiometric = !!localStorage.getItem('lumina_biometric_user');
       const hasSavedEmail = !!localStorage.getItem('lumina_saved_email');
@@ -320,10 +320,16 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
     }
 
     // For standard logins or profiles without data backups, route directly to sanctuary
-    localStorage.setItem('lumina_user', JSON.stringify(existingUser));
-    localStorage.setItem('lumina_biometric_user', JSON.stringify(existingUser));
+    if (rememberMe) {
+      localStorage.setItem('lumina_user', JSON.stringify(existingUser));
+      localStorage.setItem('lumina_biometric_user', JSON.stringify(existingUser));
+    } else {
+      localStorage.removeItem('lumina_user');
+      localStorage.removeItem('lumina_biometric_user');
+      sessionStorage.setItem('lumina_user', JSON.stringify(existingUser));
+    }
     credentialsSaver();
-    onLogin(existingUser);
+    onLogin(existingUser, rememberMe);
   };
 
   // Google Login proxy
@@ -376,10 +382,16 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
       };
 
       await syncUser(newUser);
-      localStorage.setItem('lumina_user', JSON.stringify(newUser));
-      localStorage.setItem('lumina_biometric_user', JSON.stringify(newUser));
+      if (rememberMe) {
+        localStorage.setItem('lumina_user', JSON.stringify(newUser));
+        localStorage.setItem('lumina_biometric_user', JSON.stringify(newUser));
+      } else {
+        localStorage.removeItem('lumina_user');
+        localStorage.removeItem('lumina_biometric_user');
+        sessionStorage.setItem('lumina_user', JSON.stringify(newUser));
+      }
       handleSaveCredentials(newUser.email, 'google_sim', newUser.name);
-      onLogin(newUser);
+      onLogin(newUser, rememberMe);
     } catch (fbErr: any) {
       console.warn("Google Login failed or was cancelled:", fbErr);
       setError("Google Sign-In could not be completed. Please try again or use email sign-in below. 🌸");
@@ -436,11 +448,17 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
         ]
       };
 
-      localStorage.setItem('lumina_user', JSON.stringify(appleUser));
-      localStorage.setItem('lumina_biometric_user', JSON.stringify(appleUser));
+      if (rememberMe) {
+        localStorage.setItem('lumina_user', JSON.stringify(appleUser));
+        localStorage.setItem('lumina_biometric_user', JSON.stringify(appleUser));
+      } else {
+        localStorage.removeItem('lumina_user');
+        localStorage.removeItem('lumina_biometric_user');
+        sessionStorage.setItem('lumina_user', JSON.stringify(appleUser));
+      }
       handleSaveCredentials(appleUser.email, 'apple_sec_sim', appleUser.name);
       
-      onLogin(appleUser);
+      onLogin(appleUser, rememberMe);
       setLoading(false);
     }, 1200);
   };
@@ -825,9 +843,15 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
                   type="button"
                   id="btn-confirm-restore"
                   onClick={() => {
-                    localStorage.setItem('lumina_user', JSON.stringify(pendingRestoreUser));
-                    localStorage.setItem('lumina_biometric_user', JSON.stringify(pendingRestoreUser));
-                    onLogin(pendingRestoreUser);
+                    if (rememberMe) {
+                      localStorage.setItem('lumina_user', JSON.stringify(pendingRestoreUser));
+                      localStorage.setItem('lumina_biometric_user', JSON.stringify(pendingRestoreUser));
+                    } else {
+                      localStorage.removeItem('lumina_user');
+                      localStorage.removeItem('lumina_biometric_user');
+                      sessionStorage.setItem('lumina_user', JSON.stringify(pendingRestoreUser));
+                    }
+                    onLogin(pendingRestoreUser, rememberMe);
                     setPendingRestoreUser(null);
                   }}
                   className={`w-full py-4 bg-gradient-to-r ${pendingRestoreUser.isPartner ? "from-[#db2777] to-rose-400" : "from-pink-400 to-rose-450"} text-white font-bold rounded-2xl text-[10px] uppercase tracking-widest shadow-md shadow-pink-100 hover:scale-[1.01] active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer`}
@@ -867,9 +891,15 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
                       waterGoal: 8,
                       onboardingCompleted: pendingRestoreUser.isPartner ? true : false
                     };
-                    localStorage.setItem('lumina_user', JSON.stringify(emptyUser));
-                    localStorage.setItem('lumina_biometric_user', JSON.stringify(emptyUser));
-                    onLogin(emptyUser);
+                    if (rememberMe) {
+                      localStorage.setItem('lumina_user', JSON.stringify(emptyUser));
+                      localStorage.setItem('lumina_biometric_user', JSON.stringify(emptyUser));
+                    } else {
+                      localStorage.removeItem('lumina_user');
+                      localStorage.removeItem('lumina_biometric_user');
+                      sessionStorage.setItem('lumina_user', JSON.stringify(emptyUser));
+                    }
+                    onLogin(emptyUser, rememberMe);
                     setPendingRestoreUser(null);
                   }}
                   className="w-full py-4.5 bg-white border border-pink-100 rounded-2xl text-pink-500 hover:text-pink-600 font-bold text-[10px] uppercase tracking-widest hover:bg-pink-50/20 transition-all flex items-center justify-center gap-2 cursor-pointer"

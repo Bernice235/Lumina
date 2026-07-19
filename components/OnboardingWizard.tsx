@@ -840,14 +840,16 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
           )}
 
           {step < totalSteps ? (
-            <button
-              type="button"
-              onClick={handleNext}
-              className="flex items-center gap-1.5 px-6 py-3 bg-pink-500 text-white rounded-2xl text-xs font-black uppercase tracking-wider shadow-md hover:bg-pink-600 active:scale-95 transition-all cursor-pointer"
-            >
-              {step === 1 ? 'Get Started' : 'Continue'}
-              <ChevronRight size={14} />
-            </button>
+            step !== 10 ? (
+              <button
+                type="button"
+                onClick={handleNext}
+                className="flex items-center gap-1.5 px-6 py-3 bg-pink-500 text-white rounded-2xl text-xs font-black uppercase tracking-wider shadow-md hover:bg-pink-600 active:scale-95 transition-all cursor-pointer"
+              >
+                {step === 1 ? 'Get Started' : 'Continue'}
+                <ChevronRight size={14} />
+              </button>
+            ) : null
           ) : (
             <button
               type="button"

@@ -42,7 +42,7 @@ import { THEMES, SONGS, THEME_PALETTES } from './constants';
 import { syncUser, subscribeToGifts, subscribeToUser, acceptInvite, subscribeToPartnerRequests, getCleanName } from './services/firebaseService';
 import { getDefaultNotificationSettings } from './services/notificationService';
 import { auth } from './services/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, setPersistence, browserSessionPersistence, indexedDBLocalPersistence } from 'firebase/auth';
 import { SplashScreen } from './components/SplashScreen';
 
 const App: React.FC = () => {
@@ -716,8 +716,14 @@ const App: React.FC = () => {
             setLatestCloudUser(fullUser);
             setLatestCloudLoading(false);
             
-            // Cache details for biometrics instantly
-            localStorage.setItem('lumina_biometric_user', JSON.stringify(fullUser));
+            const isRememberEnabled = localStorage.getItem('lumina_remember_me') !== 'false';
+            
+            // Cache details for biometrics if remember me is enabled
+            if (isRememberEnabled) {
+              localStorage.setItem('lumina_biometric_user', JSON.stringify(fullUser));
+            } else {
+              localStorage.removeItem('lumina_biometric_user');
+            }
             
             // Automatically unlock session for any authenticated user on app load or snapshot sync
             sessionStorage.setItem('lumina_session_unlocked', 'true');
@@ -725,7 +731,11 @@ const App: React.FC = () => {
             const localUser = userRef.current;
             if (!localUser || JSON.stringify(fullUser) !== JSON.stringify(localUser)) {
               setUser(fullUser);
-              localStorage.setItem('lumina_user', JSON.stringify(fullUser));
+              if (isRememberEnabled) {
+                localStorage.setItem('lumina_user', JSON.stringify(fullUser));
+              } else {
+                sessionStorage.setItem('lumina_user', JSON.stringify(fullUser));
+              }
               setWaterGoal(fullUser.waterGoal || 8);
             }
           } else {
@@ -802,12 +812,17 @@ const App: React.FC = () => {
   useEffect(() => {
     if (user) {
       syncUser(user);
-      localStorage.setItem('lumina_user', JSON.stringify(user));
-      localStorage.setItem('lumina_biometric_user', JSON.stringify(user));
+      const isRememberEnabled = localStorage.getItem('lumina_remember_me') !== 'false';
+      if (isRememberEnabled) {
+        localStorage.setItem('lumina_user', JSON.stringify(user));
+        localStorage.setItem('lumina_biometric_user', JSON.stringify(user));
+      } else {
+        sessionStorage.setItem('lumina_user', JSON.stringify(user));
+      }
     }
   }, [user]);
 
-  const proceedWithLogin = (userData: User) => {
+  const proceedWithLogin = (userData: User, remember: boolean = true) => {
     const activeData = (latestCloudUser && latestCloudUser.id === userData.id)
       ? latestCloudUser
       : userData;
@@ -843,11 +858,37 @@ const App: React.FC = () => {
       waterGoal: activeData.waterGoal || 8,
       notificationSettings: activeData.notificationSettings || getDefaultNotificationSettings()
     };
+
+    // Dynamically adjust Firebase Auth persistence based on user preference
+    try {
+      if (remember) {
+        setPersistence(auth, indexedDBLocalPersistence).catch((err) => {
+          console.warn("Failed to set persistent local auth persistence:", err);
+        });
+      } else {
+        setPersistence(auth, browserSessionPersistence).catch((err) => {
+          console.warn("Failed to set session auth persistence:", err);
+        });
+      }
+    } catch (e) {
+      console.warn("Failed to configure dynamic persistence:", e);
+    }
+
     sessionStorage.setItem('lumina_session_unlocked', 'true');
     sessionStorage.removeItem('lumina_logged_out');
     setUser(fullUser);
-    localStorage.setItem('lumina_user', JSON.stringify(fullUser));
-    localStorage.setItem('lumina_biometric_user', JSON.stringify(fullUser));
+
+    if (remember) {
+      localStorage.setItem('lumina_remember_me', 'true');
+      localStorage.setItem('lumina_user', JSON.stringify(fullUser));
+      localStorage.setItem('lumina_biometric_user', JSON.stringify(fullUser));
+    } else {
+      localStorage.setItem('lumina_remember_me', 'false');
+      localStorage.removeItem('lumina_user');
+      localStorage.removeItem('lumina_biometric_user');
+      sessionStorage.setItem('lumina_user', JSON.stringify(fullUser));
+    }
+
     setWaterGoal(fullUser.waterGoal || 8);
     playWelcomeVoice(fullUser.name);
     setIsMusicPlaying(true);
@@ -909,11 +950,11 @@ const App: React.FC = () => {
       tempLogs: [],
     };
     
-    proceedWithLogin(newUserObj);
+    proceedWithLogin(newUserObj, true);
     setRestoreDataPrompt(null);
   };
 
-  const handleLogin = (userData: User) => {
+  const handleLogin = (userData: User, rememberMe: boolean = true) => {
     // Check cloud backup and restore saved cycle data automatically
     const hasCloudBackup = 
       (userData.periods && userData.periods.length > 0) || 
@@ -927,17 +968,30 @@ const App: React.FC = () => {
       ...userData,
       onboardingCompleted: hasCloudBackup ? true : (userData.onboardingCompleted ?? false)
     };
-    proceedWithLogin(restoredUser);
+    proceedWithLogin(restoredUser, rememberMe);
   };
 
   const handleLogout = () => {
-    sessionStorage.removeItem('lumina_session_unlocked');
-    sessionStorage.setItem('lumina_logged_out', 'true');
-    localStorage.removeItem('lumina_user');
+    // 1. Completely sign out the user in Firebase Auth
     auth.signOut().catch(() => {});
+
+    // 2. Clear the active session in React state
     setUser(null);
     setLatestCloudUser(null);
     setIsMusicPlaying(false);
+
+    // 3. Clear all active session flags in sessionStorage
+    sessionStorage.removeItem('lumina_session_unlocked');
+    sessionStorage.setItem('lumina_logged_out', 'true');
+    sessionStorage.removeItem('lumina_user');
+
+    // 4. Completely purge stored login state and biometric credentials from localStorage
+    localStorage.removeItem('lumina_user');
+    localStorage.removeItem('lumina_biometric_user');
+    localStorage.removeItem('lumina_saved_email');
+    localStorage.removeItem('lumina_saved_password');
+    localStorage.removeItem('lumina_saved_name');
+    localStorage.removeItem('lumina_remember_me');
   };
 
   // Handle auto-linking on login / startup with an invitation code
