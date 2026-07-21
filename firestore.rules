@@ -66,7 +66,6 @@ service cloud.firestore {
 
     function isValidPartnerRequest(data) {
       return data.keys().hasAll(['id', 'user_id', 'partner_id', 'partnerName', 'requested_permissions', 'status', 'created_at']) &&
-             data.keys().size() == 7 &&
              data.status in ['pending', 'approved', 'declined'] &&
              data.user_id is string && data.user_id.size() <= 128 &&
              data.partner_id is string && data.partner_id.size() <= 128 &&

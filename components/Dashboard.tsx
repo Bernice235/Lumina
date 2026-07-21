@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { User, Symptom, Reminder, ReceivedComfort } from '../types';
+import { WallpapersAndThemesModal } from './WallpapersAndThemesModal';
 import { getDailyAffirmation } from '../services/gemini';
 import { syncUser } from '../services/firebaseService';
 import { SONGS, MOODS, BABY_SIZES } from '../constants';
@@ -89,6 +90,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   const [selectedMood, setSelectedMood] = useState('Happy');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isWallpapersOpen, setIsWallpapersOpen] = useState(false);
 
   // Pregnancy and Postpartum Custom states
   const [exerciseTrimester, setExerciseTrimester] = useState<1 | 2 | 3>(1);
@@ -2020,28 +2022,25 @@ const Dashboard: React.FC<DashboardProps> = ({
                   </div>
                 </div>
 
-                {/* Themes Card with Claymorphic style */}
-                <div className="bg-white/80 backdrop-blur-md p-4 rounded-3xl border border-pink-100/50 shadow-[inset_0_2px_4px_rgba(255,255,255,0.8),_0_6px_15px_rgba(244,114,182,0.03)]">
-                  <p className="text-[9px] font-black uppercase tracking-wider text-pink-400 mb-2">Sanctuary Theme</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {['rose', 'lavender', 'mint', 'peach'].map(t => {
-                      const isActive = user.theme === t;
-                      return (
-                        <button 
-                          key={t}
-                          onClick={() => {
-                            if (setUser) {
-                              setUser((prev: any) => prev ? { ...prev, theme: t } : null);
-                            }
-                          }}
-                          className={`py-2 px-3 rounded-2xl text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-between border ${isActive ? 'bg-gradient-to-br from-pink-400 to-rose-400 text-white shadow-md border-pink-300' : 'bg-pink-50/50 text-pink-400 border-pink-100/50 hover:bg-pink-100/20'}`}
-                        >
-                          <span className="capitalize">{t}</span>
-                          <span className={`w-3 h-3 rounded-full border border-white ${t === 'rose' ? 'bg-pink-400' : t === 'lavender' ? 'bg-purple-400' : t === 'mint' ? 'bg-teal-400' : 'bg-orange-400'}`} />
-                        </button>
-                      );
-                    })}
-                  </div>
+                {/* Wallpapers & Themes Card */}
+                <div className="bg-gradient-to-br from-purple-500/10 via-pink-500/10 to-rose-400/10 p-4 rounded-3xl border border-pink-100 shadow-[inset_0_2px_4px_rgba(255,255,255,0.8),_0_6px_15px_rgba(244,114,182,0.04)] space-y-2">
+                  <p className="text-[9px] font-black uppercase tracking-wider text-purple-600">Personalization</p>
+                  <button 
+                    onClick={() => {
+                      setIsWallpapersOpen(true);
+                      setIsMenuOpen(false);
+                    }}
+                    className="w-full py-3 px-4 bg-gradient-to-r from-pink-500 via-rose-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-[0.98] shadow-md flex items-center justify-between cursor-pointer"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="text-sm">🎨</span>
+                      <span>Wallpapers & Themes</span>
+                    </span>
+                    <span className="text-xs">➔</span>
+                  </button>
+                  <p className="text-[9px] text-stone-400 italic text-center">
+                    Customize wallpapers, themes & cycle colors
+                  </p>
                 </div>
               </div>
             </div>
@@ -2381,6 +2380,16 @@ const Dashboard: React.FC<DashboardProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Wallpapers & Themes Customization Modal */}
+      {setUser && (
+        <WallpapersAndThemesModal
+          isOpen={isWallpapersOpen}
+          onClose={() => setIsWallpapersOpen(false)}
+          user={user}
+          setUser={setUser as any}
+        />
       )}
     </div>
   );

@@ -25,6 +25,8 @@ import {
   Plus
 } from 'lucide-react';
 
+import { syncUser } from '../services/firebaseService';
+
 interface OnboardingWizardProps {
   user: User;
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
@@ -191,6 +193,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
 
     setUser(updatedUser);
     localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+    syncUser(updatedUser);
     onComplete(updatedUser);
   };
 

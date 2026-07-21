@@ -291,45 +291,34 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
 
   // Helper to distinguish user roles (Cycle Tracker vs Partner) and selectively request restoration
   const handleExistingUserLogin = (existingUser: User, credentialsSaver: () => void) => {
-    const isNewDevice = !localStorage.getItem('lumina_user');
-    
-    if (isNewDevice) {
-      if (existingUser.isPartner) {
-        const hasPartnerData = !!(existingUser.isPartnerLinked || existingUser.partnerId || existingUser.partnerRequest);
-        if (hasPartnerData) {
-          setPendingRestoreUser(existingUser);
-          setLoading(false);
-          return;
-        }
-      } else {
-        // Cycle tracker device login => only show restore if actual tracker data exists
-        const hasTrackerData = !!(
-          (existingUser.periods && existingUser.periods.length > 0) ||
-          (existingUser.periodDates && existingUser.periodDates.length > 0) ||
-          (existingUser.symptoms && existingUser.symptoms.length > 0) ||
-          (existingUser.moodLogs && existingUser.moodLogs.length > 0) ||
-          (existingUser.bcLogs && existingUser.bcLogs.length > 0) ||
-          (existingUser.diaryEntries && existingUser.diaryEntries.length > 0)
-        );
-        if (hasTrackerData) {
-          setPendingRestoreUser(existingUser);
-          setLoading(false);
-          return;
-        }
-      }
-    }
+    // Preserve onboarding status if user has saved cycle data or completed onboarding previously
+    const hasCycleInfo = !!(existingUser.lastPeriodStart && existingUser.cycleLength && existingUser.periodLength);
+    const hasTrackerData = !!(
+      existingUser.onboardingCompleted ||
+      hasCycleInfo ||
+      (existingUser.periods && existingUser.periods.length > 0) ||
+      (existingUser.periodDates && existingUser.periodDates.length > 0) ||
+      (existingUser.symptoms && existingUser.symptoms.length > 0) ||
+      (existingUser.moodLogs && existingUser.moodLogs.length > 0) ||
+      (existingUser.bcLogs && existingUser.bcLogs.length > 0) ||
+      (existingUser.diaryEntries && existingUser.diaryEntries.length > 0)
+    );
 
-    // For standard logins or profiles without data backups, route directly to sanctuary
+    const fullExistingUser: User = {
+      ...existingUser,
+      onboardingCompleted: (existingUser.onboardingCompleted === true || hasCycleInfo || hasTrackerData || !!existingUser.isPartner) ? true : false
+    };
+
     if (rememberMe) {
-      localStorage.setItem('lumina_user', JSON.stringify(existingUser));
-      localStorage.setItem('lumina_biometric_user', JSON.stringify(existingUser));
+      localStorage.setItem('lumina_user', JSON.stringify(fullExistingUser));
+      localStorage.setItem('lumina_biometric_user', JSON.stringify(fullExistingUser));
     } else {
       localStorage.removeItem('lumina_user');
       localStorage.removeItem('lumina_biometric_user');
-      sessionStorage.setItem('lumina_user', JSON.stringify(existingUser));
+      sessionStorage.setItem('lumina_user', JSON.stringify(fullExistingUser));
     }
     credentialsSaver();
-    onLogin(existingUser, rememberMe);
+    onLogin(fullExistingUser, rememberMe);
   };
 
   // Google Login proxy

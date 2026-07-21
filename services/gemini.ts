@@ -1,64 +1,100 @@
 import { decodeBase64, decodeAudioData } from "./audio";
 
-// Helper function to send safe POST requests to our server API proxy endpoints 
+// Helper function to send safe POST requests to our server API proxy endpoints with timeout
 async function fetchGeminiProxy(endpoint: string, body: object): Promise<any> {
-  const response = await fetch(`/api/gemini/${endpoint}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+  try {
+    const response = await fetch(`/api/gemini/${endpoint}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (err) {
+    clearTimeout(timeoutId);
+    throw err;
   }
-  return await response.json();
+}
+
+function generateClientFallbackAffirmation(name: string, phase?: string, mood?: string): string {
+  const n = name || 'beautiful';
+  const m = mood?.toLowerCase() || '';
+  const p = phase?.toLowerCase() || '';
+
+  if (m.includes('happy') || m.includes('excited') || m.includes('joyful')) {
+    return `Your light is radiant today, ${n}. Keep shining and embracing this wonderful, magnetic energy. You are exactly where you need to be. 🌟`;
+  }
+  if (m.includes('crampy') || m.includes('sleepy') || m.includes('tired') || m.includes('sad')) {
+    return `Be gentle with your beautiful temple, ${n}. Your body is doing sacred work right now, and you deserve deep comfort, rest, and peace. 🩹`;
+  }
+  if (p.includes('menstrual')) {
+    return `In this winter of your cycle, ${n}, your softest surrender is your greatest power. Let go, rest deeply, and let your body renew. 🌸`;
+  }
+  if (p.includes('follicular')) {
+    return `Your spring is rising, ${n}. New beginnings, fresh clarity, and beautiful ideas are starting to bloom in your heart. 🌱`;
+  }
+  if (p.includes('ovulat')) {
+    return `You are at your absolute solar peak, ${n}. Magnetic, brilliant, and deeply alluring, the world reflects your inner sun. ☀️`;
+  }
+  if (p.includes('luteal')) {
+    return `As the autumn wind blows, ${n}, draw inward. Protect your boundaries, nest in cozy comfort, and honor your intuitive wisdom. 🍂`;
+  }
+  return `Your presence is a gentle whisper of beauty in the world, ${n}. Nurture your soul, honor your pace, and love your magic. 💖`;
 }
 
 export async function getDailyAffirmation(name: string, phase?: string, mood?: string): Promise<string> {
   try {
     const data = await fetchGeminiProxy("daily-affirmation", { name, phase, mood });
-    return data.text;
+    if (data?.text) return data.text;
   } catch (error) {
-    console.error("Failed to fetch daily affirmation from proxy:", error);
-    return `Your presence is a gentle whisper of beauty in the world, ${name}. Nurture your soul, honor your pace, and love your magic. 💖`;
+    console.warn("Proxy affirmation unavailable, using fallback:", error);
   }
+  return generateClientFallbackAffirmation(name, phase, mood);
 }
 
 export async function getSupplementAdvice(symptoms: string[]): Promise<string> {
   try {
     const data = await fetchGeminiProxy("supplement-advice", { symptoms });
-    return data.text;
+    if (data?.text) return data.text;
   } catch (error) {
-    console.error("Failed to fetch supplement advice from proxy:", error);
-    return "Your body is doing its best! Consider magnesium for cramps and some quiet rest. Always check with a professional first, sweet girl!";
+    console.warn("Proxy supplement advice unavailable, using fallback:", error);
   }
+  return "Your body is doing its best! Consider magnesium for cramps and some quiet rest. Always check with a professional first, sweet girl!";
 }
 
 export async function getLuminaAdvice(question: string): Promise<string> {
   try {
     const data = await fetchGeminiProxy("lumina-advice", { question });
-    return data.text;
+    if (data?.text) return data.text;
   } catch (error) {
-    console.error("Failed to fetch Lumina advice from proxy:", error);
-    return "Your body is a beautiful mystery! It's always best to chat with a professional for specific medical concerns, but remember that you are perfectly made.";
+    console.warn("Proxy Lumina advice unavailable, using fallback:", error);
   }
+  return "Your body is a beautiful mystery! It's always best to chat with a professional for specific medical concerns, but remember that you are perfectly made.";
 }
 
 export async function getProductAdvice(product: string, concern: string): Promise<string> {
   try {
     const data = await fetchGeminiProxy("product-advice", { product, concern });
-    return data.text;
+    if (data?.text) return data.text;
   } catch (error) {
-    console.error("Failed to fetch product advice from proxy:", error);
-    return "Take a deep breath. You are in control of your body, and it's okay to take it slow. You've got this, beautiful!";
+    console.warn("Proxy product advice unavailable, using fallback:", error);
   }
+  return "Take a deep breath. You are in control of your body, and it's okay to take it slow. You've got this, beautiful!";
 }
 
 export async function playWelcomeVoice(name: string): Promise<void> {
   try {
     const data = await fetchGeminiProxy("welcome-voice", { name });
-    const base64Audio = data.base64Audio;
+    const base64Audio = data?.base64Audio;
     if (base64Audio) {
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
       const audioBuffer = await decodeAudioData(
@@ -83,7 +119,7 @@ export async function playWelcomeVoice(name: string): Promise<void> {
       window.speechSynthesis.cancel();
       const text = `Welcome back to your sanctuary, ${name || 'beautiful'}. You are safe, and you are exactly where you need to be.`;
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 0.9; // Gently slower rate
+      utterance.rate = 0.9;
       utterance.pitch = 1.0;
       
       const voices = window.speechSynthesis.getVoices();
@@ -100,46 +136,46 @@ export async function playWelcomeVoice(name: string): Promise<void> {
       window.speechSynthesis.speak(utterance);
     }
   } catch (synthError) {
-    console.error("Web speech synthesis failed:", synthError);
+    console.warn("Web speech synthesis notice:", synthError);
   }
 }
 
 export async function getGiftIdeas(phase: string): Promise<string[]> {
   try {
     const data = await fetchGeminiProxy("gift-ideas", { phase });
-    return data.items || data.ideas || [];
+    if (data?.items || data?.ideas) return data.items || data.ideas;
   } catch (error) {
-    console.error("Failed to fetch gift ideas from proxy:", error);
-    return ["A bouquet of flowers", "Soft silk pajamas", "A handwritten letter", "Luxury chocolates", "A relaxing foot rub"];
+    console.warn("Proxy gift ideas unavailable, using fallback:", error);
   }
+  return ["A bouquet of flowers", "Soft silk pajamas", "A handwritten letter", "Luxury chocolates", "A relaxing foot rub"];
 }
 
 export async function getSupportMission(phase: string): Promise<string[]> {
   try {
     const data = await fetchGeminiProxy("support-mission", { phase });
-    return data.items || data.mission || [];
+    if (data?.items || data?.mission) return data.items || data.mission;
   } catch (error) {
-    console.error("Failed to fetch support missions from proxy:", error);
-    return ["Clean the kitchen", "Prepare a warm bath", "Get her favorite snacks", "Light a scented candle", "Take care of dinner tonight"];
+    console.warn("Proxy support missions unavailable, using fallback:", error);
   }
+  return ["Clean the kitchen", "Prepare a warm bath", "Get her favorite snacks", "Light a scented candle", "Take care of dinner tonight"];
 }
 
 export async function getCommunicationTips(phase: string): Promise<string> {
   try {
     const data = await fetchGeminiProxy("communication-tips", { phase });
-    return data.text;
+    if (data?.text) return data.text;
   } catch (error) {
-    console.error("Failed to fetch communication tips from proxy:", error);
-    return "Be patient, offer snacks, and ask 'How can I support you best right now?'";
+    console.warn("Proxy communication tips unavailable, using fallback:", error);
   }
+  return "Be patient, offer snacks, and ask 'How can I support you best right now?'";
 }
 
 export async function getLoveNoteIdeas(phase: string): Promise<string[]> {
   try {
     const data = await fetchGeminiProxy("love-note-ideas", { phase });
-    return data.items || data.ideas || [];
+    if (data?.items || data?.ideas) return data.items || data.ideas;
   } catch (error) {
-    console.error("Failed to fetch love note ideas from proxy:", error);
-    return ["Just thinking about you and how amazing you are. ✨", "I'm here for whatever you need today, my love.", "You're doing so much, don't forget how much you're appreciated."];
+    console.warn("Proxy love note ideas unavailable, using fallback:", error);
   }
+  return ["Just thinking about you and how amazing you are. ✨", "I'm here for whatever you need today, my love.", "You're doing so much, don't forget how much you're appreciated."];
 }

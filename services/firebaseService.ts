@@ -37,6 +37,38 @@ const isSandboxId = (id?: string | null): boolean => {
 };
 
 export const syncUser = async (user: User) => {
+  if (!user || !user.id) {
+    console.warn('[syncUser] Aborted sync: User object or user.id is missing or undefined');
+    return;
+  }
+
+  console.log('[syncUser] Syncing user state to Firestore/Storage:', {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    isPartner: user.isPartner,
+    cycleData: {
+      lastPeriodStart: user.lastPeriodStart,
+      cycleLength: user.cycleLength,
+      periodLength: user.periodLength,
+      periodsCount: user.periods?.length || 0,
+      symptomsCount: user.symptoms?.length || 0,
+      moodLogsCount: user.moodLogs?.length || 0,
+      diaryEntriesCount: user.diaryEntries?.length || 0
+    },
+    partnerData: {
+      partnerId: user.partnerId,
+      partnerCode: user.partnerCode,
+      isPartnerLinked: user.isPartnerLinked,
+      partnerRequest: user.partnerRequest
+    },
+    settings: {
+      theme: user.theme,
+      onboardingCompleted: user.onboardingCompleted,
+      isPregnancyMode: user.isPregnancyMode
+    }
+  });
+
   if (isSandboxId(user.id)) {
     localStorage.setItem(`lumina_user_${user.id}`, JSON.stringify(user));
     // Trigger real-time storage event for local updates

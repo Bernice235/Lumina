@@ -143,8 +143,269 @@ export function getBabySize(weeks: number): string {
   return "Sweet Watermelon 🍉";
 }
 
-export function calculateScheduledNotifications(user: any, settings: any): any[] {
-  return [];
+export interface ScheduledNotificationItem {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  date: string;
+  emoji: string;
+  isPartner: boolean;
+  category: 'cycle' | 'mood' | 'symptom' | 'wellness' | 'medication' | 'partner' | 'pregnancy';
+}
+
+export function calculateScheduledNotifications(user: any, settings: any): ScheduledNotificationItem[] {
+  if (!user) return [];
+  const activeSettings = settings || user.notificationSettings || getDefaultNotificationSettings();
+  if (!activeSettings.enabled && !activeSettings.partnerNotificationsEnabled) return [];
+
+  const items: ScheduledNotificationItem[] = [];
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+
+  const tone = activeSettings.toneStyle || 'supportive';
+  const isPartner = !!user.isPartner;
+
+  if (user.isPregnancyMode) {
+    // Pregnancy Notifications
+    if (activeSettings.pregnancyEnabled || activeSettings.partnerPregnancyEnabled) {
+      const pStats = getPregnancyStats(user);
+      const babySize = getBabySize(pStats.weeks);
+
+      // Weekly Development
+      if (activeSettings.pregnancyTypes?.weeklyBabyDev ?? true) {
+        items.push({
+          id: `preg_dev_${pStats.weeks}`,
+          type: 'weeklyBabyDev',
+          title: isPartner ? 'Supporting Her Bloom 💕' : `Week ${pStats.weeks} Baby Growth 👶`,
+          body: generatePregnancyNotificationText(isPartner ? 'weeklyBabyUpdate' : 'weeklyBabyDev', tone, isPartner, { week: pStats.weeks }),
+          date: todayStr,
+          emoji: '👶',
+          isPartner,
+          category: 'pregnancy'
+        });
+      }
+
+      // Baby Size Update
+      if (activeSettings.pregnancyTypes?.babySizeUpdate ?? true) {
+        items.push({
+          id: `preg_size_${pStats.weeks}`,
+          type: 'babySizeUpdate',
+          title: 'Baby Size Milestone 🥭',
+          body: generatePregnancyNotificationText('babySizeUpdate', tone, false, { size: babySize }),
+          date: todayStr,
+          emoji: '🥭',
+          isPartner: false,
+          category: 'pregnancy'
+        });
+      }
+
+      // Hydration
+      if (activeSettings.pregnancyTypes?.hydration ?? true) {
+        items.push({
+          id: `preg_hyd_${todayStr}`,
+          type: 'hydration',
+          title: 'Gentle Hydration 💧',
+          body: generatePregnancyNotificationText('hydration', tone, false),
+          date: todayStr,
+          emoji: '💧',
+          isPartner: false,
+          category: 'wellness'
+        });
+      }
+
+      // Prenatal Vitamin
+      if (activeSettings.pregnancyTypes?.medicationVitamin ?? true) {
+        items.push({
+          id: `preg_vit_${todayStr}`,
+          type: 'medicationVitamin',
+          title: 'Prenatal Vitamin Reminder 💊',
+          body: generatePregnancyNotificationText('medicationVitamin', tone, false),
+          date: todayStr,
+          emoji: '💊',
+          isPartner: false,
+          category: 'medication'
+        });
+      }
+
+      // Rest / Gentle Care
+      if (activeSettings.pregnancyTypes?.rest ?? true) {
+        items.push({
+          id: `preg_rest_${todayStr}`,
+          type: 'rest',
+          title: isPartner ? 'Supporting Her Rest 🌙' : 'Sanctuary Rest Check 🌙',
+          body: generatePregnancyNotificationText('rest', tone, isPartner),
+          date: todayStr,
+          emoji: '🌙',
+          isPartner,
+          category: 'pregnancy'
+        });
+      }
+
+      // Due Date Countdown
+      if (activeSettings.pregnancyTypes?.dueDateCountdown ?? true) {
+        items.push({
+          id: `preg_due_${pStats.weeksLeft}`,
+          type: 'dueDateCountdown',
+          title: isPartner ? 'Partner Arrival Countdown 🎀' : 'Due Date Milestone 🎀',
+          body: generatePregnancyNotificationText('dueDateCountdown', tone, isPartner, { weeksLeft: pStats.weeksLeft }),
+          date: todayStr,
+          emoji: '🎀',
+          isPartner,
+          category: 'pregnancy'
+        });
+      }
+    }
+  } else {
+    // Standard Cycle Notifications
+    const predictions = getCyclePredictions(user);
+
+    // 1. Period Starting
+    if (activeSettings.types?.periodStarting ?? true) {
+      items.push({
+        id: `period_start_${predictions.nextPeriod}`,
+        type: 'periodStarting',
+        title: isPartner ? 'Her Cycle Approaching 🌸' : 'Period Starting Soon 🌸',
+        body: generateNotificationText('periodStarting', tone, isPartner, { date: predictions.nextPeriod }),
+        date: predictions.nextPeriod,
+        emoji: '🌸',
+        isPartner,
+        category: 'cycle'
+      });
+    }
+
+    // 2. Period Ending
+    if (activeSettings.types?.periodEnding ?? true) {
+      items.push({
+        id: `period_end_${user.lastPeriodStart}`,
+        type: 'periodEnding',
+        title: isPartner ? 'Sanctuary Renewal 🌷' : 'Cycle Cleansing Done ✨',
+        body: generateNotificationText('periodEnding', tone, isPartner),
+        date: todayStr,
+        emoji: '🌷',
+        isPartner,
+        category: 'cycle'
+      });
+    }
+
+    // 3. Ovulation
+    if (activeSettings.types?.ovulation ?? true) {
+      items.push({
+        id: `ovulation_${predictions.ovulation}`,
+        type: 'ovulation',
+        title: isPartner ? 'Her Ovulation Season 🌸' : 'Celestial Ovulation ✨',
+        body: generateNotificationText('ovulation', tone, isPartner, { date: predictions.ovulation }),
+        date: predictions.ovulation,
+        emoji: '💖',
+        isPartner,
+        category: 'cycle'
+      });
+    }
+
+    // 4. Fertile Window
+    if (activeSettings.types?.fertileWindow ?? true) {
+      items.push({
+        id: `fertile_${predictions.fertileStart}`,
+        type: 'fertileWindow',
+        title: isPartner ? 'Abundant Bloom Phase 💞' : 'Abundant Peak Bloom 💞',
+        body: generateNotificationText('fertileWindow', tone, isPartner, { startDate: predictions.fertileStart, endDate: predictions.fertileEnd }),
+        date: predictions.fertileStart,
+        emoji: '💞',
+        isPartner,
+        category: 'cycle'
+      });
+    }
+
+    // 5. Luteal Phase
+    if (activeSettings.types?.lutealPhase ?? true) {
+      items.push({
+        id: `luteal_${todayStr}`,
+        type: 'lutealPhase',
+        title: 'Quiet Sunset Inward 🌙',
+        body: generateNotificationText('lutealPhase', tone, isPartner),
+        date: todayStr,
+        emoji: '🌙',
+        isPartner,
+        category: 'cycle'
+      });
+    }
+
+    // 6. Medication / Birth Control Reminders
+    if (user.birthControlConfig?.enabled) {
+      items.push({
+        id: `bc_reminder_${todayStr}`,
+        type: 'medication',
+        title: 'Medication & Supplement Reminder 💊',
+        body: `Time for your scheduled ${user.birthControlConfig.method || 'medication'} intake (${user.birthControlConfig.reminderTime || '09:00'}). Stay consistent & hydrated! 🌸`,
+        date: todayStr,
+        emoji: '💊',
+        isPartner: false,
+        category: 'medication'
+      });
+    }
+
+    // 7. Water & Hydration Reminder
+    if (activeSettings.types?.hydration ?? true) {
+      items.push({
+        id: `water_reminder_${todayStr}`,
+        type: 'hydration',
+        title: 'Hydration & Water Reminder 💧',
+        body: `Drink up! Reach your daily target of ${user.waterGoal || 8} glasses of water today for optimal cycle vitality and self-care. 💧`,
+        date: todayStr,
+        emoji: '💧',
+        isPartner: false,
+        category: 'wellness'
+      });
+    }
+
+    // 8. Low Energy / Mood Updates
+    const latestMood = user.moodLogs?.[user.moodLogs.length - 1];
+    if (latestMood && (latestMood.mood === 'tired' || latestMood.mood === 'sad' || latestMood.mood === 'anxious' || latestMood.mood === 'irritable')) {
+      items.push({
+        id: `mood_care_${latestMood.id || todayStr}`,
+        type: 'moodCare',
+        title: isPartner ? 'Partner Low Energy Alert 🧸' : 'Gentle Self-Care Pause 🧸',
+        body: isPartner 
+          ? `Your partner recently logged feeling ${latestMood.mood}. Offer a warm hug, heating pad, or a cup of warm tea! 💗`
+          : `You noted feeling ${latestMood.mood} today. Give yourself permission to rest and recharge in sanctuary. 💆‍♀️`,
+        date: todayStr,
+        emoji: '🧸',
+        isPartner,
+        category: 'mood'
+      });
+    }
+
+    // 8. Symptom Updates
+    const recentSymptoms = user.symptoms || [];
+    if (recentSymptoms.length > 0) {
+      items.push({
+        id: `symptom_care_${todayStr}`,
+        type: 'symptomCare',
+        title: isPartner ? 'Partner Symptom Update 🌸' : 'Sanctuary Symptom Care 🌸',
+        body: isPartner
+          ? `Your partner recently logged symptoms (${recentSymptoms.slice(0, 2).map((s: any) => s.name || s.type).join(', ')}). A gentle check-in means the world. 💖`
+          : `Remember to stay hydrated and rest for your reported symptoms (${recentSymptoms.slice(0, 2).map((s: any) => s.name || s.type).join(', ')}). 🍵`,
+        date: todayStr,
+        emoji: '🍵',
+        isPartner,
+        category: 'symptom'
+      });
+    }
+
+    // 9. Support Reminders & Wellness Updates
+    items.push({
+      id: `wellness_tip_${todayStr}`,
+      type: 'wellness',
+      title: 'Daily Wellness Affirmation 🌿',
+      body: 'Take a deep, belly breath. Your body is navigating its natural rhythm with wisdom and grace. 🌸',
+      date: todayStr,
+      emoji: '🌿',
+      isPartner: false,
+      category: 'wellness'
+    });
+  }
+
+  return items;
 }
 
 export function generateNotificationText(

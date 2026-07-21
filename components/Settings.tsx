@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, NotificationSettings, Symptom, DiaryEntry, BirthControlLog, TemperatureLog, SharingSettings, BillingItem, Reminder } from '../types';
+import { User, NotificationSettings, Symptom, DiaryEntry, BirthControlLog, TemperatureLog, SharingSettings, BillingItem, Reminder, PartnerNotificationPreferences } from '../types';
 import PartnerMode from './PartnerMode';
 import { 
   Bell, 
@@ -1408,18 +1408,18 @@ const Settings: React.FC<SettingsProps> = ({
                     {/* Permission checklists */}
                     {!user.isSharingPaused && (
                       <div className="space-y-3 pt-2">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400 ml-1">Edit Shared Information</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400 ml-1">Share with Partner</p>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           {[
-                            { label: "Share Cycle Information", desc: "Show period status and forecasts", key: "shareCycleInfo" },
-                            { label: "Share Symptoms", desc: "Show physical symptom logs", key: "shareSymptoms" },
-                            { label: "Share Mood", desc: "Show logged mood events", key: "shareMood" },
-                            { label: "Share Fertility Information", desc: "Show fertile windows & ovulation predictions", key: "shareFertilityInfo" },
-                            { label: "Share Pregnancy Information", desc: "Show pregnancy milestones", key: "sharePregnancyInfo" },
+                            { label: "Period Status", desc: "Show period status, stage, and forecasts", key: "shareCycleInfo" },
+                            { label: "Ovulation Information", desc: "Show fertile windows & ovulation predictions", key: "shareFertilityInfo" },
+                            { label: "Mood Updates", desc: "Show logged mood events and emotional status", key: "shareMood" },
+                            { label: "Symptom Updates", desc: "Show physical symptom logs and comfort needs", key: "shareSymptoms" },
+                            { label: "Wellness Updates", desc: "Show wellness briefs & daily care suggestions", key: "shareWellnessUpdates" },
+                            { label: "Share Pregnancy Information", desc: "Show pregnancy milestones & baby growth", key: "sharePregnancyInfo" },
                             { label: "Share Intimacy Logs", desc: "Show contraceptive & intimacy tracker logs", key: "shareIntimacyInfo" },
-                            { label: "Share Doctor Reports", desc: "Show shared medical details", key: "shareDoctorReports" },
-                            { label: "Share Appointment Reminders", desc: "Show shared visits & clinic schedules", key: "shareAppointmentReminders" },
-                            { label: "Share Wellness Updates", desc: "Show wellness briefs & daily suggestions", key: "shareWellnessUpdates" }
+                            { label: "Share Doctor Reports", desc: "Show shared medical details & summaries", key: "shareDoctorReports" },
+                            { label: "Share Appointment Reminders", desc: "Show shared visits & clinic schedules", key: "shareAppointmentReminders" }
                           ].map((pref) => (
                             <div key={pref.key} className="flex items-start gap-3 p-3 bg-indigo-50/20 hover:bg-indigo-50/40 rounded-2xl transition-all">
                               <input
@@ -1549,30 +1549,59 @@ const Settings: React.FC<SettingsProps> = ({
 
                   {settings.partnerNotificationsEnabled && (
                     <div className="space-y-3 pt-2 animate-fadeIn grid grid-cols-1 md:grid-cols-2 gap-3 md:space-y-0">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-pink-500 ml-1 col-span-full">Allowed Partner Types</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-pink-500 ml-1 col-span-full">Partner Notification Preferences 💜</p>
                       {[
-                        { key: 'periodStarting', label: 'Period Expected Warning', d: '“Hey she might be starting on [date], check on her...”' },
-                        { key: 'periodStarted', label: 'Period Started Helper', d: '“She started today, send chocolates or comfort...”' },
-                        { key: 'periodEnding', label: 'Period Ended Alert', d: '“She finished her cycle, new renewal spring...”' },
-                        { key: 'ovulation', label: 'Ovulation Alert', d: '“She may be ovulating around [date]...”' },
-                        { key: 'fertileWindow', label: 'Fertile Window alert', d: '“She may be in her fertile window...”' },
-                        { key: 'pregnancyRisk', label: 'Educational Pregnancy Risk', d: '“Her pregnancy risk might be higher/lower...”' },
-                      ].map((item) => (
-                        <div key={item.key} className="flex justify-between items-center p-3 bg-purple-50/10 border border-purple-100/20 rounded-2xl hover:bg-purple-50/20 pl-4 transition-all">
-                          <div className="space-y-0.5 max-w-[80%]">
-                            <span className="text-[11px] font-bold text-indigo-950 leading-tight block">{item.label}</span>
-                            <p className="text-[10px] text-indigo-400 italic font-medium leading-tight">{item.d}</p>
+                        { key: 'periodStarting', label: 'Period Starting', d: "Notify me when my partner's period starts." },
+                        { key: 'periodEnding', label: 'Period Ending', d: "Notify me when my partner's period ends." },
+                        { key: 'ovulationUpdates', label: 'Ovulation Updates', d: 'Notify me during ovulation and fertility windows.' },
+                        { key: 'moodUpdates', label: 'Mood Updates', d: 'Notify me when my partner shares a mood update.' },
+                        { key: 'symptomUpdates', label: 'Symptom Updates', d: 'Notify me when my partner shares symptoms.' },
+                        { key: 'lowEnergyDays', label: 'Low Energy Days', d: 'Notify me when my partner reports low energy.' },
+                        { key: 'supportReminders', label: 'Support Reminders', d: 'Receive suggestions on how to support my partner.' },
+                        { key: 'wellnessUpdates', label: 'Wellness Updates', d: 'Receive wellness summaries and educational tips.' },
+                        { key: 'partnerMessages', label: 'Partner Messages', d: 'Receive shared updates and appreciation notes.' },
+                        { key: 'educationalInsights', label: 'Educational Insights', d: 'Receive learning content about menstrual health and cycle phases.' },
+                      ].map((item) => {
+                        const isChecked = user.partnerNotificationPreferences?.[item.key as keyof PartnerNotificationPreferences] ?? ((settings.partnerReceiveTypes as any)[item.key] ?? true);
+                        return (
+                          <div key={item.key} className="flex justify-between items-center p-3 bg-purple-50/10 border border-purple-100/20 rounded-2xl hover:bg-purple-50/20 pl-4 transition-all">
+                            <div className="space-y-0.5 max-w-[80%]">
+                              <span className="text-[11px] font-bold text-indigo-950 leading-tight block">{item.label}</span>
+                              <p className="text-[10px] text-indigo-400 italic font-medium leading-tight">{item.d}</p>
+                            </div>
+                            <button 
+                              onClick={async () => {
+                                const newval = !isChecked;
+                                const updatedPrefs = {
+                                  ...(user.partnerNotificationPreferences || {
+                                    periodStarting: true, periodEnding: true, ovulationUpdates: true, moodUpdates: true, symptomUpdates: true, lowEnergyDays: true, supportReminders: true, wellnessUpdates: true, partnerMessages: true, educationalInsights: true
+                                  }),
+                                  [item.key]: newval
+                                };
+                                const updatedUser = {
+                                  ...user,
+                                  partnerNotificationPreferences: updatedPrefs,
+                                  notificationSettings: {
+                                    ...(user.notificationSettings || settings),
+                                    partnerReceiveTypes: {
+                                      ...(user.notificationSettings?.partnerReceiveTypes || {}),
+                                      [item.key]: newval
+                                    }
+                                  }
+                                };
+                                setUser(updatedUser);
+                                localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+                                await syncUser(updatedUser);
+                              }}
+                              className={`w-9 h-5 shrink-0 rounded-full p-0.5 transition-colors duration-300 ease-in-out flex items-center ${
+                                isChecked ? 'bg-purple-500 justify-end' : 'bg-purple-100 justify-start'
+                              }`}
+                            >
+                              <span className="w-4 h-4 rounded-full bg-white shadow-sm"></span>
+                            </button>
                           </div>
-                          <button 
-                            onClick={() => updatePartnerReceiveTypes(item.key as any, !settings.partnerReceiveTypes[item.key as keyof NotificationSettings['partnerReceiveTypes']])}
-                            className={`w-9 h-5 shrink-0 rounded-full p-0.5 transition-colors duration-300 ease-in-out flex items-center ${
-                              settings.partnerReceiveTypes[item.key as keyof NotificationSettings['partnerReceiveTypes']] ? 'bg-purple-500 justify-end' : 'bg-purple-100 justify-start'
-                            }`}
-                          >
-                            <span className="w-4 h-4 rounded-full bg-white shadow-sm"></span>
-                          </button>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>

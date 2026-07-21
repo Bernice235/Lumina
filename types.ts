@@ -41,6 +41,19 @@ export interface PartnerRequest {
   timestamp?: string;
 }
 
+export interface PartnerNotificationPreferences {
+  periodStarting: boolean;
+  periodEnding: boolean;
+  ovulationUpdates: boolean;
+  moodUpdates: boolean;
+  symptomUpdates: boolean;
+  lowEnergyDays: boolean;
+  supportReminders: boolean;
+  wellnessUpdates: boolean;
+  partnerMessages: boolean;
+  educationalInsights: boolean;
+}
+
 export interface SharingSettings {
   shareCycleInfo: boolean;
   shareSymptoms: boolean;
@@ -81,6 +94,8 @@ export interface User {
   deliveryDate?: string;
   diaryPin?: string;
   theme: AppTheme;
+  wallpaper?: string;
+  useCycleBasedWallpaper?: boolean;
   darkMode?: boolean;
   periodDates?: string[];
   periodLogs?: PeriodLog[];
@@ -103,6 +118,8 @@ export interface User {
   partnerRequest?: PartnerRequest;
   waterGoal?: number;
   wellnessPreferences?: string[];
+  partnerSupportPreferences?: any;
+  partnerNotificationPreferences?: PartnerNotificationPreferences;
   notificationSettings?: NotificationSettings;
   pregnancyAppointments?: { id: string; date: string; title: string; notes?: string }[];
   pregnancySupplements?: string[];

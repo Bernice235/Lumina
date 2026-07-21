@@ -1,8 +1,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, X } from 'lucide-react';
-import { User, Reminder, ReceivedComfort } from '../types';
+import { Bell, X, GraduationCap, BookOpen, Heart, ShieldCheck, CheckCircle2, AlertCircle, Info, Sparkles } from 'lucide-react';
+import { User, Reminder, ReceivedComfort, PartnerNotificationPreferences } from '../types';
 import { getGiftIdeas, getCommunicationTips, getLoveNoteIdeas, getSupportMission } from '../services/gemini';
 import { 
   createInvite, 
@@ -41,7 +41,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
   const [loading, setLoading] = useState(true);
   const [newReminderText, setNewReminderText] = useState('');
   const [newReminderTime, setNewReminderTime] = useState('');
-  const [activeTab, setActiveTab] = useState<'mission' | 'ideas' | 'notes' | 'reminders' | 'calendar' | 'education'>('mission');
+  const [activeTab, setActiveTab] = useState<'mission' | 'ideas' | 'notes' | 'reminders' | 'calendar' | 'education' | 'notifications'>('mission');
   const [expandedPhase, setExpandedPhase] = useState<string | null>(null);
   const [selectedQuickCard, setSelectedQuickCard] = useState<string | null>(null);
   const [partnerCodeInput, setPartnerCodeInput] = useState('');
@@ -1782,22 +1782,46 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
     return (
       <div className="space-y-8 animate-fadeIn pb-24 font-sans">
         {/* Top Header Section for Partner Mode */}
-        <header className="flex items-center justify-between px-4 py-3 bg-white/40 backdrop-blur-2xl border border-white/60 shadow-[inset_0_2px_4px_rgba(255,255,255,0.6),_0_8px_32px_rgba(99,102,241,0.03)] rounded-3xl sticky top-2 z-40">
-          <div className="flex items-center gap-1.5 cursor-pointer">
+        <header className="flex items-center justify-between px-4 py-3 bg-white/40 backdrop-blur-2xl border border-white/60 shadow-[inset_0_2px_4px_rgba(255,255,255,0.6),_0_8px_32px_rgba(99,102,241,0.03)] rounded-3xl sticky top-2 z-40 flex-wrap gap-2">
+          <div className="flex items-center gap-2 cursor-pointer flex-wrap">
             <span className="text-xl animate-pulse">🤝</span>
             <span className="font-serif italic font-black text-2xl bg-gradient-to-r from-indigo-500 to-purple-400 bg-clip-text text-transparent drop-shadow-sm">
               Lumina Partner
             </span>
+            {/* Connection Status Indicator Badge */}
+            {user.isPartnerLinked && (user.partnerId || targetUser) ? (
+              <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-wider border border-emerald-200/60 shadow-sm">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+                <span>Connected ({getCleanName(targetUser?.name || user.partnerName, targetUser?.email) || 'Partner'})</span>
+              </div>
+            ) : activePendingRequest?.status === 'pending' || user.partnerRequest?.status === 'pending' ? (
+              <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-700 rounded-full text-[10px] font-black uppercase tracking-wider border border-amber-200/60 shadow-sm">
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping shrink-0"></span>
+                <span>Pending Approval</span>
+              </div>
+            ) : activePendingRequest?.status === 'declined' || user.partnerRequest?.status === 'declined' ? (
+              <div className="flex items-center gap-1.5 px-3 py-1 bg-rose-50 text-rose-700 rounded-full text-[10px] font-black uppercase tracking-wider border border-rose-200/60 shadow-sm">
+                <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0"></span>
+                <span>Request Declined</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 px-3 py-1 bg-stone-100 text-stone-600 rounded-full text-[10px] font-black uppercase tracking-wider border border-stone-200/60 shadow-sm">
+                <span className="w-2 h-2 rounded-full bg-stone-400 shrink-0"></span>
+                <span>Not Connected</span>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-3">
-            <button 
-              type="button"
-              onClick={() => setUser({ ...user, isPartner: false })}
-              className="px-4 py-2 text-[10px] font-bold text-indigo-600 bg-indigo-50/50 hover:bg-indigo-100/50 rounded-2xl border border-indigo-100/50 transition-all active:scale-95 cursor-pointer"
-            >
-              ← Back to My Account
-            </button>
+            {!user.isPartner && (
+              <button 
+                type="button"
+                onClick={() => setUser({ ...user, isPartner: false })}
+                className="px-4 py-2 text-[10px] font-bold text-indigo-600 bg-indigo-50/50 hover:bg-indigo-100/50 rounded-2xl border border-indigo-100/50 transition-all active:scale-95 cursor-pointer"
+              >
+                ← Back to My Account
+              </button>
+            )}
             
             <button 
               type="button"
@@ -1942,22 +1966,46 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
   return (
     <div className="space-y-8 animate-fadeIn pb-24">
       {/* Top Header Section for Partner Mode */}
-      <header className="flex items-center justify-between px-4 py-3 bg-white/40 backdrop-blur-2xl border border-white/60 shadow-[inset_0_2px_4px_rgba(255,255,255,0.6),_0_8px_32px_rgba(99,102,241,0.03)] rounded-3xl sticky top-2 z-40">
-        <div className="flex items-center gap-1.5 cursor-pointer">
+      <header className="flex items-center justify-between px-4 py-3 bg-white/40 backdrop-blur-2xl border border-white/60 shadow-[inset_0_2px_4px_rgba(255,255,255,0.6),_0_8px_32px_rgba(99,102,241,0.03)] rounded-3xl sticky top-2 z-40 flex-wrap gap-2">
+        <div className="flex items-center gap-2 cursor-pointer flex-wrap">
           <span className="text-xl animate-pulse">🤝</span>
           <span className="font-serif italic font-black text-2xl bg-gradient-to-r from-indigo-500 to-purple-400 bg-clip-text text-transparent drop-shadow-sm">
             Lumina Partner
           </span>
+          {/* Connection Status Indicator Badge */}
+          {user.isPartnerLinked && (user.partnerId || targetUser) ? (
+            <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-wider border border-emerald-200/60 shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+              <span>Connected ({getCleanName(targetUser?.name || user.partnerName, targetUser?.email) || 'Partner'})</span>
+            </div>
+          ) : activePendingRequest?.status === 'pending' || user.partnerRequest?.status === 'pending' ? (
+            <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-700 rounded-full text-[10px] font-black uppercase tracking-wider border border-amber-200/60 shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping shrink-0"></span>
+              <span>Pending Approval</span>
+            </div>
+          ) : activePendingRequest?.status === 'declined' || user.partnerRequest?.status === 'declined' ? (
+            <div className="flex items-center gap-1.5 px-3 py-1 bg-rose-50 text-rose-700 rounded-full text-[10px] font-black uppercase tracking-wider border border-rose-200/60 shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0"></span>
+              <span>Request Declined</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 px-3 py-1 bg-stone-100 text-stone-600 rounded-full text-[10px] font-black uppercase tracking-wider border border-stone-200/60 shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-stone-400 shrink-0"></span>
+              <span>Not Connected</span>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-3">
-          <button 
-            type="button"
-            onClick={() => setUser({ ...user, isPartner: false })}
-            className="px-4 py-2 text-[10px] font-bold text-indigo-600 bg-indigo-50/50 hover:bg-indigo-100/50 rounded-2xl border border-indigo-100/50 transition-all active:scale-95 cursor-pointer"
-          >
-            ← Back to My Account
-          </button>
+          {!user.isPartner && (
+            <button 
+              type="button"
+              onClick={() => setUser({ ...user, isPartner: false })}
+              className="px-4 py-2 text-[10px] font-bold text-indigo-600 bg-indigo-50/50 hover:bg-indigo-100/50 rounded-2xl border border-indigo-100/50 transition-all active:scale-95 cursor-pointer"
+            >
+              ← Back to My Account
+            </button>
+          )}
           
           <button 
             type="button"
@@ -2023,12 +2071,14 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
           <h3 className="text-2xl font-serif text-indigo-600 italic">
             {getCleanName(targetUser?.name, targetUser?.email) || "Your Partner"}'s Cycle
           </h3>
-          <button 
-            onClick={() => setUser({ ...user, isPartner: false })}
-            className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest"
-          >
-            ← Back to My Account
-          </button>
+          {!user.isPartner && (
+            <button 
+              onClick={() => setUser({ ...user, isPartner: false })}
+              className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest"
+            >
+              ← Back to My Account
+            </button>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2109,6 +2159,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
         <NavItem active={activeTab === 'reminders'} onClick={() => setActiveTab('reminders')} label="Tasks" icon="⏰" />
         <NavItem active={activeTab === 'calendar'} onClick={() => setActiveTab('calendar')} label="Calendar" icon="📅" />
         <NavItem active={activeTab === 'education'} onClick={() => setActiveTab('education')} label="Education" icon="🎓" />
+        <NavItem active={activeTab === 'notifications'} onClick={() => setActiveTab('notifications')} label="Notifications" icon="🔔" />
       </nav>
 
       {activeTab === 'mission' && (
@@ -2278,6 +2329,249 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                 <span className="text-[10px] font-bold text-indigo-400 uppercase">Fertile</span>
               </div>
             </div>
+          </div>
+        </section>
+      )}
+
+      {activeTab === 'education' && (
+        <section className="space-y-8 animate-fadeIn font-sans">
+          {/* Partner Education Header Banner */}
+          <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 p-8 md:p-10 rounded-[3rem] text-white shadow-xl relative overflow-hidden">
+            <div className="relative z-10 space-y-3">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-[10px] font-black uppercase tracking-widest border border-white/20">
+                <GraduationCap className="w-4 h-4 text-pink-200" />
+                Partner Education Guide
+              </div>
+              <h3 className="text-3xl md:text-4xl font-serif italic font-bold">Understanding Her Cycle & How to Support</h3>
+              <p className="text-sm opacity-90 max-w-xl leading-relaxed font-serif italic">
+                Knowledge is empathy. Understanding the 4 menstrual phases, PMS, and mood patterns will help you become her greatest comfort and support hero.
+              </p>
+            </div>
+            <div className="absolute top-0 right-0 p-8 opacity-10">
+              <span className="text-[12rem]">🎓</span>
+            </div>
+          </div>
+
+          {/* The 4 Phases Cards */}
+          <div className="space-y-4">
+            <h4 className="text-xs font-black text-indigo-400 uppercase tracking-widest px-2">The 4 Menstrual Phases</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Phase 1: Menstrual */}
+              <div className="bg-white p-7 rounded-[2.5rem] border border-rose-100 shadow-sm space-y-4 hover:shadow-md transition-all">
+                <div className="flex justify-between items-start">
+                  <span className="text-4xl">🩸</span>
+                  <span className="px-3 py-1 rounded-full bg-rose-50 text-rose-600 text-[10px] font-black uppercase tracking-widest">Days 1 - 5</span>
+                </div>
+                <div>
+                  <h5 className="text-xl font-serif italic text-rose-600 font-bold">1. Menstrual Phase</h5>
+                  <p className="text-xs text-gray-500 italic mt-1 leading-relaxed">
+                    Hormones (estrogen & progesterone) drop to their lowest level. The uterine lining sheds.
+                  </p>
+                </div>
+                <div className="space-y-2 pt-2 border-t border-rose-50">
+                  <p className="text-[10px] font-black text-rose-500 uppercase tracking-wider">How She Feels:</p>
+                  <p className="text-xs text-stone-600 italic">Cramps, low energy, fatigue, desire for warmth & rest.</p>
+                  <p className="text-[10px] font-black text-indigo-500 uppercase tracking-wider mt-2">How You Can Support:</p>
+                  <p className="text-xs text-stone-700 bg-indigo-50/50 p-3 rounded-2xl border border-indigo-100/50 italic">
+                    "Bring a heating pad, prepare warm tea, offer gentle massages, and take over physical chores without asking."
+                  </p>
+                </div>
+              </div>
+
+              {/* Phase 2: Follicular */}
+              <div className="bg-white p-7 rounded-[2.5rem] border border-emerald-100 shadow-sm space-y-4 hover:shadow-md transition-all">
+                <div className="flex justify-between items-start">
+                  <span className="text-4xl">🌱</span>
+                  <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase tracking-widest">Days 6 - 13</span>
+                </div>
+                <div>
+                  <h5 className="text-xl font-serif italic text-emerald-600 font-bold">2. Follicular Phase</h5>
+                  <p className="text-xs text-gray-500 italic mt-1 leading-relaxed">
+                    Estrogen rises steadily. Follicles develop in the ovaries and energy rebounds.
+                  </p>
+                </div>
+                <div className="space-y-2 pt-2 border-t border-emerald-50">
+                  <p className="text-[10px] font-black text-emerald-500 uppercase tracking-wider">How She Feels:</p>
+                  <p className="text-xs text-stone-600 italic">Increased stamina, optimism, mental clarity, creative energy.</p>
+                  <p className="text-[10px] font-black text-indigo-500 uppercase tracking-wider mt-2">How You Can Support:</p>
+                  <p className="text-xs text-stone-700 bg-indigo-50/50 p-3 rounded-2xl border border-indigo-100/50 italic">
+                    "Plan active dates, try new outdoor experiences, and support her new ideas and projects."
+                  </p>
+                </div>
+              </div>
+
+              {/* Phase 3: Ovulation */}
+              <div className="bg-white p-7 rounded-[2.5rem] border border-amber-100 shadow-sm space-y-4 hover:shadow-md transition-all">
+                <div className="flex justify-between items-start">
+                  <span className="text-4xl">✨</span>
+                  <span className="px-3 py-1 rounded-full bg-amber-50 text-amber-600 text-[10px] font-black uppercase tracking-widest">Days 14 - 16</span>
+                </div>
+                <div>
+                  <h5 className="text-xl font-serif italic text-amber-600 font-bold">3. Ovulation Phase</h5>
+                  <p className="text-xs text-gray-500 italic mt-1 leading-relaxed">
+                    Estrogen and LH surge to release an egg. Fertility and confidence reach peak height.
+                  </p>
+                </div>
+                <div className="space-y-2 pt-2 border-t border-amber-50">
+                  <p className="text-[10px] font-black text-amber-500 uppercase tracking-wider">How She Feels:</p>
+                  <p className="text-xs text-stone-600 italic">High confidence, sociability, heightened sense of attraction & romance.</p>
+                  <p className="text-[10px] font-black text-indigo-500 uppercase tracking-wider mt-2">How You Can Support:</p>
+                  <p className="text-xs text-stone-700 bg-indigo-50/50 p-3 rounded-2xl border border-indigo-100/50 italic">
+                    "Plan romantic dinners, dress up together, give sincere compliments, and enjoy deep connection."
+                  </p>
+                </div>
+              </div>
+
+              {/* Phase 4: Luteal */}
+              <div className="bg-white p-7 rounded-[2.5rem] border border-purple-100 shadow-sm space-y-4 hover:shadow-md transition-all">
+                <div className="flex justify-between items-start">
+                  <span className="text-4xl">🌙</span>
+                  <span className="px-3 py-1 rounded-full bg-purple-50 text-purple-600 text-[10px] font-black uppercase tracking-widest">Days 17 - 28</span>
+                </div>
+                <div>
+                  <h5 className="text-xl font-serif italic text-purple-600 font-bold">4. Luteal Phase & PMS</h5>
+                  <p className="text-xs text-gray-500 italic mt-1 leading-relaxed">
+                    Progesterone peaks then drops. Metabolic needs increase, leading to cravings and sensitivity.
+                  </p>
+                </div>
+                <div className="space-y-2 pt-2 border-t border-purple-50">
+                  <p className="text-[10px] font-black text-purple-500 uppercase tracking-wider">How She Feels:</p>
+                  <p className="text-xs text-stone-600 italic">Bloating, mood swings, irritability, food cravings, sensitivity to stress.</p>
+                  <p className="text-[10px] font-black text-indigo-500 uppercase tracking-wider mt-2">How You Can Support:</p>
+                  <p className="text-xs text-stone-700 bg-indigo-50/50 p-3 rounded-2xl border border-indigo-100/50 italic">
+                    "Be patient, bring her favorite snacks, avoid arguing over small things, and offer soothing comfort."
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* PMS & Mood Changes Deep Dive */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-white p-8 rounded-[3rem] border border-indigo-50 shadow-sm space-y-4">
+              <div className="w-12 h-12 bg-pink-100 rounded-full flex items-center justify-center text-2xl">🍫</div>
+              <h4 className="text-xl font-serif italic text-indigo-900 font-bold">Understanding PMS & Mood Shifts</h4>
+              <p className="text-xs text-stone-500 leading-relaxed italic">
+                PMS is caused by sudden hormonal drops before bleeding. It is not an exaggeration — her body is undergoing real physiological shifts.
+              </p>
+              <ul className="space-y-2.5 text-xs text-stone-600">
+                <li className="flex items-start gap-2">
+                  <span className="text-pink-500 font-bold">•</span>
+                  <span><strong>Cravings:</strong> Her body burns more calories during the luteal phase, driving carbohydrate and sweet cravings.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-pink-500 font-bold">•</span>
+                  <span><strong>Mood Changes:</strong> Serotonin levels drop alongside progesterone. Extra patience goes a long way.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-pink-500 font-bold">•</span>
+                  <span><strong>Physical Sensitivity:</strong> Headaches, bloating, and joint discomfort are common.</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="bg-white p-8 rounded-[3rem] border border-indigo-50 shadow-sm space-y-4">
+              <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center text-2xl">🛡️</div>
+              <h4 className="text-xl font-serif italic text-indigo-900 font-bold">How to Support Like a Pro</h4>
+              <p className="text-xs text-stone-500 leading-relaxed italic">
+                Golden rules every partner should follow to make her feel cherished and understood:
+              </p>
+              <ul className="space-y-2.5 text-xs text-stone-600">
+                <li className="flex items-start gap-2">
+                  <span className="text-indigo-500 font-bold">1.</span>
+                  <span><strong>Listen without fixing:</strong> Sometimes she just needs validation, not solutions.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-indigo-500 font-bold">2.</span>
+                  <span><strong>Anticipate needs:</strong> Check her cycle status on Lumina and bring tea or snacks proactively.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-indigo-500 font-bold">3.</span>
+                  <span><strong>Send Digital Comfort:</strong> Use the Comfort Buttons below to send hugs, flowers, and cocoa balloons.</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {activeTab === 'notifications' && (
+        <section className="bg-white p-8 md:p-10 rounded-[3rem] border border-purple-100 shadow-sm space-y-6 animate-fadeIn font-sans">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-purple-50 pb-6">
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-50 text-purple-600 text-[10px] font-black uppercase tracking-widest mb-2 border border-purple-100">
+                <span>🔔</span> Partner Notification Preferences
+              </div>
+              <h3 className="text-2xl md:text-3xl font-serif italic text-purple-950 font-bold">
+                Stay Connected 💜
+              </h3>
+              <p className="text-xs text-stone-500 italic mt-1">
+                Choose which updates you would like to receive.
+              </p>
+            </div>
+            <button
+              onClick={async () => {
+                await syncUser(user);
+                alert("Notification preferences updated successfully! 💜");
+              }}
+              className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-2xl text-xs font-bold uppercase tracking-wider shadow-md active:scale-95 transition-all shrink-0 cursor-pointer"
+            >
+              Save Preferences ✨
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[
+              { key: 'periodStarting', label: 'Period Starting', desc: "Notify me when my partner's period starts." },
+              { key: 'periodEnding', label: 'Period Ending', desc: "Notify me when my partner's period ends." },
+              { key: 'ovulationUpdates', label: 'Ovulation Updates', desc: 'Notify me during ovulation and fertility windows.' },
+              { key: 'moodUpdates', label: 'Mood Updates', desc: 'Notify me when my partner shares a mood update.' },
+              { key: 'symptomUpdates', label: 'Symptom Updates', desc: 'Notify me when my partner shares symptoms.' },
+              { key: 'lowEnergyDays', label: 'Low Energy Days', desc: 'Notify me when my partner reports low energy.' },
+              { key: 'supportReminders', label: 'Support Reminders', desc: 'Receive suggestions on how to support my partner.' },
+              { key: 'wellnessUpdates', label: 'Wellness Updates', desc: 'Receive wellness summaries and educational tips.' },
+              { key: 'partnerMessages', label: 'Partner Messages', desc: 'Receive shared updates and appreciation notes.' },
+              { key: 'educationalInsights', label: 'Educational Insights', desc: 'Receive learning content about menstrual health and cycle phases.' },
+            ].map((pref) => {
+              const currentVal = user.partnerNotificationPreferences?.[pref.key as keyof PartnerNotificationPreferences] ?? true;
+              return (
+                <div key={pref.key} className="flex items-start justify-between p-4 bg-purple-50/20 hover:bg-purple-50/50 rounded-2xl border border-purple-100/60 transition-all">
+                  <div className="pr-4">
+                    <p className="text-xs font-bold text-purple-950 flex items-center gap-1">
+                      {pref.label}
+                    </p>
+                    <p className="text-[10px] text-stone-500 mt-0.5 leading-tight italic">{pref.desc}</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={currentVal}
+                    onChange={async (e) => {
+                      const updatedPrefs = {
+                        ...(user.partnerNotificationPreferences || {
+                          periodStarting: true, periodEnding: true, ovulationUpdates: true, moodUpdates: true, symptomUpdates: true, lowEnergyDays: true, supportReminders: true, wellnessUpdates: true, partnerMessages: true, educationalInsights: true
+                        }),
+                        [pref.key]: e.target.checked
+                      };
+                      const updatedUser = {
+                        ...user,
+                        partnerNotificationPreferences: updatedPrefs,
+                        notificationSettings: {
+                          ...(user.notificationSettings || {}),
+                          partnerReceiveTypes: {
+                            ...(user.notificationSettings?.partnerReceiveTypes || {}),
+                            [pref.key]: e.target.checked
+                          }
+                        }
+                      };
+                      setUser(updatedUser);
+                      localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+                      await syncUser(updatedUser);
+                    }}
+                    className="w-5 h-5 rounded border-purple-300 text-purple-600 focus:ring-purple-500 mt-0.5 cursor-pointer shrink-0"
+                  />
+                </div>
+              );
+            })}
           </div>
         </section>
       )}

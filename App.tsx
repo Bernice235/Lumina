@@ -16,11 +16,15 @@ import {
   RefreshCw, 
   Volume2, 
   VolumeX, 
+  X,
+  Trash2,
+  CheckCheck,
   Image as ImageIcon 
 } from 'lucide-react';
 import { User, Symptom, DiaryEntry, SelfCareTask, AppTheme, Reminder, BirthControlLog, Song, TemperatureLog, PeriodLog, Period, ReceivedComfort } from './types';
 import Auth from './components/Auth';
 import { OnboardingWizard } from './components/OnboardingWizard';
+import { PartnerOnboardingWizard } from './components/PartnerOnboardingWizard';
 import Dashboard from './components/Dashboard';
 import PeriodTracker from './components/PeriodTracker';
 import SelfCare from './components/SelfCare';
@@ -39,8 +43,9 @@ import DoctorReport from './components/DoctorReport';
 import { CycleGraph } from './components/CycleGraph';
 import { playWelcomeVoice } from './services/gemini';
 import { THEMES, SONGS, THEME_PALETTES } from './constants';
+import { WALLPAPER_LIST } from './components/WallpapersAndThemesModal';
 import { syncUser, subscribeToGifts, subscribeToUser, acceptInvite, subscribeToPartnerRequests, getCleanName } from './services/firebaseService';
-import { getDefaultNotificationSettings } from './services/notificationService';
+import { getDefaultNotificationSettings, calculateScheduledNotifications, scheduleNativeLocalNotification } from './services/notificationService';
 import { auth } from './services/firebase';
 import { onAuthStateChanged, setPersistence, browserSessionPersistence, indexedDBLocalPersistence } from 'firebase/auth';
 import { SplashScreen } from './components/SplashScreen';
@@ -132,6 +137,7 @@ const App: React.FC = () => {
     return 'dashboard';
   });
   const [settingsSubTab, setSettingsSubTab] = useState<'notifications' | 'general' | 'billing'>('billing');
+  const [isGlobalNotificationsOpen, setIsGlobalNotificationsOpen] = useState(false);
   const [simulatedNotify, setSimulatedNotify] = useState<{
     id: string;
     title: string;
@@ -436,6 +442,40 @@ const App: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [simulatedNotify?.id]);
+
+  // Calculate and sync scheduled notifications to user.notifications array
+  useEffect(() => {
+    if (!user) return;
+    const scheduled = calculateScheduledNotifications(user, user.notificationSettings);
+    if (!scheduled || scheduled.length === 0) return;
+
+    const existingNotifs = user.notifications || [];
+    let updatedNotifs = [...existingNotifs];
+    let hasNew = false;
+    const nowISO = new Date().toISOString();
+
+    scheduled.forEach(item => {
+      const exists = updatedNotifs.some(n => n.id === item.id);
+      if (!exists) {
+        updatedNotifs.unshift({
+          id: item.id,
+          title: item.title,
+          body: item.body,
+          emoji: item.emoji,
+          timestamp: nowISO,
+          isRead: false
+        });
+        hasNew = true;
+      }
+    });
+
+    if (hasNew) {
+      const updatedUser = { ...user, notifications: updatedNotifs };
+      setUser(updatedUser);
+      localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+      syncUser(updatedUser);
+    }
+  }, [user?.id, user?.lastPeriodStart, user?.cycleLength, user?.periodLength, user?.notificationSettings?.enabled, user?.partnerNotificationPreferences]);
   const [showSplash, setShowSplash] = useState(true);
   const [restoreDataPrompt, setRestoreDataPrompt] = useState<{ userData: User } | null>(null);
   const [latestCloudUser, setLatestCloudUser] = useState<User | null>(null);
@@ -622,7 +662,7 @@ const App: React.FC = () => {
                     theme: userData.theme || 'rose',
                     tempUnit: userData.tempUnit || 'C',
                     isPregnancyMode: userData.isPregnancyMode || false,
-                    onboardingCompleted: userData.onboardingCompleted || false,
+                    onboardingCompleted: (userData.onboardingCompleted === true || !!(userData.lastPeriodStart && userData.cycleLength) || !!userData.isPartner),
                     diaryPin: userData.diaryPin || '1234',
                     favoriteSongs: userData.favoriteSongs || [],
                     customSongs: userData.customSongs || [],
@@ -685,7 +725,7 @@ const App: React.FC = () => {
               theme: userData.theme || 'rose',
               tempUnit: userData.tempUnit || 'C',
               isPregnancyMode: userData.isPregnancyMode || false,
-              onboardingCompleted: userData.onboardingCompleted || false,
+              onboardingCompleted: (userData.onboardingCompleted === true || !!(userData.lastPeriodStart && userData.cycleLength) || !!userData.isPartner),
               diaryPin: userData.diaryPin || '1234',
               favoriteSongs: userData.favoriteSongs || [],
               customSongs: userData.customSongs || [],
@@ -822,6 +862,77 @@ const App: React.FC = () => {
     }
   }, [user]);
 
+  // ----------------------------------------------------
+  // AUTOMATIC NOTIFICATION ENGINE & SCHEDULER
+  // ----------------------------------------------------
+  useEffect(() => {
+    if (!user) return;
+
+    // Request browser notification permission if available and default
+    if ('Notification' in window && window.Notification.permission === 'default') {
+      try {
+        window.Notification.requestPermission();
+      } catch (e) {
+        console.warn('Notification permission request error:', e);
+      }
+    }
+
+    const activeSettings = user.notificationSettings || getDefaultNotificationSettings();
+    if (!activeSettings.enabled && !activeSettings.partnerNotificationsEnabled) {
+      return;
+    }
+
+    const scheduled = calculateScheduledNotifications(user, activeSettings);
+    if (!scheduled || scheduled.length === 0) return;
+
+    const existingNotifs = user.notifications || [];
+    const existingIds = new Set(existingNotifs.map(n => n.id));
+    const newNotifsToAdd: { id: string; title: string; body: string; emoji: string; timestamp: string; isRead: boolean }[] = [];
+
+    scheduled.forEach(item => {
+      if (!existingIds.has(item.id)) {
+        newNotifsToAdd.push({
+          id: item.id,
+          title: item.title,
+          body: item.body,
+          emoji: item.emoji || '🔔',
+          timestamp: new Date().toISOString(),
+          isRead: false
+        });
+      }
+    });
+
+    if (newNotifsToAdd.length > 0) {
+      const topAlert = newNotifsToAdd[0];
+      if ('Notification' in window && window.Notification.permission === 'granted') {
+        try {
+          new window.Notification(`${topAlert.emoji} ${topAlert.title}`, { body: topAlert.body });
+        } catch (e) {
+          console.warn("Native Notification trigger failed:", e);
+        }
+      }
+
+      const updatedNotifs = [...newNotifsToAdd, ...existingNotifs].slice(0, 50);
+      const updatedUser: User = {
+        ...user,
+        notifications: updatedNotifs
+      };
+      setUser(updatedUser);
+      syncUser(updatedUser);
+      localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+      localStorage.setItem('lumina_biometric_user', JSON.stringify(updatedUser));
+    }
+  }, [
+    user?.id,
+    user?.lastPeriodStart,
+    user?.cycleLength,
+    user?.periodLength,
+    user?.isPregnancyMode,
+    user?.notificationSettings?.enabled,
+    user?.notificationSettings?.toneStyle,
+    JSON.stringify(user?.notificationSettings?.types || {})
+  ]);
+
   const proceedWithLogin = (userData: User, remember: boolean = true) => {
     const activeData = (latestCloudUser && latestCloudUser.id === userData.id)
       ? latestCloudUser
@@ -832,7 +943,7 @@ const App: React.FC = () => {
       theme: activeData.theme || 'rose',
       tempUnit: activeData.tempUnit || 'C',
       isPregnancyMode: activeData.isPregnancyMode || false,
-      onboardingCompleted: activeData.onboardingCompleted || false,
+      onboardingCompleted: (activeData.onboardingCompleted === true || userData.onboardingCompleted === true || !!activeData.lastPeriodStart || !!userData.lastPeriodStart || !!activeData.isPartner || !!userData.isPartner) ? true : false,
       diaryPin: activeData.diaryPin || '1234',
       favoriteSongs: activeData.favoriteSongs || [],
       customSongs: activeData.customSongs || [],
@@ -956,7 +1067,9 @@ const App: React.FC = () => {
 
   const handleLogin = (userData: User, rememberMe: boolean = true) => {
     // Check cloud backup and restore saved cycle data automatically
+    const hasCycleInfo = !!(userData.lastPeriodStart && userData.cycleLength && userData.periodLength);
     const hasCloudBackup = 
+      hasCycleInfo ||
       (userData.periods && userData.periods.length > 0) || 
       (userData.symptoms && userData.symptoms.length > 0) ||
       (userData.moodLogs && userData.moodLogs.length > 0) ||
@@ -966,7 +1079,7 @@ const App: React.FC = () => {
 
     const restoredUser = {
       ...userData,
-      onboardingCompleted: hasCloudBackup ? true : (userData.onboardingCompleted ?? false)
+      onboardingCompleted: (userData.onboardingCompleted === true || hasCloudBackup || hasCycleInfo || !!userData.isPartner) ? true : false
     };
     proceedWithLogin(restoredUser, rememberMe);
   };
@@ -1440,7 +1553,20 @@ const App: React.FC = () => {
       );
     }
 
-    if (!user.onboardingCompleted && !user.isPartner) {
+    if (!user.onboardingCompleted) {
+      if (user.isPartner) {
+        return (
+          <PartnerOnboardingWizard
+            user={user}
+            setUser={setUser}
+            onComplete={(completedUser) => {
+              setUser(completedUser);
+              localStorage.setItem('lumina_user', JSON.stringify(completedUser));
+              syncUser(completedUser);
+            }}
+          />
+        );
+      }
       return (
         <OnboardingWizard 
           user={user} 
@@ -1459,6 +1585,9 @@ const App: React.FC = () => {
       );
     }
 
+    const unreadCount = user?.notifications?.filter(n => !n.isRead).length || 0;
+    const hasUnreadNotifs = unreadCount > 0;
+
     // Main authenticated application screen inside container
     return (
       <div className="flex flex-col h-full w-full relative">
@@ -1466,20 +1595,23 @@ const App: React.FC = () => {
           <div className="w-full flex justify-between items-center gap-2">
             <div className="cursor-pointer flex-shrink-0" onClick={() => setActiveTab('dashboard')}>
               <h1 className={`text-xl font-serif italic ${themeClass}`}>Lumina</h1>
-              <div className="flex gap-1 mt-0.5">
-                {(Object.keys(THEMES) as AppTheme[]).map(t => (
-                  <button 
-                    key={t}
-                    onClick={(e) => { e.stopPropagation(); updateTheme(t); }}
-                    className={`w-2.5 h-2.5 rounded-full border border-white shadow-sm transition-transform hover:scale-125 ${user.theme === t ? 'ring-2 ring-offset-1 ring-pink-500 scale-110' : ''}`}
-                    style={{ backgroundColor: THEME_PALETTES[t][500] }}
-                    title={t}
-                  />
-                ))}
-              </div>
             </div>
             
             <div className="flex items-center gap-1.5 justify-end">
+              {/* Notification Bell */}
+              <button 
+                onClick={() => setIsGlobalNotificationsOpen(true)}
+                className="p-1.5 rounded-full bg-pink-50/80 dark:bg-stone-800 hover:bg-pink-100 text-pink-600 transition-all relative cursor-pointer active:scale-95 flex items-center justify-center border border-pink-100/50"
+                title="Notification Center"
+              >
+                <Bell className={`w-3.5 h-3.5 ${hasUnreadNotifs ? 'animate-bounce text-pink-600' : 'text-stone-500'}`} />
+                {hasUnreadNotifs && (
+                  <span className="absolute -top-1 -right-1 min-w-[15px] h-[15px] px-1 bg-gradient-to-r from-rose-500 to-pink-500 text-white text-[8px] font-black rounded-full flex items-center justify-center border border-white dark:border-stone-900 animate-pulse">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+
               {!user.isPartner && (
                 <button 
                   onClick={togglePregnancy}
@@ -1512,12 +1644,168 @@ const App: React.FC = () => {
         <main className="flex-1 overflow-y-auto px-4 py-4 scrollbar-none pb-32">
           {renderContent()}
         </main>
+
+        {/* Global Notification Center Drawer */}
+        {isGlobalNotificationsOpen && (
+          <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex justify-end animate-fadeIn">
+            <div className="w-full max-w-sm bg-white dark:bg-stone-900 h-full shadow-2xl flex flex-col overflow-hidden animate-slideLeft">
+              {/* Drawer Header */}
+              <div className="p-4 bg-gradient-to-r from-pink-500 via-rose-500 to-purple-600 text-white flex justify-between items-center shadow-md">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 bg-white/20 rounded-full">
+                    <Bell className="w-5 h-5 text-white animate-bounce" />
+                  </div>
+                  <div>
+                    <h3 className="font-serif italic font-bold text-lg leading-tight">Notification Center</h3>
+                    <p className="text-[10px] text-pink-100 opacity-90">
+                      {unreadCount > 0 ? `${unreadCount} new update${unreadCount > 1 ? 's' : ''}` : 'All caught up ✨'}
+                    </p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setIsGlobalNotificationsOpen(false)}
+                  className="p-1.5 rounded-full bg-white/20 hover:bg-white/30 text-white transition-all cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Action Toolbar */}
+              <div className="px-4 py-2.5 bg-pink-50/50 dark:bg-stone-800/60 border-b border-pink-100/30 flex justify-between items-center text-xs">
+                <button 
+                  onClick={() => {
+                    if (!user) return;
+                    const marked = (user.notifications || []).map(n => ({ ...n, isRead: true }));
+                    const updated = { ...user, notifications: marked };
+                    setUser(updated);
+                    syncUser(updated);
+                  }}
+                  className="text-pink-600 dark:text-pink-400 font-medium hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <CheckCheck className="w-3.5 h-3.5" /> Mark all read
+                </button>
+                <button 
+                  onClick={() => {
+                    if (!user) return;
+                    const updated = { ...user, notifications: [] };
+                    setUser(updated);
+                    syncUser(updated);
+                  }}
+                  className="text-stone-400 hover:text-rose-500 font-medium hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Clear all
+                </button>
+              </div>
+
+              {/* Notification List */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                {(!user?.notifications || user.notifications.length === 0) ? (
+                  <div className="py-16 text-center text-stone-400 dark:text-stone-500 space-y-2">
+                    <Sparkles className="w-8 h-8 mx-auto opacity-30 text-pink-400" />
+                    <p className="text-sm font-medium text-stone-600 dark:text-stone-300">No notifications right now</p>
+                    <p className="text-xs text-stone-400 max-w-xs mx-auto">
+                      Your automatic period, ovulation, water, medication, and partner notifications will appear here.
+                    </p>
+                  </div>
+                ) : (
+                  user.notifications.map((notif) => (
+                    <div 
+                      key={notif.id}
+                      onClick={() => {
+                        if (!user) return;
+                        const updatedList = (user.notifications || []).map(n => n.id === notif.id ? { ...n, isRead: true } : n);
+                        const updated = { ...user, notifications: updatedList };
+                        setUser(updated);
+                        syncUser(updated);
+                        setIsGlobalNotificationsOpen(false);
+                        if (notif.title.toLowerCase().includes('water') || notif.title.toLowerCase().includes('hydration')) {
+                          setActiveTab('water');
+                        } else if (notif.title.toLowerCase().includes('period') || notif.title.toLowerCase().includes('ovulation') || notif.title.toLowerCase().includes('cycle')) {
+                          setActiveTab('tracker');
+                        } else if (notif.title.toLowerCase().includes('partner')) {
+                          setActiveTab('partner');
+                        } else if (notif.title.toLowerCase().includes('medication') || notif.title.toLowerCase().includes('pill')) {
+                          setActiveTab('settings');
+                        }
+                      }}
+                      className={`p-3.5 rounded-2xl border transition-all cursor-pointer relative group ${
+                        !notif.isRead 
+                          ? 'bg-gradient-to-r from-pink-50/90 to-rose-50/40 dark:from-stone-800 dark:to-stone-800/80 border-pink-200/80 dark:border-pink-900/50 shadow-sm' 
+                          : 'bg-white dark:bg-stone-800/40 border-stone-100 dark:border-stone-800 opacity-80 hover:opacity-100'
+                      }`}
+                    >
+                      {!notif.isRead && (
+                        <span className="absolute top-3.5 right-3.5 w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+                      )}
+                      <div className="flex items-start gap-3">
+                        <span className="text-2xl flex-shrink-0 leading-none pt-0.5">{notif.emoji || '🌸'}</span>
+                        <div className="flex-1 min-w-0 pr-2">
+                          <h4 className="text-xs font-bold text-stone-800 dark:text-stone-100 leading-snug">
+                            {notif.title}
+                          </h4>
+                          <p className="text-[11px] text-stone-600 dark:text-stone-300 mt-1 leading-relaxed">
+                            {notif.body}
+                          </p>
+                          <p className="text-[9px] text-stone-400 mt-2 font-mono">
+                            {new Date(notif.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {new Date(notif.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                          </p>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (!user) return;
+                            const updatedList = (user.notifications || []).filter(n => n.id !== notif.id);
+                            const updated = { ...user, notifications: updatedList };
+                            setUser(updated);
+                            syncUser(updated);
+                          }}
+                          className="text-stone-300 hover:text-rose-500 p-1 rounded-full transition-colors opacity-60 hover:opacity-100 hover:bg-stone-100 dark:hover:bg-stone-700"
+                          title="Delete notification"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
 
   const currentThemeData = THEMES[user?.theme || 'rose'];
   const themeClass = `text-${currentThemeData.primary}`;
+
+  const getAppBackgroundClass = () => {
+    if (user?.useCycleBasedWallpaper) {
+      const lastStart = user.lastPeriodStart ? new Date(user.lastPeriodStart) : new Date();
+      const today = new Date();
+      const diffDays = Math.floor((today.getTime() - lastStart.getTime()) / (1000 * 60 * 60 * 24)) % (user.cycleLength || 28);
+      const day = diffDays + 1;
+
+      if (day <= (user.periodLength || 5)) {
+        return 'bg-gradient-to-br from-rose-100/90 via-pink-50 to-rose-200/50';
+      } else if (day <= 13) {
+        return 'bg-gradient-to-br from-teal-100/80 via-emerald-50 to-purple-100/60';
+      } else if (day <= 16) {
+        return 'bg-gradient-to-br from-orange-100/80 via-amber-50 to-yellow-100/50';
+      } else {
+        return 'bg-gradient-to-br from-purple-150 via-indigo-100/80 to-slate-200/60';
+      }
+    }
+
+    if (user?.wallpaper) {
+      const wp = WALLPAPER_LIST.find(w => w.id === user.wallpaper);
+      if (wp) {
+        return `bg-gradient-to-br ${wp.gradient}`;
+      }
+    }
+
+    return currentThemeData?.bg || 'bg-[#fffafb]';
+  };
 
   const renderPremiumLock = (title: string, description: string, emoji: string) => {
     return (
@@ -1699,7 +1987,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className={`min-h-screen w-full overflow-x-hidden pb-28 ${currentThemeData.bg} selection:bg-pink-100 transition-colors duration-500`}>
+    <div className={`min-h-screen w-full overflow-x-hidden pb-28 ${getAppBackgroundClass()} selection:bg-pink-100 transition-colors duration-500`}>
       <audio 
         ref={audioRef}
         src={currentTrack?.source === 'internal' ? currentTrack.url : undefined} 
@@ -1712,17 +2000,6 @@ const App: React.FC = () => {
           <div className="w-full flex flex-wrap md:flex-nowrap justify-between items-center gap-4">
             <div className="cursor-pointer flex-shrink-0" onClick={() => setActiveTab('dashboard')}>
               <h1 className={`text-2xl md:text-3xl font-serif italic ${themeClass}`}>Lumina</h1>
-              <div className="flex gap-1 mt-1">
-                {(Object.keys(THEMES) as AppTheme[]).map(t => (
-                  <button 
-                    key={t}
-                    onClick={(e) => { e.stopPropagation(); updateTheme(t); }}
-                    className={`w-2.5 h-2.5 md:w-3 md:h-3 rounded-full border border-white shadow-sm transition-transform hover:scale-125 ${user.theme === t ? 'ring-2 ring-offset-1 ring-pink-500 scale-110' : ''}`}
-                    style={{ backgroundColor: THEME_PALETTES[t][500] }}
-                    title={t}
-                  />
-                ))}
-              </div>
             </div>
             
             <div className="flex items-center gap-2 md:gap-4 flex-wrap justify-end">
