@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { User, NotificationSettings, Symptom, DiaryEntry, BirthControlLog, TemperatureLog, SharingSettings, BillingItem, Reminder, PartnerNotificationPreferences } from '../types';
 import PartnerMode from './PartnerMode';
+import { CommunityInvite } from './CommunityInvite';
 import { 
   Bell, 
   Sparkles, 
@@ -108,9 +109,10 @@ const Settings: React.FC<SettingsProps> = ({
   toggleMusicActive = () => {},
   setActiveTab
 }) => {
-  const getMappedTab = (tab: any): 'account' | 'cycle' | 'notifications' | 'music_sanctuary' | 'partner' | 'premium' | 'privacy_security' | 'about' => {
+  const getMappedTab = (tab: any): 'account' | 'cycle' | 'notifications' | 'music_sanctuary' | 'partner' | 'premium' | 'privacy_security' | 'about' | 'invite' => {
     if (tab === 'general' || tab === 'account') return 'account';
     if (tab === 'cycle') return 'cycle';
+    if (tab === 'invite') return 'invite';
     if (tab === 'notifications') return 'notifications';
     if (tab === 'music' || tab === 'music_sanctuary') return 'music_sanctuary';
     if (tab === 'partner') return 'partner';
@@ -120,7 +122,7 @@ const Settings: React.FC<SettingsProps> = ({
     return 'account';
   };
 
-  const [activeSubTab, setActiveSubTab] = useState<'account' | 'cycle' | 'notifications' | 'music_sanctuary' | 'partner' | 'premium' | 'privacy_security' | 'about'>(getMappedTab(initialSubTab));
+  const [activeSubTab, setActiveSubTab] = useState<'account' | 'cycle' | 'notifications' | 'music_sanctuary' | 'partner' | 'premium' | 'privacy_security' | 'about' | 'invite' | 'menu'>(getMappedTab(initialSubTab));
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
 
@@ -749,6 +751,7 @@ const Settings: React.FC<SettingsProps> = ({
         <h1 className="font-serif italic font-black text-xl text-stone-800">
           {activeSubTab === 'menu' ? 'Settings' : 
            activeSubTab === 'cycle' ? 'My Cycle' :
+           activeSubTab === 'invite' ? 'Invite Friends' :
            activeSubTab === 'notifications' ? 'Reminders' :
            activeSubTab === 'partner' ? 'Partner Sync' :
            activeSubTab === 'music_sanctuary' ? 'Music & Sanctuary' :
@@ -785,6 +788,12 @@ const Settings: React.FC<SettingsProps> = ({
                 label: 'My Cycle',
                 color: 'bg-rose-50 text-pink-500',
                 emoji: '😊',
+              },
+              {
+                id: 'invite' as const,
+                label: 'Invite Friends',
+                color: 'bg-emerald-50 text-emerald-600',
+                emoji: '💌',
               },
               {
                 id: 'notifications' as const,
@@ -1989,6 +1998,10 @@ const Settings: React.FC<SettingsProps> = ({
           )}
             </div>
           )}
+        </div>
+      ) : activeSubTab === 'invite' ? (
+        <div className="space-y-8 animate-fadeIn">
+          <CommunityInvite user={user} />
         </div>
       ) : activeSubTab === 'premium' ? (
         <div className="space-y-8 animate-fadeIn text-center">

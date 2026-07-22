@@ -1986,6 +1986,24 @@ const Dashboard: React.FC<DashboardProps> = ({
 
               {/* Menu List */}
               <div className="space-y-4">
+                {/* Personal Diary Card */}
+                <div className="bg-gradient-to-br from-amber-500/10 via-rose-500/10 to-pink-500/10 p-4 rounded-3xl border border-pink-100 shadow-[0_4px_15px_rgba(244,114,182,0.04)]">
+                  <p className="text-[9px] font-black uppercase tracking-wider text-rose-600 mb-2">Personal Sanctuary</p>
+                  <button 
+                    onClick={() => {
+                      onTabChange?.('diary');
+                      setIsMenuOpen(false);
+                    }}
+                    className="w-full py-2.5 px-4 bg-white hover:bg-pink-50/50 border border-pink-200/50 rounded-2xl text-[10px] font-black uppercase tracking-widest text-rose-600 transition-all active:scale-[0.98] shadow-sm flex items-center justify-between cursor-pointer"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="text-sm">📖</span>
+                      <span>Personal Diary</span>
+                    </span>
+                    <span className="text-xs">➔</span>
+                  </button>
+                </div>
+
                 {/* Music Sanctuary Quick Access */}
                 <div className="bg-gradient-to-br from-pink-500/10 to-rose-400/10 p-4 rounded-3xl border border-pink-100 shadow-[0_4px_15px_rgba(244,114,182,0.04)]">
                   <p className="text-[9px] font-black uppercase tracking-wider text-pink-500 mb-2">Sound & Serenity</p>

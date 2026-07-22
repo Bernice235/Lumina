@@ -16,7 +16,6 @@ interface CommunityInviteProps {
 }
 
 export const CommunityInvite: React.FC<CommunityInviteProps> = ({ user }) => {
-  const [activeMode, setActiveMode] = useState<'friend' | 'partner'>('friend');
   const [showQR, setShowQR] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -29,13 +28,10 @@ export const CommunityInvite: React.FC<CommunityInviteProps> = ({ user }) => {
   };
 
   const referralLink = `${getBaseUrl()}?ref=${user.id}`;
-  const partnerLink = `${getBaseUrl()}/invite/${user.partnerCode || user.id}`;
-
-  const currentLink = activeMode === 'friend' ? referralLink : partnerLink;
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(currentLink);
+      await navigator.clipboard.writeText(referralLink);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
@@ -44,11 +40,7 @@ export const CommunityInvite: React.FC<CommunityInviteProps> = ({ user }) => {
   };
 
   const getShareText = () => {
-    if (activeMode === 'friend') {
-      return `Join me on Lumina, the modern, supportive cycle tracker and pregnancy sanctuary! 🌸 Here is my personal invite code: ${user.partnerCode || user.id}\nClick here to join: ${referralLink}`;
-    } else {
-      return `🌸 ${user.name || 'Bernice'} invited you to join her Lumina Partner Circle securely. Use link to connect: ${partnerLink}`;
-    }
+    return `Join me on Lumina, the modern, supportive cycle tracker and pregnancy sanctuary! 🌸 Here is my personal invite code: ${user.partnerCode || user.id}\nClick here to join: ${referralLink}`;
   };
 
   const shareWhatsApp = () => {
@@ -69,50 +61,17 @@ export const CommunityInvite: React.FC<CommunityInviteProps> = ({ user }) => {
           <Share2 size={24} />
         </div>
         <div className="space-y-1">
-          <h3 className="text-2xl font-serif text-pink-600 italic font-bold">Lumina Invitations</h3>
+          <h3 className="text-2xl font-serif text-pink-600 italic font-bold">Invite Friends</h3>
           <p className="text-xs text-gray-500 leading-relaxed font-serif">
-            Invite friends to join the sanctuary or securely connect with a companion.
+            Invite friends and sisters to join the sanctuary and experience Lumina together.
           </p>
         </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex bg-rose-50/50 p-1.5 rounded-2xl border border-rose-100/40">
-        <button
-          onClick={() => {
-            setActiveMode('friend');
-            setShowQR(false);
-          }}
-          className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-            activeMode === 'friend'
-              ? 'bg-gradient-to-r from-pink-500 to-rose-450 text-white shadow-md'
-              : 'text-gray-400 hover:text-pink-500'
-          }`}
-        >
-          <span>🌸</span> Invite a Friend
-        </button>
-        <button
-          onClick={() => {
-            setActiveMode('partner');
-            setShowQR(false);
-          }}
-          className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-            activeMode === 'partner'
-              ? 'bg-gradient-to-r from-pink-500 to-rose-450 text-white shadow-md'
-              : 'text-gray-400 hover:text-pink-500'
-          }`}
-        >
-          <Heart size={12} /> Invite a Partner
-        </button>
       </div>
 
       {/* Mode Details */}
       <div className="bg-pink-50/20 p-5 rounded-3xl border border-pink-100/30 text-center space-y-2">
         <p className="text-xs text-pink-950 font-serif italic">
-          {activeMode === 'friend' 
-            ? "Share Lumina with other sisters, friends or colleagues so they can enjoy our beautiful period tracker & soundscapes."
-            : "Connect with your partner, husband, or companion so they can view your cycle phase, symptoms, and support you."
-          }
+          Share Lumina with other sisters, friends or colleagues so they can enjoy our beautiful period tracker & soundscapes.
         </p>
       </div>
 
@@ -171,7 +130,7 @@ export const CommunityInvite: React.FC<CommunityInviteProps> = ({ user }) => {
             >
               <div className="space-y-1">
                 <p className="text-[10px] font-bold text-pink-600 uppercase tracking-widest">
-                  {activeMode === 'friend' ? 'Friend Invitation QR' : 'Partner Connection QR'}
+                  Friend Invitation QR
                 </p>
                 <p className="text-[9px] text-gray-400 font-serif leading-none italic">
                   Let them scan with their phone camera to connect instantly
@@ -180,7 +139,7 @@ export const CommunityInvite: React.FC<CommunityInviteProps> = ({ user }) => {
 
               <div className="qr-code-container bg-white p-4 rounded-[2rem] border border-pink-100 shadow-lg w-full max-w-[240px] aspect-square flex items-center justify-center overflow-hidden mx-auto">
                 <img 
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&color=db2777&data=${encodeURIComponent(currentLink)}`} 
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&color=db2777&data=${encodeURIComponent(referralLink)}`} 
                   alt="Lumina Referral QR Code"
                   className="w-full h-full object-contain block"
                   referrerPolicy="no-referrer"
