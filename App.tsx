@@ -2048,7 +2048,7 @@ const App: React.FC = () => {
         loop={false}
       />
       
-      {!(activeTab === 'dashboard' && !user.isPartner) && (
+      {!user.isPartner && !(activeTab === 'dashboard') && (
         <header className="px-4 md:px-6 pt-8 pb-5 bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-[60] border-b border-pink-50">
           <div className="w-full flex flex-wrap md:flex-nowrap justify-between items-center gap-4">
             <div className="cursor-pointer flex-shrink-0" onClick={() => setActiveTab('dashboard')}>

@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, X, GraduationCap, BookOpen, Heart, ShieldCheck, CheckCircle2, AlertCircle, Info, Sparkles, Settings, LogOut, Shield, User as UserIcon, Trash2 } from 'lucide-react';
+import { Bell, X, GraduationCap, BookOpen, Heart, ShieldCheck, CheckCircle2, AlertCircle, Info, Sparkles, Settings, LogOut, Shield, User as UserIcon, Trash2, Menu } from 'lucide-react';
 import { User, Reminder, ReceivedComfort, PartnerNotificationPreferences } from '../types';
 import { getGiftIdeas, getCommunicationTips, getLoveNoteIdeas, getSupportMission } from '../services/gemini';
 import { 
@@ -32,6 +32,7 @@ interface PartnerModeProps {
 }
 
 const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders, setUser, partnerUser, onLogout }) => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
   const [deleteConfirmInput, setDeleteConfirmInput] = useState('');
@@ -405,6 +406,152 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
 
   const renderGlobalModals = () => (
     <>
+      {/* GLOBAL HAMBURGER NAVIGATION DRAWER */}
+      {isMenuOpen && (
+        <>
+          <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-[150] transition-opacity" onClick={() => setIsMenuOpen(false)} />
+          <div className="fixed inset-y-0 left-0 max-w-xs w-full bg-[#fffafb]/95 backdrop-blur-3xl shadow-2xl z-[160] p-6 flex flex-col justify-between border-r border-indigo-100/40 animate-slideRight text-left">
+            <div className="space-y-6">
+              {/* Title Header with Close */}
+              <div className="flex items-center justify-between border-b border-indigo-100/30 pb-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">🤝</span>
+                  <div>
+                    <span className="font-serif italic font-black text-xl bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent block">Lumina Partner</span>
+                    <span className="text-[9px] font-bold text-stone-400 uppercase tracking-widest block">Navigation Menu</span>
+                  </div>
+                </div>
+                <button 
+                  type="button"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="p-1.5 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Navigation Items List */}
+              <div className="space-y-3">
+                {/* 1. Partner Education Guide */}
+                <div className="bg-gradient-to-br from-indigo-500/10 to-purple-500/10 p-4 rounded-3xl border border-indigo-100 shadow-[0_4px_15px_rgba(99,102,241,0.04)]">
+                  <p className="text-[9px] font-black uppercase tracking-wider text-indigo-600 mb-2">Education & Learning</p>
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('education');
+                      setIsMenuOpen(false);
+                    }}
+                    className="w-full py-2.5 px-4 bg-white hover:bg-indigo-50/50 border border-indigo-200/50 rounded-2xl text-[10px] font-black uppercase tracking-widest text-indigo-700 transition-all active:scale-[0.98] shadow-sm flex items-center justify-between cursor-pointer"
+                  >
+                    <span className="flex items-center gap-2">
+                      <GraduationCap className="w-4 h-4 text-indigo-600" />
+                      <span>Partner Education Guide</span>
+                    </span>
+                    <span className="text-xs">➔</span>
+                  </button>
+                </div>
+
+                {/* 2. Partner Settings */}
+                <div className="bg-gradient-to-br from-pink-500/10 to-indigo-500/10 p-4 rounded-3xl border border-indigo-100 shadow-[0_4px_15px_rgba(99,102,241,0.04)]">
+                  <p className="text-[9px] font-black uppercase tracking-wider text-stone-500 mb-2">Sanctuary & Preferences</p>
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      setShowSettings(true);
+                    }}
+                    className="w-full py-2.5 px-4 bg-white hover:bg-indigo-50/50 border border-indigo-200/50 rounded-2xl text-[10px] font-black uppercase tracking-widest text-stone-800 transition-all active:scale-[0.98] shadow-sm flex items-center justify-between cursor-pointer"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Settings className="w-4 h-4 text-indigo-600" />
+                      <span>Partner Settings & Privacy</span>
+                    </span>
+                    <span className="text-xs">➔</span>
+                  </button>
+                </div>
+
+                {/* 3. Daily Support Mission */}
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('mission');
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full p-3 bg-white/80 hover:bg-white border border-stone-200/60 rounded-2xl text-stone-700 font-bold text-xs uppercase tracking-wider flex items-center justify-between cursor-pointer transition-all shadow-sm"
+                >
+                  <span className="flex items-center gap-2">
+                    <span>🛡️</span> Support Mission
+                  </span>
+                  <span className="text-stone-400 text-xs">➔</span>
+                </button>
+
+                {/* 4. Support Ideas & Gifts */}
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('ideas');
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full p-3 bg-white/80 hover:bg-white border border-stone-200/60 rounded-2xl text-stone-700 font-bold text-xs uppercase tracking-wider flex items-center justify-between cursor-pointer transition-all shadow-sm"
+                >
+                  <span className="flex items-center gap-2">
+                    <span>🎁</span> Support Ideas & Gifts
+                  </span>
+                  <span className="text-stone-400 text-xs">➔</span>
+                </button>
+
+                {/* 5. Love Notes */}
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('notes');
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full p-3 bg-white/80 hover:bg-white border border-stone-200/60 rounded-2xl text-stone-700 font-bold text-xs uppercase tracking-wider flex items-center justify-between cursor-pointer transition-all shadow-sm"
+                >
+                  <span className="flex items-center gap-2">
+                    <span>💌</span> Sweet Notes
+                  </span>
+                  <span className="text-stone-400 text-xs">➔</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Bottom Actions: Log Out & Delete Account */}
+            <div className="border-t border-indigo-100/40 pt-4 space-y-2 text-center">
+              <span className="text-[9px] font-black uppercase tracking-wider text-stone-400 block mb-1">Account Actions</span>
+              
+              {onLogout && (
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    setShowLogoutModal(true);
+                  }}
+                  className="w-full py-3 rounded-2xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-[10px] uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer transition-all border border-stone-200/60"
+                >
+                  <LogOut className="w-4 h-4 text-stone-600" />
+                  Log Out
+                </button>
+              )}
+
+              <button 
+                type="button"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  setDeleteConfirmInput('');
+                  setShowDeleteAccountModal(true);
+                }}
+                className="w-full py-3 rounded-2xl bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 cursor-pointer transition-all shadow-md shadow-rose-200"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete Account & Data
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
       {/* GLOBAL PARTNER SETTINGS MODAL */}
       {showSettings && (
         <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-md z-[160] flex items-center justify-center p-4 animate-fadeIn">
@@ -2126,6 +2273,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
             </div>
           </div>
         )}
+        {renderGlobalModals()}
       </div>
     );
   }
@@ -2136,11 +2284,21 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
       <div className="space-y-8 animate-fadeIn pb-24 font-sans">
         {/* Top Header Section for Partner Mode */}
         <header className="flex items-center justify-between px-4 py-3 bg-white/40 backdrop-blur-2xl border border-white/60 shadow-[inset_0_2px_4px_rgba(255,255,255,0.6),_0_8px_32px_rgba(99,102,241,0.03)] rounded-3xl sticky top-2 z-40 flex-wrap gap-2">
-          <div className="flex items-center gap-2 cursor-pointer flex-wrap">
-            <span className="text-xl animate-pulse">🤝</span>
-            <span className="font-serif italic font-black text-2xl bg-gradient-to-r from-indigo-500 to-purple-400 bg-clip-text text-transparent drop-shadow-sm">
-              Lumina Partner
-            </span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button 
+              type="button"
+              onClick={() => setIsMenuOpen(true)}
+              title="Navigation Menu"
+              className="p-2.5 rounded-2xl bg-white/70 hover:bg-white/95 text-indigo-600 transition-all duration-300 shadow-sm border border-indigo-100/60 cursor-pointer flex items-center justify-center active:scale-90"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => setActiveTab('mission')}>
+              <span className="text-xl animate-pulse">🤝</span>
+              <span className="font-serif italic font-black text-2xl bg-gradient-to-r from-indigo-500 to-purple-400 bg-clip-text text-transparent drop-shadow-sm">
+                Lumina Partner
+              </span>
+            </div>
             {/* Connection Status Indicator Badge */}
             {user.isPartnerLinked && (user.partnerId || targetUser) ? (
               <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-wider border border-emerald-200/60 shadow-sm">
@@ -2335,6 +2493,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
             </div>
           </>
         )}
+        {renderGlobalModals()}
       </div>
     );
   }
@@ -2343,11 +2502,21 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
     <div className="space-y-8 animate-fadeIn pb-24">
       {/* Top Header Section for Partner Mode */}
       <header className="flex items-center justify-between px-4 py-3 bg-white/40 backdrop-blur-2xl border border-white/60 shadow-[inset_0_2px_4px_rgba(255,255,255,0.6),_0_8px_32px_rgba(99,102,241,0.03)] rounded-3xl sticky top-2 z-40 flex-wrap gap-2">
-        <div className="flex items-center gap-2 cursor-pointer flex-wrap">
-          <span className="text-xl animate-pulse">🤝</span>
-          <span className="font-serif italic font-black text-2xl bg-gradient-to-r from-indigo-500 to-purple-400 bg-clip-text text-transparent drop-shadow-sm">
-            Lumina Partner
-          </span>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button 
+            type="button"
+            onClick={() => setIsMenuOpen(true)}
+            title="Navigation Menu"
+            className="p-2.5 rounded-2xl bg-white/70 hover:bg-white/95 text-indigo-600 transition-all duration-300 shadow-sm border border-indigo-100/60 cursor-pointer flex items-center justify-center active:scale-90"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => setActiveTab('mission')}>
+            <span className="text-xl animate-pulse">🤝</span>
+            <span className="font-serif italic font-black text-2xl bg-gradient-to-r from-indigo-500 to-purple-400 bg-clip-text text-transparent drop-shadow-sm">
+              Lumina Partner
+            </span>
+          </div>
           {/* Connection Status Indicator Badge */}
           {user.isPartnerLinked && (user.partnerId || targetUser) ? (
             <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-wider border border-emerald-200/60 shadow-sm">
@@ -3075,6 +3244,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
           </div>
         </>
       )}
+      {renderGlobalModals()}
     </div>
   );
 };
