@@ -1,13 +1,14 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, X, GraduationCap, BookOpen, Heart, ShieldCheck, CheckCircle2, AlertCircle, Info, Sparkles } from 'lucide-react';
+import { Bell, X, GraduationCap, BookOpen, Heart, ShieldCheck, CheckCircle2, AlertCircle, Info, Sparkles, Settings, LogOut, Shield, User as UserIcon, Trash2 } from 'lucide-react';
 import { User, Reminder, ReceivedComfort, PartnerNotificationPreferences } from '../types';
 import { getGiftIdeas, getCommunicationTips, getLoveNoteIdeas, getSupportMission } from '../services/gemini';
 import { 
   createInvite, 
   acceptInvite, 
   disconnectPartner, 
+  deleteUserAccount,
   sendGift, 
   subscribeToUser, 
   subscribeToGifts,
@@ -32,6 +33,9 @@ interface PartnerModeProps {
 
 const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders, setUser, partnerUser, onLogout }) => {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState('');
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const unreadPartnerNotifications = user.notifications?.filter(n => !n.isRead) || [];
   const hasUnreadPartnerAlerts = unreadPartnerNotifications.length > 0;
@@ -398,6 +402,299 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
     setUser(updatedUser);
     syncUser(updatedUser);
   };
+
+  const renderGlobalModals = () => (
+    <>
+      {/* GLOBAL PARTNER SETTINGS MODAL */}
+      {showSettings && (
+        <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-md z-[160] flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white/95 backdrop-blur-2xl rounded-[2.5rem] max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 md:p-8 space-y-6 border border-pink-100 shadow-2xl text-stone-800 scrollbar-thin">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-pink-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center text-xl shadow-sm">
+                  ⚙️
+                </div>
+                <div>
+                  <h3 className="font-serif font-bold text-xl text-stone-800">Partner Settings</h3>
+                  <p className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Sanctuary & Preferences</p>
+                </div>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setShowSettings(false)}
+                className="p-2 rounded-2xl bg-stone-100 hover:bg-stone-200 text-stone-500 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Section 1: Account Profile */}
+            <div className="bg-stone-50/80 p-5 rounded-3xl border border-stone-200/60 space-y-3">
+              <div className="flex items-center gap-2 text-indigo-600 font-bold text-xs uppercase tracking-wider">
+                <UserIcon className="w-4 h-4" /> Account Information
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div className="bg-white p-3.5 rounded-2xl border border-stone-200/50">
+                  <span className="text-[9px] font-bold text-stone-400 uppercase tracking-wider block">Your Name</span>
+                  <span className="font-bold text-stone-800 text-sm">{user.name || 'Partner'}</span>
+                </div>
+                <div className="bg-white p-3.5 rounded-2xl border border-stone-200/50">
+                  <span className="text-[9px] font-bold text-stone-400 uppercase tracking-wider block">Email</span>
+                  <span className="font-semibold text-stone-700 truncate block text-xs">{user.email || 'partner@lumina.app'}</span>
+                </div>
+              </div>
+              <div className="bg-white p-3.5 rounded-2xl border border-stone-200/50 flex items-center justify-between gap-2">
+                <div>
+                  <span className="text-[9px] font-bold text-stone-400 uppercase tracking-wider block">Partner Invite Code</span>
+                  <span className="font-mono font-bold text-indigo-600 text-sm">{user.partnerCode || user.id}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await navigator.clipboard.writeText(user.partnerCode || user.id);
+                    alert('Partner Code copied to clipboard!');
+                  }}
+                  className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-xl text-[10px] font-bold uppercase tracking-wider cursor-pointer shrink-0"
+                >
+                  Copy Code
+                </button>
+              </div>
+            </div>
+
+            {/* Section 2: Privacy & Sharing Controls */}
+            <div className="bg-pink-50/30 p-5 rounded-3xl border border-pink-100/60 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-pink-600 font-bold text-xs uppercase tracking-wider">
+                  <Shield className="w-4 h-4" /> Sharing & Privacy
+                </div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const updated = { ...user, isSharingPaused: !user.isSharingPaused };
+                    setUser(updated);
+                    await syncUser(updated);
+                  }}
+                  className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-all ${
+                    user.isSharingPaused 
+                      ? 'bg-amber-100 text-amber-800 border border-amber-300' 
+                      : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                  }`}
+                >
+                  {user.isSharingPaused ? 'Sharing Paused ⏸️' : 'Sharing Active 🟢'}
+                </button>
+              </div>
+              <div className="space-y-2 pt-1">
+                <SharingToggle label="Share Cycle Information" active={user.sharingSettings?.shareCycleInfo ?? true} onChange={(v) => updateSharing('shareCycleInfo', v)} />
+                <SharingToggle label="Share Symptoms & Comfort" active={user.sharingSettings?.shareSymptoms ?? true} onChange={(v) => updateSharing('shareSymptoms', v)} />
+                <SharingToggle label="Share Mood Updates" active={user.sharingSettings?.shareMood ?? true} onChange={(v) => updateSharing('shareMood', v)} />
+                <SharingToggle label="Share Notes & Reminders" active={user.sharingSettings?.shareNotes ?? true} onChange={(v) => updateSharing('shareNotes', v)} />
+                <SharingToggle label="Share Doctor Reports" active={user.sharingSettings?.shareDoctorReports ?? true} onChange={(v) => updateSharing('shareDoctorReports', v)} />
+              </div>
+            </div>
+
+            {/* Section 3: Partner Education Shortcut */}
+            <div className="bg-indigo-50/60 p-4 rounded-3xl border border-indigo-100 flex items-center justify-between gap-3">
+              <div>
+                <span className="font-bold text-xs text-indigo-900 flex items-center gap-1.5">
+                  <GraduationCap className="w-4 h-4 text-indigo-600" /> Partner Education Guide
+                </span>
+                <span className="text-[10px] text-stone-500 block mt-0.5">Learn about the 4 cycle phases, PMS, and support tips</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSettings(false);
+                  setActiveTab('education');
+                }}
+                className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider cursor-pointer shrink-0 transition-all shadow-sm"
+              >
+                Open Guide 🎓
+              </button>
+            </div>
+
+            {/* Section 4: Connection Info & Unlink */}
+            {user.isPartnerLinked && (
+              <div className="bg-stone-50/80 p-5 rounded-3xl border border-stone-200/60 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-stone-700 font-bold text-xs uppercase tracking-wider">
+                    👥 Partner Connection
+                  </div>
+                  <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-[9px] font-bold uppercase">
+                    Active Link
+                  </span>
+                </div>
+                <p className="text-xs text-stone-600 font-serif italic">
+                  Connected with: <span className="font-bold text-stone-800 font-sans">{getCleanName(partnerUser?.name || user.partnerName, partnerUser?.email) || 'Partner'}</span>
+                </p>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (confirm('Are you sure you want to disconnect from your partner connection?')) {
+                      await disconnectPartner(user.id, user.partnerId || '');
+                      const updated = { ...user, isPartnerLinked: false, partnerId: '', partnerName: '' };
+                      setUser(updated);
+                      setShowSettings(false);
+                    }
+                  }}
+                  className="w-full py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-2xl text-[10px] font-bold uppercase tracking-wider border border-rose-200 cursor-pointer transition-colors"
+                >
+                  Unlink Partner Connection
+                </button>
+              </div>
+            )}
+
+            {/* Section 5: Account Actions (Log Out & Delete Account) */}
+            <div className="pt-3 border-t border-stone-100 space-y-2.5 text-center">
+              <span className="text-[10px] font-black uppercase tracking-wider text-stone-400 block mb-1">Account Actions</span>
+              
+              {onLogout && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSettings(false);
+                    setShowLogoutModal(true);
+                  }}
+                  className="w-full py-3 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-2xl font-bold uppercase text-xs tracking-wider cursor-pointer transition-all flex items-center justify-center gap-2 border border-stone-200/60"
+                >
+                  <LogOut className="w-4 h-4 text-stone-600" /> Log Out
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSettings(false);
+                  setDeleteConfirmInput('');
+                  setShowDeleteAccountModal(true);
+                }}
+                className="w-full py-3 bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white rounded-2xl font-bold uppercase text-xs tracking-widest shadow-md shadow-rose-200 cursor-pointer transition-all flex items-center justify-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" /> Delete Account & Data
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowSettings(false)}
+                className="text-xs font-bold text-stone-400 hover:text-stone-600 uppercase tracking-wider cursor-pointer pt-2 inline-block"
+              >
+                Close Settings
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* GLOBAL LOGOUT CONFIRMATION MODAL */}
+      {showLogoutModal && (
+        <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-md z-[170] flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-[2.5rem] p-6 max-w-sm w-full space-y-5 border border-pink-100 shadow-2xl text-center">
+            <div className="w-16 h-16 bg-pink-50 rounded-full flex items-center justify-center text-rose-500 mx-auto text-2xl">
+              🚪
+            </div>
+            <div className="space-y-2">
+              <h3 className="font-serif font-bold text-lg text-stone-800">Partner Logout</h3>
+              <p className="text-xs text-stone-600 font-medium leading-relaxed">
+                Are you sure you want to log out of Lumina Partner Mode?
+              </p>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowLogoutModal(false)}
+                className="flex-1 py-3 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs uppercase tracking-wider rounded-2xl transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowLogoutModal(false);
+                  if (onLogout) onLogout();
+                }}
+                className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs uppercase tracking-wider rounded-2xl transition-all cursor-pointer shadow-md shadow-rose-200"
+              >
+                Log Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* GLOBAL DELETE ACCOUNT CONFIRMATION MODAL */}
+      {showDeleteAccountModal && (
+        <div className="fixed inset-0 bg-stone-900/70 backdrop-blur-md z-[180] flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-[2.5rem] p-6 sm:p-8 max-w-md w-full space-y-5 border border-rose-100 shadow-2xl text-center">
+            <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center text-rose-600 mx-auto text-2xl shadow-inner border border-rose-100">
+              ⚠️
+            </div>
+            <div className="space-y-2">
+              <h3 className="font-serif font-bold text-xl text-stone-900">Delete Account Permanently</h3>
+              <p className="text-xs text-stone-600 leading-relaxed">
+                This will permanently delete your account, remove your partner link, and erase all synced data. <strong className="text-rose-600">This action cannot be undone.</strong>
+              </p>
+            </div>
+
+            <div className="bg-rose-50/50 p-4 rounded-2xl border border-rose-100/60 text-left space-y-2">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-rose-700 block">
+                Type <span className="font-mono bg-white px-1.5 py-0.5 rounded border border-rose-200">DELETE</span> to confirm:
+              </label>
+              <input
+                type="text"
+                value={deleteConfirmInput}
+                onChange={(e) => setDeleteConfirmInput(e.target.value)}
+                placeholder="Type DELETE"
+                className="w-full px-3.5 py-2.5 text-xs font-mono font-bold border border-rose-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-400 bg-white text-stone-800"
+              />
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                disabled={isDeletingAccount}
+                onClick={() => {
+                  setShowDeleteAccountModal(false);
+                  setDeleteConfirmInput('');
+                }}
+                className="flex-1 py-3 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs uppercase tracking-wider rounded-2xl transition-all cursor-pointer disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deleteConfirmInput.trim() !== 'DELETE' || isDeletingAccount}
+                onClick={async () => {
+                  try {
+                    setIsDeletingAccount(true);
+                    await deleteUserAccount(user.id);
+                    setIsDeletingAccount(false);
+                    setShowDeleteAccountModal(false);
+                    if (onLogout) {
+                      onLogout();
+                    } else {
+                      window.location.reload();
+                    }
+                  } catch (err) {
+                    console.error("Account deletion failed:", err);
+                    alert("Could not delete account. Please try again.");
+                    setIsDeletingAccount(false);
+                  }
+                }}
+                className="flex-1 py-3 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 text-white font-bold text-xs uppercase tracking-wider rounded-2xl transition-all cursor-pointer shadow-md shadow-rose-200 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+              >
+                {isDeletingAccount ? (
+                  <span className="inline-block animate-spin">⏳</span>
+                ) : (
+                  <Trash2 className="w-4 h-4" />
+                )}
+                {isDeletingAccount ? 'Deleting...' : 'Delete Now'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
 
   if (onboardingStep > 0 && connectionRequest) {
     return (
@@ -1868,20 +2165,31 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
             )}
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {!user.isPartner && (
               <button 
                 type="button"
                 onClick={() => setUser({ ...user, isPartner: false })}
-                className="px-4 py-2 text-[10px] font-bold text-indigo-600 bg-indigo-50/50 hover:bg-indigo-100/50 rounded-2xl border border-indigo-100/50 transition-all active:scale-95 cursor-pointer"
+                className="px-3 py-2 text-[10px] font-bold text-indigo-600 bg-indigo-50/50 hover:bg-indigo-100/50 rounded-2xl border border-indigo-100/50 transition-all active:scale-95 cursor-pointer"
               >
                 ← Back to My Account
               </button>
             )}
+
+            <button 
+              type="button"
+              onClick={() => setShowSettings(true)}
+              title="Partner Settings"
+              className="p-2.5 rounded-2xl bg-white/70 hover:bg-white/95 text-indigo-600 transition-all duration-300 shadow-sm border border-indigo-100/60 cursor-pointer flex items-center gap-1.5 active:scale-95"
+            >
+              <Settings className="w-5 h-5" />
+              <span className="text-[10px] font-black uppercase tracking-wider hidden sm:inline">Settings</span>
+            </button>
             
             <button 
               type="button"
               onClick={() => setIsNotificationsOpen(true)}
+              title="Notifications"
               className="p-2.5 rounded-2xl bg-white/60 hover:bg-white/90 text-indigo-600 transition-all duration-300 shadow-[inset_0_1.5px_2.5px_rgba(255,255,255,0.7),_0_4px_12px_rgba(99,102,241,0.05)] border border-indigo-50/50 cursor-pointer flex items-center justify-center relative active:scale-90"
             >
               <Bell className={`w-5 h-5 ${hasUnreadPartnerAlerts ? 'animate-shake' : ''}`} />
@@ -1890,6 +2198,18 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                 <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-gradient-to-r from-indigo-500 to-purple-550 rounded-full border-2 border-white animate-pulse" />
               )}
             </button>
+
+            {onLogout && (
+              <button 
+                type="button"
+                onClick={() => setShowLogoutModal(true)}
+                title="Log Out"
+                className="p-2.5 px-3 rounded-2xl bg-rose-50/90 hover:bg-rose-100/90 text-rose-600 transition-all duration-300 border border-rose-200/60 shadow-sm cursor-pointer flex items-center gap-1.5 active:scale-95"
+              >
+                <LogOut className="w-5 h-5" />
+                <span className="text-[10px] font-black uppercase tracking-wider hidden sm:inline">Log Out</span>
+              </button>
+            )}
           </div>
         </header>
 
@@ -2052,20 +2372,31 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
           )}
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {!user.isPartner && (
             <button 
               type="button"
               onClick={() => setUser({ ...user, isPartner: false })}
-              className="px-4 py-2 text-[10px] font-bold text-indigo-600 bg-indigo-50/50 hover:bg-indigo-100/50 rounded-2xl border border-indigo-100/50 transition-all active:scale-95 cursor-pointer"
+              className="px-3 py-2 text-[10px] font-bold text-indigo-600 bg-indigo-50/50 hover:bg-indigo-100/50 rounded-2xl border border-indigo-100/50 transition-all active:scale-95 cursor-pointer"
             >
               ← Back to My Account
             </button>
           )}
+
+          <button 
+            type="button"
+            onClick={() => setShowSettings(true)}
+            title="Partner Settings"
+            className="p-2.5 rounded-2xl bg-white/70 hover:bg-white/95 text-indigo-600 transition-all duration-300 shadow-sm border border-indigo-100/60 cursor-pointer flex items-center gap-1.5 active:scale-95"
+          >
+            <Settings className="w-5 h-5" />
+            <span className="text-[10px] font-black uppercase tracking-wider hidden sm:inline">Settings</span>
+          </button>
           
           <button 
             type="button"
             onClick={() => setIsNotificationsOpen(true)}
+            title="Notifications"
             className="p-2.5 rounded-2xl bg-white/60 hover:bg-white/90 text-indigo-600 transition-all duration-300 shadow-[inset_0_1.5px_2.5px_rgba(255,255,255,0.7),_0_4px_12px_rgba(99,102,241,0.05)] border border-indigo-50/50 cursor-pointer flex items-center justify-center relative active:scale-90"
           >
             <Bell className={`w-5 h-5 ${hasUnreadPartnerAlerts ? 'animate-shake' : ''}`} />
@@ -2074,6 +2405,18 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
               <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-gradient-to-r from-indigo-500 to-purple-550 rounded-full border-2 border-white animate-pulse" />
             )}
           </button>
+
+          {onLogout && (
+            <button 
+              type="button"
+              onClick={() => setShowLogoutModal(true)}
+              title="Log Out"
+              className="p-2.5 px-3 rounded-2xl bg-rose-50/90 hover:bg-rose-100/90 text-rose-600 transition-all duration-300 border border-rose-200/60 shadow-sm cursor-pointer flex items-center gap-1.5 active:scale-95"
+            >
+              <LogOut className="w-5 h-5" />
+              <span className="text-[10px] font-black uppercase tracking-wider hidden sm:inline">Log Out</span>
+            </button>
+          )}
         </div>
       </header>
       {/* Header with Linked User Profile */}

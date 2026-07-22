@@ -1890,7 +1890,7 @@ const App: React.FC = () => {
 
   const renderContent = () => {
     if (user.isPartner) {
-      return <PartnerMode user={user} reminders={reminders} setReminders={setReminders} setUser={setUser} />;
+      return <PartnerMode user={user} reminders={reminders} setReminders={setReminders} setUser={setUser} onLogout={handleLogout} />;
     }
 
     switch (activeTab) {
@@ -1984,7 +1984,7 @@ const App: React.FC = () => {
         return <SelfCare tasks={selfCareTasks} setTasks={setSelfCareTasks} />;
       case 'partner':
         return (
-          <PartnerMode user={user} reminders={reminders} setReminders={setReminders} setUser={setUser} />
+          <PartnerMode user={user} reminders={reminders} setReminders={setReminders} setUser={setUser} onLogout={handleLogout} />
         );
       case 'graphs':
         return <CycleGraph user={user} />;
