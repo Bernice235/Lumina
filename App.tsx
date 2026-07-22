@@ -194,18 +194,23 @@ const App: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Play "Welcome Back" voice greeting on reload/returning session
+  // Track played welcome voice per user session
+  const welcomeVoicePlayedRef = useRef<string | null>(null);
+
+  // Play "Welcome Back" voice greeting on reload/returning session or partner entry
   useEffect(() => {
-    if (user && user.onboardingCompleted && !sessionStorage.getItem('lumina_welcome_voice_played')) {
-      sessionStorage.setItem('lumina_welcome_voice_played', 'true');
-      const timer = setTimeout(() => {
-        try {
-          playWelcomeVoice(user.name || 'Beautiful');
-        } catch (e) {
-          console.warn("Could not play welcome back voice:", e);
-        }
-      }, 1200);
-      return () => clearTimeout(timer);
+    if (user && (user.onboardingCompleted || user.isPartner)) {
+      if (welcomeVoicePlayedRef.current !== user.id) {
+        welcomeVoicePlayedRef.current = user.id;
+        const timer = setTimeout(() => {
+          try {
+            playWelcomeVoice(user.name || (user.isPartner ? 'Partner' : 'Beautiful'));
+          } catch (e) {
+            console.warn("Could not play welcome back voice:", e);
+          }
+        }, 500);
+        return () => clearTimeout(timer);
+      }
     }
   }, [user]);
 
@@ -1050,7 +1055,6 @@ const App: React.FC = () => {
 
     setWaterGoal(fullUser.waterGoal || 8);
     playWelcomeVoice(fullUser.name);
-    setIsMusicPlaying(true);
 
     if (fullUser.isPartner) {
       setActiveTab('partner'); // Routes explicitly to Partner Dashboard / Connect experience
@@ -1140,6 +1144,7 @@ const App: React.FC = () => {
     setUser(null);
     setLatestCloudUser(null);
     setIsMusicPlaying(false);
+    welcomeVoicePlayedRef.current = null;
 
     // 3. Clear all active session flags in sessionStorage
     sessionStorage.removeItem('lumina_session_unlocked');
