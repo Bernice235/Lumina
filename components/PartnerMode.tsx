@@ -231,6 +231,19 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
   }, [user.id]);
 
   const targetUser = user.isPartner ? linkedUser : user;
+
+  const isConnected = Boolean(
+    user.isPartnerLinked || 
+    user.partnerId || 
+    partnerUser?.id || 
+    linkedUser?.id || 
+    (user.partnerName && user.partnerName.trim().length > 0)
+  );
+
+  const partnerDisplayName = getCleanName(
+    targetUser?.name || partnerUser?.name || linkedUser?.name || user.partnerName,
+    targetUser?.email || partnerUser?.email || linkedUser?.email
+  ) || 'Partner';
   
   const currentPhase = (() => {
     if (!targetUser) return 'Luteal';
