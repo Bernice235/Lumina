@@ -41,6 +41,13 @@ export interface PartnerRequest {
   timestamp?: string;
 }
 
+export interface BlockedPartner {
+  id: string;
+  name: string;
+  email?: string;
+  dateBlocked?: string;
+}
+
 export interface PartnerNotificationPreferences {
   periodStarting: boolean;
   periodEnding: boolean;
@@ -76,7 +83,6 @@ export interface User {
   displayName?: string;
   age?: number;
   dob?: string;
-  profilePhoto?: string;
   country?: string;
   timezone?: string;
   partnerName: string;
@@ -116,6 +122,7 @@ export interface User {
   tempLogs?: TemperatureLog[];
   sharingSettings: SharingSettings;
   partnerRequest?: PartnerRequest;
+  blockedPartners?: BlockedPartner[];
   waterGoal?: number;
   wellnessPreferences?: string[];
   partnerSupportPreferences?: any;

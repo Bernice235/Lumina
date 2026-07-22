@@ -41,7 +41,7 @@ import {
   generatePregnancyNotificationText,
   generatePostpartumNotificationText
 } from '../services/notificationService';
-import { syncUser, disconnectPartner, saveGlobalBankDetails, getGlobalBankDetails, GlobalBankConfig } from '../services/firebaseService';
+import { syncUser, disconnectPartner, blockPartner, unblockPartner, deleteUserAccount, deletePartnerAccount, saveGlobalBankDetails, getGlobalBankDetails, GlobalBankConfig } from '../services/firebaseService';
 import { 
   REVENUECAT_PLANS, 
   purchasePremiumPlan, 
@@ -187,6 +187,74 @@ const Settings: React.FC<SettingsProps> = ({
   const [profilePassword, setProfilePassword] = useState('');
   const [profileFeedback, setProfileFeedback] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
+
+  // Account Deletion & Partner Control States
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+  const [deleteAccountInput, setDeleteAccountInput] = useState('');
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [partnerToBlock, setPartnerToBlock] = useState<{ id: string; name: string } | null>(null);
+  const [partnerToUnblock, setPartnerToUnblock] = useState<{ id: string; name: string } | null>(null);
+
+  const handleDeleteUserAccount = async () => {
+    if (deleteAccountInput.trim() !== 'DELETE') return;
+    setIsDeletingAccount(true);
+    try {
+      await deleteUserAccount(user.id);
+      if (onLogout) {
+        onLogout();
+      } else {
+        setUser(null);
+      }
+    } catch (err) {
+      console.error("Account deletion error:", err);
+      alert("Failed to delete account. Please try again.");
+    } finally {
+      setIsDeletingAccount(false);
+    }
+  };
+
+  const handleBlockPartnerConfirm = async () => {
+    if (!partnerToBlock) return;
+    try {
+      await blockPartner(user.id, partnerToBlock.id, { id: partnerToBlock.id, name: partnerToBlock.name });
+      const updatedUser = {
+        ...user,
+        partnerId: undefined,
+        partnerName: '',
+        isPartnerLinked: false,
+        partnerRequest: undefined,
+        blockedPartners: [
+          ...(user.blockedPartners || []).filter(b => b.id !== partnerToBlock.id),
+          { id: partnerToBlock.id, name: partnerToBlock.name, dateBlocked: new Date().toISOString() }
+        ]
+      };
+      setUser(updatedUser);
+      localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+      alert(`${partnerToBlock.name} has been blocked.`);
+    } catch (err) {
+      console.error("Error blocking partner:", err);
+    } finally {
+      setPartnerToBlock(null);
+    }
+  };
+
+  const handleUnblockPartnerConfirm = async () => {
+    if (!partnerToUnblock) return;
+    try {
+      await unblockPartner(user.id, partnerToUnblock.id);
+      const updatedUser = {
+        ...user,
+        blockedPartners: (user.blockedPartners || []).filter(b => b.id !== partnerToUnblock.id)
+      };
+      setUser(updatedUser);
+      localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+      alert(`${partnerToUnblock.name} has been unblocked.`);
+    } catch (err) {
+      console.error("Error unblocking partner:", err);
+    } finally {
+      setPartnerToUnblock(null);
+    }
+  };
 
   React.useEffect(() => {
     setProfileName(user.name || '');
@@ -1934,7 +2002,7 @@ const Settings: React.FC<SettingsProps> = ({
         </div>
       ) : activeSubTab === 'partner' ? (
         <div className="space-y-8 animate-fadeIn">
-          <PartnerMode user={user} reminders={reminders} setReminders={setReminders} setUser={setUser} partnerUser={partnerUser} />
+          <PartnerMode user={user} reminders={reminders} setReminders={setReminders} setUser={setUser} partnerUser={partnerUser} onLogout={onLogout} />
         </div>
       ) : activeSubTab === 'music_sanctuary' ? (
         <div className="space-y-8 animate-fadeIn">
@@ -2192,6 +2260,43 @@ const Settings: React.FC<SettingsProps> = ({
                 </div>
               </div>
             </div>
+          </section>
+
+          {/* BLOCKED PARTNERS SECTION */}
+          <section className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-pink-50 space-y-4">
+            <h3 className="text-xl font-serif text-pink-500 flex items-center gap-2">
+              <ShieldAlert size={20} className="text-pink-400" />
+              <span>Blocked Partners 🚫</span>
+            </h3>
+            <p className="text-xs text-gray-500 leading-relaxed font-serif italic">
+              Manage partners you have blocked. Blocked partners cannot send you connection requests or view your updates.
+            </p>
+
+            {user.blockedPartners && user.blockedPartners.length > 0 ? (
+              <div className="space-y-2 pt-2">
+                {user.blockedPartners.map((bp) => (
+                  <div key={bp.id} className="flex items-center justify-between p-4 bg-rose-50/30 rounded-2xl border border-rose-100/50">
+                    <div>
+                      <p className="text-xs font-bold text-gray-800">{bp.name}</p>
+                      {bp.dateBlocked && (
+                        <p className="text-[9px] text-gray-400">Blocked on {new Date(bp.dateBlocked).toLocaleDateString()}</p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPartnerToUnblock({ id: bp.id, name: bp.name })}
+                      className="px-4 py-2 bg-white border border-pink-200 text-pink-600 hover:bg-pink-50 text-[10px] font-bold uppercase rounded-xl transition-all cursor-pointer shadow-sm"
+                    >
+                      Unblock
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-4 bg-gray-50 rounded-2xl text-center text-xs text-gray-400 font-serif italic">
+                You have not blocked any partners.
+              </div>
+            )}
           </section>
         </div>
       ) : activeSubTab === 'about' ? (
@@ -2618,6 +2723,145 @@ const Settings: React.FC<SettingsProps> = ({
               </button>
             </section>
           )}
+
+          {/* DANGER ZONE - DELETE ACCOUNT */}
+          <section className="bg-rose-50/70 p-6 rounded-[2.5rem] border border-rose-200/80 space-y-4">
+            <div className="flex items-center gap-2 text-rose-700">
+              <ShieldAlert className="w-5 h-5 text-rose-600" />
+              <h3 className="text-base font-serif font-bold italic">Delete Account (Danger Zone)</h3>
+            </div>
+            <p className="text-xs text-rose-800 leading-relaxed">
+              Permanently remove your account and all associated personal cycle, journal, and partner connection records.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setDeleteAccountInput('');
+                setShowDeleteAccountModal(true);
+              }}
+              className="w-full py-3.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-2xl text-[10px] uppercase tracking-widest transition-all cursor-pointer shadow-md shadow-rose-200"
+            >
+              🗑️ Delete Account
+            </button>
+          </section>
+        </div>
+      )}
+
+      {/* DELETE ACCOUNT CONFIRMATION MODAL */}
+      {showDeleteAccountModal && (
+        <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-[2.5rem] p-6 max-w-md w-full space-y-5 border border-rose-100 shadow-2xl">
+            <div className="flex items-center gap-3 text-rose-600">
+              <div className="p-3 bg-rose-100/60 rounded-2xl">
+                <ShieldAlert size={24} />
+              </div>
+              <div>
+                <h3 className="font-serif font-bold text-lg text-stone-800">Delete Your Lumina Account?</h3>
+                <p className="text-[10px] font-bold text-rose-500 uppercase tracking-widest">Permanent & Irreversible Action</p>
+              </div>
+            </div>
+
+            <div className="space-y-2 text-xs text-stone-600 bg-rose-50/50 p-4 rounded-2xl border border-rose-100/60">
+              <p className="font-bold text-rose-800">Deleting your account will permanently remove:</p>
+              <ul className="list-disc pl-5 space-y-1 text-[11px]">
+                <li>Cycle history</li>
+                <li>Wellness data</li>
+                <li>Journal entries</li>
+                <li>Partner connections</li>
+                <li>Notifications</li>
+                <li>Preferences</li>
+                <li>All account information</li>
+              </ul>
+              <p className="font-bold text-rose-700 pt-1">This action cannot be undone.</p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-stone-600 uppercase tracking-wider block">
+                To confirm, please type <span className="text-rose-600 font-mono font-bold">DELETE</span> below:
+              </label>
+              <input
+                type="text"
+                value={deleteAccountInput}
+                onChange={(e) => setDeleteAccountInput(e.target.value)}
+                placeholder="Type DELETE to confirm"
+                className="w-full bg-stone-50 border border-stone-200 px-4 py-3 rounded-2xl text-xs font-mono text-stone-800 focus:border-rose-400 outline-none"
+              />
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowDeleteAccountModal(false)}
+                className="flex-1 py-3 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deleteAccountInput.trim() !== 'DELETE' || isDeletingAccount}
+                onClick={handleDeleteUserAccount}
+                className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-md shadow-rose-200"
+              >
+                {isDeletingAccount ? 'Deleting...' : 'Delete Account'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* BLOCK PARTNER MODAL */}
+      {partnerToBlock && (
+        <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-[2.5rem] p-6 max-w-sm w-full space-y-4 border border-rose-100 shadow-2xl">
+            <h3 className="font-serif font-bold text-lg text-stone-800">Block {partnerToBlock.name}?</h3>
+            <p className="text-xs text-stone-600 leading-relaxed">
+              Blocking this partner will disconnect your sharing and prevent them from sending you new connection requests.
+            </p>
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setPartnerToBlock(null)}
+                className="flex-1 py-3 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleBlockPartnerConfirm}
+                className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-md"
+              >
+                Block Partner
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* UNBLOCK PARTNER MODAL */}
+      {partnerToUnblock && (
+        <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-[2.5rem] p-6 max-w-sm w-full space-y-4 border border-pink-100 shadow-2xl">
+            <h3 className="font-serif font-bold text-lg text-stone-800">Unblock {partnerToUnblock.name}?</h3>
+            <p className="text-xs text-stone-600 leading-relaxed">
+              Unblocking {partnerToUnblock.name} will allow them to send you partner connection requests again.
+            </p>
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setPartnerToUnblock(null)}
+                className="flex-1 py-3 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleUnblockPartnerConfirm}
+                className="flex-1 py-3 bg-pink-500 hover:bg-pink-600 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-md"
+              >
+                Unblock Partner
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

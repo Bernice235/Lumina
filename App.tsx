@@ -657,16 +657,36 @@ const App: React.FC = () => {
                   if (JSON.stringify(userData) === JSON.stringify(localUser)) {
                     return;
                   }
+                  let emailBackup: Partial<User> = {};
+                  if (userData.email) {
+                    const savedEmailStr = localStorage.getItem('lumina_user_email_' + userData.email.toLowerCase().trim());
+                    if (savedEmailStr) {
+                      try {
+                        emailBackup = JSON.parse(savedEmailStr);
+                      } catch (e) {
+                        console.warn("Failed to parse emailBackup", e);
+                      }
+                    }
+                  }
+
                   const fullUser: User = {
+                    ...emailBackup,
                     ...userData,
-                    theme: userData.theme || 'rose',
-                    tempUnit: userData.tempUnit || 'C',
-                    isPregnancyMode: userData.isPregnancyMode || false,
-                    onboardingCompleted: (userData.onboardingCompleted === true || !!(userData.lastPeriodStart && userData.cycleLength) || !!userData.isPartner),
-                    diaryPin: userData.diaryPin || '1234',
-                    favoriteSongs: userData.favoriteSongs || [],
-                    customSongs: userData.customSongs || [],
-                    isPartnerLinked: userData.isPartnerLinked || false,
+                    cycleLength: userData.cycleLength || emailBackup.cycleLength || 28,
+                    periodLength: userData.periodLength || emailBackup.periodLength || 5,
+                    lastPeriodStart: userData.lastPeriodStart || emailBackup.lastPeriodStart || new Date().toISOString(),
+                    periods: (userData.periods && userData.periods.length > 0) ? userData.periods : (emailBackup.periods || []),
+                    periodLogs: (userData.periodLogs && userData.periodLogs.length > 0) ? userData.periodLogs : (emailBackup.periodLogs || []),
+                    symptoms: (userData.symptoms && userData.symptoms.length > 0) ? userData.symptoms : (emailBackup.symptoms || []),
+                    moodLogs: (userData.moodLogs && userData.moodLogs.length > 0) ? userData.moodLogs : (emailBackup.moodLogs || []),
+                    theme: userData.theme || emailBackup.theme || 'rose',
+                    tempUnit: userData.tempUnit || emailBackup.tempUnit || 'C',
+                    isPregnancyMode: userData.isPregnancyMode ?? emailBackup.isPregnancyMode ?? false,
+                    onboardingCompleted: userData.onboardingCompleted === true || emailBackup.onboardingCompleted === true || !!userData.isPartner || !!(userData.lastPeriodStart || emailBackup.lastPeriodStart),
+                    diaryPin: userData.diaryPin || emailBackup.diaryPin || '1234',
+                    favoriteSongs: userData.favoriteSongs || emailBackup.favoriteSongs || [],
+                    customSongs: userData.customSongs || emailBackup.customSongs || [],
+                    isPartnerLinked: userData.isPartnerLinked ?? emailBackup.isPartnerLinked ?? false,
                     sharingSettings: {
                       shareCycleInfo: userData.sharingSettings?.shareCycleInfo ?? true,
                       shareSymptoms: userData.sharingSettings?.shareSymptoms ?? false,
@@ -720,16 +740,37 @@ const App: React.FC = () => {
           if (userData) {
             const isUnlockedNow = sessionStorage.getItem('lumina_session_unlocked') === 'true';
             
+            // Restore any cached local cycle data for this email if present
+            let emailBackup: Partial<User> = {};
+            if (userData.email) {
+              const savedEmailStr = localStorage.getItem('lumina_user_email_' + userData.email.toLowerCase().trim());
+              if (savedEmailStr) {
+                try {
+                  emailBackup = JSON.parse(savedEmailStr);
+                } catch (e) {
+                  console.warn("Failed to parse emailBackup", e);
+                }
+              }
+            }
+
             const fullUser: User = {
+              ...emailBackup,
               ...userData,
-              theme: userData.theme || 'rose',
-              tempUnit: userData.tempUnit || 'C',
-              isPregnancyMode: userData.isPregnancyMode || false,
-              onboardingCompleted: (userData.onboardingCompleted === true || !!(userData.lastPeriodStart && userData.cycleLength) || !!userData.isPartner),
-              diaryPin: userData.diaryPin || '1234',
-              favoriteSongs: userData.favoriteSongs || [],
-              customSongs: userData.customSongs || [],
-              isPartnerLinked: userData.isPartnerLinked || false,
+              cycleLength: userData.cycleLength || emailBackup.cycleLength || 28,
+              periodLength: userData.periodLength || emailBackup.periodLength || 5,
+              lastPeriodStart: userData.lastPeriodStart || emailBackup.lastPeriodStart || new Date().toISOString(),
+              periods: (userData.periods && userData.periods.length > 0) ? userData.periods : (emailBackup.periods || []),
+              periodLogs: (userData.periodLogs && userData.periodLogs.length > 0) ? userData.periodLogs : (emailBackup.periodLogs || []),
+              symptoms: (userData.symptoms && userData.symptoms.length > 0) ? userData.symptoms : (emailBackup.symptoms || []),
+              moodLogs: (userData.moodLogs && userData.moodLogs.length > 0) ? userData.moodLogs : (emailBackup.moodLogs || []),
+              theme: userData.theme || emailBackup.theme || 'rose',
+              tempUnit: userData.tempUnit || emailBackup.tempUnit || 'C',
+              isPregnancyMode: userData.isPregnancyMode ?? emailBackup.isPregnancyMode ?? false,
+              onboardingCompleted: userData.onboardingCompleted === true || emailBackup.onboardingCompleted === true || !!userData.isPartner,
+              diaryPin: userData.diaryPin || emailBackup.diaryPin || '1234',
+              favoriteSongs: userData.favoriteSongs || emailBackup.favoriteSongs || [],
+              customSongs: userData.customSongs || emailBackup.customSongs || [],
+              isPartnerLinked: userData.isPartnerLinked ?? emailBackup.isPartnerLinked ?? false,
               sharingSettings: {
                 shareCycleInfo: userData.sharingSettings?.shareCycleInfo ?? true,
                 shareSymptoms: userData.sharingSettings?.shareSymptoms ?? false,
@@ -742,14 +783,14 @@ const App: React.FC = () => {
                 shareAppointmentReminders: userData.sharingSettings?.shareAppointmentReminders ?? false,
                 shareWellnessUpdates: userData.sharingSettings?.shareWellnessUpdates ?? false,
               },
-              birthControlConfig: userData.birthControlConfig || {
+              birthControlConfig: userData.birthControlConfig || emailBackup.birthControlConfig || {
                 method: 'Pill',
                 frequency: 'daily',
                 reminderTime: '09:00',
                 enabled: false
               },
-              waterGoal: userData.waterGoal || 8,
-              notificationSettings: userData.notificationSettings || getDefaultNotificationSettings()
+              waterGoal: userData.waterGoal || emailBackup.waterGoal || 8,
+              notificationSettings: userData.notificationSettings || emailBackup.notificationSettings || getDefaultNotificationSettings()
             };
             
             // Sync with memory
@@ -757,6 +798,10 @@ const App: React.FC = () => {
             setLatestCloudLoading(false);
             
             const isRememberEnabled = localStorage.getItem('lumina_remember_me') !== 'false';
+            
+            if (fullUser.email) {
+              localStorage.setItem('lumina_user_email_' + fullUser.email.toLowerCase().trim(), JSON.stringify(fullUser));
+            }
             
             // Cache details for biometrics if remember me is enabled
             if (isRememberEnabled) {
@@ -852,6 +897,9 @@ const App: React.FC = () => {
   useEffect(() => {
     if (user) {
       syncUser(user);
+      if (user.email) {
+        localStorage.setItem('lumina_user_email_' + user.email.toLowerCase().trim(), JSON.stringify(user));
+      }
       const isRememberEnabled = localStorage.getItem('lumina_remember_me') !== 'false';
       if (isRememberEnabled) {
         localStorage.setItem('lumina_user', JSON.stringify(user));

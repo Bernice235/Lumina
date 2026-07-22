@@ -11,8 +11,8 @@ import {
   deleteDoc,
   addDoc
 } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from './firebase';
-import { User, ReceivedComfort } from '../types';
+import { db, auth, handleFirestoreError, OperationType } from './firebase';
+import { User, ReceivedComfort, BlockedPartner } from '../types';
 
 function cleanUndefined<T>(obj: T): T {
   if (obj === null || typeof obj !== 'object') {
@@ -42,31 +42,18 @@ export const syncUser = async (user: User) => {
     return;
   }
 
-  console.log('[syncUser] Syncing user state to Firestore/Storage:', {
+  console.log('[syncUser BEFORE write] Syncing user state to Firestore/Storage:', {
     id: user.id,
     email: user.email,
     name: user.name,
     isPartner: user.isPartner,
-    cycleData: {
-      lastPeriodStart: user.lastPeriodStart,
-      cycleLength: user.cycleLength,
-      periodLength: user.periodLength,
-      periodsCount: user.periods?.length || 0,
-      symptomsCount: user.symptoms?.length || 0,
-      moodLogsCount: user.moodLogs?.length || 0,
-      diaryEntriesCount: user.diaryEntries?.length || 0
-    },
-    partnerData: {
-      partnerId: user.partnerId,
-      partnerCode: user.partnerCode,
-      isPartnerLinked: user.isPartnerLinked,
-      partnerRequest: user.partnerRequest
-    },
-    settings: {
-      theme: user.theme,
-      onboardingCompleted: user.onboardingCompleted,
-      isPregnancyMode: user.isPregnancyMode
-    }
+    lastPeriodStart: user.lastPeriodStart,
+    cycleLength: user.cycleLength,
+    periodLength: user.periodLength,
+    periodsCount: user.periods?.length || 0,
+    symptomsCount: user.symptoms?.length || 0,
+    moodLogsCount: user.moodLogs?.length || 0,
+    diaryEntriesCount: user.diaryEntries?.length || 0
   });
 
   if (isSandboxId(user.id)) {
@@ -76,12 +63,20 @@ export const syncUser = async (user: User) => {
       key: `lumina_user_${user.id}`,
       newValue: JSON.stringify(user)
     }));
+    console.log('[syncUser AFTER local write SUCCESS] Updated sandbox storage for:', user.id);
     return;
   }
   const path = `users/${user.id}`;
   try {
     await setDoc(doc(db, "users", user.id), cleanUndefined(user), { merge: true });
+    console.log('[syncUser AFTER Firestore write SUCCESS] Merged user doc in Firestore for:', {
+      id: user.id,
+      lastPeriodStart: user.lastPeriodStart,
+      cycleLength: user.cycleLength,
+      periodLength: user.periodLength
+    });
   } catch (error) {
+    console.error('[syncUser ERROR] Firestore write failed:', error);
     handleFirestoreError(error, OperationType.WRITE, path);
   }
 };
@@ -89,24 +84,53 @@ export const syncUser = async (user: User) => {
 export const subscribeToUser = (userId: string, callback: (user: User | null) => void) => {
   if (isSandboxId(userId)) {
     const localData = localStorage.getItem(`lumina_user_${userId}`);
-    callback(localData ? JSON.parse(localData) : null);
+    const parsed = localData ? JSON.parse(localData) : null;
+    console.log('[subscribeToUser - Sandbox] Fetched local user:', {
+      userId,
+      lastPeriodStart: parsed?.lastPeriodStart,
+      cycleLength: parsed?.cycleLength,
+      periodLength: parsed?.periodLength,
+      onboardingCompleted: parsed?.onboardingCompleted
+    });
+    callback(parsed);
 
     const listener = (e: StorageEvent) => {
       if (e.key === `lumina_user_${userId}`) {
-        callback(e.newValue ? JSON.parse(e.newValue) : null);
+        const updated = e.newValue ? JSON.parse(e.newValue) : null;
+        console.log('[subscribeToUser - Sandbox Event] Storage updated:', {
+          userId,
+          lastPeriodStart: updated?.lastPeriodStart,
+          cycleLength: updated?.cycleLength,
+          periodLength: updated?.periodLength
+        });
+        callback(updated);
       }
     };
     window.addEventListener('storage', listener);
     return () => window.removeEventListener('storage', listener);
   }
   const path = `users/${userId}`;
+  console.log('[subscribeToUser - Firestore] Subscribing to doc:', path);
   return onSnapshot(doc(db, "users", userId), (docSnap) => {
     if (docSnap.exists()) {
-      callback(docSnap.data() as User);
+      const data = docSnap.data() as User;
+      console.log('[subscribeToUser - Firestore SNAPSHOT] Firestore returned user data:', {
+        userId,
+        email: data.email,
+        name: data.name,
+        lastPeriodStart: data.lastPeriodStart,
+        cycleLength: data.cycleLength,
+        periodLength: data.periodLength,
+        periodsCount: data.periods?.length || 0,
+        onboardingCompleted: data.onboardingCompleted
+      });
+      callback(data);
     } else {
+      console.log('[subscribeToUser - Firestore SNAPSHOT] Doc does not exist for userId:', userId);
       callback(null);
     }
   }, (error) => {
+    console.error('[subscribeToUser - Firestore ERROR]', error);
     handleFirestoreError(error, OperationType.GET, path);
   });
 };
@@ -560,6 +584,142 @@ export const getGlobalBankDetails = async (): Promise<GlobalBankConfig | null> =
   }
   const cached = localStorage.getItem("lumina_global_bank_config");
   return cached ? JSON.parse(cached) : null;
+};
+
+export const blockPartner = async (userId: string, partnerIdToBlock: string, partnerDetails?: { id?: string; name?: string; email?: string }) => {
+  if (!userId || !partnerIdToBlock) return;
+  
+  // First disconnect partner connection if currently connected
+  await disconnectPartner(userId, partnerIdToBlock);
+
+  if (isSandboxId(userId)) {
+    const userRaw = localStorage.getItem(`lumina_user_${userId}`);
+    if (userRaw) {
+      const u: User = JSON.parse(userRaw);
+      const existingBlocked = u.blockedPartners || [];
+      const isAlreadyBlocked = existingBlocked.some(b => b.id === partnerIdToBlock);
+      const newBlocked = isAlreadyBlocked ? existingBlocked : [
+        ...existingBlocked,
+        {
+          id: partnerIdToBlock,
+          name: partnerDetails?.name || u.partnerName || 'Partner',
+          email: partnerDetails?.email,
+          dateBlocked: new Date().toISOString()
+        }
+      ];
+      await syncUser({
+        ...u,
+        partnerId: undefined,
+        partnerName: '',
+        isPartnerLinked: false,
+        partnerRequest: undefined,
+        blockedPartners: newBlocked
+      });
+    }
+    return;
+  }
+
+  try {
+    const userSnap = await getDoc(doc(db, "users", userId));
+    if (userSnap.exists()) {
+      const u = userSnap.data() as User;
+      const existingBlocked = u.blockedPartners || [];
+      const isAlreadyBlocked = existingBlocked.some(b => b.id === partnerIdToBlock);
+      const newBlocked = isAlreadyBlocked ? existingBlocked : [
+        ...existingBlocked,
+        {
+          id: partnerIdToBlock,
+          name: partnerDetails?.name || u.partnerName || 'Partner',
+          email: partnerDetails?.email,
+          dateBlocked: new Date().toISOString()
+        }
+      ];
+      await updateDoc(doc(db, "users", userId), {
+        partnerId: null,
+        partnerName: '',
+        isPartnerLinked: false,
+        partnerRequest: null,
+        blockedPartners: cleanUndefined(newBlocked)
+      });
+    }
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `users/${userId}`);
+  }
+};
+
+export const unblockPartner = async (userId: string, partnerIdToUnblock: string) => {
+  if (!userId || !partnerIdToUnblock) return;
+
+  if (isSandboxId(userId)) {
+    const userRaw = localStorage.getItem(`lumina_user_${userId}`);
+    if (userRaw) {
+      const u: User = JSON.parse(userRaw);
+      const existingBlocked = u.blockedPartners || [];
+      const newBlocked = existingBlocked.filter(b => b.id !== partnerIdToUnblock);
+      await syncUser({
+        ...u,
+        blockedPartners: newBlocked
+      });
+    }
+    return;
+  }
+
+  try {
+    const userSnap = await getDoc(doc(db, "users", userId));
+    if (userSnap.exists()) {
+      const u = userSnap.data() as User;
+      const existingBlocked = u.blockedPartners || [];
+      const newBlocked = existingBlocked.filter(b => b.id !== partnerIdToUnblock);
+      await updateDoc(doc(db, "users", userId), {
+        blockedPartners: cleanUndefined(newBlocked)
+      });
+    }
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `users/${userId}`);
+  }
+};
+
+export const deleteUserAccount = async (userId: string) => {
+  if (!userId) return;
+
+  try {
+    const userRaw = localStorage.getItem(`lumina_user_${userId}`);
+    if (userRaw) {
+      const u: User = JSON.parse(userRaw);
+      if (u.partnerId) {
+        await disconnectPartner(userId, u.partnerId);
+      }
+    }
+  } catch (e) {
+    console.warn("Error disconnecting partner before delete:", e);
+  }
+
+  try {
+    if (!isSandboxId(userId)) {
+      await deleteDoc(doc(db, "users", userId));
+    }
+  } catch (error) {
+    console.warn("Firestore user delete notice:", error);
+  }
+
+  try {
+    if (auth.currentUser) {
+      const { deleteUser } = await import('firebase/auth');
+      await deleteUser(auth.currentUser);
+    }
+  } catch (authErr) {
+    console.warn("Firebase auth deletion warning:", authErr);
+  }
+
+  localStorage.removeItem('lumina_user');
+  localStorage.removeItem('lumina_biometric_user');
+  localStorage.removeItem('lumina_saved_password');
+  localStorage.removeItem(`lumina_user_${userId}`);
+  sessionStorage.clear();
+};
+
+export const deletePartnerAccount = async (partnerId: string) => {
+  return deleteUserAccount(partnerId);
 };
 
 

@@ -27,9 +27,11 @@ interface PartnerModeProps {
   setReminders: React.Dispatch<React.SetStateAction<Reminder[]>>;
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
   partnerUser?: User | null;
+  onLogout?: () => void;
 }
 
-const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders, setUser, partnerUser }) => {
+const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders, setUser, partnerUser, onLogout }) => {
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const unreadPartnerNotifications = user.notifications?.filter(n => !n.isRead) || [];
   const hasUnreadPartnerAlerts = unreadPartnerNotifications.length > 0;
@@ -1287,6 +1289,15 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
             <h2 className="text-3xl font-serif text-pink-600 font-bold tracking-tight">Partner</h2>
             <p className="text-xs text-stone-500 font-serif italic mt-1">Build understanding and grow together</p>
           </div>
+          {onLogout && (
+            <button
+              type="button"
+              onClick={() => setShowLogoutModal(true)}
+              className="px-5 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-full text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shadow-sm self-center md:self-auto flex items-center gap-2"
+            >
+              <span>🚪</span> Log Out
+            </button>
+          )}
         </header>
 
         {/* Sub-Navigation tabs */}
@@ -1329,7 +1340,52 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
           >
             ⚙️ Manage Permissions
           </button>
+          {onLogout && (
+            <button 
+              type="button"
+              onClick={() => setShowLogoutModal(true)}
+              className="px-5 py-3 rounded-full text-[10px] font-black uppercase tracking-wider whitespace-nowrap shrink-0 transition-all cursor-pointer bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100"
+            >
+              🚪 Log Out
+            </button>
+          )}
         </div>
+
+        {/* LOGOUT CONFIRMATION MODAL */}
+        {showLogoutModal && (
+          <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fadeIn">
+            <div className="bg-white rounded-[2.5rem] p-6 max-w-sm w-full space-y-5 border border-pink-100 shadow-2xl text-center">
+              <div className="w-16 h-16 bg-pink-50 rounded-full flex items-center justify-center text-rose-500 mx-auto text-2xl">
+                🚪
+              </div>
+              <div className="space-y-2">
+                <h3 className="font-serif font-bold text-lg text-stone-800">Partner Logout</h3>
+                <p className="text-xs text-stone-600 font-medium leading-relaxed">
+                  Are you sure you want to log out?
+                </p>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowLogoutModal(false)}
+                  className="flex-1 py-3 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs uppercase tracking-wider rounded-2xl transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowLogoutModal(false);
+                    if (onLogout) onLogout();
+                  }}
+                  className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs uppercase tracking-wider rounded-2xl transition-all cursor-pointer shadow-md shadow-rose-200"
+                >
+                  Log Out
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Sub-Tab Contents */}
         {subTab === 'partners' && (

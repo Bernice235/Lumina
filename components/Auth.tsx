@@ -117,7 +117,6 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
   const [displayName, setDisplayName] = useState('');
   const [age, setAge] = useState('');
   const [dob, setDob] = useState('');
-  const [profilePhoto, setProfilePhoto] = useState('');
   const [country, setCountry] = useState('');
   const [timezone, setTimezone] = useState(() => {
     try {
@@ -461,6 +460,21 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
     const emailKey = email.toLowerCase().trim();
     const isSignUp = screen === 'email_signup';
 
+    // 1. Strict Email Validation
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailKey || !emailRegex.test(emailKey)) {
+      setError("Please enter a valid email address.");
+      setLoading(false);
+      return;
+    }
+
+    // 2. Strict Password Validation
+    if (!password || password.length < 8) {
+      setError("Password must be at least 8 characters long.");
+      setLoading(false);
+      return;
+    }
+
     const resolvedName = isSignUp ? (displayName || `${firstName} ${lastName}`).trim() : name;
 
     if (isSignUp) {
@@ -479,6 +493,26 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
       }
     }
 
+    // Helper to find saved local user profile by email key
+    const getSavedUserByEmail = (): User | null => {
+      const savedEmailData = localStorage.getItem('lumina_user_email_' + emailKey);
+      if (savedEmailData) {
+        try {
+          const parsed = JSON.parse(savedEmailData);
+          if (parsed && parsed.email && parsed.email.toLowerCase().trim() === emailKey) {
+            return parsed;
+          }
+        } catch (err) {
+          console.warn("Failed to parse saved email user:", err);
+        }
+      }
+      const localUser = getTargetUser();
+      if (localUser && localUser.email && localUser.email.toLowerCase().trim() === emailKey) {
+        return localUser;
+      }
+      return null;
+    };
+
     if (connectionMode === 'offline') {
       // Local Database logic
       if (isSignUp) {
@@ -494,21 +528,22 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
           displayName,
           parseInt(age) || undefined,
           dob,
-          profilePhoto || undefined,
           country || undefined,
           timezone
         );
 
         localStorage.setItem('lumina_user', JSON.stringify(offlineUser));
+        localStorage.setItem('lumina_user_email_' + emailKey, JSON.stringify(offlineUser));
         localStorage.setItem('lumina_biometric_user', JSON.stringify(offlineUser));
         handleSaveCredentials(emailKey, password, resolvedName);
         onLogin(offlineUser);
         setLoading(false);
       } else {
         // Simple local match with strict email isolation check
-        const localUser = getTargetUser();
-        if (localUser && localUser.email && localUser.email.toLowerCase().trim() === emailKey) {
+        const localUser = getSavedUserByEmail();
+        if (localUser) {
           localStorage.setItem('lumina_user', JSON.stringify(localUser));
+          localStorage.setItem('lumina_user_email_' + emailKey, JSON.stringify(localUser));
           localStorage.setItem('lumina_biometric_user', JSON.stringify(localUser));
           handleSaveCredentials(emailKey, password, localUser.name);
           onLogin(localUser);
@@ -522,9 +557,10 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
             'offline_companion_' + emailKey.replace(/[^a-zA-Z0-9]/g, ''),
             'Loving Companion',
             registerRole === 'partner',
-            '', '', '', undefined, '', undefined, undefined, timezone
+            '', '', '', undefined, '', undefined, timezone
           );
           localStorage.setItem('lumina_user', JSON.stringify(offlineUser));
+          localStorage.setItem('lumina_user_email_' + emailKey, JSON.stringify(offlineUser));
           localStorage.setItem('lumina_biometric_user', JSON.stringify(offlineUser));
           handleSaveCredentials(emailKey, password, offlineUser.name);
           onLogin(offlineUser);
@@ -550,7 +586,6 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
           displayName,
           age: parseInt(age) || undefined,
           dob,
-          profilePhoto: profilePhoto || undefined,
           country: country || undefined,
           timezone,
           partnerName: 'Loving Partner',
@@ -580,6 +615,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
 
         await syncUser(newUser);
         localStorage.setItem('lumina_user', JSON.stringify(newUser));
+        localStorage.setItem('lumina_user_email_' + emailKey, JSON.stringify(newUser));
         localStorage.setItem('lumina_biometric_user', JSON.stringify(newUser));
         handleSaveCredentials(newUser.email, password, resolvedName);
         onLogin(newUser);
@@ -590,8 +626,14 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
 
         const unsubscribe = subscribeToUser(fbUser.uid, (existingUser) => {
           if (existingUser) {
-            handleExistingUserLogin(existingUser, () => {
-              handleSaveCredentials(email, password, existingUser.name);
+            // Check if we have richer cycle data cached locally for this email
+            const localSaved = getSavedUserByEmail();
+            const mergedUser = localSaved && localSaved.lastPeriodStart && localSaved.cycleLength
+              ? { ...localSaved, ...existingUser, cycleLength: existingUser.cycleLength || localSaved.cycleLength, periodLength: existingUser.periodLength || localSaved.periodLength, lastPeriodStart: existingUser.lastPeriodStart || localSaved.lastPeriodStart }
+              : existingUser;
+
+            handleExistingUserLogin(mergedUser, () => {
+              handleSaveCredentials(email, password, mergedUser.name);
             });
           } else {
             setError('We couldn\'t find a match for this account. Feel free to join today! 💕');
@@ -624,8 +666,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
         return;
       }
 
-      // If network, cookie block, or CORS blocked inside preview sandboxes, we perform a gorgeous, 
-      // silent offline registration/login so their trial behaves perfectly.
+      // Offline / Preview Sandbox fallback
       let fallbackUser: User;
       if (isSignUp) {
         fallbackUser = createNewSandboxUser(
@@ -640,13 +681,12 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
           displayName,
           parseInt(age) || undefined,
           dob,
-          profilePhoto || undefined,
           country || undefined,
           timezone
         );
       } else {
-        const cachedUser = getTargetUser();
-        if (cachedUser && cachedUser.email && cachedUser.email.toLowerCase().trim() === emailKey) {
+        const cachedUser = getSavedUserByEmail();
+        if (cachedUser) {
           fallbackUser = cachedUser;
         } else {
           // No local account with matching email exists, create a brand-new isolated sandbox
@@ -657,12 +697,13 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
             'offline_companion_' + emailKey.replace(/[^a-zA-Z0-9]/g, ''),
             'Loving Companion',
             registerRole === 'partner',
-            '', '', '', undefined, '', undefined, undefined, timezone
+            '', '', '', undefined, '', undefined, timezone
           );
         }
       }
 
       localStorage.setItem('lumina_user', JSON.stringify(fallbackUser));
+      localStorage.setItem('lumina_user_email_' + emailKey, JSON.stringify(fallbackUser));
       localStorage.setItem('lumina_biometric_user', JSON.stringify(fallbackUser));
       handleSaveCredentials(fallbackUser.email, password, fallbackUser.name);
       
@@ -685,7 +726,6 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
     displayName?: string,
     age?: number,
     dob?: string,
-    profilePhoto?: string,
     country?: string,
     timezone?: string
   ): User => {
@@ -698,7 +738,6 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
       displayName,
       age,
       dob,
-      profilePhoto,
       country,
       timezone,
       partnerName: '',
@@ -1385,17 +1424,6 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
                   {/* Optional Fields Group */}
                   <div className="space-y-3">
                     <p className="text-[7.5px] font-extrabold text-gray-400 uppercase tracking-widest border-b border-pink-50 pb-1">Optional Details</p>
-                    
-                    <div className="space-y-1">
-                      <label className="text-[7px] font-bold text-gray-400 uppercase tracking-widest px-1">Profile Photo URL</label>
-                      <input
-                        type="url"
-                        placeholder="https://example.com/photo.jpg"
-                        value={profilePhoto}
-                        onChange={(e) => setProfilePhoto(e.target.value)}
-                        className="w-full px-4 py-3 bg-white/50 border border-pink-100/60 rounded-xl text-[9px] font-bold tracking-widest outline-none focus:border-pink-300 transition-colors"
-                      />
-                    </div>
 
                     <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-1">
