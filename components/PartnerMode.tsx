@@ -48,7 +48,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
   const [loading, setLoading] = useState(true);
   const [newReminderText, setNewReminderText] = useState('');
   const [newReminderTime, setNewReminderTime] = useState('');
-  const [activeTab, setActiveTab] = useState<'mission' | 'ideas' | 'notes' | 'reminders' | 'calendar' | 'education' | 'notifications'>('mission');
+  const [activeTab, setActiveTab] = useState<'home' | 'mission' | 'ideas' | 'notes' | 'reminders' | 'calendar' | 'education' | 'notifications'>('home');
   const [expandedPhase, setExpandedPhase] = useState<string | null>(null);
   const [selectedQuickCard, setSelectedQuickCard] = useState<string | null>(null);
   const [partnerCodeInput, setPartnerCodeInput] = useState('');
@@ -444,53 +444,30 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
               </div>
 
               {/* Navigation Items List */}
-              <div className="space-y-3">
-                {/* 1. Partner Education Guide */}
-                <div className="bg-gradient-to-br from-indigo-500/10 to-purple-500/10 p-4 rounded-3xl border border-indigo-100 shadow-[0_4px_15px_rgba(99,102,241,0.04)]">
-                  <p className="text-[9px] font-black uppercase tracking-wider text-indigo-600 mb-2">Education & Learning</p>
-                  <button 
-                    type="button"
-                    onClick={() => {
-                      setActiveTab('education');
-                      setIsMenuOpen(false);
-                    }}
-                    className="w-full py-2.5 px-4 bg-white hover:bg-indigo-50/50 border border-indigo-200/50 rounded-2xl text-[10px] font-black uppercase tracking-widest text-indigo-700 transition-all active:scale-[0.98] shadow-sm flex items-center justify-between cursor-pointer"
-                  >
-                    <span className="flex items-center gap-2">
-                      <GraduationCap className="w-4 h-4 text-indigo-600" />
-                      <span>Partner Education Guide</span>
-                    </span>
-                    <span className="text-xs">➔</span>
-                  </button>
-                </div>
+              <div className="space-y-2.5">
+                {/* 0. Home Dashboard */}
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('home');
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full p-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center justify-between cursor-pointer transition-all shadow-md shadow-indigo-100 active:scale-[0.98]"
+                >
+                  <span className="flex items-center gap-2">
+                    <span>🏠</span> Home Dashboard
+                  </span>
+                  <span className="text-white/80 text-xs">➔</span>
+                </button>
 
-                {/* 2. Partner Settings */}
-                <div className="bg-gradient-to-br from-pink-500/10 to-indigo-500/10 p-4 rounded-3xl border border-indigo-100 shadow-[0_4px_15px_rgba(99,102,241,0.04)]">
-                  <p className="text-[9px] font-black uppercase tracking-wider text-stone-500 mb-2">Sanctuary & Preferences</p>
-                  <button 
-                    type="button"
-                    onClick={() => {
-                      setIsMenuOpen(false);
-                      setShowSettings(true);
-                    }}
-                    className="w-full py-2.5 px-4 bg-white hover:bg-indigo-50/50 border border-indigo-200/50 rounded-2xl text-[10px] font-black uppercase tracking-widest text-stone-800 transition-all active:scale-[0.98] shadow-sm flex items-center justify-between cursor-pointer"
-                  >
-                    <span className="flex items-center gap-2">
-                      <Settings className="w-4 h-4 text-indigo-600" />
-                      <span>Partner Settings & Privacy</span>
-                    </span>
-                    <span className="text-xs">➔</span>
-                  </button>
-                </div>
-
-                {/* 3. Daily Support Mission */}
+                {/* 1. Daily Support Mission */}
                 <button 
                   type="button"
                   onClick={() => {
                     setActiveTab('mission');
                     setIsMenuOpen(false);
                   }}
-                  className="w-full p-3 bg-white/80 hover:bg-white border border-stone-200/60 rounded-2xl text-stone-700 font-bold text-xs uppercase tracking-wider flex items-center justify-between cursor-pointer transition-all shadow-sm"
+                  className="w-full p-3 bg-white/90 hover:bg-white border border-stone-200/60 rounded-2xl text-stone-800 font-bold text-xs uppercase tracking-wider flex items-center justify-between cursor-pointer transition-all shadow-2xs"
                 >
                   <span className="flex items-center gap-2">
                     <span>🛡️</span> Support Mission
@@ -498,14 +475,14 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                   <span className="text-stone-400 text-xs">➔</span>
                 </button>
 
-                {/* 4. Support Ideas & Gifts */}
+                {/* 2. Support Ideas & Gifts */}
                 <button 
                   type="button"
                   onClick={() => {
                     setActiveTab('ideas');
                     setIsMenuOpen(false);
                   }}
-                  className="w-full p-3 bg-white/80 hover:bg-white border border-stone-200/60 rounded-2xl text-stone-700 font-bold text-xs uppercase tracking-wider flex items-center justify-between cursor-pointer transition-all shadow-sm"
+                  className="w-full p-3 bg-white/90 hover:bg-white border border-stone-200/60 rounded-2xl text-stone-800 font-bold text-xs uppercase tracking-wider flex items-center justify-between cursor-pointer transition-all shadow-2xs"
                 >
                   <span className="flex items-center gap-2">
                     <span>🎁</span> Support Ideas & Gifts
@@ -513,19 +490,81 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                   <span className="text-stone-400 text-xs">➔</span>
                 </button>
 
-                {/* 5. Love Notes */}
+                {/* 3. Sweet Notes */}
                 <button 
                   type="button"
                   onClick={() => {
                     setActiveTab('notes');
                     setIsMenuOpen(false);
                   }}
-                  className="w-full p-3 bg-white/80 hover:bg-white border border-stone-200/60 rounded-2xl text-stone-700 font-bold text-xs uppercase tracking-wider flex items-center justify-between cursor-pointer transition-all shadow-sm"
+                  className="w-full p-3 bg-white/90 hover:bg-white border border-stone-200/60 rounded-2xl text-stone-800 font-bold text-xs uppercase tracking-wider flex items-center justify-between cursor-pointer transition-all shadow-2xs"
                 >
                   <span className="flex items-center gap-2">
                     <span>💌</span> Sweet Notes
                   </span>
                   <span className="text-stone-400 text-xs">➔</span>
+                </button>
+
+                {/* 4. Partner Education Guide */}
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('education');
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full p-3 bg-indigo-50/70 hover:bg-indigo-100/70 border border-indigo-200/60 rounded-2xl text-indigo-900 font-bold text-xs uppercase tracking-wider flex items-center justify-between cursor-pointer transition-all shadow-2xs"
+                >
+                  <span className="flex items-center gap-2">
+                    <GraduationCap className="w-4 h-4 text-indigo-600" />
+                    <span>Partner Education Guide</span>
+                  </span>
+                  <span className="text-indigo-400 text-xs">➔</span>
+                </button>
+
+                {/* 5. Hero Checklist & Tasks */}
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('reminders');
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full p-3 bg-white/90 hover:bg-white border border-stone-200/60 rounded-2xl text-stone-800 font-bold text-xs uppercase tracking-wider flex items-center justify-between cursor-pointer transition-all shadow-2xs"
+                >
+                  <span className="flex items-center gap-2">
+                    <span>⏰</span> Hero Checklist & Tasks
+                  </span>
+                  <span className="text-stone-400 text-xs">➔</span>
+                </button>
+
+                {/* 6. Partner Calendar */}
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('calendar');
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full p-3 bg-white/90 hover:bg-white border border-stone-200/60 rounded-2xl text-stone-800 font-bold text-xs uppercase tracking-wider flex items-center justify-between cursor-pointer transition-all shadow-2xs"
+                >
+                  <span className="flex items-center gap-2">
+                    <span>📅</span> Partner Calendar
+                  </span>
+                  <span className="text-stone-400 text-xs">➔</span>
+                </button>
+
+                {/* 7. Sanctuary & Preferences */}
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    setShowSettings(true);
+                  }}
+                  className="w-full p-3 bg-pink-50/60 hover:bg-pink-100/60 border border-pink-200/60 rounded-2xl text-pink-900 font-bold text-xs uppercase tracking-wider flex items-center justify-between cursor-pointer transition-all shadow-2xs"
+                >
+                  <span className="flex items-center gap-2">
+                    <Settings className="w-4 h-4 text-pink-600" />
+                    <span>Sanctuary & Preferences</span>
+                  </span>
+                  <span className="text-pink-400 text-xs">➔</span>
                 </button>
               </div>
             </div>
@@ -2306,17 +2345,17 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
             >
               <Menu className="w-5 h-5" />
             </button>
-            <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => setActiveTab('mission')}>
+            <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => setActiveTab('home')}>
               <span className="text-xl animate-pulse">🤝</span>
               <span className="font-serif italic font-black text-2xl bg-gradient-to-r from-indigo-500 to-purple-400 bg-clip-text text-transparent drop-shadow-sm">
                 Lumina Partner
               </span>
             </div>
             {/* Connection Status Indicator Badge */}
-            {user.isPartnerLinked && (user.partnerId || targetUser) ? (
+            {isConnected ? (
               <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-wider border border-emerald-200/60 shadow-sm">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
-                <span>Connected ({getCleanName(targetUser?.name || user.partnerName, targetUser?.email) || 'Partner'})</span>
+                <span>Connected ({partnerDisplayName})</span>
               </div>
             ) : activePendingRequest?.status === 'pending' || user.partnerRequest?.status === 'pending' ? (
               <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-700 rounded-full text-[10px] font-black uppercase tracking-wider border border-amber-200/60 shadow-sm">
@@ -2349,16 +2388,6 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
 
             <button 
               type="button"
-              onClick={() => setShowSettings(true)}
-              title="Partner Settings"
-              className="p-2.5 rounded-2xl bg-white/70 hover:bg-white/95 text-indigo-600 transition-all duration-300 shadow-sm border border-indigo-100/60 cursor-pointer flex items-center gap-1.5 active:scale-95"
-            >
-              <Settings className="w-5 h-5" />
-              <span className="text-[10px] font-black uppercase tracking-wider hidden sm:inline">Settings</span>
-            </button>
-            
-            <button 
-              type="button"
               onClick={() => setIsNotificationsOpen(true)}
               title="Notifications"
               className="p-2.5 rounded-2xl bg-white/60 hover:bg-white/90 text-indigo-600 transition-all duration-300 shadow-[inset_0_1.5px_2.5px_rgba(255,255,255,0.7),_0_4px_12px_rgba(99,102,241,0.05)] border border-indigo-50/50 cursor-pointer flex items-center justify-center relative active:scale-90"
@@ -2369,18 +2398,6 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                 <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-gradient-to-r from-indigo-500 to-purple-550 rounded-full border-2 border-white animate-pulse" />
               )}
             </button>
-
-            {onLogout && (
-              <button 
-                type="button"
-                onClick={() => setShowLogoutModal(true)}
-                title="Log Out"
-                className="p-2.5 px-3 rounded-2xl bg-rose-50/90 hover:bg-rose-100/90 text-rose-600 transition-all duration-300 border border-rose-200/60 shadow-sm cursor-pointer flex items-center gap-1.5 active:scale-95"
-              >
-                <LogOut className="w-5 h-5" />
-                <span className="text-[10px] font-black uppercase tracking-wider hidden sm:inline">Log Out</span>
-              </button>
-            )}
           </div>
         </header>
 
@@ -2524,17 +2541,17 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
           >
             <Menu className="w-5 h-5" />
           </button>
-          <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => setActiveTab('mission')}>
+          <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => setActiveTab('home')}>
             <span className="text-xl animate-pulse">🤝</span>
             <span className="font-serif italic font-black text-2xl bg-gradient-to-r from-indigo-500 to-purple-400 bg-clip-text text-transparent drop-shadow-sm">
               Lumina Partner
             </span>
           </div>
           {/* Connection Status Indicator Badge */}
-          {user.isPartnerLinked && (user.partnerId || targetUser) ? (
+          {isConnected ? (
             <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-wider border border-emerald-200/60 shadow-sm">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
-              <span>Connected ({getCleanName(targetUser?.name || user.partnerName, targetUser?.email) || 'Partner'})</span>
+              <span>Connected ({partnerDisplayName})</span>
             </div>
           ) : activePendingRequest?.status === 'pending' || user.partnerRequest?.status === 'pending' ? (
             <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-700 rounded-full text-[10px] font-black uppercase tracking-wider border border-amber-200/60 shadow-sm">
@@ -2564,16 +2581,6 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
               ← Back to My Account
             </button>
           )}
-
-          <button 
-            type="button"
-            onClick={() => setShowSettings(true)}
-            title="Partner Settings"
-            className="p-2.5 rounded-2xl bg-white/70 hover:bg-white/95 text-indigo-600 transition-all duration-300 shadow-sm border border-indigo-100/60 cursor-pointer flex items-center gap-1.5 active:scale-95"
-          >
-            <Settings className="w-5 h-5" />
-            <span className="text-[10px] font-black uppercase tracking-wider hidden sm:inline">Settings</span>
-          </button>
           
           <button 
             type="button"
@@ -2587,161 +2594,165 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
               <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-gradient-to-r from-indigo-500 to-purple-550 rounded-full border-2 border-white animate-pulse" />
             )}
           </button>
-
-          {onLogout && (
-            <button 
-              type="button"
-              onClick={() => setShowLogoutModal(true)}
-              title="Log Out"
-              className="p-2.5 px-3 rounded-2xl bg-rose-50/90 hover:bg-rose-100/90 text-rose-600 transition-all duration-300 border border-rose-200/60 shadow-sm cursor-pointer flex items-center gap-1.5 active:scale-95"
-            >
-              <LogOut className="w-5 h-5" />
-              <span className="text-[10px] font-black uppercase tracking-wider hidden sm:inline">Log Out</span>
-            </button>
-          )}
         </div>
       </header>
-      {/* Header with Linked User Profile */}
-      <header className="relative bg-gradient-to-br from-indigo-600 to-indigo-800 p-10 rounded-[3rem] shadow-2xl shadow-indigo-200 text-white border border-indigo-400 overflow-hidden">
-        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
-          <div className="space-y-4 text-center md:text-left">
-            <div className="flex items-center justify-center md:justify-start gap-4">
-              <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-4xl shadow-inner border border-white/30">
-                🛡️
+      {/* Home Dashboard View */}
+      {activeTab === 'home' && (
+        <div className="space-y-8 animate-fadeIn">
+          {/* Header with Linked User Profile */}
+          <header className="relative bg-gradient-to-br from-indigo-600 to-indigo-800 p-8 md:p-10 rounded-[3rem] shadow-2xl shadow-indigo-200 text-white border border-indigo-400 overflow-hidden">
+            <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="space-y-4 text-center md:text-left">
+                <div className="flex items-center justify-center md:justify-start gap-4">
+                  <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-4xl shadow-inner border border-white/30">
+                    🛡️
+                  </div>
+                  <div>
+                    <h2 className="text-3xl md:text-4xl font-serif italic tracking-tight">
+                      {getSanctuaryTitle(targetUser)}
+                    </h2>
+                    <p className="text-sm opacity-80 font-medium">
+                      Supporting {getCleanName(targetUser?.name, targetUser?.email) || "your partner"}'s bloom
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex flex-wrap justify-center md:justify-start gap-2">
+                  <div className="bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border border-white/10">
+                    Phase: <span className="text-yellow-300">{currentPhase}</span>
+                  </div>
+                  <div className="bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border border-white/10">
+                    Mission: <span className="text-pink-300">Support Hero</span>
+                  </div>
+                </div>
               </div>
-              <div>
-                <h2 className="text-4xl font-serif italic tracking-tight">
-                  {getSanctuaryTitle(targetUser)}
-                </h2>
-                <p className="text-sm opacity-80 font-medium">
-                  Supporting {getCleanName(targetUser?.name, targetUser?.email) || "your partner"}'s bloom
+
+              <div className="bg-white/10 backdrop-blur-md p-5 rounded-[2.5rem] border border-white/20 text-center w-full md:w-64">
+                <p className="text-[10px] font-black uppercase tracking-widest text-indigo-200 mb-2">Navigation Hint</p>
+                <p className="text-xs font-medium text-white/90 leading-relaxed">
+                  Tap the <span className="font-bold text-yellow-300">☰ Menu</span> button at top to access Support Mission, Gift Ideas, Sweet Notes & Settings.
                 </p>
               </div>
             </div>
-            
-            <div className="flex flex-wrap justify-center md:justify-start gap-2">
-              <div className="bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border border-white/10">
-                Phase: <span className="text-yellow-300">{currentPhase}</span>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border border-white/10">
-                Mission: <span className="text-pink-300">Support Hero</span>
-              </div>
+            <div className="absolute top-0 right-0 p-12 opacity-10">
+              <span className="text-[15rem] rotate-12">🛡️</span>
             </div>
-          </div>
+          </header>
 
-          <div className="bg-white p-6 rounded-[2.5rem] shadow-lg flex-shrink-0 w-full md:w-72 border border-white">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-400 mb-3 text-center">Hero's Guide</p>
-            <p className="text-xs text-indigo-900 font-serif italic leading-relaxed text-center">
-              {loading ? "Aligning stars..." : (supportMission[0] || "Small gestures mean the most. Today, focus on listening without solving.")}
-            </p>
-            <div className="mt-4 flex justify-center gap-3">
-              {['🌸', '🍫', '🍵'].map((e, i) => (
-                <div key={i} className="w-8 h-8 bg-indigo-50 rounded-full flex items-center justify-center text-lg">{e}</div>
-              ))}
-            </div>
-          </div>
-        </div>
-        <div className="absolute top-0 right-0 p-12 opacity-10">
-          <span className="text-[15rem] rotate-12">🛡️</span>
-        </div>
-      </header>
-
-      {/* Cycle Overview Card */}
-      <section className="bg-white p-8 rounded-[3rem] shadow-sm border border-indigo-50 space-y-6">
-        <div className="flex items-center justify-between">
-          <h3 className="text-2xl font-serif text-indigo-600 italic">
-            {getCleanName(targetUser?.name, targetUser?.email) || "Your Partner"}'s Cycle
-          </h3>
-          {!user.isPartner && (
-            <button 
-              onClick={() => setUser({ ...user, isPartner: false })}
-              className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest"
-            >
-              ← Back to My Account
-            </button>
-          )}
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="p-6 bg-indigo-50/30 rounded-[2rem] border border-indigo-50">
-            <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-2">Status</p>
-            {targetUser?.sharingSettings.shareCycleInfo ? (
-              <>
-                <p className="text-lg font-serif italic text-indigo-900">Period starts in 2 days</p>
-                <p className="text-xs text-indigo-300 mt-1">Current Phase: {currentPhase}</p>
-              </>
-            ) : (
-              <p className="text-xs text-indigo-300 italic">Cycle info is private 🔒</p>
-            )}
-          </div>
-          <div className="p-6 bg-pink-50/30 rounded-[2rem] border border-pink-50">
-            <p className="text-[10px] font-bold text-pink-400 uppercase tracking-widest mb-2">Mood & Symptoms</p>
-            {targetUser?.sharingSettings.shareMood || targetUser?.sharingSettings.shareSymptoms ? (
-              <>
-                {targetUser?.sharingSettings.shareMood && <p className="text-lg font-serif italic text-pink-600">😔 Low energy</p>}
-                {targetUser?.sharingSettings.shareSymptoms && <p className="text-xs text-pink-300 mt-1">Symptoms: Cramps</p>}
-              </>
-            ) : (
-              <p className="text-xs text-pink-300 italic">Mood & symptoms are private 🔒</p>
-            )}
-          </div>
-        </div>
-
-        <div className="p-6 bg-yellow-50/50 rounded-[2rem] border border-yellow-100 flex items-start gap-4">
-          <span className="text-2xl">💡</span>
-          <div>
-            <p className="text-[10px] font-bold text-yellow-600 uppercase tracking-widest mb-1">Support Tip</p>
-            <p className="text-sm text-yellow-800 italic">
-              {loading ? "Calculating support strategy..." : (commTips.substring(0, 100).split('\n')[0] || "She may need rest today. Consider preparing a warm bath or a heating pad.")}
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Care & Gift Reminders */}
-      <section className="bg-white p-8 rounded-[3rem] shadow-sm border border-pink-50">
-        <h3 className="text-2xl font-serif text-pink-500 italic mb-6">Care & Gift Reminders</h3>
-        <div className="space-y-4">
-          <div className="p-6 bg-pink-50/30 rounded-[2rem] border border-pink-50">
-            <p className="text-[10px] font-bold text-pink-400 uppercase tracking-widest mb-2">Upcoming</p>
-            {targetUser?.sharingSettings.shareCycleInfo ? (
-              <p className="text-sm text-pink-600 font-serif italic">
-                • {currentPhase === 'Menstrual' ? 'Period in progress' : 
-                   currentPhase === 'Pregnancy' ? 'Pregnancy journey' :
-                   'Preparing for next bloom'}
-              </p>
-            ) : (
-              <p className="text-xs text-pink-300 italic">Protected Information 🔒</p>
-            )}
-          </div>
-          <div className="p-6 bg-white border border-pink-100 rounded-[2rem] space-y-4">
-            <p className="text-[10px] font-bold text-pink-400 uppercase tracking-widest">💡 AI Suggestions</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {giftIdeas.slice(0, 3).map((idea, i) => (
-                <SuggestionItem key={i} icon={['🎁', '🌸', '💬'][i % 3]} label={idea.length > 20 ? idea.substring(0, 20) + "..." : idea} />
-              ))}
-              {giftIdeas.length === 0 && (
-                <>
-                  <SuggestionItem icon="🎁" label="Buy chocolate" />
-                  <SuggestionItem icon="🌸" label="Send flowers" />
-                  <SuggestionItem icon="💬" label="Check in emotionally" />
-                </>
+          {/* Cycle Overview Card */}
+          <section className="bg-white p-8 rounded-[3rem] shadow-sm border border-indigo-50 space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-2xl font-serif text-indigo-600 italic">
+                {getCleanName(targetUser?.name, targetUser?.email) || "Your Partner"}'s Cycle
+              </h3>
+              {!user.isPartner && (
+                <button 
+                  onClick={() => setUser({ ...user, isPartner: false })}
+                  className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest cursor-pointer hover:underline"
+                >
+                  ← Back to My Account
+                </button>
               )}
             </div>
-          </div>
-        </div>
-      </section>
 
-      {/* Dashboard Navigation */}
-      <nav className="flex bg-white/50 p-1.5 rounded-3xl border border-indigo-100/50 shadow-sm sticky top-24 z-40 backdrop-blur-md overflow-x-auto whitespace-nowrap scrollbar-none gap-1">
-        <NavItem active={activeTab === 'mission'} onClick={() => setActiveTab('mission')} label="Support Mission" icon="⚔️" />
-        <NavItem active={activeTab === 'ideas'} onClick={() => setActiveTab('ideas')} label="Gift Ideas" icon="🎁" />
-        <NavItem active={activeTab === 'notes'} onClick={() => setActiveTab('notes')} label="Love Notes" icon="✉️" />
-        <NavItem active={activeTab === 'reminders'} onClick={() => setActiveTab('reminders')} label="Tasks" icon="⏰" />
-        <NavItem active={activeTab === 'calendar'} onClick={() => setActiveTab('calendar')} label="Calendar" icon="📅" />
-        <NavItem active={activeTab === 'education'} onClick={() => setActiveTab('education')} label="Education" icon="🎓" />
-        <NavItem active={activeTab === 'notifications'} onClick={() => setActiveTab('notifications')} label="Notifications" icon="🔔" />
-      </nav>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-6 bg-indigo-50/30 rounded-[2rem] border border-indigo-50">
+                <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-2">Status</p>
+                {targetUser?.sharingSettings.shareCycleInfo ? (
+                  <>
+                    <p className="text-lg font-serif italic text-indigo-900">Period starts in 2 days</p>
+                    <p className="text-xs text-indigo-300 mt-1">Current Phase: {currentPhase}</p>
+                  </>
+                ) : (
+                  <p className="text-xs text-indigo-300 italic">Cycle info is private 🔒</p>
+                )}
+              </div>
+              <div className="p-6 bg-pink-50/30 rounded-[2rem] border border-pink-50">
+                <p className="text-[10px] font-bold text-pink-400 uppercase tracking-widest mb-2">Mood & Symptoms</p>
+                {targetUser?.sharingSettings.shareMood || targetUser?.sharingSettings.shareSymptoms ? (
+                  <>
+                    {targetUser?.sharingSettings.shareMood && <p className="text-lg font-serif italic text-pink-600">😔 Low energy</p>}
+                    {targetUser?.sharingSettings.shareSymptoms && <p className="text-xs text-pink-300 mt-1">Symptoms: Cramps</p>}
+                  </>
+                ) : (
+                  <p className="text-xs text-pink-300 italic">Mood & symptoms are private 🔒</p>
+                )}
+              </div>
+            </div>
+
+            <div className="p-6 bg-yellow-50/50 rounded-[2rem] border border-yellow-100 flex items-start gap-4">
+              <span className="text-2xl">💡</span>
+              <div>
+                <p className="text-[10px] font-bold text-yellow-600 uppercase tracking-widest mb-1">Support Tip</p>
+                <p className="text-sm text-yellow-800 italic">
+                  {loading ? "Calculating support strategy..." : (commTips.substring(0, 100).split('\n')[0] || "She may need rest today. Consider preparing a warm bath or a heating pad.")}
+                </p>
+              </div>
+            </div>
+          </section>
+
+          {/* Partner Calendar Overview */}
+          <section className="bg-white p-8 rounded-[3rem] shadow-sm border border-indigo-50">
+            <h3 className="text-2xl font-serif text-indigo-600 italic mb-6">
+              {getCleanName(targetUser?.name, targetUser?.email) || "Your Partner"}'s Calendar
+            </h3>
+            <div className="p-6 bg-indigo-50/30 rounded-[2rem] border border-indigo-50 text-center">
+              <p className="text-sm text-indigo-900 font-serif italic mb-4">Upcoming Cycle Days: Phase {currentPhase}</p>
+              <div className="grid grid-cols-7 gap-2">
+                {Array.from({ length: 31 }).map((_, i) => {
+                  const day = i + 1;
+                  const isPeriod = day >= 12 && day <= 17;
+                  const isFertile = day >= 24 && day <= 28;
+                  return (
+                    <div 
+                      key={i} 
+                      className={`aspect-square flex items-center justify-center rounded-xl text-[10px] font-bold ${
+                        isPeriod ? 'bg-rose-400 text-white shadow-md shadow-rose-100' : 
+                        isFertile ? 'bg-indigo-400 text-white shadow-md shadow-indigo-100' : 
+                        'bg-white text-indigo-300 border border-indigo-50'
+                      }`}
+                    >
+                      {day}
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mt-6 flex justify-center gap-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-rose-400 rounded-full"></div>
+                  <span className="text-[10px] font-bold text-indigo-400 uppercase">Period</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-indigo-400 rounded-full"></div>
+                  <span className="text-[10px] font-bold text-indigo-400 uppercase">Fertile</span>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {/* Sub-view Top Header Bar (When a feature tab is selected from hamburger menu) */}
+      {activeTab !== 'home' && (
+        <div className="flex items-center justify-between bg-white/80 backdrop-blur-md p-4 rounded-3xl border border-indigo-100/60 shadow-sm animate-fadeIn flex-wrap gap-2 mb-6">
+          <button 
+            type="button"
+            onClick={() => setActiveTab('home')}
+            className="flex items-center gap-2 px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-2xl font-black text-[10px] uppercase tracking-wider transition-all cursor-pointer active:scale-95 shadow-2xs"
+          >
+            <span>← Back to Home Dashboard</span>
+          </button>
+          <span className="text-xs font-black uppercase tracking-widest text-indigo-600 bg-indigo-50/60 px-4 py-2 rounded-full border border-indigo-100/40">
+            {activeTab === 'mission' && '🛡️ Support Mission'}
+            {activeTab === 'ideas' && '🎁 Support Ideas & Gifts'}
+            {activeTab === 'notes' && '💌 Sweet Notes'}
+            {activeTab === 'education' && '🎓 Partner Education Guide'}
+            {activeTab === 'reminders' && '⏰ Hero Checklist & Tasks'}
+            {activeTab === 'calendar' && '📅 Partner Calendar'}
+            {activeTab === 'notifications' && '🔔 Notifications'}
+          </span>
+        </div>
+      )}
 
       {activeTab === 'mission' && (
         <div className="space-y-6 animate-fadeIn">
