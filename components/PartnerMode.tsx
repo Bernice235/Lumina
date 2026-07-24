@@ -239,14 +239,28 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
     return () => unsubGifts();
   }, [user.id]);
 
-  const targetUser = user.isPartner ? linkedUser : user;
+  const targetUser = user.isPartner ? (linkedUser || partnerUser || user) : user;
+
+  const isDeclined = user.partnerRequest?.status === 'declined' || 
+                     activePendingRequest?.status === 'declined' || 
+                     linkedUser?.partnerRequest?.status === 'declined';
+
+  const isPendingApproval = !isDeclined && (
+    user.partnerRequest?.status === 'pending' || 
+    activePendingRequest?.status === 'pending' || 
+    (!user.isPartnerLinked && !linkedUser?.isPartnerLinked && Boolean(user.partnerId || linkedUser?.id))
+  );
 
   const isConnected = Boolean(
-    user.isPartnerLinked || 
-    user.partnerId || 
-    partnerUser?.id || 
-    linkedUser?.id || 
-    (user.partnerName && user.partnerName.trim().length > 0)
+    !isDeclined &&
+    !isPendingApproval &&
+    (
+      user.isPartnerLinked ||
+      (linkedUser && linkedUser.isPartnerLinked) ||
+      (partnerUser && partnerUser.isPartnerLinked) ||
+      user.partnerRequest?.status === 'approved' ||
+      activePendingRequest?.status === 'approved'
+    )
   );
 
   const partnerDisplayName = getCleanName(
@@ -2442,6 +2456,141 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
           </div>
         )}
         {renderGlobalModals()}
+      </div>
+    );
+  }
+
+  // Partner pending or declined state view for Partner Mode
+  if (user.isPartner && !isConnected) {
+    return (
+      <div className="space-y-8 animate-fadeIn pb-24 font-sans max-w-2xl mx-auto pt-4">
+        {/* Top Header Section for Partner Mode */}
+        <header className="flex items-center justify-between px-4 py-3 bg-white/40 backdrop-blur-2xl border border-white/60 shadow-sm rounded-3xl sticky top-2 z-40 flex-wrap gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1.5 cursor-pointer">
+              <span className="text-xl animate-pulse">🤝</span>
+              <span className="font-serif italic font-black text-2xl bg-gradient-to-r from-indigo-500 to-purple-400 bg-clip-text text-transparent drop-shadow-sm">
+                Lumina Partner
+              </span>
+            </div>
+            {isDeclined ? (
+              <div className="flex items-center gap-1.5 px-3 py-1 bg-rose-50 text-rose-700 rounded-full text-[10px] font-black uppercase tracking-wider border border-rose-200/60 shadow-sm">
+                <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0"></span>
+                <span>Request Declined</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-700 rounded-full text-[10px] font-black uppercase tracking-wider border border-amber-200/60 shadow-sm">
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping shrink-0"></span>
+                <span>Pending Approval</span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            {onLogout && (
+              <button 
+                type="button"
+                onClick={() => setShowLogoutModal(true)}
+                className="px-3 py-1.5 rounded-2xl bg-rose-50 text-rose-600 hover:bg-rose-100 text-[10px] font-black uppercase tracking-wider border border-rose-200/60 transition-all cursor-pointer"
+              >
+                🚪 Log Out
+              </button>
+            )}
+          </div>
+        </header>
+
+        {isDeclined ? (
+          <section className="bg-white p-10 rounded-[3rem] shadow-lg border border-rose-100 flex flex-col items-center text-center space-y-6 animate-fadeIn">
+            <div className="w-20 h-20 bg-rose-50 rounded-full flex items-center justify-center text-4xl shadow-inner border border-rose-100">
+              💔
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-2xl font-serif italic text-stone-800 font-bold">Connection Request Declined</h3>
+              <p className="text-xs text-stone-600 max-w-md mx-auto leading-relaxed">
+                Your request to connect with <span className="font-bold text-indigo-600">{partnerDisplayName}</span> was declined. It is only when <span className="font-bold text-indigo-600">{partnerDisplayName}</span> accepts your connection request that you will be able to access partner features and view cycle insights.
+              </p>
+            </div>
+            <div className="p-4 bg-rose-50/50 rounded-2xl border border-rose-100 max-w-md w-full text-left space-y-2 text-xs">
+              <p className="font-bold text-rose-900 flex items-center gap-1.5">
+                <span>🔒</span> Privacy Safeguard
+              </p>
+              <p className="text-stone-600 text-[11px] leading-relaxed">
+                We respect both partners' privacy choices. You can enter a new invitation link if your partner re-invites you.
+              </p>
+            </div>
+          </section>
+        ) : (
+          <section className="bg-white p-10 rounded-[3rem] shadow-lg border border-amber-100 flex flex-col items-center text-center space-y-6 animate-fadeIn">
+            <div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center text-4xl shadow-inner border border-amber-100 animate-pulse">
+              ⏳
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-2xl font-serif italic text-stone-800 font-bold">Connection Request Pending</h3>
+              <p className="text-xs text-stone-600 max-w-md mx-auto leading-relaxed">
+                Your partner account has been created! A connection request has been sent to <span className="font-bold text-indigo-600">{partnerDisplayName}</span>. Once <span className="font-bold text-indigo-600">{partnerDisplayName}</span> accepts your request, you will be connected and can view their actual cycle calendar and support features.
+              </p>
+            </div>
+            <div className="p-4 bg-indigo-50/60 rounded-2xl border border-indigo-100 max-w-md w-full text-left space-y-2 text-xs">
+              <p className="font-bold text-indigo-900 flex items-center gap-1.5">
+                <span>🔔</span> Notification Sent to {partnerDisplayName}
+              </p>
+              <p className="text-stone-600 text-[11px] leading-relaxed">
+                {partnerDisplayName} has received a notification in their bell icon and pending requests panel to accept your request.
+              </p>
+            </div>
+            <button 
+              type="button"
+              onClick={async () => {
+                if (user.partnerId) {
+                  const unsub = subscribeToUser(user.partnerId, (pUser) => {
+                    if (pUser) setLinkedUser(pUser);
+                  });
+                  setTimeout(unsub, 1000);
+                }
+                await syncUser(user);
+              }}
+              className="px-6 py-3 bg-indigo-600 text-white rounded-2xl font-bold text-xs uppercase tracking-wider shadow-md hover:bg-indigo-700 transition-all cursor-pointer"
+            >
+              Check Connection Status 🔄
+            </button>
+          </section>
+        )}
+
+        {/* LOGOUT CONFIRMATION MODAL */}
+        {showLogoutModal && (
+          <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fadeIn">
+            <div className="bg-white rounded-[2.5rem] p-6 max-w-sm w-full space-y-5 border border-pink-100 shadow-2xl text-center">
+              <div className="w-16 h-16 bg-pink-50 rounded-full flex items-center justify-center text-rose-500 mx-auto text-2xl">
+                🚪
+              </div>
+              <div className="space-y-2">
+                <h3 className="font-serif font-bold text-lg text-stone-800">Partner Logout</h3>
+                <p className="text-xs text-stone-600 font-medium leading-relaxed">
+                  Are you sure you want to log out?
+                </p>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowLogoutModal(false)}
+                  className="flex-1 py-3 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs uppercase tracking-wider rounded-2xl transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowLogoutModal(false);
+                    if (onLogout) onLogout();
+                  }}
+                  className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs uppercase tracking-wider rounded-2xl transition-all cursor-pointer shadow-md shadow-rose-200"
+                >
+                  Log Out
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
