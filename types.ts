@@ -229,7 +229,7 @@ export interface TemperatureLog {
 
 export interface ReceivedComfort {
   id: string;
-  type: 'hug' | 'tea' | 'flower' | 'chocolate' | 'sparkle';
+  type: 'hug' | 'tea' | 'flower' | 'chocolate' | 'sparkle' | 'love_note';
   senderId: string;
   senderName: string;
   timestamp: string;

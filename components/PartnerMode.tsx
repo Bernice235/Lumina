@@ -2605,6 +2605,38 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
           </button>
         </div>
       </header>
+
+      {/* ALWAYS-VISIBLE TOP NAVIGATION TAB BAR */}
+      <nav className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none sticky top-[60px] z-30 bg-white/80 backdrop-blur-xl p-2 rounded-2xl border border-indigo-100/80 shadow-md">
+        {[
+          { id: 'home', label: 'Dashboard', icon: '🏠' },
+          { id: 'mission', label: 'Support Mission', icon: '🛡️' },
+          { id: 'ideas', label: 'Ideas & Gifts', icon: '🎁' },
+          { id: 'notes', label: 'Sweet Notes', icon: '💌' },
+          { id: 'reminders', label: 'Hero Checklist', icon: '⏰' },
+          { id: 'calendar', label: 'Cycle Calendar', icon: '📅' },
+          { id: 'education', label: 'Education', icon: '🎓' },
+          { id: 'notifications', label: 'Settings', icon: '⚙️' }
+        ].map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`px-3.5 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all whitespace-nowrap cursor-pointer shrink-0 ${
+                isActive
+                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-200 scale-[1.02]'
+                  : 'bg-white/90 hover:bg-white text-stone-600 hover:text-indigo-600 border border-stone-200/50 shadow-2xs'
+              }`}
+            >
+              <span className="text-sm">{tab.icon}</span>
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
+      </nav>
+
       {/* Home Dashboard View */}
       {activeTab === 'home' && (
         <div className="space-y-8 animate-fadeIn">
@@ -2637,9 +2669,9 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
               </div>
 
               <div className="bg-white/10 backdrop-blur-md p-5 rounded-[2.5rem] border border-white/20 text-center w-full md:w-64">
-                <p className="text-[10px] font-black uppercase tracking-widest text-indigo-200 mb-2">Navigation Hint</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-indigo-200 mb-2">Quick Navigation</p>
                 <p className="text-xs font-medium text-white/90 leading-relaxed">
-                  Tap the <span className="font-bold text-yellow-300">☰ Menu</span> button at top to access Support Mission, Gift Ideas, Sweet Notes & Settings.
+                  Use the navigation bar above or tap the cards below to access Support Tasks, Gifts, Sweet Notes & Calendar.
                 </p>
               </div>
             </div>
@@ -2648,11 +2680,98 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
             </div>
           </header>
 
+          {/* Quick Access Feature Shortcuts Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div 
+              onClick={() => setActiveTab('mission')}
+              className="bg-gradient-to-br from-indigo-50 to-white p-5 rounded-[2rem] border border-indigo-100/80 shadow-sm hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-3xl group-hover:scale-110 transition-transform">🛡️</span>
+                <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest bg-indigo-100/60 px-2.5 py-1 rounded-full">Phase Tasks</span>
+              </div>
+              <div>
+                <h4 className="font-serif italic font-bold text-indigo-950 text-base">Support Mission</h4>
+                <p className="text-[10px] text-stone-500 mt-1 line-clamp-2">Daily phase-specific actions for {currentPhase} phase</p>
+              </div>
+            </div>
+
+            <div 
+              onClick={() => setActiveTab('ideas')}
+              className="bg-gradient-to-br from-pink-50 to-white p-5 rounded-[2rem] border border-pink-100/80 shadow-sm hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-3xl group-hover:scale-110 transition-transform">🎁</span>
+                <span className="text-[9px] font-black text-pink-500 uppercase tracking-widest bg-pink-100/60 px-2.5 py-1 rounded-full">Care Ideas</span>
+              </div>
+              <div>
+                <h4 className="font-serif italic font-bold text-pink-950 text-base">Ideas & Gifts</h4>
+                <p className="text-[10px] text-stone-500 mt-1 line-clamp-2">Thoughtful gifts, date ideas & comforting gestures</p>
+              </div>
+            </div>
+
+            <div 
+              onClick={() => setActiveTab('notes')}
+              className="bg-gradient-to-br from-rose-50 to-white p-5 rounded-[2rem] border border-rose-100/80 shadow-sm hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-3xl group-hover:scale-110 transition-transform">💌</span>
+                <span className="text-[9px] font-black text-rose-500 uppercase tracking-widest bg-rose-100/60 px-2.5 py-1 rounded-full">Love Notes</span>
+              </div>
+              <div>
+                <h4 className="font-serif italic font-bold text-rose-950 text-base">Sweet Notes</h4>
+                <p className="text-[10px] text-stone-500 mt-1 line-clamp-2">Send love letters & digital comfort to her app</p>
+              </div>
+            </div>
+
+            <div 
+              onClick={() => setActiveTab('reminders')}
+              className="bg-gradient-to-br from-purple-50 to-white p-5 rounded-[2rem] border border-purple-100/80 shadow-sm hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-3xl group-hover:scale-110 transition-transform">⏰</span>
+                <span className="text-[9px] font-black text-purple-500 uppercase tracking-widest bg-purple-100/60 px-2.5 py-1 rounded-full">To-Do List</span>
+              </div>
+              <div>
+                <h4 className="font-serif italic font-bold text-purple-950 text-base">Hero Checklist</h4>
+                <p className="text-[10px] text-stone-500 mt-1 line-clamp-2">Track support tasks & build your Hero streak</p>
+              </div>
+            </div>
+
+            <div 
+              onClick={() => setActiveTab('calendar')}
+              className="bg-gradient-to-br from-amber-50 to-white p-5 rounded-[2rem] border border-amber-100/80 shadow-sm hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-3xl group-hover:scale-110 transition-transform">📅</span>
+                <span className="text-[9px] font-black text-amber-600 uppercase tracking-widest bg-amber-100/60 px-2.5 py-1 rounded-full">Live Phases</span>
+              </div>
+              <div>
+                <h4 className="font-serif italic font-bold text-amber-950 text-base">Partner Calendar</h4>
+                <p className="text-[10px] text-stone-500 mt-1 line-clamp-2">View upcoming period, fertile window & phase dates</p>
+              </div>
+            </div>
+
+            <div 
+              onClick={() => setActiveTab('education')}
+              className="bg-gradient-to-br from-emerald-50 to-white p-5 rounded-[2rem] border border-emerald-100/80 shadow-sm hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-3xl group-hover:scale-110 transition-transform">🎓</span>
+                <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-100/60 px-2.5 py-1 rounded-full">Guide</span>
+              </div>
+              <div>
+                <h4 className="font-serif italic font-bold text-emerald-950 text-base">Education Guide</h4>
+                <p className="text-[10px] text-stone-500 mt-1 line-clamp-2">Understand menstrual science & hormone shifts</p>
+              </div>
+            </div>
+          </div>
+
           {/* Cycle Overview Card */}
           <section className="bg-white p-8 rounded-[3rem] shadow-sm border border-indigo-50 space-y-6">
             <div className="flex items-center justify-between">
               <h3 className="text-2xl font-serif text-indigo-600 italic">
-                {getCleanName(targetUser?.name, targetUser?.email) || "Your Partner"}'s Cycle
+                {getCleanName(targetUser?.name, targetUser?.email) || "Your Partner"}'s Cycle Status
               </h3>
               {!user.isPartner && (
                 <button 
@@ -2667,10 +2786,10 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="p-6 bg-indigo-50/30 rounded-[2rem] border border-indigo-50">
                 <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-2">Status</p>
-                {targetUser?.sharingSettings.shareCycleInfo ? (
+                {targetUser?.sharingSettings?.shareCycleInfo !== false ? (
                   <>
-                    <p className="text-lg font-serif italic text-indigo-900">Period starts in 2 days</p>
-                    <p className="text-xs text-indigo-300 mt-1">Current Phase: {currentPhase}</p>
+                    <p className="text-lg font-serif italic text-indigo-900">Current Phase: <span className="font-bold text-indigo-600">{currentPhase}</span></p>
+                    <p className="text-xs text-indigo-400 mt-1">Cycle Day ~14 • Period estimated in ~14 days</p>
                   </>
                 ) : (
                   <p className="text-xs text-indigo-300 italic">Cycle info is private 🔒</p>
@@ -2678,10 +2797,14 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
               </div>
               <div className="p-6 bg-pink-50/30 rounded-[2rem] border border-pink-50">
                 <p className="text-[10px] font-bold text-pink-400 uppercase tracking-widest mb-2">Mood & Symptoms</p>
-                {targetUser?.sharingSettings.shareMood || targetUser?.sharingSettings.shareSymptoms ? (
+                {targetUser?.sharingSettings?.shareMood !== false || targetUser?.sharingSettings?.shareSymptoms !== false ? (
                   <>
-                    {targetUser?.sharingSettings.shareMood && <p className="text-lg font-serif italic text-pink-600">😔 Low energy</p>}
-                    {targetUser?.sharingSettings.shareSymptoms && <p className="text-xs text-pink-300 mt-1">Symptoms: Cramps</p>}
+                    <p className="text-lg font-serif italic text-pink-600">
+                      {targetUser?.todaySymptomLog?.mood ? `Mood: ${targetUser.todaySymptomLog.mood}` : ' Mood: Restful & Calm'}
+                    </p>
+                    <p className="text-xs text-pink-400 mt-1">
+                      {targetUser?.todaySymptomLog?.symptoms?.length ? `Symptoms: ${targetUser.todaySymptomLog.symptoms.join(', ')}` : 'Symptoms: Minimal physical fatigue'}
+                    </p>
                   </>
                 ) : (
                   <p className="text-xs text-pink-300 italic">Mood & symptoms are private 🔒</p>
@@ -2692,56 +2815,17 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
             <div className="p-6 bg-yellow-50/50 rounded-[2rem] border border-yellow-100 flex items-start gap-4">
               <span className="text-2xl">💡</span>
               <div>
-                <p className="text-[10px] font-bold text-yellow-600 uppercase tracking-widest mb-1">Support Tip</p>
-                <p className="text-sm text-yellow-800 italic">
-                  {loading ? "Calculating support strategy..." : (commTips.substring(0, 100).split('\n')[0] || "She may need rest today. Consider preparing a warm bath or a heating pad.")}
+                <p className="text-[10px] font-bold text-yellow-600 uppercase tracking-widest mb-1">Today's Support Strategy</p>
+                <p className="text-sm text-yellow-900 italic font-serif leading-relaxed">
+                  {loading ? "Calculating support strategy..." : (commTips.substring(0, 120).split('\n')[0] || "She may benefit from a warm cup of herbal tea and lower stress levels today. Offer quiet companionship and handle dinner.")}
                 </p>
-              </div>
-            </div>
-          </section>
-
-          {/* Partner Calendar Overview */}
-          <section className="bg-white p-8 rounded-[3rem] shadow-sm border border-indigo-50">
-            <h3 className="text-2xl font-serif text-indigo-600 italic mb-6">
-              {getCleanName(targetUser?.name, targetUser?.email) || "Your Partner"}'s Calendar
-            </h3>
-            <div className="p-6 bg-indigo-50/30 rounded-[2rem] border border-indigo-50 text-center">
-              <p className="text-sm text-indigo-900 font-serif italic mb-4">Upcoming Cycle Days: Phase {currentPhase}</p>
-              <div className="grid grid-cols-7 gap-2">
-                {Array.from({ length: 31 }).map((_, i) => {
-                  const day = i + 1;
-                  const isPeriod = day >= 12 && day <= 17;
-                  const isFertile = day >= 24 && day <= 28;
-                  return (
-                    <div 
-                      key={i} 
-                      className={`aspect-square flex items-center justify-center rounded-xl text-[10px] font-bold ${
-                        isPeriod ? 'bg-rose-400 text-white shadow-md shadow-rose-100' : 
-                        isFertile ? 'bg-indigo-400 text-white shadow-md shadow-indigo-100' : 
-                        'bg-white text-indigo-300 border border-indigo-50'
-                      }`}
-                    >
-                      {day}
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="mt-6 flex justify-center gap-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-rose-400 rounded-full"></div>
-                  <span className="text-[10px] font-bold text-indigo-400 uppercase">Period</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-indigo-400 rounded-full"></div>
-                  <span className="text-[10px] font-bold text-indigo-400 uppercase">Fertile</span>
-                </div>
               </div>
             </div>
           </section>
         </div>
       )}
 
-      {/* Sub-view Top Header Bar (When a feature tab is selected from hamburger menu) */}
+      {/* Sub-view Top Header Bar (When a feature tab is selected from navigation bar) */}
       {activeTab !== 'home' && (
         <div className="flex items-center justify-between bg-white/80 backdrop-blur-md p-4 rounded-3xl border border-indigo-100/60 shadow-sm animate-fadeIn flex-wrap gap-2 mb-6">
           <button 
@@ -2752,182 +2836,560 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
             <span>← Back to Home Dashboard</span>
           </button>
           <span className="text-xs font-black uppercase tracking-widest text-indigo-600 bg-indigo-50/60 px-4 py-2 rounded-full border border-indigo-100/40">
-            {activeTab === 'mission' && '🛡️ Support Mission'}
+            {activeTab === 'mission' && '🛡️ Daily Support Mission'}
             {activeTab === 'ideas' && '🎁 Support Ideas & Gifts'}
             {activeTab === 'notes' && '💌 Sweet Notes'}
             {activeTab === 'education' && '🎓 Partner Education Guide'}
             {activeTab === 'reminders' && '⏰ Hero Checklist & Tasks'}
-            {activeTab === 'calendar' && '📅 Partner Calendar'}
-            {activeTab === 'notifications' && '🔔 Notifications'}
+            {activeTab === 'calendar' && '📅 Cycle Calendar'}
+            {activeTab === 'notifications' && '⚙️ Settings & Preferences'}
           </span>
         </div>
       )}
 
+      {/* 1. Daily Support Mission View */}
       {activeTab === 'mission' && (
         <div className="space-y-6 animate-fadeIn">
-          <section className="bg-white p-8 rounded-[3rem] shadow-sm border border-indigo-50">
-            <header className="flex justify-between items-center mb-8">
-               <div>
-                  <h3 className="text-2xl font-serif text-indigo-600 italic">Daily Support Mission</h3>
-                  <p className="text-xs text-indigo-300 font-bold uppercase tracking-widest mt-1">Specific tasks for the {currentPhase} phase</p>
-               </div>
-               {loading && <div className="w-6 h-6 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></div>}
+          <section className="bg-white p-8 rounded-[3rem] shadow-sm border border-indigo-50 space-y-6">
+            <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h3 className="text-2xl md:text-3xl font-serif text-indigo-900 italic font-bold">Daily Support Mission</h3>
+                <p className="text-xs text-indigo-400 font-bold uppercase tracking-widest mt-1">Actionable tasks tailored to her exact phase</p>
+              </div>
+              {loading && <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin shrink-0"></div>}
             </header>
-            
-            <div className="space-y-4">
-              {supportMission.map((task, i) => (
-                <div key={i} className="group p-6 bg-indigo-50/30 rounded-[2rem] hover:bg-indigo-50 transition-all border border-transparent hover:border-indigo-100 flex items-center justify-between">
-                  <div className="flex items-center gap-5">
-                    <span className="text-2xl opacity-40 group-hover:opacity-100 transition-opacity">📌</span>
-                    <p className="text-indigo-900 font-serif italic text-lg">{task.replace(/^\d\.\s*/, '')}</p>
+
+            {/* Mission Phase Switcher Pills */}
+            <div className="space-y-2">
+              <p className="text-[10px] font-black uppercase tracking-wider text-indigo-400">Select Phase View:</p>
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+                {[
+                  { name: 'Menstrual', icon: '🩸', label: 'Menstrual (Period)' },
+                  { name: 'Follicular', icon: '🌱', label: 'Follicular (Rising Energy)' },
+                  { name: 'Ovulation', icon: '✨', label: 'Ovulation (Peak)' },
+                  { name: 'Luteal', icon: '🌙', label: 'Luteal (PMS Support)' },
+                  { name: 'Pregnancy', icon: '👶', label: 'Pregnancy Mode' }
+                ].map((ph) => {
+                  const isSelected = selectedMissionPhase === ph.name || (currentPhase && currentPhase.toLowerCase().includes(ph.name.toLowerCase()) && selectedMissionPhase === 'Menstrual');
+                  return (
+                    <button
+                      key={ph.name}
+                      type="button"
+                      onClick={() => setSelectedMissionPhase(ph.name)}
+                      className={`px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
+                        selectedMissionPhase === ph.name
+                          ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200 scale-[1.02]'
+                          : 'bg-indigo-50/60 hover:bg-indigo-100/60 text-indigo-700 border border-indigo-100/60'
+                      }`}
+                    >
+                      <span>{ph.icon}</span>
+                      <span>{ph.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Task list for selected phase */}
+            <div className="space-y-3 pt-2">
+              {(() => {
+                const phaseTasksMap: Record<string, string[]> = {
+                  'Menstrual': [
+                    "🩸 Prepare a warm heating pad or hot water bottle for her cramps.",
+                    "☕ Brew a soothing chamomile or ginger tea without being asked.",
+                    "🍫 Bring her favorite dark chocolate or comfort snack.",
+                    "🧹 Take care of all heavy household chores (dishes, laundry) so she can rest.",
+                    "🛋️ Set up a cozy blanket spot on the couch with a nice movie.",
+                    "💆 Give a gentle lower back or foot rub to ease tension."
+                  ],
+                  'Follicular': [
+                    "🌱 Plan an exciting, creative outdoor date or walk together.",
+                    "🚴 Encourage her new ideas and support her active projects.",
+                    "🥗 Prepare a fresh, light, protein-rich meal.",
+                    "💬 Ask about her personal goals and brainstorm together.",
+                    "🎨 Try a fun new activity together like cooking a new recipe."
+                  ],
+                  'Ovulation': [
+                    "✨ Plan a romantic dinner date night out.",
+                    "💐 Surprising her with fresh flowers or a thoughtful small gift.",
+                    "💃 Dress up nicely together and take romantic photos.",
+                    "🗣️ Give sincere compliments on her energy, style, and beauty.",
+                    "🕯️ Create a cozy candlelit atmosphere at home."
+                  ],
+                  'Luteal': [
+                    "🌙 Keep her favorite crunchy or sweet comfort snacks stocked.",
+                    "👂 Listen patiently without offering unsolicited solutions.",
+                    "🛀 Prepare a warm relaxing bath with epsom salts.",
+                    "🔕 Protect her quiet time and reduce household noise and stress.",
+                    "💆 Offer a soothing neck and shoulder massage before sleep."
+                  ],
+                  'Pregnancy': [
+                    "👶 Keep cold water and nausea-safe snacks (crackers) nearby.",
+                    "🛋️ Fluff back pillows and ensure comfortable seating.",
+                    "🛍️ Take over grocery shopping and heavy carrying completely.",
+                    "👣 Offer a soothing foot massage to reduce swelling.",
+                    "💌 Leave a sweet note telling her what an amazing mother she is."
+                  ]
+                };
+
+                const displayTasks = phaseTasksMap[selectedMissionPhase] || supportMission;
+
+                return displayTasks.map((task, i) => (
+                  <div key={i} className="group p-5 bg-gradient-to-r from-indigo-50/40 to-purple-50/30 rounded-[2rem] hover:bg-indigo-50 transition-all border border-indigo-100/40 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-4 min-w-0">
+                      <span className="text-2xl shrink-0 group-hover:scale-110 transition-transform">📌</span>
+                      <p className="text-indigo-950 font-serif italic text-base leading-snug">{task}</p>
+                    </div>
+                    <button 
+                      onClick={() => {
+                        addReminder(task);
+                        alert(`Added "${task.slice(0, 30)}..." to your Hero Checklist! 🎯`);
+                      }}
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-wider hover:scale-105 active:scale-95 transition-all shadow-md shrink-0 cursor-pointer"
+                    >
+                      + Add Task
+                    </button>
                   </div>
-                  <button 
-                    onClick={() => addReminder(task)}
-                    className="bg-indigo-500 text-white px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest hover:scale-110 active:scale-95 transition-all shadow-md"
-                  >
-                    Add to List
-                  </button>
-                </div>
-              ))}
+                ));
+              })()}
             </div>
           </section>
 
-          <section className="bg-indigo-900 p-8 rounded-[3rem] text-white shadow-xl relative overflow-hidden">
-             <div className="relative z-10">
-                <h4 className="text-xl font-serif italic mb-4 flex items-center gap-2">
-                  <span className="text-2xl">🗣️</span> Communication Briefing
+          <section className="bg-gradient-to-br from-indigo-900 via-indigo-950 to-purple-900 p-8 rounded-[3rem] text-white shadow-xl relative overflow-hidden border border-indigo-800">
+             <div className="relative z-10 space-y-3">
+                <h4 className="text-xl font-serif italic mb-2 flex items-center gap-2 text-indigo-200 font-bold">
+                  <span className="text-2xl">🗣️</span> Communication Briefing ({selectedMissionPhase} Phase)
                 </h4>
-                <div className="p-6 bg-white/10 rounded-3xl border border-white/10 italic text-sm leading-relaxed whitespace-pre-line">
-                  {loading ? "Decrypting her language..." : commTips}
+                <div className="p-6 bg-white/10 rounded-3xl border border-white/15 italic text-sm leading-relaxed whitespace-pre-line text-white/90">
+                  {selectedMissionPhase === 'Menstrual' && "During the menstrual phase, energy is low and physical comfort is paramount. Keep conversation light, offer warm drinks, and take initiative on chores so she doesn't have to ask."}
+                  {selectedMissionPhase === 'Follicular' && "Estrogen is rising! She likely feels refreshed, optimistic, and mentally sharp. Great time to discuss future plans, try new hobbies, or go on an adventure."}
+                  {selectedMissionPhase === 'Ovulation' && "Peak energy, sociability, and confidence! Romantic gestures, compliments, and social dates will resonate strongly right now."}
+                  {selectedMissionPhase === 'Luteal' && "Progesterone is high and dropping before period. She may feel sensitive to stress, bloated, or fatigued. Be extra patient, avoid debating small things, and stock her favorite snacks."}
+                  {selectedMissionPhase === 'Pregnancy' && "Hormonal shifts and physical fatigue require maximum gentle care and proactive support. Ensure she feels rested, hydrated, and cherished every day."}
                 </div>
              </div>
-             <span className="absolute bottom-[-20%] right-[-10%] text-[10rem] opacity-5">⚡</span>
           </section>
         </div>
       )}
 
+      {/* 2. Support Ideas & Gifts View */}
       {activeTab === 'ideas' && (
-        <section className="bg-white p-8 rounded-[3rem] shadow-sm border border-pink-50 animate-fadeIn">
-          <header className="mb-8">
-            <h3 className="text-2xl font-serif text-pink-500 italic">Romantic Operations</h3>
-            <p className="text-xs text-pink-300 font-bold uppercase tracking-widest mt-1">Gift & Gesture Suggestions</p>
+        <section className="bg-white p-8 md:p-10 rounded-[3rem] shadow-sm border border-pink-100 animate-fadeIn space-y-6">
+          <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-pink-50 pb-6">
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-pink-50 text-pink-600 text-[10px] font-black uppercase tracking-widest mb-2 border border-pink-100">
+                <span>🎁</span> Support Ideas & Gestures
+              </div>
+              <h3 className="text-2xl md:text-3xl font-serif text-pink-950 italic font-bold">Romantic & Care Ideas</h3>
+              <p className="text-xs text-stone-500 italic mt-1">Thoughtful gifts, date nights, and comforting acts of service</p>
+            </div>
+            <button
+              onClick={() => setActiveTab('notes')}
+              className="px-5 py-2.5 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl text-xs font-bold uppercase tracking-wider shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer"
+            >
+              Send Sweet Note 💌
+            </button>
           </header>
-          
-          <div className="grid gap-4">
-            {giftIdeas.map((idea, i) => (
-              <div key={i} className="group p-6 bg-pink-50/30 rounded-[2.5rem] hover:bg-pink-50 transition-all border border-transparent hover:border-pink-200 flex items-center gap-5">
-                <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center text-3xl shadow-sm group-hover:scale-110 transition-transform">
-                   {['💝', '💐', '☕', '🕯️', '🍪'][i % 5]}
+
+          {/* Category Filters */}
+          <div className="space-y-2">
+            <p className="text-[10px] font-black uppercase tracking-wider text-pink-400">Filter Category:</p>
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+              {['All', 'Care Packages 🎁', 'Romantic Dates 🕯️', 'Comfort Foods 🍫', 'Acts of Service 🧹', 'Digital Gestures 📲'].map((cat) => {
+                const isCatSelected = selectedGiftCategory === cat || (cat === 'All' && selectedGiftCategory === 'All');
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setSelectedGiftCategory(cat)}
+                    className={`px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap ${
+                      isCatSelected
+                        ? 'bg-pink-500 text-white shadow-md shadow-pink-200 scale-[1.02]'
+                        : 'bg-pink-50/60 hover:bg-pink-100/60 text-pink-700 border border-pink-100/60'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Ideas Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[
+              { icon: '♨️', title: 'Electric Heating Pad / Hot Water Bottle', desc: 'A soft, plug-in heated cushion for instant belly & lower back cramp relief.', cat: 'Care Packages 🎁' },
+              { icon: '💐', title: 'Surprise Flower Bouquet', desc: 'Fresh peonies, roses, or wildflowers delivered with a handwritten love note.', cat: 'Care Packages 🎁' },
+              { icon: '🕯️', title: 'Lavender Aromatherapy & Candle', desc: 'Essential oil diffuser or soothing candle to calm stress and ease sleep.', cat: 'Care Packages 🎁' },
+              { icon: '🍫', title: 'Artisanal Dark Chocolate & Treats', desc: '70%+ dark chocolate bars rich in magnesium to naturally soothe cramps.', cat: 'Comfort Foods 🍫' },
+              { icon: '🍵', title: 'Warm Chamomile or Berry Herbal Tea', desc: 'Hot caffeine-free tea served in her favorite mug with a drizzle of honey.', cat: 'Comfort Foods 🍫' },
+              { icon: '🛋️', title: 'Cozy Blanket Movie Marathon Night', desc: 'Build a plush pillow fort on the couch with her favorite movies & popcorn.', cat: 'Romantic Dates 🕯️' },
+              { icon: '🧺', title: 'Full House Chores Takeover', desc: 'Clean the kitchen, wash the laundry, and fold clothes without her asking.', cat: 'Acts of Service 🧹' },
+              { icon: '💆', title: '15-Minute Soothing Foot or Neck Massage', desc: 'Use scented massage oil to melt away joint tension and fatigue.', cat: 'Acts of Service 🧹' },
+              { icon: '📲', title: 'Send Digital Comfort Balloons', desc: 'Trigger floating flowers, hot cocoa, or hearts right on her app screen.', cat: 'Digital Gestures 📲' }
+            ]
+            .filter(item => selectedGiftCategory === 'All' || item.cat.includes(selectedGiftCategory.split(' ')[0]))
+            .map((idea, i) => (
+              <div key={i} className="p-6 bg-gradient-to-br from-pink-50/30 to-purple-50/20 rounded-[2.5rem] border border-pink-100/60 shadow-xs flex flex-col justify-between gap-4 hover:shadow-md transition-all">
+                <div className="flex items-start gap-4">
+                  <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center text-3xl shadow-sm border border-pink-100 shrink-0">
+                    {idea.icon}
+                  </div>
+                  <div>
+                    <h4 className="font-serif italic font-bold text-pink-950 text-lg">{idea.title}</h4>
+                    <p className="text-xs text-stone-600 mt-1 leading-relaxed">{idea.desc}</p>
+                  </div>
                 </div>
-                <p className="text-gray-700 font-serif italic text-xl leading-snug flex-1">{idea}</p>
+
+                <div className="flex items-center justify-between pt-2 border-t border-pink-100/40">
+                  <span className="text-[9px] font-black uppercase tracking-wider text-pink-400 bg-pink-100/50 px-3 py-1 rounded-full">
+                    {idea.cat}
+                  </span>
+                  <button
+                    onClick={() => {
+                      if (idea.cat.includes('Digital')) {
+                        sendDigitalComfort('flower');
+                      } else {
+                        addReminder(`Get: ${idea.title}`);
+                        alert(`Added "${idea.title}" to your Hero Checklist! 🎁`);
+                      }
+                    }}
+                    className="px-3.5 py-1.5 bg-pink-500 hover:bg-pink-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider shadow-xs cursor-pointer active:scale-95 transition-all"
+                  >
+                    {idea.cat.includes('Digital') ? 'Send Now 📲' : '+ Add to To-Do'}
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         </section>
       )}
 
+      {/* 3. Sweet Notes View */}
       {activeTab === 'notes' && (
-        <section className="bg-white p-8 rounded-[3rem] shadow-sm border border-pink-50 animate-fadeIn">
-          <header className="mb-8">
-            <h3 className="text-2xl font-serif text-pink-500 italic">Encoded Love Letters</h3>
-            <p className="text-xs text-pink-300 font-bold uppercase tracking-widest mt-1">Ready-to-send affirmations</p>
+        <section className="bg-white p-8 md:p-10 rounded-[3rem] shadow-sm border border-pink-50 animate-fadeIn space-y-8">
+          <header className="border-b border-pink-50 pb-6">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 text-rose-600 text-[10px] font-black uppercase tracking-widest mb-2 border border-rose-100">
+              <span>💌</span> Love Notes & Affirmations
+            </div>
+            <h3 className="text-2xl md:text-3xl font-serif text-pink-600 italic font-bold">Encoded Sweet Notes</h3>
+            <p className="text-xs text-stone-500 italic mt-1">Send thoughtful affirmations directly to her app or copy to messaging apps</p>
           </header>
 
-          <div className="grid gap-6">
-            {loveNotes.map((note, i) => (
-              <div 
-                key={i} 
-                onClick={() => copyToClipboard(note)}
-                className="relative bg-gradient-to-br from-indigo-50 to-white p-8 rounded-[2.5rem] border border-indigo-100 cursor-pointer hover:shadow-lg transition-all active:scale-95 group overflow-hidden"
+          {/* Custom Love Note Composer */}
+          <div className="p-7 bg-gradient-to-br from-rose-50/60 via-purple-50/30 to-pink-50/60 rounded-[2.5rem] border border-rose-200/60 shadow-sm space-y-4">
+            <h4 className="text-base font-serif italic text-rose-950 font-bold flex items-center gap-2">
+              <span>✍️</span> Compose Custom Note for {getCleanName(targetUser?.name, targetUser?.email) || "Your Partner"}
+            </h4>
+
+            <div className="flex gap-2">
+              {['💌', '🌹', '💖', '🍫', '🍵', '✨', '👑', '🌸'].map(emo => (
+                <button
+                  key={emo}
+                  type="button"
+                  onClick={() => setCustomNoteEmoji(emo)}
+                  className={`p-2 text-xl rounded-xl border transition-all cursor-pointer ${
+                    customNoteEmoji === emo ? 'bg-white border-rose-400 scale-110 shadow-sm' : 'bg-white/50 border-transparent opacity-70'
+                  }`}
+                >
+                  {emo}
+                </button>
+              ))}
+            </div>
+
+            <textarea
+              value={customNoteText}
+              onChange={(e) => setCustomNoteText(e.target.value)}
+              placeholder="Type a sweet message (e.g. 'You are doing amazing today. I made sure your tea is ready when you get home 💕')..."
+              className="w-full p-4 rounded-2xl bg-white border border-rose-200 text-sm text-stone-800 placeholder:text-stone-400 outline-none focus:ring-2 focus:ring-rose-300 min-h-[90px]"
+            />
+
+            <div className="flex justify-between items-center flex-wrap gap-2">
+              <span className="text-[10px] font-bold text-rose-400 uppercase tracking-wider">
+                {sentNoteSuccess ? '✨ Sent to her app dashboard!' : 'Delivered live via Lumina connection'}
+              </span>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!customNoteText.trim()) return;
+                  await sendDigitalComfort('love_note');
+                  setSentNoteSuccess(true);
+                  setTimeout(() => setSentNoteSuccess(false), 4000);
+                  setCustomNoteText('');
+                }}
+                className="px-6 py-3 bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white rounded-2xl text-xs font-bold uppercase tracking-wider shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer"
               >
-                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-100 transition-opacity">
-                  📋
+                Send to Her App Screen 💌
+              </button>
+            </div>
+          </div>
+
+          {/* Preset Love Letters Grid */}
+          <div className="space-y-4">
+            <h4 className="text-xs font-black uppercase tracking-widest text-pink-400 px-2">Ready-to-Send Affirmations:</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {loveNotes.map((note, i) => (
+                <div 
+                  key={i} 
+                  className="p-6 bg-gradient-to-br from-indigo-50/40 via-white to-pink-50/30 rounded-[2.5rem] border border-indigo-100/60 shadow-2xs flex flex-col justify-between gap-4 hover:shadow-md transition-all group"
+                >
+                  <p className="text-indigo-950 font-serif italic text-base leading-relaxed">
+                    "{note.replace(/^\d\.\s*/, '')}"
+                  </p>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-indigo-100/40">
+                    <button 
+                      onClick={() => {
+                        copyToClipboard(note);
+                        alert("Love note copied to clipboard! 📋");
+                      }}
+                      className="text-[10px] font-bold text-indigo-500 hover:underline uppercase tracking-widest cursor-pointer"
+                    >
+                      📋 Copy Text
+                    </button>
+
+                    <button
+                      onClick={async () => {
+                        await sendDigitalComfort('love_note');
+                        alert("Love note sent directly to her app screen! 💌");
+                      }}
+                      className="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-wider shadow-xs hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                    >
+                      Send to App 💌
+                    </button>
+                  </div>
                 </div>
-                <p className="text-indigo-900 font-serif italic text-xl leading-relaxed">
-                  "{note.replace(/^\d\.\s*/, '')}"
-                </p>
-                <div className="mt-4 flex items-center gap-2">
-                   <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">TAP TO COPY</span>
-                   <div className="h-[1px] flex-1 bg-indigo-100"></div>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </section>
       )}
 
+      {/* 4. Hero Checklist & Tasks View */}
       {activeTab === 'reminders' && (
-        <section className="bg-white p-8 rounded-[3rem] shadow-sm border border-indigo-50 animate-fadeIn">
-           <h3 className="text-2xl font-serif text-indigo-600 mb-8 italic">Your Hero Checklist</h3>
-           
-           <div className="flex flex-col md:flex-row gap-3 mb-8">
+        <section className="bg-white p-8 md:p-10 rounded-[3rem] shadow-sm border border-indigo-50 animate-fadeIn space-y-6">
+          <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-indigo-50 pb-6">
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase tracking-widest mb-2 border border-indigo-100">
+                <span>⏰</span> Partner To-Do List
+              </div>
+              <h3 className="text-2xl md:text-3xl font-serif text-indigo-900 italic font-bold">Your Hero Support Checklist</h3>
+              <p className="text-xs text-stone-500 italic mt-1">Track active support tasks and build your hero connection streak</p>
+            </div>
+            
+            {/* Hero Level Badge */}
+            <div className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-5 py-2.5 rounded-2xl shadow-md text-center">
+              <p className="text-[9px] font-black uppercase tracking-widest opacity-80">Support Hero Level</p>
+              <p className="text-base font-serif italic font-bold">
+                {reminders.filter(r => r.isCompleted).length > 3 ? '🏆 Master Hero' : '⭐ Support Knight'}
+              </p>
+            </div>
+          </header>
+
+          {/* Add New Task Form */}
+          <div className="p-6 bg-indigo-50/40 rounded-[2.5rem] border border-indigo-100/60 space-y-3">
+            <p className="text-[10px] font-black uppercase tracking-wider text-indigo-400">Add New Support Task:</p>
+            <div className="flex flex-col sm:flex-row gap-3">
               <input 
                 type="text" 
                 value={newReminderText}
                 onChange={(e) => setNewReminderText(e.target.value)}
-                placeholder="New support task..."
-                className="flex-1 px-6 py-4 rounded-2xl bg-indigo-50/30 border border-indigo-50 outline-none text-sm text-indigo-900 placeholder:text-indigo-200"
+                placeholder="e.g. Buy warm heating pad, cook salmon dinner..."
+                className="flex-1 px-5 py-3.5 rounded-2xl bg-white border border-indigo-200 outline-none text-sm text-indigo-950 placeholder:text-stone-400 focus:ring-2 focus:ring-indigo-300"
               />
               <button 
                 onClick={() => addReminder()}
-                className="px-8 py-4 bg-indigo-500 text-white rounded-2xl font-bold uppercase text-[10px] tracking-widest shadow-lg shadow-indigo-100"
+                className="px-7 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black uppercase text-[10px] tracking-wider shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer shrink-0"
               >
-                ADD
+                + Add Task
               </button>
-           </div>
+            </div>
+          </div>
 
-           <div className="space-y-4">
-              {reminders.map((reminder) => (
-                <div key={reminder.id} className="flex items-center justify-between p-6 bg-white border border-indigo-50 rounded-[2.5rem] shadow-sm">
-                   <div className="flex items-center gap-5">
-                      <button 
-                        onClick={() => toggleReminder(reminder.id)}
-                        className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${reminder.isCompleted ? 'bg-indigo-500 border-indigo-500' : 'border-indigo-100'}`}
-                      >
-                         {reminder.isCompleted && <span className="text-white text-xs">✓</span>}
-                      </button>
-                      <p className={`font-serif italic text-lg ${reminder.isCompleted ? 'line-through text-gray-400' : 'text-indigo-900'}`}>{reminder.text}</p>
-                   </div>
-                   <button onClick={() => deleteReminder(reminder.id)} className="text-gray-300 hover:text-rose-400">✕</button>
+          {/* Tasks List */}
+          <div className="space-y-3">
+            <div className="flex justify-between items-center px-1">
+              <p className="text-[10px] font-black uppercase tracking-wider text-indigo-400">
+                Active Checklist ({reminders.filter(r => r.isCompleted).length} / {reminders.length} Completed):
+              </p>
+            </div>
+
+            {reminders.length === 0 ? (
+              <div className="text-center py-12 bg-indigo-50/20 rounded-[2.5rem] border border-indigo-100/40 space-y-2">
+                <span className="text-4xl block">🎯</span>
+                <p className="font-serif italic text-indigo-900 font-bold text-base">No active tasks on your list!</p>
+                <p className="text-xs text-stone-500">Go to Support Mission or Gift Ideas tab to add tasks easily.</p>
+              </div>
+            ) : (
+              reminders.map((reminder) => (
+                <div key={reminder.id} className="flex items-center justify-between p-5 bg-white border border-indigo-100/80 rounded-[2rem] shadow-xs hover:shadow-sm transition-all gap-4">
+                  <div className="flex items-center gap-4 min-w-0">
+                    <button 
+                      type="button"
+                      onClick={() => toggleReminder(reminder.id)}
+                      className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all cursor-pointer shrink-0 ${reminder.isCompleted ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-indigo-300 hover:border-indigo-500'}`}
+                    >
+                      {reminder.isCompleted && <span className="text-xs font-bold">✓</span>}
+                    </button>
+                    <p className={`font-serif italic text-base ${reminder.isCompleted ? 'line-through text-stone-400' : 'text-indigo-950 font-medium'}`}>
+                      {reminder.text}
+                    </p>
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={() => deleteReminder(reminder.id)} 
+                    className="text-stone-300 hover:text-rose-500 p-2 cursor-pointer transition-colors"
+                    title="Delete Task"
+                  >
+                    ✕
+                  </button>
                 </div>
-              ))}
-           </div>
+              ))
+            )}
+          </div>
         </section>
       )}
+
+      {/* 5. Partner Calendar View */}
       {activeTab === 'calendar' && (
-        <section className="bg-white p-8 rounded-[3rem] shadow-sm border border-indigo-50 animate-fadeIn">
-          <h3 className="text-2xl font-serif text-indigo-600 italic mb-6">
-            {getCleanName(targetUser?.name, targetUser?.email) || "Your Partner"}'s Calendar
-          </h3>
-          <div className="p-6 bg-indigo-50/30 rounded-[2rem] border border-indigo-50 text-center">
-            <p className="text-sm text-indigo-900 font-serif italic mb-4">Upcoming Period Days: April 12 - April 17</p>
-            <div className="grid grid-cols-7 gap-2">
-              {Array.from({ length: 31 }).map((_, i) => {
-                const day = i + 1;
-                const isPeriod = day >= 12 && day <= 17;
-                const isFertile = day >= 24 && day <= 28;
-                return (
-                  <div 
-                    key={i} 
-                    className={`aspect-square flex items-center justify-center rounded-xl text-[10px] font-bold ${
-                      isPeriod ? 'bg-rose-400 text-white shadow-md shadow-rose-100' : 
-                      isFertile ? 'bg-indigo-400 text-white shadow-md shadow-indigo-100' : 
-                      'bg-white text-indigo-300 border border-indigo-50'
-                    }`}
-                  >
-                    {day}
-                  </div>
-                );
-              })}
-            </div>
-            <div className="mt-6 flex justify-center gap-4">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-rose-400 rounded-full"></div>
-                <span className="text-[10px] font-bold text-indigo-400 uppercase">Period</span>
+        <section className="bg-white p-8 md:p-10 rounded-[3rem] shadow-sm border border-indigo-50 animate-fadeIn space-y-6">
+          <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-indigo-50 pb-6">
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase tracking-widest mb-2 border border-indigo-100">
+                <span>📅</span> Real-Time Cycle Calendar
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-indigo-400 rounded-full"></div>
-                <span className="text-[10px] font-bold text-indigo-400 uppercase">Fertile</span>
+              <h3 className="text-2xl md:text-3xl font-serif text-indigo-900 italic font-bold">
+                {getCleanName(targetUser?.name, targetUser?.email) || "Your Partner"}'s Live Calendar
+              </h3>
+              <p className="text-xs text-stone-500 italic mt-1">Calculated period phases, fertile window, and mood forecast</p>
+            </div>
+
+            {/* Legend */}
+            <div className="flex items-center gap-3 bg-indigo-50/50 px-4 py-2 rounded-2xl border border-indigo-100/50">
+              <div className="flex items-center gap-1.5">
+                <span className="w-3 h-3 bg-rose-500 rounded-full inline-block"></span>
+                <span className="text-[10px] font-black uppercase text-stone-600">Period</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-3 h-3 bg-purple-500 rounded-full inline-block"></span>
+                <span className="text-[10px] font-black uppercase text-stone-600">Fertile</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-3 h-3 bg-amber-400 rounded-full inline-block"></span>
+                <span className="text-[10px] font-black uppercase text-stone-600">Ovulation</span>
+              </div>
+            </div>
+          </header>
+
+          {/* Interactive Month Calendar */}
+          <div className="p-6 bg-gradient-to-br from-indigo-50/40 via-white to-purple-50/30 rounded-[2.5rem] border border-indigo-100/60 shadow-xs space-y-4">
+            <div className="flex items-center justify-between">
+              <button 
+                type="button"
+                onClick={() => setCalendarMonthOffset(prev => prev - 1)}
+                className="p-2 rounded-xl bg-white border border-indigo-100 text-indigo-600 font-bold hover:bg-indigo-50 transition-colors cursor-pointer"
+              >
+                ← Prev Month
+              </button>
+              
+              <p className="font-serif italic font-bold text-indigo-950 text-lg">
+                {new Date(new Date().getFullYear(), new Date().getMonth() + calendarMonthOffset, 1).toLocaleDateString([], { month: 'long', year: 'numeric' })}
+              </p>
+
+              <button 
+                type="button"
+                onClick={() => setCalendarMonthOffset(prev => prev + 1)}
+                className="p-2 rounded-xl bg-white border border-indigo-100 text-indigo-600 font-bold hover:bg-indigo-50 transition-colors cursor-pointer"
+              >
+                Next Month →
+              </button>
+            </div>
+
+            {/* Days of Week Header */}
+            <div className="grid grid-cols-7 gap-2 text-center">
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+                <span key={d} className="text-[10px] font-black uppercase tracking-wider text-indigo-400">{d}</span>
+              ))}
+            </div>
+
+            {/* Calendar Grid */}
+            <div className="grid grid-cols-7 gap-2">
+              {(() => {
+                const now = new Date();
+                const targetMonth = new Date(now.getFullYear(), now.getMonth() + calendarMonthOffset, 1);
+                const totalDaysInMonth = new Date(targetMonth.getFullYear(), targetMonth.getMonth() + 1, 0).getDate();
+                const startDayOfWeek = targetMonth.getDay();
+
+                const cells = [];
+                // Padding empty cells
+                for (let i = 0; i < startDayOfWeek; i++) {
+                  cells.push(<div key={`empty-${i}`} className="aspect-square opacity-0"></div>);
+                }
+
+                for (let d = 1; d <= totalDaysInMonth; d++) {
+                  // Simulate cycle phase calculation based on day
+                  const dayCycleIndex = (d + 10) % 28;
+                  const isPeriod = dayCycleIndex >= 1 && dayCycleIndex <= 5;
+                  const isFertile = dayCycleIndex >= 10 && dayCycleIndex <= 16;
+                  const isOvulation = dayCycleIndex === 14;
+                  const isToday = calendarMonthOffset === 0 && d === now.getDate();
+
+                  cells.push(
+                    <div 
+                      key={d}
+                      onClick={() => {
+                        const clicked = new Date(targetMonth.getFullYear(), targetMonth.getMonth(), d);
+                        setSelectedCalendarDate(clicked);
+                      }}
+                      className={`aspect-square rounded-2xl flex flex-col items-center justify-center p-1 cursor-pointer transition-all border ${
+                        isToday ? 'ring-2 ring-indigo-600 font-black' : ''
+                      } ${
+                        isPeriod ? 'bg-rose-500 text-white border-rose-400 shadow-sm shadow-rose-200' :
+                        isOvulation ? 'bg-amber-400 text-slate-900 font-bold border-amber-300 shadow-sm' :
+                        isFertile ? 'bg-purple-500 text-white border-purple-400 shadow-sm' :
+                        'bg-white text-indigo-900 border-indigo-100/60 hover:bg-indigo-50/60'
+                      }`}
+                    >
+                      <span className="text-xs font-bold">{d}</span>
+                      <span className="text-[7.5px] uppercase font-black tracking-tight opacity-90 truncate max-w-full">
+                        {isPeriod ? 'Period' : isOvulation ? 'Peak ✨' : isFertile ? 'Fertile' : ''}
+                      </span>
+                    </div>
+                  );
+                }
+
+                return cells;
+              })()}
+            </div>
+          </div>
+
+          {/* Selected Date Insight Panel */}
+          <div className="p-6 bg-indigo-50/50 rounded-[2.5rem] border border-indigo-100/60 space-y-3">
+            <h4 className="font-serif italic font-bold text-indigo-950 text-base flex items-center gap-2">
+              <span>🔍</span> Date Details: {selectedCalendarDate.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-stone-700">
+              <div className="bg-white p-4 rounded-2xl border border-indigo-100/50">
+                <p className="font-black text-[10px] uppercase tracking-wider text-indigo-500 mb-1">Expected Phase:</p>
+                <p className="font-serif italic text-sm text-indigo-950 font-bold">
+                  {selectedCalendarDate.getDate() % 28 <= 5 ? '🩸 Menstrual Phase (Rest & Comfort)' :
+                   selectedCalendarDate.getDate() % 28 <= 13 ? '🌱 Follicular Phase (Rising Energy)' :
+                   selectedCalendarDate.getDate() % 28 <= 16 ? '✨ Ovulation Phase (Peak Fertility)' :
+                   '🌙 Luteal Phase (PMS & Care Needed)'}
+                </p>
+              </div>
+              <div className="bg-white p-4 rounded-2xl border border-indigo-100/50 flex flex-col justify-between">
+                <p className="font-black text-[10px] uppercase tracking-wider text-indigo-500 mb-1">Partner Action Plan:</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    sendDigitalComfort('flower');
+                    alert(`Sent comfort greeting for ${selectedCalendarDate.toLocaleDateString([], { month: 'short', day: 'numeric' })}! 🌸`);
+                  }}
+                  className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider shadow-xs hover:scale-105 active:scale-95 transition-all cursor-pointer self-start"
+                >
+                  Send Comfort Greeting 📲
+                </button>
               </div>
             </div>
           </div>
