@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { User, Symptom, Reminder, ReceivedComfort } from '../types';
 import { WallpapersAndThemesModal } from './WallpapersAndThemesModal';
 import { getDailyAffirmation } from '../services/gemini';
-import { syncUser } from '../services/firebaseService';
+import { syncUser, updatePartnerRequestStatus, addNotificationToUser } from '../services/firebaseService';
 import { SONGS, MOODS, BABY_SIZES } from '../constants';
 import { 
   Activity, 
@@ -182,7 +182,11 @@ const Dashboard: React.FC<DashboardProps> = ({
     const updatedUser = {
       ...user,
       sharingSettings: approvedSettings,
-      isPartnerLinked: true
+      isPartnerLinked: true,
+      partnerRequest: partnerUser.partnerRequest ? {
+        ...partnerUser.partnerRequest,
+        status: 'approved' as const
+      } : undefined
     };
     setUser(updatedUser);
     await syncUser(updatedUser);
@@ -191,12 +195,32 @@ const Dashboard: React.FC<DashboardProps> = ({
     const updatedPartner = {
       ...partnerUser,
       partnerRequest: {
-        ...partnerUser.partnerRequest!,
+        ...(partnerUser.partnerRequest || {
+          partnerId: user.id,
+          partnerName: user.name,
+          requestedReceives: requested,
+          timestamp: new Date().toISOString()
+        }),
         status: 'approved' as const
       },
       isPartnerLinked: true
     };
     await syncUser(updatedPartner);
+
+    if (partnerRequests && partnerRequests.length > 0) {
+      for (const req of partnerRequests) {
+        if (req.status === 'pending') {
+          await updatePartnerRequestStatus(req.id, 'approved');
+        }
+      }
+    }
+
+    await addNotificationToUser(partnerUser.id, {
+      title: '💖 Connection Approved!',
+      body: `${user.name} approved your partner connection request! You are now connected in Partner Mode.`,
+      emoji: '💖'
+    });
+
     alert(`You successfully approved ${partnerUser.name}'s connection and sharing preferences! 💖`);
   };
 
@@ -209,7 +233,11 @@ const Dashboard: React.FC<DashboardProps> = ({
         ...sharingPrefs,
         shareNotes: user.sharingSettings?.shareNotes || false
       },
-      isPartnerLinked: true
+      isPartnerLinked: true,
+      partnerRequest: partnerUser.partnerRequest ? {
+        ...partnerUser.partnerRequest,
+        status: 'approved' as const
+      } : undefined
     };
     setUser(updatedUser);
     await syncUser(updatedUser);
@@ -217,12 +245,32 @@ const Dashboard: React.FC<DashboardProps> = ({
     const updatedPartner = {
       ...partnerUser,
       partnerRequest: {
-        ...partnerUser.partnerRequest!,
+        ...(partnerUser.partnerRequest || {
+          partnerId: user.id,
+          partnerName: user.name,
+          requestedReceives: [],
+          timestamp: new Date().toISOString()
+        }),
         status: 'approved' as const
       },
       isPartnerLinked: true
     };
     await syncUser(updatedPartner);
+
+    if (partnerRequests && partnerRequests.length > 0) {
+      for (const req of partnerRequests) {
+        if (req.status === 'pending') {
+          await updatePartnerRequestStatus(req.id, 'approved');
+        }
+      }
+    }
+
+    await addNotificationToUser(partnerUser.id, {
+      title: '💖 Connection Approved!',
+      body: `${user.name} approved your partner connection request! You are now connected in Partner Mode.`,
+      emoji: '💖'
+    });
+
     setIsCustomizingSharing(false);
     alert(`Custom privacy preferences saved and connection approved for ${partnerUser.name}! 💮`);
   };
@@ -233,7 +281,12 @@ const Dashboard: React.FC<DashboardProps> = ({
       const updatedPartner = {
         ...partnerUser,
         partnerRequest: {
-          ...partnerUser.partnerRequest!,
+          ...(partnerUser.partnerRequest || {
+            partnerId: user.id,
+            partnerName: user.name,
+            requestedReceives: [],
+            timestamp: new Date().toISOString()
+          }),
           status: 'declined' as const
         },
         isPartnerLinked: false
@@ -244,10 +297,28 @@ const Dashboard: React.FC<DashboardProps> = ({
         ...user,
         partnerId: undefined,
         partnerName: '',
-        isPartnerLinked: false
+        isPartnerLinked: false,
+        partnerRequest: partnerUser.partnerRequest ? {
+          ...partnerUser.partnerRequest,
+          status: 'declined' as const
+        } : undefined
       };
       setUser(updatedUser);
       await syncUser(updatedUser);
+
+      if (partnerRequests && partnerRequests.length > 0) {
+        for (const req of partnerRequests) {
+          if (req.status === 'pending') {
+            await updatePartnerRequestStatus(req.id, 'declined');
+          }
+        }
+      }
+
+      await addNotificationToUser(partnerUser.id, {
+        title: '💔 Request Declined',
+        body: `${user.name} declined your partner connection request. You cannot create or access a partner account for this user.`,
+        emoji: '💔'
+      });
 
       alert(`Request from ${partnerUser.name} declined.`);
     }

@@ -276,6 +276,113 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
     return 'Luteal';
   })();
 
+  const calculateCycleDetailsForDate = (date: Date, u: User | null) => {
+    if (!u) {
+      return {
+        phaseName: 'Luteal Phase (Care & Comfort)',
+        phaseEmoji: '🌙',
+        isPeriod: false,
+        isFertile: false,
+        isOvulation: false,
+        dayInCycle: 1,
+        loggedSymptoms: [] as string[],
+        loggedMood: null as string | null
+      };
+    }
+
+    const dateStr = date.toDateString();
+    const dateISO = date.toISOString().split('T')[0];
+
+    // Check explicit logged period dates
+    const isLoggedPeriod = (u.periodDates || []).some(pd => {
+      try {
+        return new Date(pd).toDateString() === dateStr;
+      } catch (e) {
+        return pd === dateStr || pd === dateISO;
+      }
+    }) || (u.periods || []).some(p => {
+      try {
+        const start = new Date(p.startDate);
+        const end = p.endDate ? new Date(p.endDate) : new Date(start.getTime() + (u.periodLength || 5) * 86400000);
+        return date >= start && date <= end;
+      } catch (e) {
+        return false;
+      }
+    });
+
+    const lastStart = u.lastPeriodStart ? new Date(u.lastPeriodStart) : null;
+    const cycleLen = u.cycleLength || 28;
+    const periodLen = u.periodLength || 5;
+
+    if (!lastStart) {
+      const loggedSyms = (u.symptoms || [])
+        .filter((s: any) => s.date === dateStr || s.date === dateISO || (s.timestamp && new Date(s.timestamp).toDateString() === dateStr))
+        .map((s: any) => typeof s === 'string' ? s : s.name || s.type || s.symptom || 'Discomfort');
+
+      const loggedM = (u.moodLogs || [])
+        .find((m: any) => m.date === dateStr || m.date === dateISO || (m.timestamp && new Date(m.timestamp).toDateString() === dateStr))?.mood || null;
+
+      return {
+        phaseName: isLoggedPeriod ? '🩸 Menstrual Phase (Logged Period)' : '🌙 Luteal Phase',
+        phaseEmoji: isLoggedPeriod ? '🩸' : '🌙',
+        isPeriod: isLoggedPeriod,
+        isFertile: false,
+        isOvulation: false,
+        dayInCycle: 1,
+        loggedSymptoms: loggedSyms,
+        loggedMood: loggedM
+      };
+    }
+
+    // Calculate days diff from lastPeriodStart
+    const diffTime = date.getTime() - lastStart.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    let dayInCycle = ((diffDays % cycleLen) + cycleLen) % cycleLen + 1;
+
+    const ovulationDay = Math.max(1, cycleLen - 14);
+    const fertileStart = Math.max(1, ovulationDay - 5);
+    const fertileEnd = Math.min(cycleLen, ovulationDay + 1);
+
+    const isPeriod = isLoggedPeriod || (dayInCycle >= 1 && dayInCycle <= periodLen);
+    const isOvulation = dayInCycle === ovulationDay;
+    const isFertile = dayInCycle >= fertileStart && dayInCycle <= fertileEnd;
+
+    let phaseName = '🌙 Luteal Phase (PMS & Gentle Care Needed)';
+    let phaseEmoji = '🌙';
+
+    if (isPeriod) {
+      phaseName = '🩸 Menstrual Phase (Rest & Comfort Needed)';
+      phaseEmoji = '🩸';
+    } else if (isOvulation) {
+      phaseName = '✨ Ovulation Phase (Peak Energy & High Fertility)';
+      phaseEmoji = '✨';
+    } else if (isFertile) {
+      phaseName = '💞 Fertile Window (High Energy & Connection)';
+      phaseEmoji = '💞';
+    } else if (dayInCycle > periodLen && dayInCycle < fertileStart) {
+      phaseName = '🌱 Follicular Phase (Rising Energy & Motivation)';
+      phaseEmoji = '🌱';
+    }
+
+    const loggedSymptoms = (u.symptoms || [])
+      .filter((s: any) => s.date === dateStr || s.date === dateISO || (s.timestamp && new Date(s.timestamp).toDateString() === dateStr))
+      .map((s: any) => typeof s === 'string' ? s : s.name || s.type || s.symptom || 'Discomfort');
+
+    const loggedMood = (u.moodLogs || [])
+      .find((m: any) => m.date === dateStr || m.date === dateISO || (m.timestamp && new Date(m.timestamp).toDateString() === dateStr))?.mood || null;
+
+    return {
+      phaseName,
+      phaseEmoji,
+      isPeriod,
+      isFertile,
+      isOvulation,
+      dayInCycle,
+      loggedSymptoms,
+      loggedMood
+    };
+  };
+
   useEffect(() => {
     if (user.isPartner && targetUser) {
       setLoading(true);
@@ -3327,32 +3434,31 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                 }
 
                 for (let d = 1; d <= totalDaysInMonth; d++) {
-                  // Simulate cycle phase calculation based on day
-                  const dayCycleIndex = (d + 10) % 28;
-                  const isPeriod = dayCycleIndex >= 1 && dayCycleIndex <= 5;
-                  const isFertile = dayCycleIndex >= 10 && dayCycleIndex <= 16;
-                  const isOvulation = dayCycleIndex === 14;
+                  const cellDate = new Date(targetMonth.getFullYear(), targetMonth.getMonth(), d);
+                  const details = calculateCycleDetailsForDate(cellDate, targetUser);
                   const isToday = calendarMonthOffset === 0 && d === now.getDate();
+                  const isSelected = selectedCalendarDate.toDateString() === cellDate.toDateString();
 
                   cells.push(
                     <div 
                       key={d}
                       onClick={() => {
-                        const clicked = new Date(targetMonth.getFullYear(), targetMonth.getMonth(), d);
-                        setSelectedCalendarDate(clicked);
+                        setSelectedCalendarDate(cellDate);
                       }}
-                      className={`aspect-square rounded-2xl flex flex-col items-center justify-center p-1 cursor-pointer transition-all border ${
+                      className={`aspect-square rounded-2xl flex flex-col items-center justify-center p-1 cursor-pointer transition-all border relative ${
                         isToday ? 'ring-2 ring-indigo-600 font-black' : ''
                       } ${
-                        isPeriod ? 'bg-rose-500 text-white border-rose-400 shadow-sm shadow-rose-200' :
-                        isOvulation ? 'bg-amber-400 text-slate-900 font-bold border-amber-300 shadow-sm' :
-                        isFertile ? 'bg-purple-500 text-white border-purple-400 shadow-sm' :
+                        isSelected ? 'scale-105 shadow-md z-10 ring-2 ring-purple-400' : ''
+                      } ${
+                        details.isPeriod ? 'bg-rose-500 text-white border-rose-400 shadow-sm shadow-rose-200' :
+                        details.isOvulation ? 'bg-amber-400 text-slate-900 font-bold border-amber-300 shadow-sm' :
+                        details.isFertile ? 'bg-purple-500 text-white border-purple-400 shadow-sm' :
                         'bg-white text-indigo-900 border-indigo-100/60 hover:bg-indigo-50/60'
                       }`}
                     >
                       <span className="text-xs font-bold">{d}</span>
                       <span className="text-[7.5px] uppercase font-black tracking-tight opacity-90 truncate max-w-full">
-                        {isPeriod ? 'Period' : isOvulation ? 'Peak ✨' : isFertile ? 'Fertile' : ''}
+                        {details.isPeriod ? 'Period' : details.isOvulation ? 'Peak ✨' : details.isFertile ? 'Fertile' : ''}
                       </span>
                     </div>
                   );
@@ -3364,35 +3470,67 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
           </div>
 
           {/* Selected Date Insight Panel */}
-          <div className="p-6 bg-indigo-50/50 rounded-[2.5rem] border border-indigo-100/60 space-y-3">
-            <h4 className="font-serif italic font-bold text-indigo-950 text-base flex items-center gap-2">
-              <span>🔍</span> Date Details: {selectedCalendarDate.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-stone-700">
-              <div className="bg-white p-4 rounded-2xl border border-indigo-100/50">
-                <p className="font-black text-[10px] uppercase tracking-wider text-indigo-500 mb-1">Expected Phase:</p>
-                <p className="font-serif italic text-sm text-indigo-950 font-bold">
-                  {selectedCalendarDate.getDate() % 28 <= 5 ? '🩸 Menstrual Phase (Rest & Comfort)' :
-                   selectedCalendarDate.getDate() % 28 <= 13 ? '🌱 Follicular Phase (Rising Energy)' :
-                   selectedCalendarDate.getDate() % 28 <= 16 ? '✨ Ovulation Phase (Peak Fertility)' :
-                   '🌙 Luteal Phase (PMS & Care Needed)'}
-                </p>
+          {(() => {
+            const details = calculateCycleDetailsForDate(selectedCalendarDate, targetUser);
+            return (
+              <div className="p-6 bg-indigo-50/50 rounded-[2.5rem] border border-indigo-100/60 space-y-3">
+                <h4 className="font-serif italic font-bold text-indigo-950 text-base flex items-center gap-2">
+                  <span>🔍</span> Date Details: {selectedCalendarDate.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-stone-700">
+                  <div className="bg-white p-4 rounded-2xl border border-indigo-100/50 space-y-2">
+                    <div>
+                      <p className="font-black text-[10px] uppercase tracking-wider text-indigo-500 mb-0.5">Calculated Cycle Phase:</p>
+                      <p className="font-serif italic text-sm text-indigo-950 font-bold">
+                        {details.phaseName}
+                      </p>
+                      {targetUser?.cycleLength && (
+                        <p className="text-[10px] text-indigo-400 font-semibold mt-0.5">Cycle Day {details.dayInCycle} of {targetUser.cycleLength || 28}</p>
+                      )}
+                    </div>
+
+                    {details.loggedMood && (
+                      <div className="pt-2 border-t border-indigo-50">
+                        <p className="font-black text-[9px] uppercase tracking-wider text-purple-500">Logged Mood:</p>
+                        <p className="text-xs font-bold text-stone-800 capitalize">{details.loggedMood}</p>
+                      </div>
+                    )}
+
+                    {details.loggedSymptoms.length > 0 && (
+                      <div className="pt-2 border-t border-indigo-50">
+                        <p className="font-black text-[9px] uppercase tracking-wider text-rose-500">Logged Symptoms:</p>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {details.loggedSymptoms.map((sym, idx) => (
+                            <span key={idx} className="px-2 py-0.5 bg-rose-50 text-rose-600 rounded-full text-[9px] font-bold border border-rose-100">{sym}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="bg-white p-4 rounded-2xl border border-indigo-100/50 flex flex-col justify-between">
+                    <p className="font-black text-[10px] uppercase tracking-wider text-indigo-500 mb-1">Partner Action Plan:</p>
+                    <p className="text-[11px] text-stone-500 italic mb-3">
+                      {details.isPeriod ? "Offer warm drinks, heating pads, and extra rest support." :
+                       details.isOvulation ? "Great energy day! Ideal time for special dates or quality bonding." :
+                       details.isFertile ? "Higher energy and connection window. Plan fun activities together!" :
+                       "Send gentle love notes or check-in messages to brighten her day."}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        sendDigitalComfort('flower');
+                        alert(`Sent comfort greeting to ${partnerDisplayName} for ${selectedCalendarDate.toLocaleDateString([], { month: 'short', day: 'numeric' })}! 🌸`);
+                      }}
+                      className="px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider shadow-xs hover:scale-105 active:scale-95 transition-all cursor-pointer self-start"
+                    >
+                      Send Comfort Greeting 📲
+                    </button>
+                  </div>
+                </div>
               </div>
-              <div className="bg-white p-4 rounded-2xl border border-indigo-100/50 flex flex-col justify-between">
-                <p className="font-black text-[10px] uppercase tracking-wider text-indigo-500 mb-1">Partner Action Plan:</p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    sendDigitalComfort('flower');
-                    alert(`Sent comfort greeting for ${selectedCalendarDate.toLocaleDateString([], { month: 'short', day: 'numeric' })}! 🌸`);
-                  }}
-                  className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider shadow-xs hover:scale-105 active:scale-95 transition-all cursor-pointer self-start"
-                >
-                  Send Comfort Greeting 📲
-                </button>
-              </div>
-            </div>
-          </div>
+            );
+          })()}
         </section>
       )}
 

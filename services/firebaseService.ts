@@ -164,6 +164,47 @@ export const createInvite = async (userId: string, userName: string, userEmail?:
   }
 };
 
+export const addNotificationToUser = async (targetUserId: string, notification: { title: string; body: string; emoji?: string }) => {
+  const notifObj = {
+    id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+    title: notification.title,
+    body: notification.body,
+    emoji: notification.emoji || '🔔',
+    timestamp: new Date().toISOString(),
+    isRead: false
+  };
+
+  if (isSandboxId(targetUserId)) {
+    const raw = localStorage.getItem(`lumina_user_${targetUserId}`) || localStorage.getItem('lumina_user');
+    if (raw) {
+      const userObj = JSON.parse(raw);
+      if (userObj.id === targetUserId) {
+        const existing = userObj.notifications || [];
+        const updated = {
+          ...userObj,
+          notifications: [notifObj, ...existing]
+        };
+        await syncUser(updated);
+      }
+    }
+    return;
+  }
+
+  try {
+    const userRef = doc(db, "users", targetUserId);
+    const snap = await getDoc(userRef);
+    if (snap.exists()) {
+      const u = snap.data() as any;
+      const existing = u.notifications || [];
+      await updateDoc(userRef, {
+        notifications: cleanUndefined([notifObj, ...existing])
+      });
+    }
+  } catch (err) {
+    console.warn("Failed to add notification to user:", err);
+  }
+};
+
 export const acceptInvite = async (code: string, currentUserId: string, currentUserName: string) => {
   if (isSandboxId(currentUserId)) {
     const inviteSnap = localStorage.getItem(`lumina_invite_${code}`);
@@ -181,7 +222,14 @@ export const acceptInvite = async (code: string, currentUserId: string, currentU
         partnerId: inviteData.senderId,
         partnerName: inviteData.senderName,
         isPartnerLinked: false,
-        isPartner: true
+        isPartner: true,
+        partnerRequest: {
+          partnerId: inviteData.senderId,
+          partnerName: inviteData.senderName,
+          requestedReceives: ['Period Updates', 'Fertility Updates', 'Wellness Support', 'Symptom Updates'],
+          status: 'pending' as const,
+          timestamp: new Date().toISOString()
+        }
       };
       await syncUser(updatedUser);
     }
@@ -194,10 +242,33 @@ export const acceptInvite = async (code: string, currentUserId: string, currentU
         ...senderUser,
         partnerId: currentUserId,
         partnerName: currentUserName,
-        isPartnerLinked: false
+        isPartnerLinked: false,
+        partnerRequest: {
+          partnerId: currentUserId,
+          partnerName: currentUserName,
+          requestedReceives: ['Period Updates', 'Fertility Updates', 'Wellness Support', 'Symptom Updates'],
+          status: 'pending' as const,
+          timestamp: new Date().toISOString()
+        }
       };
       await syncUser(updatedSender);
     }
+
+    // Create partner request
+    await submitPartnerRequest(
+      inviteData.senderId,
+      currentUserId,
+      currentUserName,
+      inviteData.senderEmail || '',
+      ['Period Updates', 'Fertility Updates', 'Wellness Support', 'Symptom Updates']
+    );
+
+    // Notify the tracker user that partner created account and requested connection
+    await addNotificationToUser(inviteData.senderId, {
+      title: '💕 New Partner Connection Request',
+      body: `${currentUserName} created a partner account and requested to connect with you. Tap to review and accept or decline.`,
+      emoji: '💕'
+    });
 
     localStorage.removeItem(`lumina_invite_${code}`);
     return { ...inviteData, name: inviteData.senderName };
@@ -210,18 +281,44 @@ export const acceptInvite = async (code: string, currentUserId: string, currentU
     }
     const inviteData = inviteSnap.data();
     
-    // Link both ways
+    const requestData = {
+      partnerId: currentUserId,
+      partnerName: currentUserName,
+      requestedReceives: ['Period Updates', 'Fertility Updates', 'Wellness Support', 'Symptom Updates'],
+      status: 'pending' as const,
+      timestamp: new Date().toISOString()
+    };
+
+    // Link both ways with pending status
     await updateDoc(doc(db, "users", currentUserId), {
       partnerId: inviteData.senderId,
       partnerName: inviteData.senderName,
       isPartnerLinked: false,
-      isPartner: true
+      isPartner: true,
+      partnerRequest: requestData
     });
 
     await updateDoc(doc(db, "users", inviteData.senderId), {
       partnerId: currentUserId,
       partnerName: currentUserName,
-      isPartnerLinked: false
+      isPartnerLinked: false,
+      partnerRequest: requestData
+    });
+
+    // Create partner request doc
+    await submitPartnerRequest(
+      inviteData.senderId,
+      currentUserId,
+      currentUserName,
+      inviteData.senderEmail || '',
+      ['Period Updates', 'Fertility Updates', 'Wellness Support', 'Symptom Updates']
+    );
+
+    // Send notification to primary tracker user
+    await addNotificationToUser(inviteData.senderId, {
+      title: '💕 New Partner Connection Request',
+      body: `${currentUserName} created a partner account and requested to connect with you. Tap to review and accept or decline.`,
+      emoji: '💕'
     });
 
     // Cleanup invite
