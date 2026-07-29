@@ -20,6 +20,7 @@
 	},
 	"packageClassList": [
 		"LocalNotificationsPlugin",
-		"PushNotificationsPlugin"
+		"PushNotificationsPlugin",
+		"PurchasesPlugin"
 	]
 }
