@@ -7,12 +7,14 @@ interface ExpectedPeriodCheckInCardProps {
   user: User;
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
   onPeriodLogged?: () => void;
+  onOpenLogModal?: () => void;
 }
 
 export const ExpectedPeriodCheckInCard: React.FC<ExpectedPeriodCheckInCardProps> = ({
   user,
   setUser,
-  onPeriodLogged
+  onPeriodLogged,
+  onOpenLogModal
 }) => {
   const [mode, setMode] = useState<'initial' | 'quick_log' | 'not_yet_acknowledged' | 'edit_prediction'>('initial');
   const [selectedDateOption, setSelectedDateOption] = useState<'today' | 'yesterday' | 'custom'>('today');
@@ -250,9 +252,9 @@ export const ExpectedPeriodCheckInCard: React.FC<ExpectedPeriodCheckInCardProps>
 
           <div className="flex items-center gap-2">
             {daysLate > 0 && (
-              <span className="px-3 py-1 bg-amber-100/80 text-amber-800 border border-amber-200 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 shadow-sm">
+              <span className="px-3.5 py-1 bg-amber-100/90 text-amber-900 border border-amber-300 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
                 <Clock size={12} className="text-amber-600" />
-                <span>{daysLate} {daysLate === 1 ? 'day' : 'days'} late</span>
+                <span>Day {daysLate} Late</span>
               </span>
             )}
             <button
@@ -268,17 +270,14 @@ export const ExpectedPeriodCheckInCard: React.FC<ExpectedPeriodCheckInCardProps>
         {/* MODE: INITIAL QUESTION */}
         {(mode === 'initial' || (mode as string) === 'question') && (
           <div className="space-y-5">
-            <p className="text-xs md:text-sm font-sans text-stone-600 leading-relaxed font-medium">
-              Lumina predicted your period would begin on <strong className="text-rose-800">{formattedExpectedDate}</strong>. 
-              {daysLate > 0 
-                ? ` It is currently ${daysLate} ${daysLate === 1 ? 'day' : 'days'} past expected. Has your period started?`
-                : " Has your period started today?"}
+            <p className="text-sm font-sans text-stone-700 leading-relaxed font-bold">
+              Your period was expected on <span className="text-rose-800 underline decoration-rose-300 decoration-2">{formattedExpectedDate}</span>. Has your period started?
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
               <button
                 onClick={() => setMode('quick_log')}
-                className="py-3.5 px-4 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-2xl font-bold text-xs uppercase tracking-wider shadow-md shadow-pink-200 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="py-3.5 px-4 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-2xl font-black text-xs uppercase tracking-wider shadow-md shadow-pink-200 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <CheckCircle2 size={16} />
                 <span>Yes, it started</span>
@@ -286,7 +285,7 @@ export const ExpectedPeriodCheckInCard: React.FC<ExpectedPeriodCheckInCardProps>
 
               <button
                 onClick={handleNotYet}
-                className="py-3.5 px-4 bg-white/90 hover:bg-white text-rose-700 border border-pink-200 rounded-2xl font-bold text-xs uppercase tracking-wider shadow-sm hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="py-3.5 px-4 bg-white/90 hover:bg-white text-rose-700 border border-pink-200 rounded-2xl font-black text-xs uppercase tracking-wider shadow-sm hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Clock size={16} className="text-rose-400" />
                 <span>Not yet</span>
@@ -294,7 +293,7 @@ export const ExpectedPeriodCheckInCard: React.FC<ExpectedPeriodCheckInCardProps>
 
               <button
                 onClick={() => setMode('edit_prediction')}
-                className="py-3.5 px-4 bg-stone-100/80 hover:bg-stone-200/80 text-stone-700 border border-stone-200/60 rounded-2xl font-bold text-xs uppercase tracking-wider shadow-sm hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="py-3.5 px-4 bg-stone-100/80 hover:bg-stone-200/80 text-stone-700 border border-stone-200/60 rounded-2xl font-black text-xs uppercase tracking-wider shadow-sm hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Edit3 size={16} className="text-stone-500" />
                 <span>Edit prediction</span>

@@ -637,6 +637,30 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
     return day;
   }, [user.lastPeriodStart, user.cycleLength]);
 
+  const lateInfo = useMemo(() => {
+    if (!user.lastPeriodStart) return { isLate: false, daysLate: 0 };
+    const lastStart = new Date(user.lastPeriodStart);
+    const start = new Date(lastStart.getFullYear(), lastStart.getMonth(), lastStart.getDate());
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const diffDays = Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    const cycleLen = user.cycleLength || 28;
+
+    const expectedMidnight = new Date(start.getTime() + cycleLen * 24 * 60 * 60 * 1000).getTime();
+    let hasLoggedNewPeriod = false;
+    if (user.periods && user.periods.length > 0) {
+      hasLoggedNewPeriod = user.periods.some(p => new Date(p.startDate).setHours(0,0,0,0) >= expectedMidnight);
+    }
+
+    if (diffDays > cycleLen && !hasLoggedNewPeriod) {
+      return {
+        isLate: true,
+        daysLate: diffDays - cycleLen
+      };
+    }
+    return { isLate: false, daysLate: 0 };
+  }, [user.lastPeriodStart, user.cycleLength, user.periods]);
+
   const getCycleDetailsForDate = (date: Date) => {
     let refDate: Date | null = null;
     if (user.lastPeriodStart) {
@@ -787,17 +811,25 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
   };
 
   const renderCycle = () => {
-    const progress = (cycleDay / (user.cycleLength || 28)) * 100;
-    const phaseInfo = cycleDay <= (user.periodLength || 5) ? { name: 'Menstrual Phase', color: '#f472b6', emoji: '🩸', advice: 'A time for rest and inward reflection. Be gentle with yourself, blooming soul.' } : 
-                     cycleDay <= (user.cycleLength || 28) - 14 ? { name: 'Follicular Phase', color: '#fb7185', emoji: '🌱', advice: 'Energy is rising. A perfect time for new projects and social connection.' } :
-                     cycleDay <= (user.cycleLength || 28) - 10 ? { name: 'Ovulatory Phase', color: '#fbbf24', emoji: '☀️', advice: 'You are at your most magnetic and articulate. Shine bright!' } : 
-                     { name: 'Luteal Phase', color: '#818cf8', emoji: '🍂', advice: 'Slow down and nurture yourself. Protect your peace.' };
+    const isLate = lateInfo.isLate;
+    const daysLate = lateInfo.daysLate;
+    const progress = isLate ? 100 : (cycleDay / (user.cycleLength || 28)) * 100;
+
+    const phaseInfo = isLate ? {
+      name: `Day ${daysLate} Late`,
+      color: '#f59e0b',
+      emoji: '⏳',
+      advice: 'Your period is past expected date. Log your period when it arrives to start a new cycle.'
+    } : cycleDay <= (user.periodLength || 5) ? { name: 'Menstrual Phase', color: '#f472b6', emoji: '🩸', advice: 'A time for rest and inward reflection. Be gentle with yourself, blooming soul.' } : 
+    cycleDay <= (user.cycleLength || 28) - 14 ? { name: 'Follicular Phase', color: '#fb7185', emoji: '🌱', advice: 'Energy is rising. A perfect time for new projects and social connection.' } :
+    cycleDay <= (user.cycleLength || 28) - 10 ? { name: 'Ovulatory Phase', color: '#fbbf24', emoji: '☀️', advice: 'You are at your most magnetic and articulate. Shine bright!' } : 
+    { name: 'Luteal Phase', color: '#818cf8', emoji: '🍂', advice: 'Slow down and nurture yourself. Protect your peace.' };
 
     return (
       <div className="flex flex-col items-center animate-fadeIn w-full">
         {setUser && (
           <div className="w-full max-w-2xl mb-6">
-            <ExpectedPeriodCheckInCard user={user} setUser={setUser} />
+            <ExpectedPeriodCheckInCard user={user} setUser={setUser} onOpenLogModal={onOpenLogModal} />
           </div>
         )}
         <div className="relative w-72 h-72 flex items-center justify-center">
@@ -814,20 +846,24 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8">
             <span className="text-5xl mb-2">{phaseInfo.emoji}</span>
-            <span className="text-4xl font-bold text-pink-600 leading-none">{cycleDay}</span>
-            <span className="text-[10px] font-bold text-pink-300 uppercase tracking-[0.2em] mt-2">Day of Cycle</span>
+            <span className={isLate ? "text-2xl md:text-3xl font-black text-amber-600 leading-tight" : "text-4xl font-bold text-pink-600 leading-none"}>
+              {isLate ? `Day ${daysLate} Late` : cycleDay}
+            </span>
+            <span className="text-[10px] font-bold text-pink-400 uppercase tracking-[0.2em] mt-2">
+              {isLate ? "Late Period Mode" : "Day of Cycle"}
+            </span>
           </div>
         </div>
         
         <div className="mt-12 text-center space-y-4 max-w-sm">
           <h3 className="text-2xl font-serif text-pink-600 italic">{phaseInfo.name}</h3>
-          <p className="text-sm text-pink-300 italic leading-relaxed">{phaseInfo.advice}</p>
+          <p className="text-sm text-pink-400 italic leading-relaxed">{phaseInfo.advice}</p>
           
           <button 
             onClick={onOpenLogModal}
-            className="mt-8 px-8 py-4 bg-gradient-to-r from-pink-400 to-rose-400 text-white rounded-full font-bold shadow-lg shadow-pink-100 hover:scale-105 transition-transform"
+            className="mt-8 px-8 py-4 bg-gradient-to-r from-pink-400 to-rose-400 text-white rounded-full font-bold shadow-lg shadow-pink-100 hover:scale-105 transition-transform cursor-pointer"
           >
-            Log Today's Journey
+            {isLate ? "Log Period Start" : "Log Today's Journey"}
           </button>
         </div>
       </div>

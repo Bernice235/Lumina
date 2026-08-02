@@ -353,18 +353,24 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
     let dayInCycle = ((diffDays % cycleLen) + cycleLen) % cycleLen + 1;
 
+    const isLatePeriod = diffDays > cycleLen && !isLoggedPeriod;
+    const daysLate = isLatePeriod ? (diffDays - cycleLen) : 0;
+
     const ovulationDay = Math.max(1, cycleLen - 14);
     const fertileStart = Math.max(1, ovulationDay - 5);
     const fertileEnd = Math.min(cycleLen, ovulationDay + 1);
 
     const isPeriod = isLoggedPeriod || (dayInCycle >= 1 && dayInCycle <= periodLen);
-    const isOvulation = dayInCycle === ovulationDay;
-    const isFertile = dayInCycle >= fertileStart && dayInCycle <= fertileEnd;
+    const isOvulation = !isLatePeriod && dayInCycle === ovulationDay;
+    const isFertile = !isLatePeriod && dayInCycle >= fertileStart && dayInCycle <= fertileEnd;
 
     let phaseName = '🌙 Luteal Phase (PMS & Gentle Care Needed)';
     let phaseEmoji = '🌙';
 
-    if (isPeriod) {
+    if (isLatePeriod) {
+      phaseName = `⏳ Day ${daysLate} Late (Expected Period Pending)`;
+      phaseEmoji = '⏳';
+    } else if (isPeriod) {
       phaseName = '🩸 Menstrual Phase (Rest & Comfort Needed)';
       phaseEmoji = '🩸';
     } else if (isOvulation) {

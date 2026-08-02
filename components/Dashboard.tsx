@@ -330,16 +330,40 @@ const Dashboard: React.FC<DashboardProps> = ({
   const cycleLen = user.cycleLength || 28;
   const periodLen = user.periodLength || 5;
 
+  const daysSinceLastStart = (() => {
+    if (!lastStart) return 0;
+    const lastStartMidnight = new Date(lastStart.getFullYear(), lastStart.getMonth(), lastStart.getDate()).getTime();
+    const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+    return Math.floor((todayMidnight - lastStartMidnight) / (1000 * 60 * 60 * 24));
+  })();
+
+  const expectedPeriodDate = lastStart ? new Date(lastStart.getTime() + cycleLen * 24 * 60 * 60 * 1000) : null;
+
+  const hasLoggedPeriodForExpectedCycle = (() => {
+    if (!expectedPeriodDate || !user.lastPeriodStart) return false;
+    const expectedMidnight = new Date(expectedPeriodDate.getFullYear(), expectedPeriodDate.getMonth(), expectedPeriodDate.getDate()).getTime();
+    if (user.periods && user.periods.length > 0) {
+      return user.periods.some(p => new Date(p.startDate).setHours(0, 0, 0, 0) >= expectedMidnight);
+    }
+    return false;
+  })();
+
+  const daysLate = (lastStart && daysSinceLastStart > cycleLen && !hasLoggedPeriodForExpectedCycle)
+    ? (daysSinceLastStart - cycleLen)
+    : 0;
+
+  const isLatePeriodMode = daysLate > 0;
+
   const cycleDay = (() => {
     if (!lastStart) return 1;
-    const diffTime = today.getTime() - lastStart.getTime();
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    let day = (diffDays % cycleLen) + 1;
+    if (isLatePeriodMode) return cycleLen + daysLate;
+    let day = (daysSinceLastStart % cycleLen) + 1;
     if (day <= 0) day += cycleLen;
     return day;
   })();
 
   const currentPhase = (() => {
+    if (isLatePeriodMode) return 'Late Period';
     if (cycleDay <= periodLen) return 'Menstrual';
     if (cycleDay <= cycleLen - 14) return 'Follicular';
     if (cycleDay <= cycleLen - 10) return 'Ovulatory';
@@ -392,21 +416,15 @@ const Dashboard: React.FC<DashboardProps> = ({
   }, [user.isPregnancyMode, weeks]);
 
   // Cycle calculations for Dashboard
-  let nextPeriodDate = lastStart ? new Date(lastStart.getTime() + cycleLen * 24 * 60 * 60 * 1000) : null;
-  let daysUntilNext = nextPeriodDate ? Math.ceil((nextPeriodDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)) : null;
+  let daysUntilNext = expectedPeriodDate ? Math.ceil((expectedPeriodDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)) : null;
 
-  // If next period is in the past, calculate the next one
-  if (daysUntilNext !== null && daysUntilNext < 0) {
-    const cyclesPassed = Math.floor(Math.abs(daysUntilNext) / cycleLen) + 1;
-    nextPeriodDate = new Date(nextPeriodDate!.getTime() + cyclesPassed * cycleLen * 24 * 60 * 60 * 1000);
-    daysUntilNext = Math.ceil((nextPeriodDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-  }
-
-  const cycleStatusText = daysUntilNext === 0 
-    ? "Period starts today" 
-    : daysUntilNext && daysUntilNext > 0 
-      ? `Next period in ${daysUntilNext} days` 
-      : "Log a period to see status";
+  const cycleStatusText = isLatePeriodMode
+    ? `Day ${daysLate} Late`
+    : daysUntilNext === 0 
+      ? "Period starts today" 
+      : daysUntilNext && daysUntilNext > 0 
+        ? `Next period in ${daysUntilNext} days` 
+        : "Log a period to see status";
 
   const getYouTubeId = (url: string): string => {
     const match = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
@@ -980,13 +998,11 @@ const Dashboard: React.FC<DashboardProps> = ({
   const getDayStatus = (date: Date) => {
     const dateStr = date.toDateString();
     if (user.periodDates?.includes(dateStr)) return 'period';
-    if (nextPeriodDate) {
-      const nextStart = new Date(nextPeriodDate);
+    if (expectedPeriodDate) {
+      const nextStart = new Date(expectedPeriodDate);
       const nextEnd = new Date(nextStart.getTime() + (periodLen - 1) * 24 * 60 * 60 * 1000);
       if (date >= nextStart && date <= nextEnd) return 'predicted';
-    }
-    if (nextPeriodDate) {
-      const ovulation = new Date(nextPeriodDate.getTime() - 14 * 24 * 60 * 60 * 1000);
+      const ovulation = new Date(expectedPeriodDate.getTime() - 14 * 24 * 60 * 60 * 1000);
       const fertileStart = new Date(ovulation.getTime() - 3 * 24 * 60 * 60 * 1000);
       const fertileEnd = new Date(ovulation.getTime() + 1 * 24 * 60 * 60 * 1000);
       if (date >= fertileStart && date <= fertileEnd) return 'fertile';
@@ -1772,6 +1788,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           <ExpectedPeriodCheckInCard 
             user={user} 
             setUser={(val) => setUser(val)} 
+            onOpenLogModal={onOpenLogModal}
           />
         )}
 
@@ -1783,29 +1800,35 @@ const Dashboard: React.FC<DashboardProps> = ({
 
           <div className="space-y-4 z-10 w-full md:max-w-[60%] text-center md:text-left">
             <div className="space-y-1">
-              <span className="text-[10px] font-black uppercase tracking-[0.25em] text-pink-400 block">Current Phase</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.25em] text-pink-400 block">
+                {isLatePeriodMode ? "Late Period Mode" : "Current Phase"}
+              </span>
               <h2 className="text-3xl md:text-4xl font-serif italic text-pink-600 font-bold leading-none">
-                {currentPhase} Phase
+                {isLatePeriodMode ? `Day ${daysLate} Late` : `${currentPhase} Phase`}
               </h2>
               <span className="text-xs font-serif italic text-pink-400/80 block pt-1">
-                {currentPhase === 'Menstrual' && "A time for quiet sunset reflection and deep physical rest."}
-                {currentPhase === 'Follicular' && "A time of rising physical energy, creativity, and new beginnings."}
-                {currentPhase === 'Ovulatory' && "Your peak biological glow. Social, radiant, and fertile."}
-                {currentPhase === 'Luteal' && "Turning gently inward. High emotional intuition and cozy comfort."}
+                {isLatePeriodMode && `Your period was expected on ${expectedPeriodDate?.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}. Lumina is tracking your late period mode.`}
+                {!isLatePeriodMode && currentPhase === 'Menstrual' && "A time for quiet sunset reflection and deep physical rest."}
+                {!isLatePeriodMode && currentPhase === 'Follicular' && "A time of rising physical energy, creativity, and new beginnings."}
+                {!isLatePeriodMode && currentPhase === 'Ovulatory' && "Your peak biological glow. Social, radiant, and fertile."}
+                {!isLatePeriodMode && currentPhase === 'Luteal' && "Turning gently inward. High emotional intuition and cozy comfort."}
               </span>
             </div>
 
             <div className="pt-2">
               <div className="flex justify-between items-center text-[10px] font-bold text-pink-500 uppercase tracking-widest mb-1.5">
-                <span>Cycle day {cycleDay} of {cycleLen}</span>
+                <span>{isLatePeriodMode ? `Day ${daysLate} Late` : `Cycle day ${cycleDay} of ${cycleLen}`}</span>
                 <span className="font-serif italic font-black text-pink-700">{cycleStatusText}</span>
               </div>
               
               {/* Progress Bar Container */}
               <div className="w-full h-3 bg-pink-100/50 rounded-full overflow-hidden p-[2px] border border-pink-100/30">
                 <div 
-                  className="h-full bg-gradient-to-r from-pink-400 via-rose-400 to-amber-300 rounded-full transition-all duration-1000 ease-out shadow-[0_1px_3px_rgba(244,114,182,0.2)]"
-                  style={{ width: `${Math.min(100, (cycleDay / cycleLen) * 100)}%` }}
+                  className={isLatePeriodMode 
+                    ? "h-full bg-gradient-to-r from-amber-400 via-rose-500 to-red-500 rounded-full transition-all duration-1000 ease-out shadow-[0_1px_3px_rgba(244,114,182,0.2)]"
+                    : "h-full bg-gradient-to-r from-pink-400 via-rose-400 to-amber-300 rounded-full transition-all duration-1000 ease-out shadow-[0_1px_3px_rgba(244,114,182,0.2)]"
+                  }
+                  style={{ width: isLatePeriodMode ? '100%' : `${Math.min(100, (cycleDay / cycleLen) * 100)}%` }}
                 ></div>
               </div>
             </div>
@@ -1817,13 +1840,18 @@ const Dashboard: React.FC<DashboardProps> = ({
             <div className="absolute inset-2 bg-gradient-to-br from-pink-200/50 via-rose-100/40 to-amber-100/30 rounded-full animate-pulse"></div>
             <div className="absolute inset-6 bg-white/85 rounded-full flex flex-col items-center justify-center text-center p-3 shadow-inner">
               <span className="text-4xl animate-bounce mb-1">
-                {currentPhase === 'Menstrual' && "🩸"}
-                {currentPhase === 'Follicular' && "🌱"}
-                {currentPhase === 'Ovulatory' && "✨"}
-                {currentPhase === 'Luteal' && "🌙"}
+                {isLatePeriodMode && "⏳"}
+                {!isLatePeriodMode && currentPhase === 'Menstrual' && "🩸"}
+                {!isLatePeriodMode && currentPhase === 'Follicular' && "🌱"}
+                {!isLatePeriodMode && currentPhase === 'Ovulatory' && "✨"}
+                {!isLatePeriodMode && currentPhase === 'Luteal' && "🌙"}
               </span>
-              <p className="text-[8px] font-black text-pink-400 uppercase tracking-widest">{currentPhase}</p>
-              <p className="text-xs font-serif font-black text-pink-700">Day {cycleDay}</p>
+              <p className="text-[8px] font-black text-pink-400 uppercase tracking-widest">
+                {isLatePeriodMode ? "Late Period" : currentPhase}
+              </p>
+              <p className="text-xs font-serif font-black text-pink-700">
+                {isLatePeriodMode ? `Day ${daysLate} Late` : `Day ${cycleDay}`}
+              </p>
             </div>
           </div>
         </section>
