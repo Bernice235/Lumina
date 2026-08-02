@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { YOGA_POSES } from '../constants';
 import { User } from '../types';
 import { getLuminaAdvice } from '../services/gemini';
@@ -37,6 +38,11 @@ interface YogaTutorialsProps {
 
 const YogaTutorials: React.FC<YogaTutorialsProps> = ({ user, setUser, todaysSymptoms }) => {
   const [selectedPose, setSelectedPose] = useState<typeof YOGA_POSES[number] | null>(null);
+  const [playerMode, setPlayerMode] = useState<'video' | 'animation'>('video');
+  const [videoSource, setVideoSource] = useState<string>('');
+  const [hasVideoError, setHasVideoError] = useState<boolean>(false);
+  const [isMuted, setIsMuted] = useState<boolean>(true);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
   const [tick, setTick] = useState<number>(0);
   const [breathTime, setBreathTime] = useState<number>(0); // 0 to 6 seconds
@@ -328,6 +334,10 @@ const YogaTutorials: React.FC<YogaTutorialsProps> = ({ user, setUser, todaysSymp
   // Trigger personalized advice when entering a pose practice
   const handleStartPractice = (pose: typeof YOGA_POSES[number]) => {
     setSelectedPose(pose);
+    const initialUrl = (pose as any).videoUrl || "https://assets.mixkit.co/videos/preview/mixkit-woman-doing-yoga-stretches-on-a-mat-40292-large.mp4";
+    setVideoSource(initialUrl);
+    setHasVideoError(false);
+    setIsMuted(true);
     setIsPlaying(true);
     setBreathTime(0);
     setBreathState('Inhale');
@@ -623,8 +633,8 @@ const YogaTutorials: React.FC<YogaTutorialsProps> = ({ user, setUser, todaysSymp
     <div className="space-y-8 animate-fadeIn text-gray-800 relative">
       
       {/* Practice Studio Overlay (Full Height Glass Modal) */}
-      {selectedPose && (
-        <div className="fixed inset-0 z-[100] bg-stone-950/85 backdrop-blur-xl flex flex-col justify-between overflow-y-auto p-4 md:p-8 animate-fadeIn">
+      {selectedPose && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-stone-950/95 backdrop-blur-2xl flex flex-col justify-between overflow-y-auto p-4 md:p-8 animate-fadeIn text-gray-100">
           
           {/* LOGGING SUCCESS FULLSCREEN CELEBRATION */}
           {loggedSuccessfully ? (
@@ -707,15 +717,31 @@ const YogaTutorials: React.FC<YogaTutorialsProps> = ({ user, setUser, todaysSymp
               </header>
 
               {/* Main Studio Body Grid */}
-              <main className="w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 my-6 flex-1 items-stretch">
-                {/* LEFT COLUMN: Animated Video Canvas Player (7 cols) */}
-                <section className="lg:col-span-7 bg-stone-900 border border-white/5 rounded-[2.5rem] p-6 flex flex-col justify-between relative overflow-hidden min-h-[380px] lg:min-h-0 shadow-2xl">
+              <main className="w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 my-6 flex-1 items-stretch">
+                {/* LEFT COLUMN: Video / Animation Player Canvas (7 cols) */}
+                <section className="lg:col-span-7 bg-stone-900 border border-white/10 rounded-[2.5rem] p-5 md:p-6 flex flex-col justify-between relative overflow-hidden min-h-[420px] md:min-h-[500px] shadow-2xl">
                   
-                  {/* Top Watermark & Breath stage */}
-                  <div className="flex justify-between items-center w-full relative z-10">
-                    <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-full text-[9px] font-bold uppercase text-white tracking-widest">
-                      <span className="w-1.5 h-1.5 rounded-full bg-pink-500 animate-ping shrink-0" />
-                      <span>Procedural Live Guide</span>
+                  {/* Top Mode Switcher & Breath stage */}
+                  <div className="flex justify-between items-center w-full relative z-10 flex-wrap gap-2">
+                    <div className="flex items-center gap-1 bg-black/60 p-1 rounded-full border border-white/10">
+                      <button 
+                        type="button"
+                        onClick={() => setPlayerMode('video')}
+                        className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                          playerMode === 'video' ? 'bg-pink-500 text-white shadow-md' : 'text-stone-400 hover:text-white'
+                        }`}
+                      >
+                        📹 HD Workout Video
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => setPlayerMode('animation')}
+                        className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                          playerMode === 'animation' ? 'bg-pink-500 text-white shadow-md' : 'text-stone-400 hover:text-white'
+                        }`}
+                      >
+                        ✨ Motion Coach
+                      </button>
                     </div>
 
                     <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
@@ -727,9 +753,68 @@ const YogaTutorials: React.FC<YogaTutorialsProps> = ({ user, setUser, todaysSymp
                     </div>
                   </div>
 
-                  {/* Central Vector Canvas container */}
-                  <div className="flex-1 flex items-center justify-center max-h-[250px] my-4">
-                    {renderProceduralAnimation(selectedPose.name)}
+                  {/* Central Video Player / Procedural Animation container */}
+                  <div className="flex-1 my-4 flex items-center justify-center w-full min-h-[280px] md:min-h-[350px]">
+                    {playerMode === 'video' ? (
+                      <div className="w-full h-full min-h-[280px] md:min-h-[350px] aspect-video bg-black rounded-2xl overflow-hidden relative shadow-2xl border border-white/10 flex items-center justify-center group">
+                        {!hasVideoError ? (
+                          <>
+                            <video 
+                              key={`${selectedPose.name}-${videoSource}`}
+                              ref={videoRef}
+                              controls 
+                              autoPlay 
+                              loop 
+                              muted={isMuted}
+                              playsInline
+                              preload="auto"
+                              onError={() => {
+                                console.warn("Video failed to load URL:", videoSource);
+                                const fallbackUrl = "https://assets.mixkit.co/videos/preview/mixkit-woman-doing-yoga-stretches-on-a-mat-40292-large.mp4";
+                                if (videoSource !== fallbackUrl) {
+                                  setVideoSource(fallbackUrl);
+                                } else {
+                                  setHasVideoError(true);
+                                }
+                              }}
+                              className="w-full h-full object-cover rounded-2xl"
+                            >
+                              <source src={videoSource || (selectedPose as any).videoUrl} type="video/mp4" />
+                              <source src="https://assets.mixkit.co/videos/preview/mixkit-woman-doing-yoga-stretches-on-a-mat-40292-large.mp4" type="video/mp4" />
+                              Your browser does not support video playback.
+                            </video>
+
+                            {/* Unmute / Sound Toggle Overlay Badge */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newMuted = !isMuted;
+                                setIsMuted(newMuted);
+                                if (videoRef.current) {
+                                  videoRef.current.muted = newMuted;
+                                }
+                              }}
+                              className="absolute top-3 left-3 z-30 bg-black/75 hover:bg-black/95 backdrop-blur-md border border-white/20 text-white text-[10px] font-extrabold px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-xl transition-all cursor-pointer"
+                            >
+                              {isMuted ? '🔇 Tap to Unmute Audio' : '🔊 Audio Active'}
+                            </button>
+                          </>
+                        ) : (
+                          /* Motion Coach Fallback Stage if Stream Unreachable */
+                          <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center bg-stone-900 text-stone-300">
+                            <p className="text-sm font-bold text-pink-300 mb-1">📹 HD Workout Video Stream</p>
+                            <p className="text-xs text-stone-400 mb-3 max-w-sm">Enjoy our live interactive Motion Coach guide below:</p>
+                            <div className="w-full max-w-xs h-48 flex items-center justify-center">
+                              {renderProceduralAnimation(selectedPose.name)}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="w-full flex items-center justify-center min-h-[250px]">
+                        {renderProceduralAnimation(selectedPose.name)}
+                      </div>
+                    )}
                   </div>
 
                   {/* Bottom Breathing Indicator Ring & Action Buttons */}
@@ -884,7 +969,8 @@ const YogaTutorials: React.FC<YogaTutorialsProps> = ({ user, setUser, todaysSymp
             </>
           )}
 
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* POSE SELECTION SCREEN WITH WEEKLY PROGRESS BADGES */}
@@ -1039,52 +1125,78 @@ const YogaTutorials: React.FC<YogaTutorialsProps> = ({ user, setUser, todaysSymp
 
           {/* Poses Cards Grid */}
           <div className="space-y-6">
-            {YOGA_POSES.map((pose, i) => (
+            {YOGA_POSES.map((pose: any, i) => (
               <div 
                 key={i} 
-                className="bg-white/70 hover:bg-white border border-pink-50 hover:border-pink-200 p-6 rounded-[2.5rem] shadow-sm hover:shadow-md transition-all duration-300 flex flex-col md:flex-row items-center gap-6 group"
+                onClick={() => {
+                  setPlayerMode('video');
+                  handleStartPractice(pose);
+                }}
+                className="bg-white/90 hover:bg-white border border-pink-100 hover:border-pink-300 p-5 md:p-6 rounded-[2.5rem] shadow-sm hover:shadow-md transition-all duration-300 flex flex-col md:flex-row items-center gap-6 group w-full cursor-pointer"
               >
-                {/* Simulated Animated Thumb container */}
-                <div className="w-full md:w-44 h-36 bg-stone-900 rounded-[2rem] border border-pink-100/10 overflow-hidden relative shrink-0 flex items-center justify-center shadow-inner">
-                  {/* Subtle vector preview sketch inside thumbnail */}
-                  <div className="w-24 h-24 opacity-80 group-hover:scale-105 transition-transform">
-                    {renderProceduralAnimation(pose.name)}
-                  </div>
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-[2rem]">
-                    <span className="w-12 h-12 bg-white text-pink-500 rounded-full flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition-transform">
-                      <Play size={16} fill="currentColor" className="ml-1" />
+                {/* Visual Thumbnail & Play Badge Preview */}
+                <div className="w-full md:w-64 h-48 sm:h-52 bg-gradient-to-br from-pink-900 via-stone-900 to-rose-950 rounded-[2rem] border border-pink-100/20 overflow-hidden relative shrink-0 flex items-center justify-center shadow-md group-hover:scale-[1.01] transition-transform">
+                  {/* Subtle poster background image or fallback gradient */}
+                  <img 
+                    src={pose.image || "https://picsum.photos/seed/yoga1/400/300"} 
+                    alt={pose.name} 
+                    className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-75 transition-opacity"
+                  />
+                  
+                  {/* Overlay gradient mask */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/40 to-transparent" />
+
+                  {/* Play Button Badge */}
+                  <div className="relative z-10 flex flex-col items-center gap-2 text-center p-3">
+                    <div className="w-12 h-12 rounded-full bg-pink-500/90 text-white flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform border border-white/30 backdrop-blur-md">
+                      <Play size={20} fill="currentColor" className="ml-1" />
+                    </div>
+                    <span className="text-[9px] font-black uppercase tracking-widest text-white bg-black/50 px-3 py-1 rounded-full border border-white/20 backdrop-blur-sm">
+                      ▶ Watch HD Tutorial
                     </span>
+                  </div>
+
+                  {/* Top Duration Badge */}
+                  <div className="absolute top-3 right-3 z-10 bg-black/60 backdrop-blur-md border border-white/20 text-pink-300 text-[8px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full">
+                    ⏱️ {pose.duration || "10 mins"}
                   </div>
                 </div>
 
                 {/* Details */}
-                <div className="flex-1 space-y-3.5 text-center md:text-left min-w-0">
+                <div className="flex-1 space-y-3 text-center md:text-left min-w-0 w-full">
                   <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-2">
                     <div>
                       <h4 className="text-xl font-serif text-pink-600 font-bold italic group-hover:text-pink-700 transition-colors">{pose.name}</h4>
-                      <p className="text-[8px] font-black uppercase tracking-widest text-pink-400 mt-0.5">Instructional Procedural Video Clip</p>
+                      <p className="text-[9px] font-black uppercase tracking-widest text-pink-400 mt-0.5">
+                        {pose.category || "Full Workout Video"} • {pose.duration || "10 mins"}
+                      </p>
                     </div>
-                    <span className="bg-pink-50/60 border border-pink-100/50 text-pink-500 text-[9px] font-bold px-3 py-1.5 rounded-full uppercase shrink-0 mx-auto md:mx-0">
-                      ⏱️ 6s Breath Cycles
+                    <span className="bg-pink-50/80 border border-pink-100 text-pink-600 text-[9px] font-extrabold px-3 py-1.5 rounded-full uppercase shrink-0 mx-auto md:mx-0">
+                      ✨ {pose.duration || "10 mins"}
                     </span>
                   </div>
 
-                  <p className="text-xs text-gray-500 leading-relaxed font-serif italic">
+                  <p className="text-xs text-stone-600 leading-relaxed font-serif italic">
                     {pose.description}
                   </p>
 
-                  <div className="pt-2 border-t border-pink-50/50 flex flex-wrap gap-4 justify-center md:justify-start items-center">
+                  <div className="pt-2 border-t border-pink-50 flex flex-wrap gap-4 justify-center md:justify-start items-center">
                     <div>
                       <span className="text-[8px] font-black text-pink-300 uppercase tracking-widest block leading-none">Primary Benefit</span>
-                      <span className="text-xs font-serif italic text-pink-500 block mt-0.5">✨ {pose.benefit}</span>
+                      <span className="text-xs font-serif italic text-pink-600 block mt-0.5">✨ {pose.benefit}</span>
                     </div>
                     
                     <button 
-                      onClick={() => handleStartPractice(pose)}
-                      className="ml-auto px-6 py-3 bg-gradient-to-r from-pink-400 to-rose-400 hover:from-pink-500 hover:to-rose-500 text-white font-extrabold uppercase text-[9px] tracking-widest rounded-full shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPlayerMode('video');
+                        handleStartPractice(pose);
+                      }}
+                      className="ml-auto px-6 py-3 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white font-extrabold uppercase text-[9px] tracking-widest rounded-full shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
                     >
                       <span>▶️</span>
-                      <span>Enter Practice Studio</span>
+                      <span>Enter Studio & Practice</span>
                     </button>
                   </div>
                 </div>

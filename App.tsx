@@ -2085,7 +2085,7 @@ const App: React.FC = () => {
                 />
               </div>
 
-              {!user.isPartner && !['cycle', 'wellness', 'edu', 'pedia', 'settings'].includes(activeTab) && (
+              {!user.isPartner && !['cycle', 'wellness', 'edu', 'pedia', 'settings', 'music'].includes(activeTab) && (
                 <button 
                   onClick={() => {
                     setActiveTab('partner');
@@ -2102,7 +2102,7 @@ const App: React.FC = () => {
                 </button>
               )}
 
-              {!['cycle', 'wellness', 'edu', 'pedia', 'settings'].includes(activeTab) && (
+              {!['cycle', 'wellness', 'edu', 'pedia', 'settings', 'music'].includes(activeTab) && (
                 <button 
                   onClick={() => {
                     setSettingsSubTab('notifications');

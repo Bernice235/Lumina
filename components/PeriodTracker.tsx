@@ -23,6 +23,7 @@ import {
 import { User, Symptom, BirthControlLog, BirthControlConfig, TemperatureLog, Period, PeriodLog } from '../types';
 import { SYMPTOMS } from '../constants';
 import TemperatureTracker from './TemperatureTracker';
+import { ExpectedPeriodCheckInCard } from './ExpectedPeriodCheckInCard';
 import { CycleGraph } from './CycleGraph';
 import { 
   BarChart, 
@@ -793,7 +794,12 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
                      { name: 'Luteal Phase', color: '#818cf8', emoji: '🍂', advice: 'Slow down and nurture yourself. Protect your peace.' };
 
     return (
-      <div className="flex flex-col items-center animate-fadeIn">
+      <div className="flex flex-col items-center animate-fadeIn w-full">
+        {setUser && (
+          <div className="w-full max-w-2xl mb-6">
+            <ExpectedPeriodCheckInCard user={user} setUser={setUser} />
+          </div>
+        )}
         <div className="relative w-72 h-72 flex items-center justify-center">
           <svg className="w-full h-full -rotate-90 transform">
             <circle cx="144" cy="144" r="120" fill="none" stroke="#fdf2f8" strokeWidth="12" />

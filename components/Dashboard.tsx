@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { User, Symptom, Reminder, ReceivedComfort } from '../types';
+import { ExpectedPeriodCheckInCard } from './ExpectedPeriodCheckInCard';
 import { WallpapersAndThemesModal } from './WallpapersAndThemesModal';
 import { getDailyAffirmation } from '../services/gemini';
 import { syncUser, updatePartnerRequestStatus, addNotificationToUser } from '../services/firebaseService';
@@ -1764,6 +1765,14 @@ const Dashboard: React.FC<DashboardProps> = ({
               </div>
             ))}
           </div>
+        )}
+
+        {/* Expected Period Check-In Card */}
+        {setUser && (
+          <ExpectedPeriodCheckInCard 
+            user={user} 
+            setUser={(val) => setUser(val)} 
+          />
         )}
 
         {/* Large Beautiful Cycle Phase Card */}

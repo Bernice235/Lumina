@@ -302,19 +302,37 @@ export const YOGA_POSES = [
     name: "Child's Pose (Balasana)",
     description: "Gently stretches the lower back and promotes deep relaxation. Perfect for cramp relief.",
     benefit: "Calms the mind, eases menstrual tension.",
-    image: "https://picsum.photos/seed/yoga1/400/300"
+    image: "https://picsum.photos/seed/yoga1/400/300",
+    videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-woman-doing-yoga-stretches-on-a-mat-40292-large.mp4",
+    duration: "10 mins",
+    category: "Cramp Relief & Relaxation"
   },
   {
     name: "Cat-Cow Stretch",
     description: "Moves the spine and abdominal muscles to help ease internal tension.",
     benefit: "Flexibility and blood flow boost.",
-    image: "https://picsum.photos/seed/yoga2/400/300"
+    image: "https://picsum.photos/seed/yoga2/400/300",
+    videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-young-woman-doing-yoga-on-a-sunny-day-41662-large.mp4",
+    duration: "12 mins",
+    category: "Spinal Mobility & Pelvic Relief"
   },
   {
     name: "Bound Angle Pose",
     description: "Opens the hips and stimulates the pelvic region gently.",
     benefit: "Relieves heaviness and bloating.",
-    image: "https://picsum.photos/seed/yoga3/400/300"
+    image: "https://picsum.photos/seed/yoga3/400/300",
+    videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-meditating-woman-in-a-beautiful-park-42289-large.mp4",
+    duration: "15 mins",
+    category: "Hip Opening & Bloating"
+  },
+  {
+    name: "Legs-Up-The-Wall (Viparita Karani)",
+    description: "Restorative inverted pose that drains excess fluid, calms the nervous system, and relieves lower back pressure.",
+    benefit: "Eases swollen legs, anxiety, and fatigue.",
+    image: "https://picsum.photos/seed/yoga4/400/300",
+    videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-woman-meditating-in-nature-32545-large.mp4",
+    duration: "10 mins",
+    category: "Restorative & Fluid Circulation"
   }
 ];
 

@@ -147,6 +147,8 @@ export interface User {
   manualTransferName_?: string; // keeping compatible
   notifications?: { id: string; title: string; body: string; emoji: string; timestamp: string; isRead: boolean }[];
   yogaLogs?: { id: string; date: string; poseName: string; duration: number; benefit: string }[];
+  latePeriodCheckIn?: { acknowledgedDate: string; daysLate: number; response: 'not_yet' | 'yes' | 'edited' };
+  latePeriodDismissedDate?: string;
 }
 
 export interface BillingItem {
