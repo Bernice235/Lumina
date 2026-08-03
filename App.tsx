@@ -1643,7 +1643,17 @@ const App: React.FC = () => {
       );
     }
 
-    const unreadCount = user?.notifications?.filter(n => !n.isRead).length || 0;
+    const unreadCount = (user?.notifications || []).filter(n => {
+      if (n.isRead) return false;
+      if (!user?.isPartner) {
+        const isPartnerNotif = n.category === 'partner' || 
+                               n.isPartner === true || 
+                               (n.title && (n.title.toLowerCase().includes('partner') || n.title.toLowerCase().includes('companion'))) || 
+                               (n.body && (n.body.toLowerCase().includes('partner') || n.body.toLowerCase().includes('companion')));
+        if (isPartnerNotif) return false;
+      }
+      return true;
+    }).length;
     const hasUnreadNotifs = unreadCount > 0;
 
     // Main authenticated application screen inside container
@@ -1785,7 +1795,20 @@ const App: React.FC = () => {
 
   const renderContent = () => {
     if (user.isPartner) {
-      return <PartnerMode user={user} reminders={reminders} setReminders={setReminders} setUser={setUser} onLogout={handleLogout} />;
+      return (
+        <PartnerMode 
+          user={user} 
+          reminders={reminders} 
+          setReminders={setReminders} 
+          setUser={setUser} 
+          onLogout={handleLogout} 
+          onOpenNotificationCenter={(notif) => {
+            if (notif) setSelectedNotifForModal(notif);
+            else setSelectedNotifForModal(null);
+            setIsGlobalNotificationsOpen(true);
+          }}
+        />
+      );
     }
 
     switch (activeTab) {
@@ -1884,7 +1907,18 @@ const App: React.FC = () => {
         return <SelfCare tasks={selfCareTasks} setTasks={setSelfCareTasks} />;
       case 'partner':
         return (
-          <PartnerMode user={user} reminders={reminders} setReminders={setReminders} setUser={setUser} onLogout={handleLogout} />
+          <PartnerMode 
+            user={user} 
+            reminders={reminders} 
+            setReminders={setReminders} 
+            setUser={setUser} 
+            onLogout={handleLogout} 
+            onOpenNotificationCenter={(notif) => {
+              if (notif) setSelectedNotifForModal(notif);
+              else setSelectedNotifForModal(null);
+              setIsGlobalNotificationsOpen(true);
+            }}
+          />
         );
       case 'graphs':
         return <CycleGraph user={user} />;
@@ -1927,6 +1961,11 @@ const App: React.FC = () => {
             togglePregnancy={togglePregnancy}
             partnerRequests={partnerRequests}
             handleLogout={handleLogout}
+            onOpenNotificationCenter={(notif) => {
+              if (notif) setSelectedNotifForModal(notif);
+              else setSelectedNotifForModal(null);
+              setIsGlobalNotificationsOpen(true);
+            }}
           />
         );
     }
@@ -1984,6 +2023,40 @@ const App: React.FC = () => {
                   className="w-8 md:w-10 h-1 accent-pink-400"
                 />
               </div>
+
+              {/* Global Notification Bell Button */}
+              {(() => {
+                const unreadNotifCount = (user?.notifications || []).filter(n => {
+                  if (n.isRead) return false;
+                  if (!user?.isPartner) {
+                    const isPartnerNotif = n.category === 'partner' || 
+                                           n.isPartner === true || 
+                                           (n.title && (n.title.toLowerCase().includes('partner') || n.title.toLowerCase().includes('companion'))) || 
+                                           (n.body && (n.body.toLowerCase().includes('partner') || n.body.toLowerCase().includes('companion')));
+                    if (isPartnerNotif) return false;
+                  }
+                  return true;
+                }).length;
+
+                return (
+                  <button 
+                    onClick={() => {
+                      setSelectedNotifForModal(null);
+                      setIsGlobalNotificationsOpen(true);
+                    }}
+                    className="p-2 rounded-full bg-pink-50/90 hover:bg-pink-100 text-pink-600 transition-all relative cursor-pointer active:scale-95 flex items-center justify-center border border-pink-100/80 shadow-sm"
+                    title="Notification Center"
+                    id="global-header-notification-bell"
+                  >
+                    <Bell className={`w-4 h-4 ${unreadNotifCount > 0 ? 'animate-bounce text-pink-600' : 'text-stone-500'}`} />
+                    {unreadNotifCount > 0 && (
+                      <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 bg-gradient-to-r from-rose-500 to-pink-500 text-white text-[9px] font-black rounded-full flex items-center justify-center border border-white animate-pulse">
+                        {unreadNotifCount > 9 ? '9+' : unreadNotifCount}
+                      </span>
+                    )}
+                  </button>
+                );
+              })()}
 
               {!user.isPartner && !['cycle', 'wellness', 'edu', 'pedia', 'settings', 'music'].includes(activeTab) && (
                 <button 
@@ -2229,6 +2302,20 @@ const App: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Global Notification Center Modal */}
+      <NotificationCenterModal
+        isOpen={isGlobalNotificationsOpen}
+        onClose={() => {
+          setIsGlobalNotificationsOpen(false);
+          setSelectedNotifForModal(null);
+        }}
+        user={user}
+        setUser={setUser}
+        syncUser={syncUser}
+        setActiveTab={setActiveTab}
+        initialSelectedNotif={selectedNotifForModal}
+      />
     </div>
   );
 };

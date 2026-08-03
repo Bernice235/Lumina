@@ -25,8 +25,39 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
   const [selectedNotif, setSelectedNotif] = useState<AppNotification | null>(initialSelectedNotif);
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'cycle' | 'wellness' | 'partner'>('all');
 
+  const handleSyncNotificationsNow = async () => {
+    const scheduled = calculateScheduledNotifications(user, user.notificationSettings || getDefaultNotificationSettings());
+    if (scheduled && scheduled.length > 0) {
+      const existingNotifs = user.notifications || [];
+      const updatedList = [...existingNotifs];
+      const nowISO = new Date().toISOString();
+      scheduled.forEach(item => {
+        if (!updatedList.some(n => n.id === item.id)) {
+          updatedList.unshift({
+            id: item.id,
+            title: item.title,
+            body: item.body,
+            emoji: item.emoji,
+            timestamp: nowISO,
+            isRead: false,
+            phaseInfo: item.phaseInfo,
+            category: item.category,
+            detailedTip: item.detailedTip,
+            isPartner: item.isPartner
+          });
+        }
+      });
+      const updatedUser = { ...user, notifications: updatedList };
+      setUser(updatedUser);
+      await syncUser(updatedUser);
+    }
+  };
+
   useEffect(() => {
     if (isOpen) {
+      if (!user?.notifications || user.notifications.length === 0) {
+        handleSyncNotificationsNow();
+      }
       if (initialSelectedNotif) {
         setSelectedNotif(initialSelectedNotif);
         if (!initialSelectedNotif.isRead && user) {
@@ -44,20 +75,45 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
 
   if (!isOpen) return null;
 
-  const notifications = user?.notifications || [];
+  // Filter out partner notifications in User Mode (!user?.isPartner)
+  const allNotifications = user?.notifications || [];
+  const notifications = allNotifications.filter(n => {
+    if (!user?.isPartner) {
+      const isPartnerNotif = n.category === 'partner' || 
+                             n.isPartner === true || 
+                             (n.title && (n.title.toLowerCase().includes('partner') || n.title.toLowerCase().includes('companion'))) || 
+                             (n.body && (n.body.toLowerCase().includes('partner') || n.body.toLowerCase().includes('companion')));
+      return !isPartnerNotif;
+    }
+    return true;
+  });
+
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
+  const availableCategories: Array<{ id: 'all' | 'cycle' | 'wellness' | 'partner'; label: string }> = user?.isPartner
+    ? [
+        { id: 'all', label: 'All' },
+        { id: 'partner', label: 'Partner Updates' },
+        { id: 'wellness', label: 'Wellness Tips' },
+        { id: 'cycle', label: 'Cycle & Phase' },
+      ]
+    : [
+        { id: 'all', label: 'All' },
+        { id: 'cycle', label: 'Cycle & Phase' },
+        { id: 'wellness', label: 'Wellness' },
+      ];
+
   const filteredNotifications = notifications.filter(n => {
-    if (categoryFilter === 'cycle') return n.category === 'cycle' || n.title.toLowerCase().includes('phase') || n.title.toLowerCase().includes('period') || n.title.toLowerCase().includes('ovulation');
+    if (categoryFilter === 'cycle') return n.category === 'cycle' || n.category === 'pregnancy' || n.title.toLowerCase().includes('phase') || n.title.toLowerCase().includes('period') || n.title.toLowerCase().includes('ovulation') || n.title.toLowerCase().includes('growth');
     if (categoryFilter === 'wellness') return n.category === 'wellness' || n.category === 'symptom' || n.category === 'mood' || n.title.toLowerCase().includes('water') || n.title.toLowerCase().includes('hydration') || n.title.toLowerCase().includes('medication');
-    if (categoryFilter === 'partner') return n.category === 'partner' || n.title.toLowerCase().includes('partner') || n.isPartner;
+    if (categoryFilter === 'partner') return n.category === 'partner' || n.title.toLowerCase().includes('partner') || n.title.toLowerCase().includes('companion') || n.isPartner;
     return true;
   });
 
   const handleSelectNotif = (notif: AppNotification) => {
     // Mark as read
     if (!notif.isRead) {
-      const updatedList = notifications.map(n => n.id === notif.id ? { ...n, isRead: true } : n);
+      const updatedList = (user?.notifications || []).map(n => n.id === notif.id ? { ...n, isRead: true } : n);
       const updatedUser = { ...user, notifications: updatedList };
       setUser(updatedUser);
       syncUser(updatedUser);
@@ -66,14 +122,17 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
   };
 
   const handleMarkAllRead = () => {
-    const updated = notifications.map(n => ({ ...n, isRead: true }));
+    const notifIdsToMark = new Set(notifications.map(n => n.id));
+    const updated = (user?.notifications || []).map(n => notifIdsToMark.has(n.id) ? { ...n, isRead: true } : n);
     const updatedUser = { ...user, notifications: updated };
     setUser(updatedUser);
     syncUser(updatedUser);
   };
 
   const handleClearAll = () => {
-    const updatedUser = { ...user, notifications: [] };
+    const notifIdsToRemove = new Set(notifications.map(n => n.id));
+    const updated = (user?.notifications || []).filter(n => !notifIdsToRemove.has(n.id));
+    const updatedUser = { ...user, notifications: updated };
     setUser(updatedUser);
     syncUser(updatedUser);
     setSelectedNotif(null);
@@ -81,7 +140,7 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
 
   const handleDeleteNotif = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    const updatedList = notifications.filter(n => n.id !== id);
+    const updatedList = (user?.notifications || []).filter(n => n.id !== id);
     const updatedUser = { ...user, notifications: updatedList };
     setUser(updatedUser);
     syncUser(updatedUser);
@@ -109,33 +168,6 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
       setActiveTab('wellness');
     } else {
       setActiveTab('cycle');
-    }
-  };
-
-  const handleSyncNotificationsNow = async () => {
-    const scheduled = calculateScheduledNotifications(user, user.notificationSettings || getDefaultNotificationSettings());
-    if (scheduled && scheduled.length > 0) {
-      const existingNotifs = user.notifications || [];
-      const updatedList = [...existingNotifs];
-      const nowISO = new Date().toISOString();
-      scheduled.forEach(item => {
-        if (!updatedList.some(n => n.id === item.id)) {
-          updatedList.unshift({
-            id: item.id,
-            title: item.title,
-            body: item.body,
-            emoji: item.emoji,
-            timestamp: nowISO,
-            isRead: false,
-            phaseInfo: item.phaseInfo,
-            category: item.category,
-            detailedTip: item.detailedTip
-          });
-        }
-      });
-      const updatedUser = { ...user, notifications: updatedList };
-      setUser(updatedUser);
-      await syncUser(updatedUser);
     }
   };
 
@@ -247,17 +279,17 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
             {/* Action Toolbar & Filters */}
             <div className="bg-pink-50/50 dark:bg-stone-800/60 border-b border-pink-100/30">
               <div className="px-4 py-2 flex gap-1.5 overflow-x-auto scrollbar-hide text-xs">
-                {(['all', 'cycle', 'wellness', 'partner'] as const).map(cat => (
+                {availableCategories.map(cat => (
                   <button
-                    key={cat}
-                    onClick={() => setCategoryFilter(cat)}
+                    key={cat.id}
+                    onClick={() => setCategoryFilter(cat.id)}
                     className={`px-3 py-1.5 rounded-full font-bold uppercase text-[10px] tracking-wider transition-all whitespace-nowrap cursor-pointer ${
-                      categoryFilter === cat
+                      categoryFilter === cat.id
                         ? 'bg-pink-500 text-white shadow-sm'
                         : 'bg-white dark:bg-stone-800 text-stone-500 hover:text-pink-600'
                     }`}
                   >
-                    {cat === 'all' ? 'All' : cat === 'cycle' ? 'Cycle & Phase' : cat === 'wellness' ? 'Wellness' : 'Partner'}
+                    {cat.label}
                   </button>
                 ))}
               </div>

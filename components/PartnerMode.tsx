@@ -29,9 +29,10 @@ interface PartnerModeProps {
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
   partnerUser?: User | null;
   onLogout?: () => void;
+  onOpenNotificationCenter?: (notif?: any) => void;
 }
 
-const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders, setUser, partnerUser, onLogout }) => {
+const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders, setUser, partnerUser, onLogout, onOpenNotificationCenter }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
@@ -2659,7 +2660,13 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
 
             <button 
               type="button"
-              onClick={() => setIsNotificationsOpen(true)}
+              onClick={() => {
+                if (onOpenNotificationCenter) {
+                  onOpenNotificationCenter(null);
+                } else {
+                  setIsNotificationsOpen(true);
+                }
+              }}
               title="Notifications"
               className="p-2.5 rounded-2xl bg-white/60 hover:bg-white/90 text-indigo-600 transition-all duration-300 shadow-[inset_0_1.5px_2.5px_rgba(255,255,255,0.7),_0_4px_12px_rgba(99,102,241,0.05)] border border-indigo-50/50 cursor-pointer flex items-center justify-center relative active:scale-90"
             >
@@ -2855,7 +2862,13 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
           
           <button 
             type="button"
-            onClick={() => setIsNotificationsOpen(true)}
+            onClick={() => {
+              if (onOpenNotificationCenter) {
+                onOpenNotificationCenter(null);
+              } else {
+                setIsNotificationsOpen(true);
+              }
+            }}
             title="Notifications"
             className="p-2.5 rounded-2xl bg-white/60 hover:bg-white/90 text-indigo-600 transition-all duration-300 shadow-[inset_0_1.5px_2.5px_rgba(255,255,255,0.7),_0_4px_12px_rgba(99,102,241,0.05)] border border-indigo-50/50 cursor-pointer flex items-center justify-center relative active:scale-90"
           >

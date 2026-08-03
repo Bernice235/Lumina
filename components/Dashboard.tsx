@@ -128,7 +128,17 @@ const Dashboard: React.FC<DashboardProps> = ({
   });
   const [checkinSuccess, setCheckinSuccess] = useState(false);
 
-  const unreadSystemNotifications = user.notifications?.filter(n => !n.isRead) || [];
+  const unreadSystemNotifications = (user.notifications || []).filter(n => {
+    if (n.isRead) return false;
+    if (!user.isPartner) {
+      const isPartnerNotif = n.category === 'partner' || 
+                             n.isPartner === true || 
+                             (n.title && (n.title.toLowerCase().includes('partner') || n.title.toLowerCase().includes('companion'))) || 
+                             (n.body && (n.body.toLowerCase().includes('partner') || n.body.toLowerCase().includes('companion')));
+      if (isPartnerNotif) return false;
+    }
+    return true;
+  });
   const hasUnreadAlerts = (partnerUser?.partnerRequest?.status === 'pending') || 
                           (receivedGifts.length > 0) || 
                           (reminders.filter(r => !r.isCompleted).length > 0) ||
