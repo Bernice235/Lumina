@@ -152,6 +152,147 @@ export interface ScheduledNotificationItem {
   emoji: string;
   isPartner: boolean;
   category: 'cycle' | 'mood' | 'symptom' | 'wellness' | 'medication' | 'partner' | 'pregnancy';
+  phaseInfo?: string;
+  detailedTip?: string;
+}
+
+export function getPhaseDayNotification(user: any) {
+  if (!user || !user.lastPeriodStart) return null;
+
+  const cycleLen = user.cycleLength || 28;
+  const periodLen = user.periodLength || 5;
+
+  const lastStart = new Date(user.lastPeriodStart);
+  const start = new Date(lastStart.getFullYear(), lastStart.getMonth(), lastStart.getDate());
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  const diffTime = today.getTime() - start.getTime();
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+  const expectedMidnight = new Date(start.getTime() + cycleLen * 24 * 60 * 60 * 1000).getTime();
+  let hasLoggedNewPeriod = false;
+  if (user.periods && user.periods.length > 0) {
+    hasLoggedNewPeriod = user.periods.some((p: any) => new Date(p.startDate).setHours(0,0,0,0) >= expectedMidnight);
+  }
+
+  const isLate = diffDays > cycleLen && !hasLoggedNewPeriod;
+  const daysLate = isLate ? (diffDays - cycleLen) : 0;
+
+  let cycleDay = ((diffDays % cycleLen) + cycleLen) % cycleLen + 1;
+  if (isLate) {
+    cycleDay = cycleLen + daysLate;
+  }
+
+  let phaseName = 'Period Phase';
+  let phaseDay = 1;
+  let title = '';
+  let emoji = '🩸';
+  let body = '';
+  let detailedTip = '';
+
+  if (isLate) {
+    phaseName = 'Late Period Phase';
+    phaseDay = daysLate;
+    title = `Day ${daysLate} of Late Period Phase`;
+    emoji = '⏳';
+    body = `Your period is ${daysLate} ${daysLate === 1 ? 'day' : 'days'} past expected. Rest deeply and log your flow when it arrives.`;
+    detailedTip = `Lumina is tracking your cycle in late mode. Stress, diet, travel, or normal biological variations can shift your start date by a few days. Drink chamomile tea, stay hydrated, and use our Check-In card whenever your period begins.`;
+  } else if (cycleDay <= periodLen) {
+    phaseName = 'Period Phase';
+    phaseDay = cycleDay;
+    title = `Day ${phaseDay} of Period Phase`;
+    emoji = '🩸';
+
+    if (phaseDay === 1) {
+      body = 'Your cycle begins anew today. Progesterone and estrogen are at baseline. Honor your body with warm herbal tea, gentle heating pads, and deep rest.';
+      detailedTip = 'Day 1 brings uterine shedding as hormone levels reach their lowest point. Focus on pelvic comfort, gentle heat, high-iron nourishment, and quiet self-care.';
+    } else if (phaseDay === 2) {
+      body = 'Flow is naturally heaviest today. Replenish with iron-rich foods like dark leafy greens, stay hydrated, and take moments to rest.';
+      detailedTip = 'Day 2 commonly marks peak flow. Your body is working hard—support it with warm soups, berries, adequate hydration, and minimal strenuous exercise.';
+    } else if (phaseDay === 3) {
+      body = 'Uterine shedding eases. Practice restorative diaphragmatic breathing, light stretching, and gentle pelvic relaxation.';
+      detailedTip = 'Day 3 brings gradual stabilization. As cramping recedes, light walking and soft yoga help improve circulation and ease residual tension.';
+    } else if (phaseDay === 4) {
+      body = 'Estrogen begins its quiet upward arc. Energy is subtly returning. Enjoy warm baths and quiet creative reflection.';
+      detailedTip = 'Day 4 starts the early estrogen rise. You might feel a gentle lift in mood and mental clarity. It’s a wonderful time for journaling and soft planning.';
+    } else {
+      body = `Day ${phaseDay} of your period. Flow is wrapping up as renewal takes root and your body prepares for the follicular bloom.`;
+      detailedTip = 'Your menstrual phase is coming to a close. Energy continues to steady, paving the way for the energetic, inspiring follicular phase ahead.';
+    }
+  } else if (cycleDay <= cycleLen - 14) {
+    phaseName = 'Follicular Phase';
+    phaseDay = cycleDay - periodLen;
+    title = `Day ${phaseDay} of Follicular Phase`;
+    emoji = '🌱';
+
+    if (phaseDay === 1) {
+      body = 'Rising estrogen boosts brain neuroplasticity! An ideal day for brainstorming, setting fresh goals, and trying new skills.';
+      detailedTip = 'Day 1 of the Follicular Phase launches rising follicle-stimulating hormone (FSH). Cognitive clarity and optimism climb—seize this momentum for strategic planning!';
+    } else if (phaseDay === 2) {
+      body = 'Mental clarity and optimism increase. Try an energizing light workout, start a creative project, or plan social gatherings.';
+      detailedTip = 'As estrogen climbs, insulin sensitivity improves. Fuel your active mind with complex carbs, lean protein, and fresh fruits while starting exciting endeavors.';
+    } else if (phaseDay === 3) {
+      body = 'Skin collagen production surges with rising estrogen. Hydrate generously and nourish with antioxidant berries and fresh greens.';
+      detailedTip = 'Your biological glow is brightening! High estrogen supports skin elasticity and mental stamina. Embrace vibrant workouts and social connections.';
+    } else if (phaseDay === 4) {
+      body = 'Metabolic efficiency is high. Great day for strength training, complex problem solving, and fresh nutrient-dense salads.';
+      detailedTip = 'You are in prime follicular strength. Estrogen primes your muscle recovery and endurance, making today fantastic for productivity and active wellness.';
+    } else {
+      body = `Day ${phaseDay} of Follicular Phase. Peak creative momentum builds before ovulation. Your confidence and communication feel fluid.`;
+      detailedTip = 'The follicular phase is blossoming toward ovulation. Take advantage of high stamina, clear focus, and spontaneous creativity.';
+    }
+  } else if (cycleDay <= cycleLen - 10) {
+    phaseName = 'Ovulation Phase';
+    phaseDay = cycleDay - (cycleLen - 14);
+    if (phaseDay < 1) phaseDay = 1;
+    title = `Day ${phaseDay} of Ovulation Phase`;
+    emoji = '☀️';
+
+    if (phaseDay === 1) {
+      body = 'LH surge peak! You are at your most magnetic, articulate, and vibrant. Embrace social connection and present your ideas.';
+      detailedTip = 'Luteinizing Hormone (LH) spikes to trigger egg release. Testosterone and estrogen reach their joint peak—boosting libido, charisma, and verbal expression.';
+    } else {
+      body = `Day ${phaseDay} of Ovulation Phase. Peak fertile window and social radiance. Your energy is expansive and vibrant.`;
+      detailedTip = 'Your body is in peak reproductive vitality. Stay hydrated, enjoy social or romantic intimacy, and celebrate your natural magnetic radiance.';
+    }
+  } else {
+    phaseName = 'Luteal Phase';
+    phaseDay = cycleDay - (cycleLen - 10);
+    if (phaseDay < 1) phaseDay = 1;
+    title = `Day ${phaseDay} of Luteal Phase`;
+    emoji = '🍂';
+
+    if (phaseDay === 1) {
+      body = 'Progesterone rises, initiating nesting instincts. Shift focus to completing ongoing tasks, cozy organization, and calm routines.';
+      detailedTip = 'Following ovulation, the corpus luteum releases progesterone. Your metabolic energy shifts inward—making it ideal for organizing, auditing, and wrapping up projects.';
+    } else if (phaseDay === 2) {
+      body = 'Metabolism slightly increases. Fuel your body with complex carbs like sweet potatoes, oats, and roasted veggies for steady blood sugar.';
+      detailedTip = 'Progesterone slightly raises resting metabolic rate. Eat nutrient-dense, complex carbohydrates to keep blood sugar stable and prevent mood dips.';
+    } else if (phaseDay === 3) {
+      body = 'Serotonin may fluctuate. Enjoy magnesium-rich dark chocolate, chamomile tea, and early wind-down bedtime routines.';
+      detailedTip = 'Progesterone promotes calming GABA pathways but can lower serotonin. Magnesium, B6 vitamins, and soothing warm beverages keep anxiety at bay.';
+    } else if (phaseDay === 4) {
+      body = 'Emotional intuition is heightened. Set gentle boundaries, indulge in self-care, and create a quiet sanctuary at home.';
+      detailedTip = 'High sensitivity during mid-late luteal phase is a superpower for emotional reflection. Protect your boundaries and avoid unnecessary stress.';
+    } else {
+      body = `Day ${phaseDay} of Luteal Phase. Nesting mode active as your body prepares for renewal. Rest deeply, stretch softly, and protect your peace.`;
+      detailedTip = 'As hormones taper toward your next cycle, focus on rest, restorative sleep, cozy blankets, and nourishing foods as your body prepares for cleansing.';
+    }
+  }
+
+  return {
+    id: `phase_day_${today.toISOString().split('T')[0]}`,
+    phaseName,
+    phaseDay,
+    title,
+    emoji,
+    body,
+    detailedTip,
+    date: today.toISOString().split('T')[0],
+    category: 'cycle' as const,
+    phaseInfo: `${phaseName} • Day ${phaseDay}`
+  };
 }
 
 export function calculateScheduledNotifications(user: any, settings: any): ScheduledNotificationItem[] {
@@ -257,6 +398,23 @@ export function calculateScheduledNotifications(user: any, settings: any): Sched
       }
     }
   } else {
+    // Phase Day Notification (Today's specific phase day)
+    const phaseDayNotif = getPhaseDayNotification(user);
+    if (phaseDayNotif) {
+      items.push({
+        id: phaseDayNotif.id,
+        type: 'phaseDay',
+        title: phaseDayNotif.title,
+        body: phaseDayNotif.body,
+        date: phaseDayNotif.date,
+        emoji: phaseDayNotif.emoji,
+        isPartner: false,
+        category: 'cycle',
+        phaseInfo: phaseDayNotif.phaseInfo,
+        detailedTip: phaseDayNotif.detailedTip
+      });
+    }
+
     // Standard Cycle Notifications
     const predictions = getCyclePredictions(user);
 

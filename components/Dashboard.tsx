@@ -58,6 +58,7 @@ interface DashboardProps {
   togglePregnancy?: () => void;
   partnerRequests?: any[];
   handleLogout?: () => void;
+  onOpenNotificationCenter?: (notif?: any) => void;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ 
@@ -85,7 +86,8 @@ const Dashboard: React.FC<DashboardProps> = ({
   setVolume,
   togglePregnancy,
   partnerRequests = [],
-  handleLogout
+  handleLogout,
+  onOpenNotificationCenter
 }) => {
   const [affirmation, setAffirmation] = useState("Loading your daily inspiration...");
   const [selectedMood, setSelectedMood] = useState('Happy');
@@ -2044,8 +2046,16 @@ const Dashboard: React.FC<DashboardProps> = ({
         </div>
 
         <button 
-          onClick={() => setIsNotificationsOpen(true)}
+          onClick={() => {
+            if (onOpenNotificationCenter) {
+              onOpenNotificationCenter(null);
+            } else {
+              setIsNotificationsOpen(true);
+            }
+          }}
           className="p-2.5 rounded-2xl bg-white/60 hover:bg-white/90 text-pink-600 transition-all duration-300 shadow-[inset_0_1.5px_2.5px_rgba(255,255,255,0.7),_0_4px_12px_rgba(244,114,182,0.05)] border border-pink-50/50 cursor-pointer flex items-center justify-center relative active:scale-90"
+          id="dashboard-header-notification-bell"
+          title="Notification Center"
         >
           <Bell className={`w-5 h-5 ${hasUnreadAlerts ? 'animate-shake' : ''}`} />
           {/* Active Notifications dot if any partner requests or alerts are active */}
@@ -2240,6 +2250,10 @@ const Dashboard: React.FC<DashboardProps> = ({
                             };
                             setUser(updatedUser);
                             await syncUser(updatedUser);
+                          }
+                          if (onOpenNotificationCenter) {
+                            onOpenNotificationCenter(notif);
+                            setIsNotificationsOpen(false);
                           }
                         }}
                         className={`p-3 rounded-2xl border transition-all flex flex-col gap-1 cursor-pointer ${

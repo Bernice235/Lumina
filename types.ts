@@ -74,6 +74,19 @@ export interface SharingSettings {
   shareWellnessUpdates: boolean;
 }
 
+export interface AppNotification {
+  id: string;
+  title: string;
+  body: string;
+  emoji: string;
+  timestamp: string;
+  isRead: boolean;
+  phaseInfo?: string;
+  category?: 'cycle' | 'wellness' | 'medication' | 'partner' | 'pregnancy' | 'mood' | 'symptom';
+  detailedTip?: string;
+  isPartner?: boolean;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -145,7 +158,7 @@ export interface User {
   manualTransferAccount?: string;
   manualTransferName?: string;
   manualTransferName_?: string; // keeping compatible
-  notifications?: { id: string; title: string; body: string; emoji: string; timestamp: string; isRead: boolean }[];
+  notifications?: AppNotification[];
   yogaLogs?: { id: string; date: string; poseName: string; duration: number; benefit: string }[];
   latePeriodCheckIn?: { acknowledgedDate: string; daysLate: number; response: 'not_yet' | 'yes' | 'edited' };
   latePeriodDismissedDate?: string;
@@ -259,9 +272,12 @@ export interface Symptom {
 export interface DiaryEntry {
   id: string;
   date: string;
+  createdAt?: string;
+  updatedAt?: string;
   content: string;
   mood: string;
   emoji?: string;
+  cyclePhase?: string;
 }
 
 export interface SelfCareTask {
