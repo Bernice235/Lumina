@@ -131,15 +131,23 @@ const Dashboard: React.FC<DashboardProps> = ({
   const unreadSystemNotifications = (user.notifications || []).filter(n => {
     if (n.isRead) return false;
     if (!user.isPartner) {
-      const isPartnerNotif = n.category === 'partner' || 
-                             n.isPartner === true || 
-                             (n.title && (n.title.toLowerCase().includes('partner') || n.title.toLowerCase().includes('companion'))) || 
-                             (n.body && (n.body.toLowerCase().includes('partner') || n.body.toLowerCase().includes('companion')));
+      const isConnectionRequest = n.category === 'partner_request' || 
+                                  n.isPartnerRequest === true ||
+                                  (n.title && (n.title.toLowerCase().includes('request') || n.title.toLowerCase().includes('invite') || n.title.toLowerCase().includes('connection') || n.title.toLowerCase().includes('linked')));
+      if (isConnectionRequest) return true;
+
+      const isPartnerNotif = n.category === 'partner' || n.isPartner === true;
       if (isPartnerNotif) return false;
     }
     return true;
   });
-  const hasUnreadAlerts = (partnerUser?.partnerRequest?.status === 'pending') || 
+
+  const activePendingRequest = (partnerRequests && partnerRequests.find((r: any) => r.status === 'pending')) || 
+                               user.partnerRequest || 
+                               partnerUser?.partnerRequest;
+  const isPendingRequest = activePendingRequest?.status === 'pending';
+
+  const hasUnreadAlerts = isPendingRequest || 
                           (receivedGifts.length > 0) || 
                           (reminders.filter(r => !r.isCompleted).length > 0) ||
                           (unreadSystemNotifications.length > 0);
@@ -159,36 +167,42 @@ const Dashboard: React.FC<DashboardProps> = ({
   });
 
   useEffect(() => {
-    if (partnerUser?.partnerRequest?.status === 'pending') {
-      const requested = partnerUser.partnerRequest.requestedReceives || [];
+    if (activePendingRequest?.status === 'pending') {
+      const requested = activePendingRequest.requestedReceives || activePendingRequest.requested_permissions || [];
       setSharingPrefs({
-        shareCycleInfo: requested.some(r => r.includes('Period')),
-        shareFertilityInfo: requested.some(r => r.includes('Fertility') || r.includes('Ovulation')),
-        sharePregnancyInfo: requested.some(r => r.includes('Pregnancy')),
-        shareSymptoms: requested.some(r => r.includes('Symptom')),
-        shareMood: requested.some(r => r.includes('Mood')),
+        shareCycleInfo: requested.some((r: string) => r.includes('Period')),
+        shareFertilityInfo: requested.some((r: string) => r.includes('Fertility') || r.includes('Ovulation')),
+        sharePregnancyInfo: requested.some((r: string) => r.includes('Pregnancy')),
+        shareSymptoms: requested.some((r: string) => r.includes('Symptom')),
+        shareMood: requested.some((r: string) => r.includes('Mood')),
         shareIntimacyInfo: false, // Default to false for privacy
         shareDoctorReports: false, // Default to false for privacy
-        shareAppointmentReminders: requested.some(r => r.includes('Appointment') || r.includes('Doctor')),
-        shareWellnessUpdates: requested.some(r => r.includes('Wellness') || r.includes('Suggestions') || r.includes('Support') || r.includes('Gift') || r.includes('Messages')),
+        shareAppointmentReminders: requested.some((r: string) => r.includes('Appointment') || r.includes('Doctor')),
+        shareWellnessUpdates: requested.some((r: string) => r.includes('Wellness') || r.includes('Suggestions') || r.includes('Support') || r.includes('Gift') || r.includes('Messages')),
       });
     }
-  }, [partnerUser?.partnerRequest]);
+  }, [activePendingRequest?.status]);
 
   const handleApproveAll = async () => {
-    if (!partnerUser || !setUser) return;
-    const requested = partnerUser.partnerRequest?.requestedReceives || [];
+    if (!setUser) return;
+    const activeReq = activePendingRequest;
+    if (!activeReq) return;
+
+    const targetPartnerId = partnerUser?.id || user.partnerId || activeReq.partnerId || activeReq.partner_id;
+    const targetPartnerName = partnerUser?.name || user.partnerName || activeReq.partnerName || 'Partner';
+    const requested = activeReq.requestedReceives || activeReq.requested_permissions || ['Period Updates', 'Fertility Updates', 'Wellness Support', 'Symptom Updates'];
+
     const approvedSettings = {
-      shareCycleInfo: requested.some(r => r.includes('Period')),
-      shareFertilityInfo: requested.some(r => r.includes('Fertility') || r.includes('Ovulation')),
-      sharePregnancyInfo: requested.some(r => r.includes('Pregnancy')),
-      shareSymptoms: requested.some(r => r.includes('Symptom')),
-      shareMood: requested.some(r => r.includes('Mood')),
+      shareCycleInfo: requested.some((r: string) => r.includes('Period')),
+      shareFertilityInfo: requested.some((r: string) => r.includes('Fertility') || r.includes('Ovulation')),
+      sharePregnancyInfo: requested.some((r: string) => r.includes('Pregnancy')),
+      shareSymptoms: requested.some((r: string) => r.includes('Symptom')),
+      shareMood: requested.some((r: string) => r.includes('Mood')),
       shareNotes: user.sharingSettings?.shareNotes || false,
       shareIntimacyInfo: false,
       shareDoctorReports: false,
-      shareAppointmentReminders: requested.some(r => r.includes('Appointment') || r.includes('Doctor')),
-      shareWellnessUpdates: requested.some(r => r.includes('Wellness') || r.includes('Suggestions') || r.includes('Support') || r.includes('Gift') || r.includes('Messages')),
+      shareAppointmentReminders: requested.some((r: string) => r.includes('Appointment') || r.includes('Doctor')),
+      shareWellnessUpdates: requested.some((r: string) => r.includes('Wellness') || r.includes('Suggestions') || r.includes('Support') || r.includes('Gift') || r.includes('Messages')),
     };
     
     // Update user
@@ -196,29 +210,27 @@ const Dashboard: React.FC<DashboardProps> = ({
       ...user,
       sharingSettings: approvedSettings,
       isPartnerLinked: true,
-      partnerRequest: partnerUser.partnerRequest ? {
-        ...partnerUser.partnerRequest,
+      partnerId: targetPartnerId,
+      partnerName: targetPartnerName,
+      partnerRequest: {
+        ...activeReq,
         status: 'approved' as const
-      } : undefined
+      }
     };
     setUser(updatedUser);
     await syncUser(updatedUser);
 
-    // Update partner request status to approved
-    const updatedPartner = {
-      ...partnerUser,
-      partnerRequest: {
-        ...(partnerUser.partnerRequest || {
-          partnerId: user.id,
-          partnerName: user.name,
-          requestedReceives: requested,
-          timestamp: new Date().toISOString()
-        }),
-        status: 'approved' as const
-      },
-      isPartnerLinked: true
-    };
-    await syncUser(updatedPartner);
+    if (partnerUser) {
+      const updatedPartner = {
+        ...partnerUser,
+        partnerRequest: {
+          ...activeReq,
+          status: 'approved' as const
+        },
+        isPartnerLinked: true
+      };
+      await syncUser(updatedPartner);
+    }
 
     if (partnerRequests && partnerRequests.length > 0) {
       for (const req of partnerRequests) {
@@ -228,17 +240,23 @@ const Dashboard: React.FC<DashboardProps> = ({
       }
     }
 
-    await addNotificationToUser(partnerUser.id, {
-      title: '💖 Connection Approved!',
-      body: `${user.name} approved your partner connection request! You are now connected in Partner Mode.`,
-      emoji: '💖'
-    });
+    if (targetPartnerId) {
+      await addNotificationToUser(targetPartnerId, {
+        title: '💖 Connection Approved!',
+        body: `${user.name} approved your partner connection request! You are now connected in Partner Mode.`,
+        emoji: '💖'
+      });
+    }
 
-    alert(`You successfully approved ${partnerUser.name}'s connection and sharing preferences! 💖`);
+    alert(`You successfully approved ${targetPartnerName}'s connection and sharing preferences! 💖`);
   };
 
   const handleSaveCustomSharing = async () => {
-    if (!partnerUser || !setUser) return;
+    if (!setUser) return;
+    const activeReq = activePendingRequest;
+    const targetPartnerId = partnerUser?.id || user.partnerId || activeReq?.partnerId || activeReq?.partner_id;
+    const targetPartnerName = partnerUser?.name || user.partnerName || activeReq?.partnerName || 'Partner';
+
     const updatedUser = {
       ...user,
       sharingSettings: {
@@ -247,28 +265,32 @@ const Dashboard: React.FC<DashboardProps> = ({
         shareNotes: user.sharingSettings?.shareNotes || false
       },
       isPartnerLinked: true,
-      partnerRequest: partnerUser.partnerRequest ? {
-        ...partnerUser.partnerRequest,
+      partnerId: targetPartnerId,
+      partnerName: targetPartnerName,
+      partnerRequest: activeReq ? {
+        ...activeReq,
         status: 'approved' as const
       } : undefined
     };
     setUser(updatedUser);
     await syncUser(updatedUser);
 
-    const updatedPartner = {
-      ...partnerUser,
-      partnerRequest: {
-        ...(partnerUser.partnerRequest || {
-          partnerId: user.id,
-          partnerName: user.name,
-          requestedReceives: [],
-          timestamp: new Date().toISOString()
-        }),
-        status: 'approved' as const
-      },
-      isPartnerLinked: true
-    };
-    await syncUser(updatedPartner);
+    if (partnerUser) {
+      const updatedPartner = {
+        ...partnerUser,
+        partnerRequest: {
+          ...(partnerUser.partnerRequest || activeReq || {
+            partnerId: user.id,
+            partnerName: user.name,
+            requestedReceives: [],
+            timestamp: new Date().toISOString()
+          }),
+          status: 'approved' as const
+        },
+        isPartnerLinked: true
+      };
+      await syncUser(updatedPartner);
+    }
 
     if (partnerRequests && partnerRequests.length > 0) {
       for (const req of partnerRequests) {
@@ -278,41 +300,49 @@ const Dashboard: React.FC<DashboardProps> = ({
       }
     }
 
-    await addNotificationToUser(partnerUser.id, {
-      title: '💖 Connection Approved!',
-      body: `${user.name} approved your partner connection request! You are now connected in Partner Mode.`,
-      emoji: '💖'
-    });
+    if (targetPartnerId) {
+      await addNotificationToUser(targetPartnerId, {
+        title: '💖 Connection Approved!',
+        body: `${user.name} approved your partner connection request! You are now connected in Partner Mode.`,
+        emoji: '💖'
+      });
+    }
 
     setIsCustomizingSharing(false);
-    alert(`Custom privacy preferences saved and connection approved for ${partnerUser.name}! 💮`);
+    alert(`Custom privacy preferences saved and connection approved for ${targetPartnerName}! 💮`);
   };
 
   const handleDeclineRequest = async () => {
-    if (!partnerUser || !setUser) return;
-    if (confirm(`Are you sure you want to decline ${partnerUser.name}'s request?`)) {
-      const updatedPartner = {
-        ...partnerUser,
-        partnerRequest: {
-          ...(partnerUser.partnerRequest || {
-            partnerId: user.id,
-            partnerName: user.name,
-            requestedReceives: [],
-            timestamp: new Date().toISOString()
-          }),
-          status: 'declined' as const
-        },
-        isPartnerLinked: false
-      };
-      await syncUser(updatedPartner);
+    if (!setUser) return;
+    const activeReq = activePendingRequest;
+    const targetPartnerId = partnerUser?.id || user.partnerId || activeReq?.partnerId || activeReq?.partner_id;
+    const targetPartnerName = partnerUser?.name || user.partnerName || activeReq?.partnerName || 'Partner';
+
+    if (confirm(`Are you sure you want to decline ${targetPartnerName}'s connection request?`)) {
+      if (partnerUser) {
+        const updatedPartner = {
+          ...partnerUser,
+          partnerRequest: {
+            ...(partnerUser.partnerRequest || activeReq || {
+              partnerId: user.id,
+              partnerName: user.name,
+              requestedReceives: [],
+              timestamp: new Date().toISOString()
+            }),
+            status: 'declined' as const
+          },
+          isPartnerLinked: false
+        };
+        await syncUser(updatedPartner);
+      }
 
       const updatedUser = {
         ...user,
         partnerId: undefined,
         partnerName: '',
         isPartnerLinked: false,
-        partnerRequest: partnerUser.partnerRequest ? {
-          ...partnerUser.partnerRequest,
+        partnerRequest: activeReq ? {
+          ...activeReq,
           status: 'declined' as const
         } : undefined
       };
@@ -327,13 +357,13 @@ const Dashboard: React.FC<DashboardProps> = ({
         }
       }
 
-      await addNotificationToUser(partnerUser.id, {
-        title: '💔 Request Declined',
-        body: `${user.name} declined your partner connection request. You cannot create or access a partner account for this user.`,
-        emoji: '💔'
-      });
-
-      alert(`Request from ${partnerUser.name} declined.`);
+      if (targetPartnerId) {
+        await addNotificationToUser(targetPartnerId, {
+          title: '💔 Connection Declined',
+          body: `${user.name} declined the partner connection request.`,
+          emoji: '💔'
+        });
+      }
     }
   };
 
@@ -2292,18 +2322,19 @@ const Dashboard: React.FC<DashboardProps> = ({
               )}
 
               {/* Partner connection request notification */}
-              {partnerUser?.partnerRequest?.status === 'pending' && (
+              {isPendingRequest && activePendingRequest && (
                 <div className="bg-gradient-to-br from-indigo-50 to-purple-50 p-4 rounded-3xl border border-indigo-100 shadow-[inset_0_2px_4px_rgba(255,255,255,0.8),_0_6px_15px_rgba(244,114,182,0.03)] space-y-3 animate-fadeIn">
                   <div className="flex gap-2">
                     <span className="text-xl shrink-0">💕</span>
                     <div>
                       <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Companion Link</p>
-                      <p className="text-xs text-indigo-900 font-bold mt-0.5">{partnerUser.name} requested to link accounts!</p>
+                      <p className="text-xs text-indigo-900 font-bold mt-0.5">{partnerUser?.name || user.partnerName || activePendingRequest.partnerName || 'A partner'} requested to link accounts!</p>
                     </div>
                   </div>
                   <button 
                     onClick={() => {
                       setIsNotificationsOpen(false);
+                      window.scrollTo({ top: 400, behavior: 'smooth' });
                     }}
                     className="w-full py-2 bg-indigo-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-md hover:bg-indigo-700 transition-all text-center block"
                   >
@@ -2379,14 +2410,14 @@ const Dashboard: React.FC<DashboardProps> = ({
       )}
 
       {/* Step 3 (Partner Connection Request) & Step 4 (Privacy Controls) */}
-      {partnerUser?.partnerRequest?.status === 'pending' && (
+      {isPendingRequest && activePendingRequest && (
         <section className="bg-gradient-to-br from-purple-50 to-pink-50 p-8 rounded-[2.5rem] border border-pink-100 shadow-sm space-y-6 animate-fadeIn">
           <div className="flex items-start gap-4">
             <span className="text-3xl">💕</span>
             <div className="space-y-1">
               <h3 className="text-2xl font-serif text-indigo-950 italic">Partner Connection Request</h3>
               <p className="text-sm text-gray-600">
-                <span className="font-bold text-indigo-600">{partnerUser.name}</span> would like to connect on Lumina and has requested to receive the following:
+                <span className="font-bold text-indigo-600">{partnerUser?.name || user.partnerName || activePendingRequest.partnerName || 'Your partner'}</span> would like to connect on Lumina and has requested to receive the following:
               </p>
             </div>
           </div>
@@ -2394,7 +2425,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           <div className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl border border-pink-100/50">
             <h4 className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-3">Requested Categories:</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-indigo-900">
-              {partnerUser.partnerRequest.requestedReceives?.map((reqItem, i) => (
+              {(activePendingRequest.requestedReceives || activePendingRequest.requested_permissions || ['Period Updates', 'Fertility Updates', 'Wellness Support', 'Symptom Updates']).map((reqItem: string, i: number) => (
                 <div key={i} className="flex items-center gap-2">
                   <span className="text-pink-500">✓</span>
                   <span>{reqItem}</span>

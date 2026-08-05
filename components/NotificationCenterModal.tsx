@@ -73,16 +73,48 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
     }
   }, [isOpen, initialSelectedNotif]);
 
+  // Ensure that if user has a pending partnerRequest or partnerId, a notification exists
+  useEffect(() => {
+    if (user && !user.isPartner && (user.partnerRequest?.status === 'pending' || (user.partnerId && !user.isPartnerLinked))) {
+      const existingNotif = (user.notifications || []).some(n => 
+        n.category === 'partner_request' || n.isPartnerRequest || (n.title && n.title.toLowerCase().includes('request'))
+      );
+      if (!existingNotif) {
+        const partnerName = user.partnerRequest?.partnerName || user.partnerName || 'Your partner';
+        const notifObj = {
+          id: `notif_partner_req_${Date.now()}`,
+          title: '💕 New Partner Connection Request',
+          body: `${partnerName} requested to connect on Partner Mode. Tap to review and accept or decline.`,
+          emoji: '💕',
+          timestamp: new Date().toISOString(),
+          isRead: false,
+          category: 'partner_request',
+          isPartnerRequest: true
+        };
+        const updatedUser = {
+          ...user,
+          notifications: [notifObj, ...(user.notifications || [])]
+        };
+        setUser(updatedUser);
+        syncUser(updatedUser);
+      }
+    }
+  }, [user?.partnerRequest?.status, user?.partnerId, user?.isPartner, user?.isPartnerLinked]);
+
   if (!isOpen) return null;
 
-  // Filter out partner notifications in User Mode (!user?.isPartner)
+  // Filter notifications in User Mode (!user?.isPartner)
   const allNotifications = user?.notifications || [];
   const notifications = allNotifications.filter(n => {
     if (!user?.isPartner) {
-      const isPartnerNotif = n.category === 'partner' || 
-                             n.isPartner === true || 
-                             (n.title && (n.title.toLowerCase().includes('partner') || n.title.toLowerCase().includes('companion'))) || 
-                             (n.body && (n.body.toLowerCase().includes('partner') || n.body.toLowerCase().includes('companion')));
+      // ALWAYS keep partner requests, invites, and connection notifications visible!
+      const isConnectionRequest = n.category === 'partner_request' || 
+                                  n.isPartnerRequest === true ||
+                                  (n.title && (n.title.toLowerCase().includes('request') || n.title.toLowerCase().includes('invite') || n.title.toLowerCase().includes('connection') || n.title.toLowerCase().includes('linked')));
+      if (isConnectionRequest) return true;
+
+      // Filter out general partner-mode tips/reminders
+      const isPartnerNotif = n.category === 'partner' || n.isPartner === true;
       return !isPartnerNotif;
     }
     return true;
@@ -90,23 +122,17 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
-  const availableCategories: Array<{ id: 'all' | 'cycle' | 'wellness' | 'partner'; label: string }> = user?.isPartner
-    ? [
-        { id: 'all', label: 'All' },
-        { id: 'partner', label: 'Partner Updates' },
-        { id: 'wellness', label: 'Wellness Tips' },
-        { id: 'cycle', label: 'Cycle & Phase' },
-      ]
-    : [
-        { id: 'all', label: 'All' },
-        { id: 'cycle', label: 'Cycle & Phase' },
-        { id: 'wellness', label: 'Wellness' },
-      ];
+  const availableCategories: Array<{ id: 'all' | 'cycle' | 'wellness' | 'partner'; label: string }> = [
+    { id: 'all', label: 'All' },
+    { id: 'partner', label: user?.isPartner ? 'Partner Updates' : 'Partner Requests' },
+    { id: 'cycle', label: 'Cycle & Phase' },
+    { id: 'wellness', label: 'Wellness' },
+  ];
 
   const filteredNotifications = notifications.filter(n => {
     if (categoryFilter === 'cycle') return n.category === 'cycle' || n.category === 'pregnancy' || n.title.toLowerCase().includes('phase') || n.title.toLowerCase().includes('period') || n.title.toLowerCase().includes('ovulation') || n.title.toLowerCase().includes('growth');
     if (categoryFilter === 'wellness') return n.category === 'wellness' || n.category === 'symptom' || n.category === 'mood' || n.title.toLowerCase().includes('water') || n.title.toLowerCase().includes('hydration') || n.title.toLowerCase().includes('medication');
-    if (categoryFilter === 'partner') return n.category === 'partner' || n.title.toLowerCase().includes('partner') || n.title.toLowerCase().includes('companion') || n.isPartner;
+    if (categoryFilter === 'partner') return n.category === 'partner' || n.category === 'partner_request' || n.isPartnerRequest || n.title.toLowerCase().includes('partner') || n.title.toLowerCase().includes('request') || n.title.toLowerCase().includes('invite') || n.title.toLowerCase().includes('companion') || n.isPartner;
     return true;
   });
 
@@ -156,8 +182,9 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
       setActiveTab('diary');
     } else if (text.includes('water') || text.includes('hydration') || text.includes('sip')) {
       setActiveTab('water');
-    } else if (text.includes('partner') || text.includes('companion') || notif.category === 'partner') {
+    } else if (text.includes('partner') || text.includes('companion') || text.includes('request') || text.includes('invite') || notif.category === 'partner' || notif.category === 'partner_request' || notif.isPartnerRequest) {
       setActiveTab('partner');
+      window.dispatchEvent(new CustomEvent('lumina-set-partner-subtab', { detail: 'requests' }));
     } else if (text.includes('medication') || text.includes('pill') || text.includes('vitamin')) {
       setActiveTab('settings');
     } else if (text.includes('music') || text.includes('song') || text.includes('sound')) {
@@ -358,6 +385,19 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
                         <p className="text-[11px] text-stone-600 dark:text-stone-300 mt-1 leading-relaxed line-clamp-2">
                           {notif.body}
                         </p>
+
+                        {(notif.category === 'partner_request' || notif.isPartnerRequest || (notif.title && (notif.title.toLowerCase().includes('request') || notif.title.toLowerCase().includes('invite')))) && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleActionClick(notif);
+                            }}
+                            className="mt-2.5 w-full py-2 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider shadow-sm hover:scale-[1.01] transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                          >
+                            <span>Review & Approve Request 💖</span>
+                          </button>
+                        )}
+
                         <div className="flex items-center justify-between mt-2 pt-1 border-t border-stone-100 dark:border-stone-800/50">
                           <p className="text-[9px] text-stone-400 font-mono">
                             {new Date(notif.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' })} • {new Date(notif.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

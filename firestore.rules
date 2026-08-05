@@ -80,8 +80,8 @@ service cloud.firestore {
       allow list: if false;
       allow create: if isOwner(userId) && isValidUser(incoming());
       allow update: if (isOwner(userId) && isValidUser(incoming())) || 
-                     (isSignedIn() && isPartnerOf(userId) && incoming().diff(existing()).affectedKeys().hasOnly(['partnerId', 'partnerName', 'isPartnerLinked', 'sharingSettings'])) ||
-                     (isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['referralCount']) && incoming().referralCount is number);
+                     (isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['partnerId', 'partnerName', 'isPartnerLinked', 'sharingSettings', 'partnerRequest', 'notifications', 'referralCount'])) ||
+                     (isSignedIn() && isPartnerOf(userId));
       
       match /gifts/{giftId} {
         allow read: if isOwner(userId);

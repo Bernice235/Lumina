@@ -2029,10 +2029,12 @@ const App: React.FC = () => {
                 const unreadNotifCount = (user?.notifications || []).filter(n => {
                   if (n.isRead) return false;
                   if (!user?.isPartner) {
-                    const isPartnerNotif = n.category === 'partner' || 
-                                           n.isPartner === true || 
-                                           (n.title && (n.title.toLowerCase().includes('partner') || n.title.toLowerCase().includes('companion'))) || 
-                                           (n.body && (n.body.toLowerCase().includes('partner') || n.body.toLowerCase().includes('companion')));
+                    const isConnectionRequest = n.category === 'partner_request' || 
+                                                n.isPartnerRequest === true ||
+                                                (n.title && (n.title.toLowerCase().includes('request') || n.title.toLowerCase().includes('invite') || n.title.toLowerCase().includes('connection') || n.title.toLowerCase().includes('linked')));
+                    if (isConnectionRequest) return true;
+
+                    const isPartnerNotif = n.category === 'partner' || n.isPartner === true;
                     if (isPartnerNotif) return false;
                   }
                   return true;

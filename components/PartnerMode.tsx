@@ -16,6 +16,7 @@ import {
   subscribeToPartnerRequests,
   submitPartnerRequest,
   updatePartnerRequestStatus,
+  addNotificationToUser,
   completePartnerConnection,
   getUserDisplayName,
   getCleanName,
@@ -501,6 +502,23 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
       const inviteData = await acceptInvite(partnerCodeInput.toUpperCase(), user.id, user.name);
       if (inviteData) {
         setConnectionRequest(inviteData);
+        const updatedUser = {
+          ...user,
+          partnerId: inviteData.senderId,
+          partnerName: inviteData.senderName,
+          isPartner: true,
+          isPartnerLinked: false,
+          partnerRequest: {
+            partnerId: user.id,
+            partnerName: user.name,
+            requestedReceives: ['Period Updates', 'Fertility Updates', 'Wellness Support', 'Symptom Updates'],
+            status: 'pending' as const,
+            timestamp: new Date().toISOString()
+          }
+        };
+        setUser(updatedUser);
+        localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+        localStorage.setItem('lumina_biometric_user', JSON.stringify(updatedUser));
         setOnboardingStep(1);
       }
     } catch (err: any) {
@@ -1369,29 +1387,42 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                 onClick={async () => {
                   setLoading(true);
                   try {
+                    const targetPartnerId = user.partnerId || connectionRequest?.senderId || '';
+                    const targetPartnerName = user.partnerName || connectionRequest?.senderName || 'Partner';
+
                     const req = {
-                      partnerId: user.partnerId || '',
-                      partnerName: user.partnerName || '',
+                      partnerId: user.id,
+                      partnerName: user.name,
                       requestedReceives: requestedReceives,
                       status: 'pending' as const,
                       timestamp: new Date().toISOString()
                     };
                     const updatedUser = {
                       ...user,
+                      partnerId: targetPartnerId,
+                      partnerName: targetPartnerName,
                       partnerRequest: req,
                       onboardingCompleted: false
                     };
                     setUser(updatedUser);
                     await syncUser(updatedUser);
 
-                    // Create real-time Firestore / Sandbox PartnerRequest document!
-                    await submitPartnerRequest(
-                      user.partnerId || '', // user_id (The tracked user)
-                      user.id || '',        // partner_id (Michael, the logged-in partner)
-                      user.name || '',      // partnerName (Michael)
-                      user.email || '',     // partnerEmail (Michael)
-                      requestedReceives     // requested_permissions
-                    );
+                    if (targetPartnerId) {
+                      // Create real-time Firestore / Sandbox PartnerRequest document!
+                      await submitPartnerRequest(
+                        targetPartnerId,      // user_id (The tracked user)
+                        user.id || '',        // partner_id (Michael, the logged-in partner)
+                        user.name || '',      // partnerName (Michael)
+                        user.email || '',     // partnerEmail (Michael)
+                        requestedReceives     // requested_permissions
+                      );
+
+                      await addNotificationToUser(targetPartnerId, {
+                        title: '💕 New Partner Connection Request',
+                        body: `${user.name} requested to connect on Partner Mode. Tap to review and accept or decline.`,
+                        emoji: '💕'
+                      });
+                    }
 
                     setPartnerStep(3);
                   } catch (err) {
@@ -1524,7 +1555,11 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
     );
   }
 
-  if (!user.isPartner && !user.partnerId) {
+  const hasPendingNotificationRequest = (user.notifications || []).some(n => 
+    (n.category === 'partner_request' || n.isPartnerRequest || (n.title && n.title.toLowerCase().includes('request')))
+  );
+
+  if (!user.isPartner && !user.partnerId && !incomingRequests.some(r => r.status === 'pending') && user.partnerRequest?.status !== 'pending' && !hasPendingNotificationRequest) {
     return (
       <div className="space-y-8 animate-fadeIn pb-24 font-sans select-none">
         <header className="bg-gradient-to-br from-pink-500 to-rose-500 p-10 rounded-[3rem] shadow-xl text-white text-center">
@@ -1723,8 +1758,16 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
     );
   }
 
-  if (!user.isPartner && (user.partnerId || incomingRequests.some(r => r.status === 'pending'))) {
-    const activePendingRequest = incomingRequests.find(r => r.status === 'pending');
+  if (!user.isPartner && (user.partnerId || incomingRequests.some(r => r.status === 'pending') || user.partnerRequest?.status === 'pending' || hasPendingNotificationRequest)) {
+    const activePendingRequest = incomingRequests.find(r => r.status === 'pending') || 
+      (user.partnerRequest?.status === 'pending' ? {
+        id: `${user.id}_${user.partnerRequest.partnerId || 'partner'}`,
+        user_id: user.id,
+        partner_id: user.partnerRequest.partnerId || user.partnerId || '',
+        partnerName: user.partnerRequest.partnerName || user.partnerName || 'Your partner',
+        requested_permissions: user.partnerRequest.requestedReceives || ['Period Updates', 'Fertility Updates', 'Wellness Support', 'Symptom Updates'],
+        status: 'pending' as const
+      } : null);
     const isPendingApproval = activePendingRequest ? true : (linkedUser?.partnerRequest?.status === 'pending');
     const isApproved = activePendingRequest ? false : (linkedUser?.partnerRequest?.status === 'approved');
     const requestedPermissionsList = activePendingRequest 

@@ -164,28 +164,29 @@ export const createInvite = async (userId: string, userName: string, userEmail?:
   }
 };
 
-export const addNotificationToUser = async (targetUserId: string, notification: { title: string; body: string; emoji?: string }) => {
+export const addNotificationToUser = async (targetUserId: string, notification: { title: string; body: string; emoji?: string; category?: string; isPartnerRequest?: boolean }) => {
+  const isReq = notification.isPartnerRequest || notification.category === 'partner_request' || notification.title.toLowerCase().includes('request') || notification.title.toLowerCase().includes('invite');
   const notifObj = {
     id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
     title: notification.title,
     body: notification.body,
-    emoji: notification.emoji || '🔔',
+    emoji: notification.emoji || (isReq ? '💕' : '🔔'),
     timestamp: new Date().toISOString(),
-    isRead: false
+    isRead: false,
+    category: notification.category || (isReq ? 'partner_request' : undefined),
+    isPartnerRequest: isReq
   };
 
   if (isSandboxId(targetUserId)) {
     const raw = localStorage.getItem(`lumina_user_${targetUserId}`) || localStorage.getItem('lumina_user');
     if (raw) {
       const userObj = JSON.parse(raw);
-      if (userObj.id === targetUserId) {
-        const existing = userObj.notifications || [];
-        const updated = {
-          ...userObj,
-          notifications: [notifObj, ...existing]
-        };
-        await syncUser(updated);
-      }
+      const existing = userObj.notifications || [];
+      const updated = {
+        ...userObj,
+        notifications: cleanUndefined([notifObj, ...existing])
+      };
+      await syncUser(updated);
     }
     return;
   }
@@ -510,6 +511,44 @@ export const submitPartnerRequest = async (userId: string, partnerId: string, pa
     const filtered = list.filter((r: any) => !(r.user_id === userId && r.partner_id === partnerId));
     filtered.push(requestData);
     localStorage.setItem('lumina_partner_requests', JSON.stringify(filtered));
+
+    // Update target user in local storage
+    const rawUser = localStorage.getItem(`lumina_user_${userId}`) || localStorage.getItem('lumina_user');
+    if (rawUser) {
+      const targetUserObj = JSON.parse(rawUser);
+      const notifObj = {
+        id: `notif_partner_req_${Date.now()}`,
+        title: '💕 New Partner Connection Request',
+        body: `${partnerName} requested to connect on Partner Mode. Tap to review and accept or decline.`,
+        emoji: '💕',
+        timestamp: new Date().toISOString(),
+        isRead: false,
+        category: 'partner_request',
+        isPartnerRequest: true
+      };
+      const existingNotifs = targetUserObj.notifications || [];
+      const updatedUser = {
+        ...targetUserObj,
+        partnerId: partnerId,
+        partnerName: partnerName,
+        partnerRequest: {
+          partnerId,
+          partnerName,
+          partnerEmail,
+          requestedReceives: requestedPermissions,
+          status: 'pending' as const,
+          timestamp: new Date().toISOString()
+        },
+        notifications: [notifObj, ...existingNotifs.filter((n: any) => n.id !== notifObj.id)]
+      };
+      localStorage.setItem(`lumina_user_${userId}`, JSON.stringify(updatedUser));
+      localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: `lumina_user_${userId}`,
+        newValue: JSON.stringify(updatedUser)
+      }));
+    }
+
     window.dispatchEvent(new StorageEvent('storage', {
       key: 'lumina_partner_requests',
       newValue: JSON.stringify(filtered)
@@ -520,6 +559,36 @@ export const submitPartnerRequest = async (userId: string, partnerId: string, pa
   const path = `partner_requests/${request_id}`;
   try {
     await setDoc(doc(db, "partner_requests", request_id), requestData);
+
+    const userRef = doc(db, "users", userId);
+    const snap = await getDoc(userRef);
+    if (snap.exists()) {
+      const targetUserData = snap.data();
+      const notifObj = {
+        id: `notif_partner_req_${Date.now()}`,
+        title: '💕 New Partner Connection Request',
+        body: `${partnerName} requested to connect on Partner Mode. Tap to review and accept or decline.`,
+        emoji: '💕',
+        timestamp: new Date().toISOString(),
+        isRead: false,
+        category: 'partner_request',
+        isPartnerRequest: true
+      };
+      const existingNotifs = targetUserData.notifications || [];
+      await updateDoc(userRef, {
+        partnerId: partnerId,
+        partnerName: partnerName,
+        partnerRequest: {
+          partnerId,
+          partnerName,
+          partnerEmail,
+          requestedReceives: requestedPermissions,
+          status: 'pending',
+          timestamp: new Date().toISOString()
+        },
+        notifications: [notifObj, ...existingNotifs.filter((n: any) => n.id !== notifObj.id)]
+      });
+    }
     return request_id;
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);

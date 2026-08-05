@@ -82,9 +82,10 @@ export interface AppNotification {
   timestamp: string;
   isRead: boolean;
   phaseInfo?: string;
-  category?: 'cycle' | 'wellness' | 'medication' | 'partner' | 'pregnancy' | 'mood' | 'symptom';
+  category?: 'cycle' | 'wellness' | 'medication' | 'partner' | 'partner_request' | 'pregnancy' | 'mood' | 'symptom';
   detailedTip?: string;
   isPartner?: boolean;
+  isPartnerRequest?: boolean;
 }
 
 export interface User {
