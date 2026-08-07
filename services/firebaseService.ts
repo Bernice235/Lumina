@@ -36,6 +36,33 @@ const isSandboxId = (id?: string | null): boolean => {
   return id.startsWith('sandbox_') || id.startsWith('offline_');
 };
 
+export const checkIsOnboardingCompleted = (userObj?: Partial<User> | null, backupObj?: Partial<User> | null): boolean => {
+  if (!userObj && !backupObj) return false;
+
+  // Explicit false takes strict precedence (new registrations, manually reset onboarding)
+  if (userObj?.onboardingCompleted === false) return false;
+  if (backupObj?.onboardingCompleted === false && userObj?.onboardingCompleted !== true) return false;
+
+  // Explicit true
+  if (userObj?.onboardingCompleted === true) return true;
+  if (backupObj?.onboardingCompleted === true) return true;
+
+  // Fallback check for legacy user accounts without onboardingCompleted field
+  const hasLoggedData = !!(
+    (userObj?.periods && userObj.periods.length > 0) ||
+    (userObj?.periodDates && userObj.periodDates.length > 0) ||
+    (userObj?.symptoms && userObj.symptoms.length > 0) ||
+    (userObj?.moodLogs && userObj.moodLogs.length > 0) ||
+    (userObj?.diaryEntries && userObj.diaryEntries.length > 0) ||
+    (userObj?.bcLogs && userObj.bcLogs.length > 0) ||
+    (backupObj?.periods && backupObj.periods.length > 0) ||
+    (backupObj?.symptoms && backupObj.symptoms.length > 0) ||
+    (backupObj?.moodLogs && backupObj.moodLogs.length > 0)
+  );
+
+  return hasLoggedData;
+};
+
 export const syncUser = async (user: User) => {
   if (!user || !user.id) {
     console.warn('[syncUser] Aborted sync: User object or user.id is missing or undefined');
@@ -114,15 +141,13 @@ export const subscribeToUser = (userId: string, callback: (user: User | null) =>
   return onSnapshot(doc(db, "users", userId), (docSnap) => {
     if (docSnap.exists()) {
       const data = docSnap.data() as User;
-      console.log('[subscribeToUser - Firestore SNAPSHOT] Firestore returned user data:', {
+      console.log('[User Notification Listener]', {
         userId,
         email: data.email,
         name: data.name,
-        lastPeriodStart: data.lastPeriodStart,
-        cycleLength: data.cycleLength,
-        periodLength: data.periodLength,
-        periodsCount: data.periods?.length || 0,
-        onboardingCompleted: data.onboardingCompleted
+        notificationsCount: data.notifications?.length || 0,
+        unreadCount: (data.notifications || []).filter(n => !n.isRead).length,
+        partnerRequest: data.partnerRequest
       });
       callback(data);
     } else {
@@ -165,7 +190,7 @@ export const createInvite = async (userId: string, userName: string, userEmail?:
 };
 
 export const addNotificationToUser = async (targetUserId: string, notification: { title: string; body: string; emoji?: string; category?: string; isPartnerRequest?: boolean }) => {
-  const isReq = notification.isPartnerRequest || notification.category === 'partner_request' || notification.title.toLowerCase().includes('request') || notification.title.toLowerCase().includes('invite');
+  const isReq = notification.isPartnerRequest || notification.category === 'partner_request' || (notification.title && notification.title.toLowerCase().includes('request')) || (notification.title && notification.title.toLowerCase().includes('invite'));
   const notifObj = {
     id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
     title: notification.title,
@@ -176,6 +201,14 @@ export const addNotificationToUser = async (targetUserId: string, notification: 
     category: notification.category || (isReq ? 'partner_request' : undefined),
     isPartnerRequest: isReq
   };
+
+  console.log('[Notification Creation]', {
+    targetUserId,
+    title: notification.title,
+    body: notification.body,
+    category: notifObj.category,
+    notifObj
+  });
 
   if (isSandboxId(targetUserId)) {
     const raw = localStorage.getItem(`lumina_user_${targetUserId}`) || localStorage.getItem('lumina_user');
@@ -194,13 +227,15 @@ export const addNotificationToUser = async (targetUserId: string, notification: 
   try {
     const userRef = doc(db, "users", targetUserId);
     const snap = await getDoc(userRef);
+    let existing: any[] = [];
     if (snap.exists()) {
       const u = snap.data() as any;
-      const existing = u.notifications || [];
-      await updateDoc(userRef, {
-        notifications: cleanUndefined([notifObj, ...existing])
-      });
+      existing = u.notifications || [];
     }
+    await setDoc(userRef, {
+      notifications: cleanUndefined([notifObj, ...existing])
+    }, { merge: true });
+    console.log('[Notification Creation - Success]', { targetUserId, totalNotifs: existing.length + 1 });
   } catch (err) {
     console.warn("Failed to add notification to user:", err);
   }
@@ -453,11 +488,11 @@ export const subscribeToPartnerRequests = (roleId: string, role: 'user' | 'partn
       try {
         const saved = localStorage.getItem('lumina_partner_requests');
         const list = saved ? JSON.parse(saved) : [];
-        if (role === 'user') {
-          return list.filter((r: any) => r.user_id === roleId);
-        } else {
-          return list.filter((r: any) => r.partner_id === roleId);
-        }
+        const filtered = role === 'user'
+          ? list.filter((r: any) => r.user_id === roleId || r.userId === roleId)
+          : list.filter((r: any) => r.partner_id === roleId || r.partnerId === roleId);
+        console.log('[Pending Request Listener - Sandbox]', { roleId, role, requestsCount: filtered.length, requests: filtered });
+        return filtered;
       } catch (err) {
         return [];
       }
@@ -483,6 +518,7 @@ export const subscribeToPartnerRequests = (roleId: string, role: 'user' | 'partn
   
   return onSnapshot(q, (snapshot) => {
     const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as DPartnerRequest));
+    console.log('[Pending Request Listener]', { roleId, role, requestsCount: list.length, requests: list });
     callback(list);
   }, (err) => {
     handleFirestoreError(err, OperationType.GET, path);
@@ -492,17 +528,40 @@ export const subscribeToPartnerRequests = (roleId: string, role: 'user' | 'partn
 export const submitPartnerRequest = async (userId: string, partnerId: string, partnerName: string, partnerEmail: string, requestedPermissions: string[]) => {
   const isSandbox = isSandboxId(userId) || isSandboxId(partnerId);
   const request_id = isSandbox ? Math.random().toString(36).substr(2, 9) : `${userId}_${partnerId}`;
+  const nowIso = new Date().toISOString();
   
-  const requestData: DPartnerRequest = {
+  const requestData: DPartnerRequest & { userId?: string; partnerId?: string; createdAt?: string } = {
     id: request_id,
     request_id,
     user_id: userId,
+    userId: userId,
     partner_id: partnerId,
+    partnerId: partnerId,
     partnerName,
     partnerEmail,
     requested_permissions: requestedPermissions,
     status: 'pending',
-    created_at: new Date().toISOString()
+    created_at: nowIso,
+    createdAt: nowIso
+  };
+
+  // STEP 1: Log exact request creation
+  console.log("Creating partner request", requestData);
+
+  const notifId = `notif_partner_req_${Date.now()}`;
+  const notifObj = {
+    id: notifId,
+    recipientId: userId,
+    targetUserId: userId,
+    type: "partner_request" as const,
+    category: "partner_request" as const,
+    title: "New Partner Request",
+    body: `${partnerName} requested to connect on Partner Mode. Tap to review and accept or decline.`,
+    emoji: '💕',
+    read: false,
+    isRead: false,
+    timestamp: nowIso,
+    isPartnerRequest: true
   };
   
   if (isSandbox) {
@@ -516,16 +575,6 @@ export const submitPartnerRequest = async (userId: string, partnerId: string, pa
     const rawUser = localStorage.getItem(`lumina_user_${userId}`) || localStorage.getItem('lumina_user');
     if (rawUser) {
       const targetUserObj = JSON.parse(rawUser);
-      const notifObj = {
-        id: `notif_partner_req_${Date.now()}`,
-        title: '💕 New Partner Connection Request',
-        body: `${partnerName} requested to connect on Partner Mode. Tap to review and accept or decline.`,
-        emoji: '💕',
-        timestamp: new Date().toISOString(),
-        isRead: false,
-        category: 'partner_request',
-        isPartnerRequest: true
-      };
       const existingNotifs = targetUserObj.notifications || [];
       const updatedUser = {
         ...targetUserObj,
@@ -537,7 +586,7 @@ export const submitPartnerRequest = async (userId: string, partnerId: string, pa
           partnerEmail,
           requestedReceives: requestedPermissions,
           status: 'pending' as const,
-          timestamp: new Date().toISOString()
+          timestamp: nowIso
         },
         notifications: [notifObj, ...existingNotifs.filter((n: any) => n.id !== notifObj.id)]
       };
@@ -558,37 +607,39 @@ export const submitPartnerRequest = async (userId: string, partnerId: string, pa
   
   const path = `partner_requests/${request_id}`;
   try {
+    // STEP 2: Write to /partner_requests/{requestId}
     await setDoc(doc(db, "partner_requests", request_id), requestData);
 
+    // STEP 3: Write to /notifications/{notificationId}
+    try {
+      await setDoc(doc(db, "notifications", notifId), notifObj);
+      console.log("Creating partner request notification in /notifications", notifObj);
+    } catch (nErr) {
+      console.warn("Could not write to notifications collection directly:", nErr);
+    }
+
+    // Write to /users/{primaryUserId}
     const userRef = doc(db, "users", userId);
     const snap = await getDoc(userRef);
+    let existingNotifs: any[] = [];
     if (snap.exists()) {
       const targetUserData = snap.data();
-      const notifObj = {
-        id: `notif_partner_req_${Date.now()}`,
-        title: '💕 New Partner Connection Request',
-        body: `${partnerName} requested to connect on Partner Mode. Tap to review and accept or decline.`,
-        emoji: '💕',
-        timestamp: new Date().toISOString(),
-        isRead: false,
-        category: 'partner_request',
-        isPartnerRequest: true
-      };
-      const existingNotifs = targetUserData.notifications || [];
-      await updateDoc(userRef, {
-        partnerId: partnerId,
-        partnerName: partnerName,
-        partnerRequest: {
-          partnerId,
-          partnerName,
-          partnerEmail,
-          requestedReceives: requestedPermissions,
-          status: 'pending',
-          timestamp: new Date().toISOString()
-        },
-        notifications: [notifObj, ...existingNotifs.filter((n: any) => n.id !== notifObj.id)]
-      });
+      existingNotifs = targetUserData.notifications || [];
     }
+    await setDoc(userRef, {
+      partnerId: partnerId,
+      partnerName: partnerName,
+      partnerRequest: {
+        partnerId,
+        partnerName,
+        partnerEmail,
+        requestedReceives: requestedPermissions,
+        status: 'pending',
+        timestamp: nowIso
+      },
+      notifications: cleanUndefined([notifObj, ...existingNotifs.filter((n: any) => n.id !== notifObj.id)])
+    }, { merge: true });
+
     return request_id;
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);

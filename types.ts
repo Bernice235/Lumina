@@ -49,16 +49,21 @@ export interface BlockedPartner {
 }
 
 export interface PartnerNotificationPreferences {
-  periodStarting: boolean;
-  periodEnding: boolean;
-  ovulationUpdates: boolean;
-  moodUpdates: boolean;
-  symptomUpdates: boolean;
-  lowEnergyDays: boolean;
-  supportReminders: boolean;
-  wellnessUpdates: boolean;
-  partnerMessages: boolean;
-  educationalInsights: boolean;
+  periodStarting?: boolean;
+  periodEnding?: boolean;
+  ovulation?: boolean;
+  ovulationUpdates?: boolean;
+  fertileWindow?: boolean;
+  moodUpdates?: boolean;
+  symptomUpdates?: boolean;
+  medicationReminders?: boolean;
+  wellnessCheckIns?: boolean;
+  lowEnergyDays?: boolean;
+  supportReminders?: boolean;
+  wellnessUpdates?: boolean;
+  partnerMessages?: boolean;
+  educationalInsights?: boolean;
+  frequency?: 'Important Events Only' | 'Daily Insights' | 'Full Companion Mode' | string;
 }
 
 export interface SharingSettings {
@@ -110,6 +115,8 @@ export interface User {
   isPregnancyMode: boolean;
   isPostpartumMode?: boolean;
   onboardingCompleted?: boolean;
+  partnerOnboardingCompleted?: boolean;
+  partnerEducationPreferences?: string[];
   pregnancyStartDate?: string;
   deliveryDate?: string;
   diaryPin?: string;

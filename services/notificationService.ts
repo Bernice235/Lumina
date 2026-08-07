@@ -418,8 +418,40 @@ export function calculateScheduledNotifications(user: any, settings: any): Sched
     // Standard Cycle Notifications
     const predictions = getCyclePredictions(user);
 
-    // 1. Period Starting
-    if (activeSettings.types?.periodStarting ?? true) {
+    // Calculate current cycle parameters to ensure notifications only trigger on appropriate cycle days
+    const cycleLen = user.cycleLength || 28;
+    const periodLen = user.periodLength || 5;
+    const reminderDaysBefore = activeSettings.reminderDaysBefore || 3;
+
+    const lastStart = user.lastPeriodStart ? new Date(user.lastPeriodStart) : new Date();
+    const start = new Date(lastStart.getFullYear(), lastStart.getMonth(), lastStart.getDate());
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    const diffTime = today.getTime() - start.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+    const expectedMidnight = new Date(start.getTime() + cycleLen * 24 * 60 * 60 * 1000).getTime();
+    let hasLoggedNewPeriod = false;
+    if (user.periods && user.periods.length > 0) {
+      hasLoggedNewPeriod = user.periods.some((p: any) => new Date(p.startDate).setHours(0,0,0,0) >= expectedMidnight);
+    }
+
+    const isLate = diffDays > cycleLen && !hasLoggedNewPeriod;
+    const daysLate = isLate ? (diffDays - cycleLen) : 0;
+
+    let cycleDay = ((diffDays % cycleLen) + cycleLen) % cycleLen + 1;
+    if (isLate) {
+      cycleDay = cycleLen + daysLate;
+    }
+
+    const ovulationDay = Math.max(1, cycleLen - 14);
+    const fertileStartDay = Math.max(1, ovulationDay - 5);
+    const fertileEndDay = ovulationDay + 1;
+
+    // 1. Period Starting - ONLY trigger when period is expected soon (within reminder window) or late
+    const isPeriodStartingSoon = isLate || (cycleDay >= cycleLen - reminderDaysBefore + 1);
+    if ((activeSettings.types?.periodStarting ?? true) && isPeriodStartingSoon) {
       items.push({
         id: `period_start_${predictions.nextPeriod}`,
         type: 'periodStarting',
@@ -432,10 +464,11 @@ export function calculateScheduledNotifications(user: any, settings: any): Sched
       });
     }
 
-    // 2. Period Ending
-    if (activeSettings.types?.periodEnding ?? true) {
+    // 2. Period Ending - ONLY trigger on the last day of period or day after period ends
+    const isPeriodEndingDay = (cycleDay === periodLen) || (cycleDay === periodLen + 1);
+    if ((activeSettings.types?.periodEnding ?? true) && isPeriodEndingDay) {
       items.push({
-        id: `period_end_${user.lastPeriodStart}`,
+        id: `period_end_${todayStr}`,
         type: 'periodEnding',
         title: isPartner ? 'Sanctuary Renewal 🌷' : 'Cycle Cleansing Done ✨',
         body: generateNotificationText('periodEnding', tone, isPartner),
@@ -446,8 +479,9 @@ export function calculateScheduledNotifications(user: any, settings: any): Sched
       });
     }
 
-    // 3. Ovulation
-    if (activeSettings.types?.ovulation ?? true) {
+    // 3. Ovulation - ONLY trigger on Ovulation Day
+    const isOvulationDay = (cycleDay === ovulationDay);
+    if ((activeSettings.types?.ovulation ?? true) && isOvulationDay) {
       items.push({
         id: `ovulation_${predictions.ovulation}`,
         type: 'ovulation',
@@ -460,8 +494,9 @@ export function calculateScheduledNotifications(user: any, settings: any): Sched
       });
     }
 
-    // 4. Fertile Window
-    if (activeSettings.types?.fertileWindow ?? true) {
+    // 4. Fertile Window - ONLY trigger during the Fertile Window
+    const isInFertileWindow = (cycleDay >= fertileStartDay && cycleDay <= fertileEndDay);
+    if ((activeSettings.types?.fertileWindow ?? true) && isInFertileWindow) {
       items.push({
         id: `fertile_${predictions.fertileStart}`,
         type: 'fertileWindow',
@@ -474,8 +509,9 @@ export function calculateScheduledNotifications(user: any, settings: any): Sched
       });
     }
 
-    // 5. Luteal Phase
-    if (activeSettings.types?.lutealPhase ?? true) {
+    // 5. Luteal Phase - ONLY trigger during the Luteal Phase
+    const isInLutealPhase = (cycleDay > fertileEndDay && cycleDay <= cycleLen);
+    if ((activeSettings.types?.lutealPhase ?? true) && isInLutealPhase) {
       items.push({
         id: `luteal_${todayStr}`,
         type: 'lutealPhase',
@@ -972,3 +1008,73 @@ export const clearAllNativeLocalNotifications = async (): Promise<void> => {
     console.error('Failed to clear local notifications:', err);
   }
 };
+
+/**
+ * Filters out cycle phase notifications from user.notifications that do not match the current cycle day.
+ * Ensures users never see premature phase notifications (e.g. Ovulation/Luteal/Fertile on Day 1).
+ */
+export function sanitizeUserNotifications(user: any): any[] {
+  if (!user || !user.notifications || !Array.isArray(user.notifications)) return [];
+  if (user.isPregnancyMode) return user.notifications;
+
+  const cycleLen = user.cycleLength || 28;
+  const periodLen = user.periodLength || 5;
+  const settings = user.notificationSettings || getDefaultNotificationSettings();
+  const reminderDaysBefore = settings.reminderDaysBefore || 3;
+
+  const lastStart = user.lastPeriodStart ? new Date(user.lastPeriodStart) : new Date();
+  const start = new Date(lastStart.getFullYear(), lastStart.getMonth(), lastStart.getDate());
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  const diffTime = today.getTime() - start.getTime();
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+  const expectedMidnight = new Date(start.getTime() + cycleLen * 24 * 60 * 60 * 1000).getTime();
+  let hasLoggedNewPeriod = false;
+  if (user.periods && user.periods.length > 0) {
+    hasLoggedNewPeriod = user.periods.some((p: any) => new Date(p.startDate).setHours(0,0,0,0) >= expectedMidnight);
+  }
+
+  const isLate = diffDays > cycleLen && !hasLoggedNewPeriod;
+  const daysLate = isLate ? (diffDays - cycleLen) : 0;
+
+  let cycleDay = ((diffDays % cycleLen) + cycleLen) % cycleLen + 1;
+  if (isLate) {
+    cycleDay = cycleLen + daysLate;
+  }
+
+  const ovulationDay = Math.max(1, cycleLen - 14);
+  const fertileStartDay = Math.max(1, ovulationDay - 5);
+  const fertileEndDay = ovulationDay + 1;
+
+  const isPeriodStartingSoon = isLate || (cycleDay >= cycleLen - reminderDaysBefore + 1);
+  const isPeriodEnding = (cycleDay === periodLen) || (cycleDay === periodLen + 1);
+  const isOvulationDay = (cycleDay === ovulationDay);
+  const isInFertileWindow = (cycleDay >= fertileStartDay && cycleDay <= fertileEndDay);
+  const isInLutealPhase = (cycleDay > fertileEndDay && cycleDay <= cycleLen);
+
+  return user.notifications.filter((n: any) => {
+    const id = n.id || '';
+    const title = (n.title || '').toLowerCase();
+
+    // Check if this is a cycle phase notification and if it corresponds to current day's phase
+    if (id.startsWith('ovulation_') || title.includes('ovulation')) {
+      return isOvulationDay;
+    }
+    if (id.startsWith('fertile_') || title.includes('fertile') || title.includes('peak bloom')) {
+      return isInFertileWindow;
+    }
+    if (id.startsWith('luteal_') || title.includes('luteal') || title.includes('sunset inward')) {
+      return isInLutealPhase;
+    }
+    if (id.startsWith('period_start_') || title.includes('period starting soon') || title.includes('cycle approaching')) {
+      return isPeriodStartingSoon;
+    }
+    if (id.startsWith('period_end_') || title.includes('cycle cleansing done') || title.includes('sanctuary renewal')) {
+      return isPeriodEnding;
+    }
+
+    return true;
+  });
+}

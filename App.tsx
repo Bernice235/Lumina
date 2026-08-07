@@ -46,7 +46,7 @@ import { playWelcomeVoice } from './services/gemini';
 import { THEMES, SONGS, THEME_PALETTES } from './constants';
 import { WALLPAPER_LIST } from './components/WallpapersAndThemesModal';
 import { syncUser, subscribeToGifts, subscribeToUser, acceptInvite, subscribeToPartnerRequests, getCleanName } from './services/firebaseService';
-import { getDefaultNotificationSettings, calculateScheduledNotifications, scheduleNativeLocalNotification } from './services/notificationService';
+import { getDefaultNotificationSettings, calculateScheduledNotifications, sanitizeUserNotifications, scheduleNativeLocalNotification } from './services/notificationService';
 import { auth } from './services/firebase';
 import { onAuthStateChanged, setPersistence, browserSessionPersistence, indexedDBLocalPersistence } from 'firebase/auth';
 import { SplashScreen } from './components/SplashScreen';
@@ -453,33 +453,35 @@ const App: React.FC = () => {
   // Calculate and sync scheduled notifications to user.notifications array
   useEffect(() => {
     if (!user) return;
-    const scheduled = calculateScheduledNotifications(user, user.notificationSettings);
-    if (!scheduled || scheduled.length === 0) return;
-
     const existingNotifs = user.notifications || [];
-    let updatedNotifs = [...existingNotifs];
-    let hasNew = false;
+    const sanitizedNotifs = sanitizeUserNotifications(user);
+
+    const scheduled = calculateScheduledNotifications(user, user.notificationSettings);
+    let updatedNotifs = [...sanitizedNotifs];
+    let hasChange = sanitizedNotifs.length !== existingNotifs.length;
     const nowISO = new Date().toISOString();
 
-    scheduled.forEach(item => {
-      const exists = updatedNotifs.some(n => n.id === item.id);
-      if (!exists) {
-        updatedNotifs.unshift({
-          id: item.id,
-          title: item.title,
-          body: item.body,
-          emoji: item.emoji,
-          timestamp: nowISO,
-          isRead: false,
-          phaseInfo: item.phaseInfo,
-          category: item.category,
-          detailedTip: item.detailedTip
-        });
-        hasNew = true;
-      }
-    });
+    if (scheduled && scheduled.length > 0) {
+      scheduled.forEach(item => {
+        const exists = updatedNotifs.some(n => n.id === item.id);
+        if (!exists) {
+          updatedNotifs.unshift({
+            id: item.id,
+            title: item.title,
+            body: item.body,
+            emoji: item.emoji,
+            timestamp: nowISO,
+            isRead: false,
+            phaseInfo: item.phaseInfo,
+            category: item.category,
+            detailedTip: item.detailedTip
+          });
+          hasChange = true;
+        }
+      });
+    }
 
-    if (hasNew) {
+    if (hasChange) {
       const updatedUser = { ...user, notifications: updatedNotifs };
       setUser(updatedUser);
       localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
@@ -692,7 +694,7 @@ const App: React.FC = () => {
                     theme: userData.theme || emailBackup.theme || 'rose',
                     tempUnit: userData.tempUnit || emailBackup.tempUnit || 'C',
                     isPregnancyMode: userData.isPregnancyMode ?? emailBackup.isPregnancyMode ?? false,
-                    onboardingCompleted: userData.onboardingCompleted === true || emailBackup.onboardingCompleted === true || !!userData.isPartner || !!(userData.lastPeriodStart || emailBackup.lastPeriodStart),
+                    onboardingCompleted: (userData.onboardingCompleted === false || emailBackup.onboardingCompleted === false) ? false : (userData.onboardingCompleted === true || emailBackup.onboardingCompleted === true),
                     diaryPin: userData.diaryPin || emailBackup.diaryPin || '1234',
                     favoriteSongs: userData.favoriteSongs || emailBackup.favoriteSongs || [],
                     customSongs: userData.customSongs || emailBackup.customSongs || [],
@@ -776,7 +778,7 @@ const App: React.FC = () => {
               theme: userData.theme || emailBackup.theme || 'rose',
               tempUnit: userData.tempUnit || emailBackup.tempUnit || 'C',
               isPregnancyMode: userData.isPregnancyMode ?? emailBackup.isPregnancyMode ?? false,
-              onboardingCompleted: userData.onboardingCompleted === true || emailBackup.onboardingCompleted === true || !!userData.isPartner,
+              onboardingCompleted: (userData.onboardingCompleted === false || emailBackup.onboardingCompleted === false) ? false : (userData.onboardingCompleted === true || emailBackup.onboardingCompleted === true),
               diaryPin: userData.diaryPin || emailBackup.diaryPin || '1234',
               favoriteSongs: userData.favoriteSongs || emailBackup.favoriteSongs || [],
               customSongs: userData.customSongs || emailBackup.customSongs || [],
@@ -1001,7 +1003,9 @@ const App: React.FC = () => {
       theme: activeData.theme || 'rose',
       tempUnit: activeData.tempUnit || 'C',
       isPregnancyMode: activeData.isPregnancyMode || false,
-      onboardingCompleted: (activeData.onboardingCompleted === true || userData.onboardingCompleted === true || !!activeData.lastPeriodStart || !!userData.lastPeriodStart || !!activeData.isPartner || !!userData.isPartner) ? true : false,
+      onboardingCompleted: (activeData.onboardingCompleted === false || userData.onboardingCompleted === false)
+        ? false
+        : (activeData.onboardingCompleted === true || userData.onboardingCompleted === true),
       diaryPin: activeData.diaryPin || '1234',
       favoriteSongs: activeData.favoriteSongs || [],
       customSongs: activeData.customSongs || [],
@@ -1123,20 +1127,23 @@ const App: React.FC = () => {
   };
 
   const handleLogin = (userData: User, rememberMe: boolean = true) => {
-    // Check cloud backup and restore saved cycle data automatically
-    const hasCycleInfo = !!(userData.lastPeriodStart && userData.cycleLength && userData.periodLength);
-    const hasCloudBackup = 
-      hasCycleInfo ||
+    // Check cloud backup and restore saved logged entries automatically for legacy accounts
+    const hasRealLoggedData = !!(
       (userData.periods && userData.periods.length > 0) || 
       (userData.symptoms && userData.symptoms.length > 0) ||
       (userData.moodLogs && userData.moodLogs.length > 0) ||
       (userData.periodDates && userData.periodDates.length > 0) ||
       (userData.bcLogs && userData.bcLogs.length > 0) ||
-      (userData.diaryEntries && userData.diaryEntries.length > 0);
+      (userData.diaryEntries && userData.diaryEntries.length > 0)
+    );
+
+    const isCompleted = userData.onboardingCompleted === false 
+      ? false 
+      : (userData.onboardingCompleted === true || hasRealLoggedData);
 
     const restoredUser = {
       ...userData,
-      onboardingCompleted: (userData.onboardingCompleted === true || hasCloudBackup || hasCycleInfo || !!userData.isPartner) ? true : false
+      onboardingCompleted: isCompleted
     };
     proceedWithLogin(restoredUser, rememberMe);
   };
@@ -1613,43 +1620,57 @@ const App: React.FC = () => {
 
     if (!user.onboardingCompleted) {
       if (user.isPartner) {
+        const isApproved = user.isPartnerLinked || user.partnerRequest?.status === 'approved';
+        if (isApproved && !user.partnerOnboardingCompleted) {
+          return (
+            <PartnerOnboardingWizard
+              user={user}
+              setUser={setUser}
+              onComplete={(completedUser) => {
+                setUser(completedUser);
+                localStorage.setItem('lumina_user', JSON.stringify(completedUser));
+                if (completedUser.email) {
+                  localStorage.setItem('lumina_user_email_' + completedUser.email.toLowerCase().trim(), JSON.stringify(completedUser));
+                }
+                syncUser(completedUser);
+              }}
+            />
+          );
+        }
+      } else {
         return (
-          <PartnerOnboardingWizard
-            user={user}
-            setUser={setUser}
+          <OnboardingWizard 
+            user={user} 
+            setUser={setUser} 
             onComplete={(completedUser) => {
               setUser(completedUser);
               localStorage.setItem('lumina_user', JSON.stringify(completedUser));
+              if (completedUser.email) {
+                localStorage.setItem('lumina_user_email_' + completedUser.email.toLowerCase().trim(), JSON.stringify(completedUser));
+              }
               syncUser(completedUser);
-            }}
+              try {
+                playWelcomeVoice(completedUser.name || 'Beautiful');
+              } catch (e) {
+                console.warn("TTS Welcome Voice skip:", e);
+              }
+            }} 
           />
         );
       }
-      return (
-        <OnboardingWizard 
-          user={user} 
-          setUser={setUser} 
-          onComplete={(completedUser) => {
-            setUser(completedUser);
-            localStorage.setItem('lumina_user', JSON.stringify(completedUser));
-            syncUser(completedUser);
-            try {
-              playWelcomeVoice(completedUser.name || 'Beautiful');
-            } catch (e) {
-              console.warn("TTS Welcome Voice skip:", e);
-            }
-          }} 
-        />
-      );
     }
 
     const unreadCount = (user?.notifications || []).filter(n => {
       if (n.isRead) return false;
       if (!user?.isPartner) {
-        const isPartnerNotif = n.category === 'partner' || 
-                               n.isPartner === true || 
-                               (n.title && (n.title.toLowerCase().includes('partner') || n.title.toLowerCase().includes('companion'))) || 
-                               (n.body && (n.body.toLowerCase().includes('partner') || n.body.toLowerCase().includes('companion')));
+        // ALWAYS keep partner requests, invites, and connection notifications visible for primary users!
+        const isConnectionRequest = n.category === 'partner_request' || 
+                                    n.isPartnerRequest === true || 
+                                    (n.title && (n.title.toLowerCase().includes('request') || n.title.toLowerCase().includes('invite')));
+        if (isConnectionRequest) return true;
+
+        // Filter out general partner-mode tips/reminders meant only for partner users
+        const isPartnerNotif = n.category === 'partner' || n.isPartner === true;
         if (isPartnerNotif) return false;
       }
       return true;
@@ -1974,7 +1995,7 @@ const App: React.FC = () => {
   const currentTrack = fullLibrary[currentSongIndex];
 
   // If the user is not fully logged in, onboarded, or is locked, render the appropriate active screen directly
-  if (showSplash || authLoading || restoreDataPrompt || !user || ((user as any).biometricsEnabled && !isSessionUnlocked) || (!user.onboardingCompleted && !user.isPartner)) {
+  if (showSplash || authLoading || restoreDataPrompt || !user || ((user as any).biometricsEnabled && !isSessionUnlocked) || !user.onboardingCompleted) {
     return renderActiveScreen();
   }
 

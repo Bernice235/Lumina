@@ -8,14 +8,14 @@ import {
   ChevronLeft, 
   Heart, 
   Check, 
-  User as UserIcon, 
   Bell, 
   BookOpen, 
   Clock, 
   ShieldCheck, 
-  HelpCircle,
-  Award
+  Award,
+  CheckCircle2
 } from 'lucide-react';
+import { syncUser } from '../services/firebaseService';
 
 interface PartnerOnboardingWizardProps {
   user: User;
@@ -27,42 +27,84 @@ export const PartnerOnboardingWizard: React.FC<PartnerOnboardingWizardProps> = (
   const [step, setStep] = useState(1);
   const totalSteps = 5;
 
-  // Partner specific fields
-  const [name, setName] = useState(user.firstName || user.name || '');
-  
-  // Step 3 Support options
-  const SUPPORT_OPTIONS = [
-    'Learn about the menstrual cycle',
-    'Receive helpful reminders',
-    'Stay informed about cycle updates',
-    'All of the above'
+  // Step 2 Notifications list (8 options requested)
+  const NOTIFICATION_OPTIONS = [
+    { id: 'periodStarting', label: 'Period Starting', desc: 'Alerts when period is predicted to start' },
+    { id: 'periodEnding', label: 'Period Ending', desc: 'Alerts when period is ending' },
+    { id: 'ovulation', label: 'Ovulation', desc: 'Alerts on ovulation day' },
+    { id: 'fertileWindow', label: 'Fertile Window', desc: 'Updates when fertile window begins' },
+    { id: 'moodUpdates', label: 'Mood Updates', desc: 'Real-time updates when mood logs are shared' },
+    { id: 'symptomUpdates', label: 'Symptom Updates', desc: 'Alerts when symptoms or discomfort are logged' },
+    { id: 'medicationReminders', label: 'Medication Reminders', desc: 'Support reminders for medication or birth control' },
+    { id: 'wellnessCheckIns', label: 'Wellness Check-ins', desc: 'Regular check-in tips and care suggestions' },
   ];
 
-  const [selectedSupport, setSelectedSupport] = useState<string[]>(['All of the above']);
-
-  // Step 4 Notification preferences (10 options)
-  const [notifPrefs, setNotifPrefs] = useState<PartnerNotificationPreferences>({
+  const [selectedNotifs, setSelectedNotifs] = useState<Record<string, boolean>>({
     periodStarting: true,
     periodEnding: true,
-    ovulationUpdates: true,
+    ovulation: true,
+    fertileWindow: true,
     moodUpdates: true,
     symptomUpdates: true,
-    lowEnergyDays: true,
-    supportReminders: true,
-    wellnessUpdates: true,
-    partnerMessages: true,
-    educationalInsights: true,
+    medicationReminders: true,
+    wellnessCheckIns: true,
   });
 
-  const [validationError, setValidationError] = useState<string | null>(null);
+  // Step 3 Partner Education Interests (6 options requested)
+  const EDUCATION_OPTIONS = [
+    'Understanding Menstruation',
+    'Ovulation & Fertility',
+    'PMS & Mood Changes',
+    'Sexual Health',
+    'Infection Prevention',
+    'Supporting a Partner During Periods',
+  ];
+
+  const [selectedEducation, setSelectedEducation] = useState<string[]>([
+    'Understanding Menstruation',
+    'Supporting a Partner During Periods',
+  ]);
+
+  // Step 4 Notification Frequency (3 options requested)
+  const FREQUENCY_OPTIONS = [
+    {
+      id: 'Important Events Only',
+      title: 'Important Events Only',
+      desc: 'Only essential updates like period start and ovulation alerts.',
+      emoji: '🔔'
+    },
+    {
+      id: 'Daily Insights',
+      title: 'Daily Insights',
+      desc: 'Daily wellness summaries, phase updates, and care tips.',
+      emoji: '☀️'
+    },
+    {
+      id: 'Full Companion Mode',
+      title: 'Full Companion Mode',
+      desc: 'Comprehensive real-time alerts, mood updates, and active care missions.',
+      emoji: '💖'
+    }
+  ];
+
+  const [selectedFrequency, setSelectedFrequency] = useState<string>('Full Companion Mode');
+
+  const toggleNotif = (id: string) => {
+    setSelectedNotifs(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
+
+  const toggleEducation = (option: string) => {
+    if (selectedEducation.includes(option)) {
+      setSelectedEducation(selectedEducation.filter(e => e !== option));
+    } else {
+      setSelectedEducation([...selectedEducation, option]);
+    }
+  };
 
   const handleNext = () => {
-    if (step === 2 && !name.trim()) {
-      setValidationError("Please share your name so your partner knows who is supporting them.");
-      return;
-    }
-    setValidationError(null);
-
     if (step < totalSteps) {
       setStep(step + 1);
     } else {
@@ -71,52 +113,32 @@ export const PartnerOnboardingWizard: React.FC<PartnerOnboardingWizardProps> = (
   };
 
   const handleBack = () => {
-    setValidationError(null);
     if (step > 1) {
       setStep(step - 1);
     }
   };
 
-  const toggleSupportOption = (option: string) => {
-    if (option === 'All of the above') {
-      if (selectedSupport.includes('All of the above')) {
-        setSelectedSupport([]);
-      } else {
-        setSelectedSupport(['Learn about the menstrual cycle', 'Receive helpful reminders', 'Stay informed about cycle updates', 'All of the above']);
-      }
-    } else {
-      let updated = selectedSupport.filter(o => o !== 'All of the above');
-      if (updated.includes(option)) {
-        updated = updated.filter(o => o !== option);
-      } else {
-        updated.push(option);
-      }
-      if (updated.length === 3) {
-        updated.push('All of the above');
-      }
-      setSelectedSupport(updated);
-    }
-  };
-
-  const toggleNotifPref = (key: keyof PartnerNotificationPreferences) => {
-    setNotifPrefs(prev => ({
-      ...prev,
-      [key]: !prev[key]
-    }));
-  };
-
   const handleFinish = () => {
+    const partnerNotifPrefs: PartnerNotificationPreferences = {
+      periodStarting: !!selectedNotifs.periodStarting,
+      periodEnding: !!selectedNotifs.periodEnding,
+      ovulation: !!selectedNotifs.ovulation,
+      ovulationUpdates: !!selectedNotifs.ovulation,
+      fertileWindow: !!selectedNotifs.fertileWindow,
+      moodUpdates: !!selectedNotifs.moodUpdates,
+      symptomUpdates: !!selectedNotifs.symptomUpdates,
+      medicationReminders: !!selectedNotifs.medicationReminders,
+      wellnessCheckIns: !!selectedNotifs.wellnessCheckIns,
+      frequency: selectedFrequency,
+    };
+
     const updatedUser: User = {
       ...user,
-      name: name.trim(),
-      firstName: name.trim(),
-      displayName: name.trim(),
       isPartner: true,
+      partnerOnboardingCompleted: true,
       onboardingCompleted: true,
-      partnerSupportPreferences: {
-        waysToSupport: selectedSupport
-      },
-      partnerNotificationPreferences: notifPrefs,
+      partnerNotificationPreferences: partnerNotifPrefs,
+      partnerEducationPreferences: selectedEducation,
       notificationSettings: {
         ...(user.notificationSettings || {
           enabled: true,
@@ -144,18 +166,22 @@ export const PartnerOnboardingWizard: React.FC<PartnerOnboardingWizardProps> = (
         }),
         partnerNotificationsEnabled: true,
         partnerReceiveTypes: {
-          periodStarting: notifPrefs.periodStarting,
-          periodStarted: notifPrefs.periodStarting,
-          periodEnding: notifPrefs.periodEnding,
-          ovulation: notifPrefs.ovulationUpdates,
-          fertileWindow: notifPrefs.ovulationUpdates,
-          pregnancyRisk: notifPrefs.ovulationUpdates
+          periodStarting: !!selectedNotifs.periodStarting,
+          periodStarted: !!selectedNotifs.periodStarting,
+          periodEnding: !!selectedNotifs.periodEnding,
+          ovulation: !!selectedNotifs.ovulation,
+          fertileWindow: !!selectedNotifs.fertileWindow,
+          pregnancyRisk: !!selectedNotifs.fertileWindow
         }
       }
     };
 
     setUser(updatedUser);
     localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+    if (updatedUser.email) {
+      localStorage.setItem('lumina_user_email_' + updatedUser.email.toLowerCase().trim(), JSON.stringify(updatedUser));
+    }
+    syncUser(updatedUser);
     onComplete(updatedUser);
   };
 
@@ -163,7 +189,7 @@ export const PartnerOnboardingWizard: React.FC<PartnerOnboardingWizardProps> = (
 
   const slideVariants = {
     enter: (direction: number) => ({
-      x: direction > 0 ? 100 : -100,
+      x: direction > 0 ? 80 : -80,
       opacity: 0,
       scale: 0.98
     }),
@@ -178,7 +204,7 @@ export const PartnerOnboardingWizard: React.FC<PartnerOnboardingWizardProps> = (
       }
     },
     exit: (direction: number) => ({
-      x: direction < 0 ? 100 : -100,
+      x: direction < 0 ? 80 : -80,
       opacity: 0,
       scale: 0.98,
       transition: {
@@ -189,42 +215,29 @@ export const PartnerOnboardingWizard: React.FC<PartnerOnboardingWizardProps> = (
     })
   };
 
-  const NOTIF_ITEMS: { key: keyof PartnerNotificationPreferences; label: string; desc: string }[] = [
-    { key: 'periodStarting', label: 'Period Starting', desc: "Notify me when my partner's period starts." },
-    { key: 'periodEnding', label: 'Period Ending', desc: "Notify me when my partner's period ends." },
-    { key: 'ovulationUpdates', label: 'Ovulation Updates', desc: 'Notify me during ovulation and fertility windows.' },
-    { key: 'moodUpdates', label: 'Mood Updates', desc: 'Notify me when my partner shares a mood update.' },
-    { key: 'symptomUpdates', label: 'Symptom Updates', desc: 'Notify me when my partner shares symptoms.' },
-    { key: 'lowEnergyDays', label: 'Low Energy Days', desc: 'Notify me when my partner reports low energy.' },
-    { key: 'supportReminders', label: 'Support Reminders', desc: 'Receive suggestions on how to support my partner.' },
-    { key: 'wellnessUpdates', label: 'Wellness Updates', desc: 'Receive wellness summaries and educational tips.' },
-    { key: 'partnerMessages', label: 'Partner Messages', desc: 'Receive shared updates and appreciation notes.' },
-    { key: 'educationalInsights', label: 'Educational Insights', desc: 'Receive learning content about menstrual health and cycle phases.' },
-  ];
-
   return (
     <div id="partner_onboarding_container" className={`min-h-screen ${currentThemeInfo?.bg || 'bg-gradient-to-br from-indigo-50 to-pink-50/30'} flex items-center justify-center p-4 relative overflow-hidden transition-colors duration-500 font-sans`}>
-      {/* Background glow effects */}
-      <div className="absolute top-[-10%] left-[-10%] w-[45%] h-[45%] rounded-full blur-[120px] opacity-25 bg-indigo-300 dark:bg-indigo-900/10 transition-all duration-700 animate-pulse"></div>
-      <div className="absolute bottom-[-10%] right-[-10%] w-[45%] h-[45%] rounded-full blur-[120px] opacity-20 bg-pink-300 dark:bg-pink-900/10 transition-all duration-700 animate-pulse"></div>
+      {/* Background ambient glow */}
+      <div className="absolute top-[-10%] left-[-10%] w-[45%] h-[45%] rounded-full blur-[120px] opacity-25 bg-indigo-300 dark:bg-indigo-900/20 transition-all duration-700 animate-pulse"></div>
+      <div className="absolute bottom-[-10%] right-[-10%] w-[45%] h-[45%] rounded-full blur-[120px] opacity-20 bg-purple-300 dark:bg-purple-900/20 transition-all duration-700 animate-pulse"></div>
 
-      <div id="partner_onboarding_card" className="bg-white/85 dark:bg-stone-900/90 backdrop-blur-2xl px-6 py-8 md:px-10 md:py-10 rounded-[2.5rem] shadow-[0_20px_50px_rgba(99,102,241,0.06)] border border-white/60 dark:border-stone-800/50 w-full max-w-xl z-10 flex flex-col justify-between min-h-[580px] relative transition-all">
+      <div id="partner_onboarding_card" className="bg-white/90 dark:bg-stone-900/90 backdrop-blur-2xl px-6 py-8 md:px-10 md:py-10 rounded-[2.5rem] shadow-[0_20px_50px_rgba(99,102,241,0.08)] border border-white/60 dark:border-stone-800/50 w-full max-w-xl z-10 flex flex-col justify-between min-h-[580px] relative transition-all">
         
         {/* Header step progress */}
         <div className="space-y-3">
-          <div className="flex justify-between items-center text-[10px] font-black tracking-widest uppercase text-indigo-500 transition-colors">
+          <div className="flex justify-between items-center text-[10px] font-black tracking-widest uppercase text-indigo-600 transition-colors">
             <span className="flex items-center gap-1.5 font-bold tracking-widest">
               <Sparkles size={12} className="text-indigo-500 animate-pulse" />
-              PARTNER ONBOARDING FLOW
+              PARTNER ONBOARDING
             </span>
-            <span className="font-serif italic font-bold">
+            <span className="font-serif italic font-bold text-indigo-700">
               Step {step} of {totalSteps}
             </span>
           </div>
           
-          <div className="w-full h-1 bg-indigo-50 dark:bg-stone-850 rounded-full overflow-hidden">
+          <div className="w-full h-1.5 bg-indigo-50 dark:bg-stone-800 rounded-full overflow-hidden">
             <motion.div 
-              className="h-full bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-500"
+              className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"
               initial={{ width: '0%' }}
               animate={{ width: `${(step / totalSteps) * 100}%` }}
               transition={{ type: 'spring', stiffness: 100 }}
@@ -232,11 +245,11 @@ export const PartnerOnboardingWizard: React.FC<PartnerOnboardingWizardProps> = (
           </div>
         </div>
 
-        {/* Step contents */}
+        {/* Step Content */}
         <div className="my-6 flex-grow flex flex-col justify-center min-h-[360px]">
           <AnimatePresence mode="wait" custom={step}>
             
-            {/* STEP 1: Welcome Partner */}
+            {/* STEP 1: Welcome Partner 💜 */}
             {step === 1 && (
               <motion.div
                 key="pstep1"
@@ -248,22 +261,22 @@ export const PartnerOnboardingWizard: React.FC<PartnerOnboardingWizardProps> = (
                 className="space-y-6 text-center"
               >
                 <div className="flex justify-center">
-                  <div className="w-20 h-20 rounded-full bg-indigo-50 dark:bg-indigo-950/20 flex items-center justify-center text-indigo-500 shadow-inner">
-                    <Heart size={38} className="text-indigo-500 animate-pulse" />
+                  <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-purple-100 to-indigo-100 dark:bg-indigo-950/40 flex items-center justify-center text-4xl shadow-inner border border-purple-200/50 animate-pulse">
+                    💜
                   </div>
                 </div>
                 <div className="space-y-3">
                   <h1 className="text-3xl md:text-4xl font-serif italic text-stone-900 dark:text-stone-100 font-bold leading-tight">
-                    Welcome to Partner Mode 🤝
+                    Welcome Partner 💜
                   </h1>
-                  <p className="text-base text-stone-500 dark:text-stone-400 font-serif italic max-w-sm mx-auto">
-                    Be the supportive partner she deserves. Get real-time cycle insights, care missions, and educational guidance.
+                  <p className="text-sm md:text-base text-stone-600 dark:text-stone-300 font-serif italic max-w-md mx-auto leading-relaxed">
+                    Your connection request has been approved! Let's set up your personalized partner companion preferences to help you support your loved one seamlessly.
                   </p>
                 </div>
               </motion.div>
             )}
 
-            {/* STEP 2: Name */}
+            {/* STEP 2: What notifications would you like to receive? */}
             {step === 2 && (
               <motion.div
                 key="pstep2"
@@ -272,46 +285,55 @@ export const PartnerOnboardingWizard: React.FC<PartnerOnboardingWizardProps> = (
                 exit="exit"
                 custom={1}
                 variants={slideVariants}
-                className="space-y-5"
+                className="space-y-4"
               >
-                <div className="space-y-2 text-center md:text-left">
-                  <div className="inline-flex w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-950/20 items-center justify-center text-indigo-500 mb-1">
-                    <UserIcon size={20} />
+                <div className="space-y-1 text-center md:text-left">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-300 text-[10px] font-black uppercase tracking-widest">
+                    <Bell size={12} />
+                    NOTIFICATION PREFERENCES
                   </div>
                   <h2 className="text-2xl font-serif italic text-stone-900 dark:text-stone-100 font-bold">
-                    What is your name?
+                    What notifications would you like to receive?
                   </h2>
-                  <p className="text-xs text-stone-400 dark:text-stone-500">
-                    Tell us your name so your partner can identify your connection request.
+                  <p className="text-xs text-stone-500 dark:text-stone-400">
+                    Select the updates you wish to receive about your partner's cycle.
                   </p>
                 </div>
 
-                <div className="space-y-4">
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-black tracking-widest uppercase text-indigo-400">Your Name</label>
-                    <input
-                      type="text"
-                      value={name}
-                      onChange={(e) => {
-                        setName(e.target.value);
-                        if (validationError) setValidationError(null);
-                      }}
-                      placeholder="e.g. Alex"
-                      className="w-full bg-white dark:bg-stone-950 border border-stone-200 dark:border-stone-850 px-5 py-3.5 rounded-2xl text-sm font-bold text-stone-800 dark:text-stone-100 outline-none focus:border-indigo-400 dark:focus:border-indigo-500 transition-colors shadow-inner"
-                      autoFocus
-                    />
-                  </div>
-
-                  {validationError && (
-                    <p className="text-[10px] text-rose-500 font-bold tracking-wide animate-pulse">
-                      ⚠️ {validationError}
-                    </p>
-                  )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 max-h-[320px] overflow-y-auto pr-1 pb-1 scrollbar-thin">
+                  {NOTIFICATION_OPTIONS.map((item) => {
+                    const isChecked = !!selectedNotifs[item.id];
+                    return (
+                      <div
+                        key={item.id}
+                        onClick={() => toggleNotif(item.id)}
+                        className={`p-3.5 border rounded-2xl flex items-center justify-between text-left transition-all cursor-pointer ${
+                          isChecked
+                            ? 'border-indigo-400 bg-indigo-50/40 dark:bg-indigo-950/30 text-indigo-950 dark:text-indigo-100 shadow-sm'
+                            : 'border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-950 text-stone-500 opacity-70 hover:opacity-100'
+                        }`}
+                      >
+                        <div className="pr-2">
+                          <p className="text-xs font-bold text-stone-800 dark:text-stone-100">
+                            ☐ {item.label}
+                          </p>
+                          <p className="text-[10px] text-stone-500 dark:text-stone-400 leading-tight mt-0.5">
+                            {item.desc}
+                          </p>
+                        </div>
+                        <div className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-colors ${
+                          isChecked ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-900'
+                        }`}>
+                          {isChecked && <Check size={13} strokeWidth={3} />}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </motion.div>
             )}
 
-            {/* STEP 3: How to support */}
+            {/* STEP 3: Partner Education Interests */}
             {step === 3 && (
               <motion.div
                 key="pstep3"
@@ -320,39 +342,43 @@ export const PartnerOnboardingWizard: React.FC<PartnerOnboardingWizardProps> = (
                 exit="exit"
                 custom={1}
                 variants={slideVariants}
-                className="space-y-5"
+                className="space-y-4"
               >
-                <div className="space-y-2 text-center md:text-left">
-                  <div className="inline-flex w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-950/20 items-center justify-center text-indigo-500 mb-1">
-                    <Award size={20} />
+                <div className="space-y-1 text-center md:text-left">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-300 text-[10px] font-black uppercase tracking-widest">
+                    <BookOpen size={12} />
+                    LEARNING & GUIDANCE
                   </div>
                   <h2 className="text-2xl font-serif italic text-stone-900 dark:text-stone-100 font-bold">
-                    How would you like to support your partner? 🌸💜🤝
+                    Partner Education Interests
                   </h2>
-                  <p className="text-xs text-stone-400 dark:text-stone-500">
-                    Select your goals so we can customize your partner workspace experience.
+                  <p className="text-xs text-stone-500 dark:text-stone-400">
+                    Which topics would you like quick tips and guides on?
                   </p>
                 </div>
 
-                <div className="space-y-2.5">
-                  {SUPPORT_OPTIONS.map((option) => {
-                    const isSel = selectedSupport.includes(option);
+                <div className="space-y-2.5 max-h-[320px] overflow-y-auto pr-1 pb-1">
+                  {EDUCATION_OPTIONS.map((option) => {
+                    const isSel = selectedEducation.includes(option);
                     return (
                       <button
                         key={option}
                         type="button"
-                        onClick={() => toggleSupportOption(option)}
+                        onClick={() => toggleEducation(option)}
                         className={`w-full p-4 border rounded-2xl flex items-center justify-between text-left transition-all cursor-pointer ${
                           isSel
-                            ? 'border-indigo-400 bg-indigo-50/30 text-indigo-950 dark:text-indigo-100 font-bold shadow-sm'
-                            : 'border-stone-100 dark:border-stone-850 bg-white dark:bg-stone-950 text-stone-600 dark:text-stone-300 hover:border-indigo-200'
+                            ? 'border-purple-400 bg-purple-50/40 dark:bg-purple-950/30 text-purple-950 dark:text-purple-100 font-bold shadow-sm'
+                            : 'border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-950 text-stone-600 dark:text-stone-300 hover:border-purple-200'
                         }`}
                       >
-                        <span className="text-xs font-bold">{option}</span>
-                        <div className={`w-5 h-5 rounded-md border flex items-center justify-center flex-shrink-0 transition-colors ${
-                          isSel ? 'bg-indigo-500 border-indigo-500 text-white' : 'border-gray-300 dark:border-stone-700'
+                        <span className="text-xs font-bold flex items-center gap-2">
+                          <span>☐</span>
+                          {option}
+                        </span>
+                        <div className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-colors ${
+                          isSel ? 'bg-purple-600 border-purple-600 text-white' : 'border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-900'
                         }`}>
-                          {isSel && <Check size={12} strokeWidth={3} />}
+                          {isSel && <Check size={13} strokeWidth={3} />}
                         </div>
                       </button>
                     );
@@ -361,7 +387,7 @@ export const PartnerOnboardingWizard: React.FC<PartnerOnboardingWizardProps> = (
               </motion.div>
             )}
 
-            {/* STEP 4: Partner Notification Preferences */}
+            {/* STEP 4: Notification Frequency */}
             {step === 4 && (
               <motion.div
                 key="pstep4"
@@ -373,53 +399,54 @@ export const PartnerOnboardingWizard: React.FC<PartnerOnboardingWizardProps> = (
                 className="space-y-4"
               >
                 <div className="space-y-1 text-center md:text-left">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-50 text-purple-600 text-[10px] font-black uppercase tracking-widest mb-1">
-                    <Bell size={12} />
-                    PARTNER NOTIFICATION PREFERENCES
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-pink-50 dark:bg-pink-950/50 text-pink-600 dark:text-pink-300 text-[10px] font-black uppercase tracking-widest">
+                    <Clock size={12} />
+                    DELIVERY FREQUENCY
                   </div>
                   <h2 className="text-2xl font-serif italic text-stone-900 dark:text-stone-100 font-bold">
-                    Stay Connected 💜
+                    Notification Frequency
                   </h2>
-                  <p className="text-xs text-stone-400 dark:text-stone-500">
-                    Choose which updates you would like to receive. You can customize these anytime later in settings.
+                  <p className="text-xs text-stone-500 dark:text-stone-400">
+                    Choose how often you would like to receive companion updates.
                   </p>
                 </div>
 
-                <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1 pb-1 scrollbar-thin">
-                  {NOTIF_ITEMS.map((item) => {
-                    const isChecked = notifPrefs[item.key];
+                <div className="space-y-3">
+                  {FREQUENCY_OPTIONS.map((freq) => {
+                    const isSelected = selectedFrequency === freq.id;
                     return (
-                      <div
-                        key={item.key}
-                        onClick={() => toggleNotifPref(item.key)}
-                        className={`p-3 border rounded-2xl flex items-start justify-between text-left transition-all cursor-pointer ${
-                          isChecked
-                            ? 'border-purple-300 bg-purple-50/20 text-purple-950 dark:text-purple-100'
-                            : 'border-stone-100 dark:border-stone-850 bg-white dark:bg-stone-950 text-stone-500 opacity-70'
+                      <button
+                        key={freq.id}
+                        type="button"
+                        onClick={() => setSelectedFrequency(freq.id)}
+                        className={`w-full p-4.5 border rounded-2xl flex items-start gap-4 text-left transition-all cursor-pointer ${
+                          isSelected
+                            ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/40 text-indigo-950 dark:text-indigo-100 shadow-md ring-2 ring-indigo-400/20'
+                            : 'border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-950 text-stone-600 dark:text-stone-300 hover:border-indigo-200'
                         }`}
                       >
-                        <div className="pr-3">
-                          <p className="text-xs font-bold flex items-center gap-1.5">
-                            {item.label}
+                        <span className="text-2xl mt-0.5">{freq.emoji}</span>
+                        <div className="flex-1">
+                          <p className="text-xs font-bold text-stone-900 dark:text-stone-100">
+                            ☐ {freq.title}
                           </p>
-                          <p className="text-[10px] text-stone-500 dark:text-stone-400 leading-tight mt-0.5">
-                            {item.desc}
+                          <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-1 leading-relaxed">
+                            {freq.desc}
                           </p>
                         </div>
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() => {}} // handled by parent div
-                          className="w-4 h-4 rounded border-purple-300 text-purple-600 focus:ring-purple-500 mt-1 cursor-pointer shrink-0"
-                        />
-                      </div>
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-1 transition-colors ${
+                          isSelected ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-900'
+                        }`}>
+                          {isSelected && <div className="w-2 h-2 rounded-full bg-white"></div>}
+                        </div>
+                      </button>
                     );
                   })}
                 </div>
               </motion.div>
             )}
 
-            {/* STEP 5: Finish */}
+            {/* STEP 5: Complete Setup */}
             {step === 5 && (
               <motion.div
                 key="pstep5"
@@ -428,20 +455,31 @@ export const PartnerOnboardingWizard: React.FC<PartnerOnboardingWizardProps> = (
                 exit="exit"
                 custom={1}
                 variants={slideVariants}
-                className="space-y-6 text-center"
+                className="space-y-6 text-center py-4"
               >
                 <div className="flex justify-center">
-                  <div className="w-20 h-20 rounded-full bg-purple-100 dark:bg-purple-950/30 flex items-center justify-center text-3xl animate-bounce">
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-emerald-100 to-indigo-100 dark:bg-emerald-950/30 flex items-center justify-center text-4xl shadow-inner animate-bounce">
                     ✨
                   </div>
                 </div>
                 <div className="space-y-3">
                   <h1 className="text-3xl font-serif italic text-stone-900 dark:text-stone-100 font-bold leading-tight">
-                    You're all set! 💖
+                    Complete Setup 💖
                   </h1>
-                  <p className="text-base text-stone-500 dark:text-stone-400 font-serif italic">
-                    Your partner dashboard is ready with your personalized notification preferences.
+                  <p className="text-sm text-stone-600 dark:text-stone-300 font-serif italic max-w-sm mx-auto leading-relaxed">
+                    Your preferences are saved! You are now fully configured to enter your Connected Partner Dashboard.
                   </p>
+                </div>
+
+                <div className="p-4 bg-indigo-50/50 dark:bg-stone-850/50 rounded-2xl border border-indigo-100 dark:border-stone-800 text-left text-xs space-y-2 max-w-sm mx-auto">
+                  <div className="flex items-center justify-between text-indigo-900 dark:text-indigo-200 font-bold">
+                    <span>Frequency Mode:</span>
+                    <span className="text-indigo-600 dark:text-indigo-400 font-mono text-[10px] uppercase font-black">{selectedFrequency}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-indigo-900 dark:text-indigo-200 font-bold">
+                    <span>Topics Selected:</span>
+                    <span className="text-indigo-600 dark:text-indigo-400 font-mono text-[10px] uppercase font-black">{selectedEducation.length} categories</span>
+                  </div>
                 </div>
               </motion.div>
             )}
@@ -449,13 +487,13 @@ export const PartnerOnboardingWizard: React.FC<PartnerOnboardingWizardProps> = (
           </AnimatePresence>
         </div>
 
-        {/* Footer Navigation */}
-        <div className="border-t border-stone-100 dark:border-stone-850 pt-5 mt-4 flex items-center justify-between gap-4">
+        {/* Footer Controls */}
+        <div className="border-t border-stone-100 dark:border-stone-800 pt-5 mt-2 flex items-center justify-between gap-4">
           {step > 1 ? (
             <button
               type="button"
               onClick={handleBack}
-              className="flex items-center gap-1 text-xs font-bold text-stone-400 hover:text-indigo-500 uppercase tracking-wider transition-colors cursor-pointer shrink-0"
+              className="flex items-center gap-1 text-xs font-bold text-stone-400 hover:text-indigo-600 uppercase tracking-wider transition-colors cursor-pointer shrink-0"
             >
               <ChevronLeft size={16} />
               Back
@@ -468,18 +506,18 @@ export const PartnerOnboardingWizard: React.FC<PartnerOnboardingWizardProps> = (
             <button
               type="button"
               onClick={handleNext}
-              className="flex items-center gap-1.5 px-6 py-3 bg-indigo-500 text-white rounded-2xl text-xs font-black uppercase tracking-wider shadow-md hover:bg-indigo-600 active:scale-95 transition-all cursor-pointer"
+              className="flex items-center gap-1.5 px-6 py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl text-xs font-black uppercase tracking-wider shadow-md hover:opacity-95 active:scale-95 transition-all cursor-pointer"
             >
-              {step === 1 ? 'Get Started' : 'Continue'}
+              Continue
               <ChevronRight size={14} />
             </button>
           ) : (
             <button
               type="button"
               onClick={handleNext}
-              className="px-8 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 hover:opacity-95 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg active:scale-98 transition-all cursor-pointer"
+              className="px-8 py-4 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all cursor-pointer"
             >
-              Enter Partner Workspace
+              Open Connected Partner Dashboard 💖
             </button>
           )}
         </div>

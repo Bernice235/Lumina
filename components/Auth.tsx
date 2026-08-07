@@ -290,11 +290,8 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
 
   // Helper to distinguish user roles (Cycle Tracker vs Partner) and selectively request restoration
   const handleExistingUserLogin = (existingUser: User, credentialsSaver: () => void) => {
-    // Preserve onboarding status if user has saved cycle data or completed onboarding previously
-    const hasCycleInfo = !!(existingUser.lastPeriodStart && existingUser.cycleLength && existingUser.periodLength);
+    // Preserve onboarding status if user has saved logged tracker history or completed onboarding previously
     const hasTrackerData = !!(
-      existingUser.onboardingCompleted ||
-      hasCycleInfo ||
       (existingUser.periods && existingUser.periods.length > 0) ||
       (existingUser.periodDates && existingUser.periodDates.length > 0) ||
       (existingUser.symptoms && existingUser.symptoms.length > 0) ||
@@ -303,9 +300,13 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
       (existingUser.diaryEntries && existingUser.diaryEntries.length > 0)
     );
 
+    const isCompleted = existingUser.onboardingCompleted === false
+      ? false
+      : (existingUser.onboardingCompleted === true || hasTrackerData);
+
     const fullExistingUser: User = {
       ...existingUser,
-      onboardingCompleted: (existingUser.onboardingCompleted === true || hasCycleInfo || hasTrackerData || !!existingUser.isPartner) ? true : false
+      onboardingCompleted: isCompleted
     };
 
     if (rememberMe) {
@@ -917,7 +918,8 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
                         shareWellnessUpdates: false
                       },
                       waterGoal: 8,
-                      onboardingCompleted: pendingRestoreUser.isPartner ? true : false
+                      onboardingCompleted: false,
+                      partnerOnboardingCompleted: false
                     };
                     if (rememberMe) {
                       localStorage.setItem('lumina_user', JSON.stringify(emptyUser));

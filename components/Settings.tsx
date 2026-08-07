@@ -1067,6 +1067,32 @@ const Settings: React.FC<SettingsProps> = ({
                 <span className="text-[8px] text-gray-400 italic">This anchors the beginning of your dynamic timeline predictions.</span>
               </div>
 
+              {/* Onboarding Questions Relaunch Section */}
+              <div className="bg-gradient-to-r from-pink-500/10 via-rose-500/10 to-indigo-500/10 p-5 rounded-3xl border border-pink-200/50 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="space-y-1 text-left">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">📋</span>
+                    <h4 className="text-xs font-bold uppercase tracking-widest text-pink-700 font-sans">Onboarding Setup Questions</h4>
+                  </div>
+                  <p className="text-[10px] text-stone-500 font-sans">
+                    Want to re-answer the initial 11 setup questions to update your baseline cycle, goals, and tracking preferences?
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const resetUser = { ...user, onboardingCompleted: false };
+                    setUser(resetUser);
+                    localStorage.setItem('lumina_user', JSON.stringify(resetUser));
+                    syncUser(resetUser);
+                    if (setActiveTab) setActiveTab('dashboard');
+                  }}
+                  className="px-5 py-3 bg-gradient-to-r from-pink-500 to-rose-500 text-white font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-md hover:scale-105 transition-all cursor-pointer shrink-0"
+                >
+                  ✨ Restart Setup Questions
+                </button>
+              </div>
+
               {/* Fertility Tracking & Awareness */}
               <div className="bg-rose-50/30 p-5 rounded-3xl border border-rose-100/30 flex flex-col gap-3">
                 <label className="text-[10px] font-bold text-pink-500 uppercase tracking-widest flex items-center gap-1.5">

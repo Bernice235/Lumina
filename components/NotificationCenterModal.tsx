@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AppNotification, User } from '../types';
 import { X, Bell, CheckCheck, Trash2, Sparkles, ChevronRight, ArrowLeft, Calendar, Heart, ShieldCheck, ExternalLink, RefreshCw } from 'lucide-react';
-import { calculateScheduledNotifications, getDefaultNotificationSettings } from '../services/notificationService';
+import { calculateScheduledNotifications, getDefaultNotificationSettings, sanitizeUserNotifications } from '../services/notificationService';
 
 interface NotificationCenterModalProps {
   isOpen: boolean;
@@ -26,11 +26,12 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'cycle' | 'wellness' | 'partner'>('all');
 
   const handleSyncNotificationsNow = async () => {
+    const sanitizedNotifs = sanitizeUserNotifications(user);
     const scheduled = calculateScheduledNotifications(user, user.notificationSettings || getDefaultNotificationSettings());
+    const updatedList = [...sanitizedNotifs];
+    const nowISO = new Date().toISOString();
+
     if (scheduled && scheduled.length > 0) {
-      const existingNotifs = user.notifications || [];
-      const updatedList = [...existingNotifs];
-      const nowISO = new Date().toISOString();
       scheduled.forEach(item => {
         if (!updatedList.some(n => n.id === item.id)) {
           updatedList.unshift({
@@ -47,10 +48,11 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
           });
         }
       });
-      const updatedUser = { ...user, notifications: updatedList };
-      setUser(updatedUser);
-      await syncUser(updatedUser);
     }
+
+    const updatedUser = { ...user, notifications: updatedList };
+    setUser(updatedUser);
+    await syncUser(updatedUser);
   };
 
   useEffect(() => {

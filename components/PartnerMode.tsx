@@ -1,6 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { PartnerOnboardingWizard } from './PartnerOnboardingWizard';
 import { Bell, X, GraduationCap, BookOpen, Heart, ShieldCheck, CheckCircle2, AlertCircle, Info, Sparkles, Settings, LogOut, Shield, User as UserIcon, Trash2, Menu } from 'lucide-react';
 import { User, Reminder, ReceivedComfort, PartnerNotificationPreferences } from '../types';
 import { getGiftIdeas, getCommunicationTips, getLoveNoteIdeas, getSupportMission } from '../services/gemini';
@@ -241,7 +242,8 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
     return () => unsubGifts();
   }, [user.id]);
 
-  const targetUser = user.isPartner ? (linkedUser || partnerUser || user) : user;
+  const actualPartnerUser = (linkedUser && linkedUser.id !== user.id) ? linkedUser :
+                            (partnerUser && partnerUser.id !== user.id) ? partnerUser : null;
 
   const isDeclined = user.partnerRequest?.status === 'declined' || 
                      activePendingRequest?.status === 'declined' || 
@@ -265,10 +267,41 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
     )
   );
 
-  const partnerDisplayName = getCleanName(
-    targetUser?.name || partnerUser?.name || linkedUser?.name || user.partnerName,
-    targetUser?.email || partnerUser?.email || linkedUser?.email
-  ) || 'Partner';
+  const partnerDisplayName = (() => {
+    if (actualPartnerUser?.name) {
+      const clean = getCleanName(actualPartnerUser.name, actualPartnerUser.email);
+      if (clean) return clean;
+    }
+    
+    if (user.isPartner) {
+      // Current user is the Partner. We need the Primary User's (invite owner) name.
+      const candidate = connectionRequest?.senderName ||
+                        connectionRequest?.name ||
+                        user.partnerName || 
+                        user.partnerRequest?.partnerName || 
+                        outgoingRequests.find(r => r.status === 'pending' || r.user_id === user.partnerId || r.userId === user.partnerId)?.partnerName ||
+                        outgoingRequests[0]?.partnerName;
+      if (candidate) {
+        const clean = getCleanName(candidate, undefined);
+        if (clean) return clean;
+      }
+    } else {
+      // Current user is the Primary User. We need the Partner's name.
+      const candidate = user.partnerName ||
+                        incomingRequests.find(r => r.status === 'pending')?.partnerName ||
+                        user.partnerRequest?.partnerName;
+      if (candidate) {
+        const clean = getCleanName(candidate, undefined);
+        if (clean) return clean;
+      }
+    }
+
+    return 'Partner';
+  })();
+
+  const targetUser = user.isPartner 
+    ? (actualPartnerUser || { ...user, name: partnerDisplayName }) 
+    : user;
   
   const currentPhase = (() => {
     if (!targetUser) return 'Luteal';
@@ -1314,6 +1347,24 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
     setPartnerStep(6);
   };
 
+  if (user.isPartner && (partnerStep === 4 || ((user.isPartnerLinked || user.partnerRequest?.status === 'approved' || outgoingRequests.some(r => r.status === 'approved')) && (!user.partnerOnboardingCompleted || !user.onboardingCompleted)))) {
+    return (
+      <PartnerOnboardingWizard
+        user={user}
+        setUser={setUser}
+        onComplete={(completedUser) => {
+          setUser(completedUser);
+          localStorage.setItem('lumina_user', JSON.stringify(completedUser));
+          if (completedUser.email) {
+            localStorage.setItem('lumina_user_email_' + completedUser.email.toLowerCase().trim(), JSON.stringify(completedUser));
+          }
+          syncUser(completedUser);
+          setPartnerStep(6);
+        }}
+      />
+    );
+  }
+
   if (user.isPartner && user.partnerId && partnerStep < 6) {
     return (
       <div className="min-h-[80vh] flex flex-col items-center justify-center p-6 animate-fadeIn font-sans">
@@ -1441,10 +1492,10 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
           {partnerStep === 3 && (
             <div className="text-center space-y-6 animate-fadeIn py-6">
               <div className="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center text-3xl mx-auto shadow-inner animate-pulse">📨</div>
-              <h2 className="text-2xl font-serif italic text-indigo-900 leading-tight">Connection request sent to {user.partnerName || 'your partner'}.</h2>
+              <h2 className="text-2xl font-serif italic text-indigo-900 leading-tight">Connection request sent to {partnerDisplayName}.</h2>
               <div className="space-y-2 max-w-sm mx-auto">
                 <p className="text-xs text-indigo-500 leading-relaxed">
-                  We have sent your connection and privacy request to <span className="font-bold text-indigo-900">{user.partnerName || 'your partner'}</span>!
+                  We have sent your connection and privacy request to <span className="font-bold text-indigo-900">{partnerDisplayName}</span>!
                 </p>
                 <p className="text-xs text-indigo-400 italic">
                   Once she reviews and approves your requested options, you'll be able to access your companion dashboard instantly.
@@ -1462,7 +1513,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
 
               <div className="flex items-center justify-center gap-2 py-4">
                 <div className="w-2 h-2 bg-indigo-600 rounded-full animate-ping"></div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Waiting for approval from {user.partnerName || 'your partner'}.</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Waiting for approval from {partnerDisplayName}.</span>
               </div>
 
               <button

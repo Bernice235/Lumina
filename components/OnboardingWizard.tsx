@@ -193,6 +193,9 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
 
     setUser(updatedUser);
     localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+    if (updatedUser.email) {
+      localStorage.setItem('lumina_user_email_' + updatedUser.email.toLowerCase().trim(), JSON.stringify(updatedUser));
+    }
     syncUser(updatedUser);
     onComplete(updatedUser);
   };
