@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AppNotification, User } from '../types';
 import { X, Bell, CheckCheck, Trash2, Sparkles, ChevronRight, ArrowLeft, Calendar, Heart, ShieldCheck, ExternalLink, RefreshCw } from 'lucide-react';
 import { calculateScheduledNotifications, getDefaultNotificationSettings, sanitizeUserNotifications } from '../services/notificationService';
+import { trackOpenNotification } from '../services/analyticsService';
 
 interface NotificationCenterModalProps {
   isOpen: boolean;
@@ -147,6 +148,7 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
       syncUser(updatedUser);
     }
     setSelectedNotif(notif);
+    trackOpenNotification(notif.title, notif.category);
   };
 
   const handleMarkAllRead = () => {

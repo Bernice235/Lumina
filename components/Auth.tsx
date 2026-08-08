@@ -11,6 +11,7 @@ import {
   sendPasswordResetEmail
 } from 'firebase/auth';
 import { syncUser, subscribeToUser, getInvite, getUserDisplayName, getCleanName, getSanctuaryTitle } from '../services/firebaseService';
+import { trackSignUp, trackLogin, setUserProperties, logCrashReport } from '../services/analyticsService';
 import { 
   Fingerprint, 
   Scan, 
@@ -318,6 +319,13 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
       sessionStorage.setItem('lumina_user', JSON.stringify(fullExistingUser));
     }
     credentialsSaver();
+    setUserProperties({
+      userId: fullExistingUser.id,
+      email: fullExistingUser.email,
+      isPartner: fullExistingUser.isPartner,
+      isPremium: fullExistingUser.isPremium
+    });
+    trackLogin('email', fullExistingUser.isPartner);
     onLogin(fullExistingUser, rememberMe);
   };
 
@@ -380,9 +388,12 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
         sessionStorage.setItem('lumina_user', JSON.stringify(newUser));
       }
       handleSaveCredentials(newUser.email, 'google_sim', newUser.name);
+      setUserProperties({ userId: newUser.id, email: newUser.email, isPartner: newUser.isPartner });
+      trackSignUp('google', newUser.isPartner);
       onLogin(newUser, rememberMe);
     } catch (fbErr: any) {
       console.warn("Google Login failed or was cancelled:", fbErr);
+      logCrashReport(fbErr, 'Authentication Error', { provider: 'google' });
       setError("Google Sign-In could not be completed. Please try again or use email sign-in below. 🌸");
     } finally {
       setLoading(false);

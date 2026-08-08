@@ -19,10 +19,12 @@ import {
   X,
   Trash2,
   CheckCheck,
+  Activity,
   Image as ImageIcon 
 } from 'lucide-react';
 import { User, Symptom, DiaryEntry, SelfCareTask, AppTheme, Reminder, BirthControlLog, Song, TemperatureLog, PeriodLog, Period, ReceivedComfort, AppNotification } from './types';
 import Auth from './components/Auth';
+import { AnalyticsDashboardModal } from './components/AnalyticsDashboardModal';
 import { OnboardingWizard } from './components/OnboardingWizard';
 import { PartnerOnboardingWizard } from './components/PartnerOnboardingWizard';
 import Dashboard from './components/Dashboard';
@@ -50,6 +52,29 @@ import { getDefaultNotificationSettings, calculateScheduledNotifications, saniti
 import { auth } from './services/firebase';
 import { onAuthStateChanged, setPersistence, browserSessionPersistence, indexedDBLocalPersistence } from 'firebase/auth';
 import { SplashScreen } from './components/SplashScreen';
+
+const isDeepEqual = (obj1: any, obj2: any): boolean => {
+  if (obj1 === obj2) return true;
+  if (obj1 === null || obj2 === null || typeof obj1 !== 'object' || typeof obj2 !== 'object') {
+    return obj1 === obj2;
+  }
+  if (Array.isArray(obj1) !== Array.isArray(obj2)) return false;
+  if (Array.isArray(obj1)) {
+    if (obj1.length !== obj2.length) return false;
+    for (let i = 0; i < obj1.length; i++) {
+      if (!isDeepEqual(obj1[i], obj2[i])) return false;
+    }
+    return true;
+  }
+  const keys1 = Object.keys(obj1);
+  const keys2 = Object.keys(obj2);
+  if (keys1.length !== keys2.length) return false;
+  for (const key of keys1) {
+    if (!Object.prototype.hasOwnProperty.call(obj2, key)) return false;
+    if (!isDeepEqual(obj1[key], obj2[key])) return false;
+  }
+  return true;
+};
 
 const App: React.FC = () => {
   const [user, setUserState] = useState<User | null>(() => {
@@ -90,13 +115,19 @@ const App: React.FC = () => {
       setUserState((prev) => {
         const next = val(prev);
         if (next) next.isPremium = true;
+        if (isDeepEqual(prev, next)) {
+          return prev;
+        }
         userRef.current = next;
         return next;
       });
     } else {
       if (val) val.isPremium = true;
-      setUserState(val);
+      if (isDeepEqual(userRef.current, val)) {
+        return;
+      }
       userRef.current = val;
+      setUserState(val);
     }
   };
 
@@ -139,6 +170,7 @@ const App: React.FC = () => {
   });
   const [settingsSubTab, setSettingsSubTab] = useState<'notifications' | 'general' | 'billing'>('billing');
   const [isGlobalNotificationsOpen, setIsGlobalNotificationsOpen] = useState(false);
+  const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
   const [selectedNotifForModal, setSelectedNotifForModal] = useState<AppNotification | null>(null);
   const [simulatedNotify, setSimulatedNotify] = useState<{
     id: string;
@@ -1687,6 +1719,16 @@ const App: React.FC = () => {
             </div>
             
             <div className="flex items-center gap-1.5 justify-end">
+              {/* Analytics & Health Dashboard Button */}
+              <button
+                onClick={() => setIsAnalyticsOpen(true)}
+                className="p-1.5 rounded-full bg-rose-50/80 dark:bg-stone-800 hover:bg-rose-100 text-rose-600 transition-all cursor-pointer active:scale-95 flex items-center justify-center border border-rose-100/50"
+                title="Analytics & Health Dashboard"
+                id="app-header-analytics-button"
+              >
+                <Activity className="w-3.5 h-3.5 text-rose-500" />
+              </button>
+
               {/* Notification Bell */}
               <button 
                 onClick={() => {
@@ -2338,6 +2380,12 @@ const App: React.FC = () => {
         syncUser={syncUser}
         setActiveTab={setActiveTab}
         initialSelectedNotif={selectedNotifForModal}
+      />
+
+      {/* Analytics & Health Monitoring Dashboard Modal */}
+      <AnalyticsDashboardModal
+        isOpen={isAnalyticsOpen}
+        onClose={() => setIsAnalyticsOpen(false)}
       />
     </div>
   );

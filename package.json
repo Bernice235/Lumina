@@ -16,6 +16,7 @@
     "cap:build:ios": "npm run build && npx cap sync && echo 'Please build and sign inside Xcode.'"
   },
   "dependencies": {
+    "@amplitude/analytics-browser": "^2.45.5",
     "@capacitor/android": "^6.0.0",
     "@capacitor/core": "^6.0.0",
     "@capacitor/ios": "^6.0.0",

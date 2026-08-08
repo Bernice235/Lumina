@@ -14,6 +14,7 @@ import {
   Info,
   Heart
 } from 'lucide-react';
+import { trackOpenSexEducationContent } from '../services/analyticsService';
 
 const Education: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'products' | 'beginner' | 'hygiene' | 'cycle' | 'qa'>('products');
@@ -21,6 +22,10 @@ const Education: React.FC = () => {
   const [concern, setConcern] = useState('');
   const [aiAdvice, setAiAdvice] = useState('');
   const [loadingAdvice, setLoadingAdvice] = useState(false);
+
+  React.useEffect(() => {
+    trackOpenSexEducationContent(`Education Tab: ${activeTab}`);
+  }, [activeTab]);
 
   const currentProduct = PRODUCT_TUTORIALS[selectedProduct];
 

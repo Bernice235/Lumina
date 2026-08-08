@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 
 import { syncUser } from '../services/firebaseService';
+import { trackCompleteOnboarding } from '../services/analyticsService';
 
 interface OnboardingWizardProps {
   user: User;
@@ -197,6 +198,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
       localStorage.setItem('lumina_user_email_' + updatedUser.email.toLowerCase().trim(), JSON.stringify(updatedUser));
     }
     syncUser(updatedUser);
+    trackCompleteOnboarding(false);
     onComplete(updatedUser);
   };
 

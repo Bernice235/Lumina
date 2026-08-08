@@ -83,8 +83,15 @@ export const syncUser = async (user: User) => {
     diaryEntriesCount: user.diaryEntries?.length || 0
   });
 
-  if (isSandboxId(user.id)) {
+  // Always update local cache for offline/sandbox/session persistence
+  try {
     localStorage.setItem(`lumina_user_${user.id}`, JSON.stringify(user));
+    localStorage.setItem('lumina_user', JSON.stringify(user));
+  } catch (e) {
+    console.warn('[syncUser] Local storage save notice:', e);
+  }
+
+  if (isSandboxId(user.id)) {
     // Trigger real-time storage event for local updates
     window.dispatchEvent(new StorageEvent('storage', {
       key: `lumina_user_${user.id}`,
@@ -102,9 +109,8 @@ export const syncUser = async (user: User) => {
       cycleLength: user.cycleLength,
       periodLength: user.periodLength
     });
-  } catch (error) {
-    console.error('[syncUser ERROR] Firestore write failed:', error);
-    handleFirestoreError(error, OperationType.WRITE, path);
+  } catch (error: any) {
+    console.warn('[syncUser] Firestore write notice (saved to local storage):', error?.message || error);
   }
 };
 
@@ -155,8 +161,13 @@ export const subscribeToUser = (userId: string, callback: (user: User | null) =>
       callback(null);
     }
   }, (error) => {
-    console.error('[subscribeToUser - Firestore ERROR]', error);
-    handleFirestoreError(error, OperationType.GET, path);
+    console.warn('[subscribeToUser - Firestore Notice]', error?.message || error);
+    try {
+      const localData = localStorage.getItem(`lumina_user_${userId}`) || localStorage.getItem('lumina_user');
+      callback(localData ? JSON.parse(localData) : null);
+    } catch {
+      callback(null);
+    }
   });
 };
 
@@ -466,7 +477,13 @@ export const subscribeToGifts = (userId: string, callback: (gifts: ReceivedComfo
     const gifts = snapshot.docs.map(doc => doc.data() as ReceivedComfort);
     callback(gifts);
   }, (error) => {
-    handleFirestoreError(error, OperationType.GET, path);
+    console.warn('[subscribeToGifts - Firestore Notice]', error?.message || error);
+    try {
+      const localGifts = localStorage.getItem(`lumina_gifts_${userId}`);
+      callback(localGifts ? JSON.parse(localGifts) : []);
+    } catch {
+      callback([]);
+    }
   });
 };
 
@@ -521,7 +538,17 @@ export const subscribeToPartnerRequests = (roleId: string, role: 'user' | 'partn
     console.log('[Pending Request Listener]', { roleId, role, requestsCount: list.length, requests: list });
     callback(list);
   }, (err) => {
-    handleFirestoreError(err, OperationType.GET, path);
+    console.warn('[subscribeToPartnerRequests - Firestore Notice]', err?.message || err);
+    try {
+      const saved = localStorage.getItem('lumina_partner_requests');
+      const list = saved ? JSON.parse(saved) : [];
+      const filtered = role === 'user'
+        ? list.filter((r: any) => r.user_id === roleId || r.userId === roleId)
+        : list.filter((r: any) => r.partner_id === roleId || r.partnerId === roleId);
+      callback(filtered);
+    } catch {
+      callback([]);
+    }
   });
 };
 

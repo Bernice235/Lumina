@@ -23,6 +23,7 @@ import {
   getCleanName,
   getSanctuaryTitle
 } from '../services/firebaseService';
+import { trackSendPartnerInvite, trackAcceptPartnerInvite, trackDeclinePartnerInvite } from '../services/analyticsService';
 
 interface PartnerModeProps {
   user: User;

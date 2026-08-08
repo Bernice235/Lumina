@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { DiaryEntry, User } from '../types';
 import { Lock, Fingerprint, ShieldCheck, AlertCircle, Edit3, PlusCircle, Clock, RotateCcw, CheckCircle2, Calendar, Sparkles, Trash2, Heart } from 'lucide-react';
+import { trackCreateDiaryEntry, trackUpdateDiaryEntry } from '../services/analyticsService';
 
 interface DiaryProps {
   entries: DiaryEntry[];
@@ -180,6 +181,7 @@ const Diary: React.FC<DiaryProps> = ({ entries, setEntries, user }) => {
         }
         return e;
       }));
+      trackUpdateDiaryEntry(mood);
     } else {
       // Create new entry
       const newEntry: DiaryEntry = {
@@ -193,6 +195,7 @@ const Diary: React.FC<DiaryProps> = ({ entries, setEntries, user }) => {
         cyclePhase: currentPhaseName
       };
       setEntries([newEntry, ...entries]);
+      trackCreateDiaryEntry(mood);
     }
 
     // Clear Draft

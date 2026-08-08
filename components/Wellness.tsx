@@ -4,6 +4,7 @@ import { SUPPLEMENTS } from '../constants';
 import { getSupplementAdvice } from '../services/gemini';
 import { HealthService } from '../services/healthService';
 import YogaTutorials from './YogaTutorials';
+import { trackOpenWellnessContent } from '../services/analyticsService';
 import { 
   Activity, 
   Heart, 
@@ -82,6 +83,10 @@ const Wellness: React.FC<WellnessProps> = ({ symptoms, user, setUser, waterIntak
     const syncPref = user.wellnessPreferences?.find(p => p.startsWith('last_sync:'));
     if (syncPref) setLastSyncText(new Date(syncPref.substring(10)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
   }, [user.wellnessPreferences]);
+
+  useEffect(() => {
+    trackOpenWellnessContent(`Wellness Tab: ${activeTab}`, activeTab);
+  }, [activeTab]);
 
   // Calculate high-fidelity Wellness Score (out of 100)
   const wellnessScore = (() => {

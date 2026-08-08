@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { User, Symptom, PeriodLog } from '../types';
 import { SYMPTOMS } from '../constants';
 import { Calendar, Activity, History, Plus, X } from 'lucide-react';
+import { trackLogPeriod } from '../services/analyticsService';
 
 interface LogModalProps {
   isOpen: boolean;
@@ -163,6 +164,7 @@ const LogModal: React.FC<LogModalProps> = ({
                         const startStr = new Date(startDate + 'T12:00:00').toDateString();
                         const endStr = new Date(endDate + 'T12:00:00').toDateString();
                         onLogFullPeriod(startStr, endStr, selectedIntensity);
+                        trackLogPeriod();
                         onClose();
                       }}
                       className="w-full py-5 bg-gradient-to-r from-pink-400 to-rose-400 text-white rounded-3xl font-bold text-lg shadow-xl shadow-pink-100 hover:scale-[1.02] active:scale-95 transition-all"

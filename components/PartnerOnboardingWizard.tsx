@@ -16,6 +16,7 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { syncUser } from '../services/firebaseService';
+import { trackCompleteOnboarding } from '../services/analyticsService';
 
 interface PartnerOnboardingWizardProps {
   user: User;
@@ -182,6 +183,7 @@ export const PartnerOnboardingWizard: React.FC<PartnerOnboardingWizardProps> = (
       localStorage.setItem('lumina_user_email_' + updatedUser.email.toLowerCase().trim(), JSON.stringify(updatedUser));
     }
     syncUser(updatedUser);
+    trackCompleteOnboarding(true);
     onComplete(updatedUser);
   };
 
