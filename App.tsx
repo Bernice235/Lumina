@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { User, Symptom, DiaryEntry, SelfCareTask, AppTheme, Reminder, BirthControlLog, Song, TemperatureLog, PeriodLog, Period, ReceivedComfort, AppNotification } from './types';
 import Auth from './components/Auth';
+import ErrorBoundary from './components/ErrorBoundary';
 import { AnalyticsDashboardModal } from './components/AnalyticsDashboardModal';
 import { OnboardingWizard } from './components/OnboardingWizard';
 import { PartnerOnboardingWizard } from './components/PartnerOnboardingWizard';
@@ -2157,7 +2158,9 @@ const App: React.FC = () => {
       )}
 
       <main className={`max-w-4xl mx-auto px-4 ${activeTab === 'dashboard' && !user.isPartner ? 'mt-4' : 'mt-8'} pb-10`}>
-        {renderContent()}
+        <ErrorBoundary onReset={() => setActiveTab('dashboard')}>
+          {renderContent()}
+        </ErrorBoundary>
       </main>
 
       <LogModal 
@@ -2295,7 +2298,7 @@ const App: React.FC = () => {
 
             <NavItem icon="🎵" label="Music" active={activeTab === 'music'} onClick={() => setActiveTab('music')} theme={user.theme} />
             <NavItem icon="📚" label="Learn" active={activeTab === 'edu'} onClick={() => setActiveTab('edu')} theme={user.theme} />
-            <NavItem icon="👤" label="Settings" active={activeTab === 'settings'} onClick={() => { setSettingsSubTab('account'); setActiveTab('settings'); }} theme={user.theme} />
+            <NavItem icon="👤" label="Settings" active={activeTab === 'settings'} onClick={() => { setSettingsSubTab('menu'); setActiveTab('settings'); }} theme={user.theme} />
           </nav>
         </>
       )}

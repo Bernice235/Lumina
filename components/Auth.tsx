@@ -1393,7 +1393,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
                             value={age}
                             onChange={(e) => setAge(e.target.value)}
                             className="w-full px-4 py-3 bg-white/50 border border-pink-100/60 rounded-xl text-[9px] font-bold tracking-widest outline-none focus:border-pink-300 transition-colors"
-                            required={registerRole !== 'partner'}
+                            required
                           />
                         </div>
                         <div className="space-y-1">
@@ -1403,7 +1403,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
                             value={dob}
                             onChange={(e) => setDob(e.target.value)}
                             className="w-full px-4 py-3 bg-white/50 border border-pink-100/60 rounded-xl text-[9px] font-bold tracking-widest outline-none focus:border-pink-300 transition-colors"
-                            required={registerRole !== 'partner'}
+                            required
                           />
                         </div>
                       </div>

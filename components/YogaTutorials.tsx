@@ -33,10 +33,10 @@ import {
 interface YogaTutorialsProps {
   user: User;
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
-  todaysSymptoms: string[];
+  todaysSymptoms?: string[];
 }
 
-const YogaTutorials: React.FC<YogaTutorialsProps> = ({ user, setUser, todaysSymptoms }) => {
+const YogaTutorials: React.FC<YogaTutorialsProps> = ({ user, setUser, todaysSymptoms = [] }) => {
   const [selectedPose, setSelectedPose] = useState<typeof YOGA_POSES[number] | null>(null);
   const [playerMode, setPlayerMode] = useState<'video' | 'animation'>('video');
   const [videoSource, setVideoSource] = useState<string>('');
@@ -64,6 +64,23 @@ const YogaTutorials: React.FC<YogaTutorialsProps> = ({ user, setUser, todaysSymp
 
   // Audio elements for soft practice sound
   const audioContextRef = useRef<AudioContext | null>(null);
+  const studioModalRef = useRef<HTMLDivElement | null>(null);
+
+  // Lock body scroll and scroll to top when practice studio is opened
+  useEffect(() => {
+    if (selectedPose) {
+      document.body.style.overflow = 'hidden';
+      if (studioModalRef.current) {
+        studioModalRef.current.scrollTop = 0;
+      }
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [selectedPose]);
 
   // Cycle phase calculation
   const getCyclePhase = (): string => {
@@ -308,7 +325,7 @@ const YogaTutorials: React.FC<YogaTutorialsProps> = ({ user, setUser, todaysSymp
     setAiLoading(true);
     setAiAdvice('');
     
-    const activeSymptoms = todaysSymptoms.length > 0 ? todaysSymptoms : ['general fatigue'];
+    const activeSymptoms = (todaysSymptoms && todaysSymptoms.length > 0) ? todaysSymptoms : ['general fatigue'];
     const prompt = `I am practicing the yoga pose "${poseName}" during my ${currentPhase} cycle phase. My symptoms today are: ${activeSymptoms.join(', ')}. Please give me 3 highly comforting, big-sisterly tips/modifications on how to safely align or practice this pose to nourish my pelvic area, soothe muscles, and support endocrine flow. Keep the reply to exactly three direct bullet points, concise and elegant, followed by a warm signature.`;
 
     try {
@@ -634,7 +651,7 @@ const YogaTutorials: React.FC<YogaTutorialsProps> = ({ user, setUser, todaysSymp
       
       {/* Practice Studio Overlay (Full Height Glass Modal) */}
       {selectedPose && createPortal(
-        <div className="fixed inset-0 z-[9999] bg-stone-950/95 backdrop-blur-2xl flex flex-col justify-between overflow-y-auto p-4 md:p-8 animate-fadeIn text-gray-100">
+        <div ref={studioModalRef} className="fixed inset-0 z-[9999] bg-stone-950/95 backdrop-blur-2xl flex flex-col justify-between overflow-y-auto p-4 md:p-8 animate-fadeIn text-gray-100">
           
           {/* LOGGING SUCCESS FULLSCREEN CELEBRATION */}
           {loggedSuccessfully ? (

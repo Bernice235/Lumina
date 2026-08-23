@@ -10,10 +10,22 @@ const AMPLITUDE_API_KEY = 'cf2b2b0258684768854bf345bcbcae93';
 let firebaseAnalyticsInstance: any = null;
 let isAmplitudeInitialized = false;
 
-// Initialize Amplitude Analytics
+// Initialize Amplitude Analytics with safe offline & restricted-environment fallbacks
 try {
   if (typeof window !== 'undefined') {
-    amplitude.init(AMPLITUDE_API_KEY, {
+    const silentLogger = {
+      disable: () => {},
+      enable: () => {},
+      error: () => {},
+      warn: () => {},
+      log: () => {},
+      debug: () => {},
+    };
+
+    const initResult = amplitude.init(AMPLITUDE_API_KEY, {
+      fetchRemoteConfig: false,
+      logLevel: amplitude.Types?.LogLevel?.None ?? 0,
+      loggerProvider: silentLogger,
       defaultTracking: {
         pageViews: true,
         sessions: true,
@@ -21,11 +33,25 @@ try {
         fileDownloads: false,
       },
     });
-    isAmplitudeInitialized = true;
-    console.log('[Analytics] Amplitude Browser SDK initialized successfully');
+
+    if (initResult && (initResult as any).promise) {
+      (initResult as any).promise
+        .then(() => {
+          isAmplitudeInitialized = true;
+          console.log('[Analytics] Amplitude Browser SDK initialized successfully');
+        })
+        .catch((_err: any) => {
+          // Gracefully handle adblockers, sandboxed network restrictions, or offline mode
+          isAmplitudeInitialized = false;
+        });
+    } else {
+      isAmplitudeInitialized = true;
+      console.log('[Analytics] Amplitude Browser SDK initialized successfully');
+    }
   }
 } catch (err) {
-  console.warn('[Analytics] Amplitude initialization warning:', err);
+  isAmplitudeInitialized = false;
+  console.warn('[Analytics] Amplitude initialization skipped:', err);
 }
 
 // Initialize Firebase Analytics if supported
@@ -236,6 +262,23 @@ export const logCrashReport = async (
 // Automatic global error handlers for Crashlytics
 if (typeof window !== 'undefined') {
   window.addEventListener('error', (event) => {
+    const rawMsg = event.error?.message || (typeof event.message === 'string' ? event.message : '') || '';
+    // Filter out benign network / third-party analytics / adblocker / resize errors / autoplay
+    if (
+      rawMsg.includes('Load failed') ||
+      rawMsg.includes('Failed to fetch') ||
+      rawMsg.includes('NetworkError') ||
+      rawMsg.includes('Amplitude') ||
+      rawMsg.includes('ResizeObserver') ||
+      rawMsg.includes('Script error') ||
+      rawMsg.includes('user gesture') ||
+      rawMsg.includes('NotAllowedError') ||
+      rawMsg.includes('play()') ||
+      rawMsg.includes('speechSynthesis') ||
+      rawMsg.includes('canceled')
+    ) {
+      return;
+    }
     logCrashReport(event.error || event.message || 'Window Error', 'App Crash', {
       filename: event.filename,
       lineno: event.lineno,
@@ -244,6 +287,23 @@ if (typeof window !== 'undefined') {
   });
 
   window.addEventListener('unhandledrejection', (event) => {
+    const reasonStr = String(event.reason?.message || event.reason || '');
+    // Filter out benign network / third-party analytics / offline promise rejections / autoplay restrictions
+    if (
+      reasonStr.includes('Load failed') ||
+      reasonStr.includes('Failed to fetch') ||
+      reasonStr.includes('NetworkError') ||
+      reasonStr.includes('Amplitude') ||
+      reasonStr.includes('AbortError') ||
+      reasonStr.includes('NotAllowedError') ||
+      reasonStr.includes('play()') ||
+      reasonStr.includes('interrupted') ||
+      reasonStr.includes('speechSynthesis') ||
+      reasonStr.includes('canceled') ||
+      reasonStr.includes('The user aborted a request')
+    ) {
+      return;
+    }
     logCrashReport(event.reason || 'Unhandled Promise Rejection', 'App Crash', {
       type: 'unhandledrejection',
     });

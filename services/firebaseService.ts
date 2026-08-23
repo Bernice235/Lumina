@@ -31,6 +31,15 @@ function cleanUndefined<T>(obj: T): T {
   return newObj;
 }
 
+export function safeJsonParse<T>(raw: string | null, fallback: T): T {
+  if (!raw) return fallback;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return fallback;
+  }
+}
+
 const isSandboxId = (id?: string | null): boolean => {
   if (!id) return false;
   return id.startsWith('sandbox_') || id.startsWith('offline_');
@@ -224,7 +233,7 @@ export const addNotificationToUser = async (targetUserId: string, notification: 
   if (isSandboxId(targetUserId)) {
     const raw = localStorage.getItem(`lumina_user_${targetUserId}`) || localStorage.getItem('lumina_user');
     if (raw) {
-      const userObj = JSON.parse(raw);
+      const userObj = safeJsonParse<any>(raw, {});
       const existing = userObj.notifications || [];
       const updated = {
         ...userObj,
@@ -258,12 +267,15 @@ export const acceptInvite = async (code: string, currentUserId: string, currentU
     if (!inviteSnap) {
       throw new Error("Invalid or expired code. ❌");
     }
-    const inviteData = JSON.parse(inviteSnap);
+    const inviteData = safeJsonParse<any>(inviteSnap, null);
+    if (!inviteData) {
+      throw new Error("Invalid or expired code format. ❌");
+    }
     
     // Link current user
     const currentUserRaw = localStorage.getItem(`lumina_user_${currentUserId}`);
     if (currentUserRaw) {
-      const currentUser = JSON.parse(currentUserRaw);
+      const currentUser = safeJsonParse<any>(currentUserRaw, {});
       const updatedUser = {
         ...currentUser,
         partnerId: inviteData.senderId,
@@ -284,7 +296,7 @@ export const acceptInvite = async (code: string, currentUserId: string, currentU
     // Link sender user
     const senderUserRaw = localStorage.getItem(`lumina_user_${inviteData.senderId}`);
     if (senderUserRaw) {
-      const senderUser = JSON.parse(senderUserRaw);
+      const senderUser = safeJsonParse<any>(senderUserRaw, {});
       const updatedSender = {
         ...senderUser,
         partnerId: currentUserId,
@@ -381,7 +393,7 @@ export const disconnectPartner = async (userId: string, partnerId: string) => {
   if (isSandboxId(userId)) {
     const userRaw = localStorage.getItem(`lumina_user_${userId}`);
     if (userRaw) {
-      const u = JSON.parse(userRaw);
+      const u = safeJsonParse<any>(userRaw, {});
       await syncUser({
         ...u,
         partnerId: undefined,
@@ -392,7 +404,7 @@ export const disconnectPartner = async (userId: string, partnerId: string) => {
     if (partnerId) {
       const pRaw = localStorage.getItem(`lumina_user_${partnerId}`);
       if (pRaw) {
-        const p = JSON.parse(pRaw);
+        const p = safeJsonParse<any>(pRaw, {});
         await syncUser({
           ...p,
           partnerId: undefined,
@@ -432,7 +444,7 @@ export const sendGift = async (senderName: string, senderId: string, receiverId:
       timestamp: new Date().toISOString()
     };
     const currentGiftsRaw = localStorage.getItem(`lumina_gifts_${receiverId}`);
-    const gifts = currentGiftsRaw ? JSON.parse(currentGiftsRaw) : [];
+    const gifts = safeJsonParse<any[]>(currentGiftsRaw, []);
     gifts.push(giftObj);
     localStorage.setItem(`lumina_gifts_${receiverId}`, JSON.stringify(gifts));
     
@@ -461,11 +473,11 @@ export const sendGift = async (senderName: string, senderId: string, receiverId:
 export const subscribeToGifts = (userId: string, callback: (gifts: ReceivedComfort[]) => void) => {
   if (isSandboxId(userId)) {
     const localGifts = localStorage.getItem(`lumina_gifts_${userId}`);
-    callback(localGifts ? JSON.parse(localGifts) : []);
+    callback(safeJsonParse<ReceivedComfort[]>(localGifts, []));
     
     const listener = (e: StorageEvent) => {
       if (e.key === `lumina_gifts_${userId}`) {
-        callback(e.newValue ? JSON.parse(e.newValue) : []);
+        callback(safeJsonParse<ReceivedComfort[]>(e.newValue, []));
       }
     };
     window.addEventListener('storage', listener);
@@ -480,7 +492,7 @@ export const subscribeToGifts = (userId: string, callback: (gifts: ReceivedComfo
     console.warn('[subscribeToGifts - Firestore Notice]', error?.message || error);
     try {
       const localGifts = localStorage.getItem(`lumina_gifts_${userId}`);
-      callback(localGifts ? JSON.parse(localGifts) : []);
+      callback(safeJsonParse<ReceivedComfort[]>(localGifts, []));
     } catch {
       callback([]);
     }
@@ -699,7 +711,7 @@ export const updatePartnerRequestStatus = async (requestId: string, status: 'app
 export const getInvite = async (code: string) => {
   if (isSandboxId(code) || localStorage.getItem(`lumina_invite_${code}`)) {
     const inviteSnap = localStorage.getItem(`lumina_invite_${code}`);
-    return inviteSnap ? JSON.parse(inviteSnap) : null;
+    return safeJsonParse<any>(inviteSnap, null);
   }
   try {
     const inviteSnap = await getDoc(doc(db, "invites", code));
@@ -717,7 +729,7 @@ export const completePartnerConnection = async (userId: string, partnerId: strin
   const isSandbox = isSandboxId(userId) || isSandboxId(partnerId);
   if (isSandbox) {
     const saved = localStorage.getItem('lumina_partner_requests');
-    const list = saved ? JSON.parse(saved) : [];
+    const list = safeJsonParse<any[]>(saved, []);
     const updated = list.map((r: any) => 
       (r.user_id === userId && r.partner_id === partnerId) ? { ...r, status: 'approved' as const } : r
     );
@@ -827,7 +839,7 @@ export const getGlobalBankDetails = async (): Promise<GlobalBankConfig | null> =
     console.warn("Failed to fetch global bank config from Firestore:", err);
   }
   const cached = localStorage.getItem("lumina_global_bank_config");
-  return cached ? JSON.parse(cached) : null;
+  return safeJsonParse<GlobalBankConfig | null>(cached, null);
 };
 
 export const blockPartner = async (userId: string, partnerIdToBlock: string, partnerDetails?: { id?: string; name?: string; email?: string }) => {
@@ -839,7 +851,7 @@ export const blockPartner = async (userId: string, partnerIdToBlock: string, par
   if (isSandboxId(userId)) {
     const userRaw = localStorage.getItem(`lumina_user_${userId}`);
     if (userRaw) {
-      const u: User = JSON.parse(userRaw);
+      const u: User = safeJsonParse<any>(userRaw, {});
       const existingBlocked = u.blockedPartners || [];
       const isAlreadyBlocked = existingBlocked.some(b => b.id === partnerIdToBlock);
       const newBlocked = isAlreadyBlocked ? existingBlocked : [
@@ -897,7 +909,7 @@ export const unblockPartner = async (userId: string, partnerIdToUnblock: string)
   if (isSandboxId(userId)) {
     const userRaw = localStorage.getItem(`lumina_user_${userId}`);
     if (userRaw) {
-      const u: User = JSON.parse(userRaw);
+      const u: User = safeJsonParse<any>(userRaw, {});
       const existingBlocked = u.blockedPartners || [];
       const newBlocked = existingBlocked.filter(b => b.id !== partnerIdToUnblock);
       await syncUser({
@@ -929,7 +941,7 @@ export const deleteUserAccount = async (userId: string) => {
   try {
     const userRaw = localStorage.getItem(`lumina_user_${userId}`);
     if (userRaw) {
-      const u: User = JSON.parse(userRaw);
+      const u: User = safeJsonParse<any>(userRaw, {});
       if (u.partnerId) {
         await disconnectPartner(userId, u.partnerId);
       }

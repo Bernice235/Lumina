@@ -129,8 +129,12 @@ const MusicRoom: React.FC<MusicRoomProps> = ({
 
   // Recently Played songs
   const [recentlyPlayed, setRecentlyPlayed] = useState<string[]>(() => {
-    const local = localStorage.getItem(`lumina_recent_${user.id}`);
-    return local ? JSON.parse(local) : ['j1', 'af1', 'p1'];
+    try {
+      const local = localStorage.getItem(`lumina_recent_${user?.id || 'default'}`);
+      return local ? JSON.parse(local) : ['j1', 'af1', 'p1'];
+    } catch {
+      return ['j1', 'af1', 'p1'];
+    }
   });
 
   // Track playlist dropdown attachment

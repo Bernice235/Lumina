@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { User, Symptom, Reminder, ReceivedComfort } from '../types';
 import { ExpectedPeriodCheckInCard } from './ExpectedPeriodCheckInCard';
 import { WallpapersAndThemesModal } from './WallpapersAndThemesModal';
@@ -801,6 +802,17 @@ const Dashboard: React.FC<DashboardProps> = ({
   };
 
   useEffect(() => {
+    if (simulatedVideo) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [simulatedVideo]);
+
+  useEffect(() => {
     let timer: NodeJS.Timeout;
     if (simulatedVideo && videoLoading) {
       timer = setTimeout(() => {
@@ -1241,107 +1253,6 @@ const Dashboard: React.FC<DashboardProps> = ({
             </p>
           </div>
         </section>
-
-        {/* Simulated Tutorial Video Modal */}
-        {simulatedVideo && (
-          <div className="fixed inset-0 bg-stone-950/85 backdrop-blur-xl z-[300] flex items-center justify-center p-4 animate-fadeIn overflow-y-auto">
-            <div className="bg-slate-900 rounded-[2.5rem] p-6 md:p-8 max-w-2xl w-full space-y-5 shadow-2xl border border-slate-800 overflow-y-auto max-h-[95vh] flex flex-col text-white">
-              
-              {/* Header Info */}
-              <div className="flex justify-between items-start gap-4">
-                <div className="flex items-center gap-3 text-left">
-                  <span className="text-3xl text-pink-400">🧘‍♀️</span>
-                  <div>
-                    <h4 className="text-lg md:text-xl font-serif italic text-pink-300 font-bold">{simulatedVideo.name}</h4>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Pregnancy & Postpartum Guided Sanctuary • {simulatedVideo.duration}</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setSimulatedVideo(null)}
-                  className="p-2 hover:bg-slate-800 rounded-full text-slate-400 hover:text-white transition-colors text-sm font-bold"
-                  title="Close player"
-                >
-                  ✕
-                </button>
-              </div>
-
-              {/* Video Area / Procedural AI Video Player */}
-              <div className="relative w-full aspect-video bg-stone-950 rounded-2xl overflow-hidden shadow-inner flex flex-col items-center justify-center border border-slate-800">
-                {videoLoading ? (
-                  <div className="space-y-4 text-center py-12">
-                    <div className="w-12 h-12 border-4 border-indigo-500/20 border-t-pink-500 rounded-full animate-spin mx-auto"></div>
-                    <p className="text-xs text-pink-300 italic font-semibold animate-pulse">Initializing AI Somatic Guide, mama...</p>
-                  </div>
-                ) : (
-                  <div className="w-full h-full p-4 flex flex-col items-center justify-between relative">
-                    {/* Live procedural graphic */}
-                    <div className="flex-1 w-full flex items-center justify-center min-h-[160px]">
-                      {renderPregnancyPostpartumExerciseSVG(simulatedVideo.name)}
-                    </div>
-
-                    {/* Floating HUD Indicators */}
-                    <div className="absolute top-3 left-3 bg-slate-900/90 border border-slate-700/50 px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-md">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-                      <span className="text-[9px] font-mono font-bold text-slate-300">LIVE AI PROCEDURAL COACHING</span>
-                    </div>
-
-                    <div className="absolute top-3 right-3 bg-slate-900/90 border border-slate-700/50 px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-md">
-                      <span className="text-[9px] font-mono font-bold text-pink-400">💨 {dashBreathState}...</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Dynamic Biofeedback HUD Controls */}
-              {!videoLoading && (
-                <div className="grid grid-cols-3 gap-3 w-full text-left">
-                  <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800 flex items-center gap-2">
-                    <Heart size={16} className="text-rose-400 animate-pulse shrink-0" />
-                    <div>
-                      <p className="text-[8px] uppercase text-stone-500 font-bold tracking-widest">Somatic Heart</p>
-                      <p className="text-xs font-mono font-bold text-slate-200">{simulatedHeartRate} bpm</p>
-                    </div>
-                  </div>
-                  <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800 flex items-center gap-2">
-                    <Activity size={16} className="text-emerald-400 shrink-0" />
-                    <div>
-                      <p className="text-[8px] uppercase text-stone-500 font-bold tracking-widest">Pelvic Alignment</p>
-                      <p className="text-xs font-mono font-bold text-slate-200">{simulatedAlignment}%</p>
-                    </div>
-                  </div>
-                  <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800 flex items-center gap-2">
-                    <span className="text-sm shrink-0">⏳</span>
-                    <div>
-                      <p className="text-[8px] uppercase text-stone-500 font-bold tracking-widest">Rhythm Pacing</p>
-                      <p className="text-xs font-mono font-bold text-slate-200">{(dashBreathTime).toFixed(1)}s</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Instructions / Safety Check bottom pane */}
-              <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-800 text-left space-y-1.5">
-                <p className="text-[10px] font-black uppercase tracking-widest text-amber-400 flex items-center gap-1">
-                  <span>💡</span> Sanctuary Guide Instructions & Safety
-                </p>
-                <p className="text-xs text-stone-300 font-serif italic leading-relaxed">
-                  {getCoachInstructions(simulatedVideo.name)[coachInstructionIndex % getCoachInstructions(simulatedVideo.name).length] || 
-                    "Focus on your breathing, inhale deeply through your nose, expand your abdomen, and exhale completely. Discontinue immediately if you feel dizzy."}
-                </p>
-              </div>
-
-              {/* Bottom Actions */}
-              <div className="flex gap-3 pt-2">
-                <button
-                  onClick={() => setSimulatedVideo(null)}
-                  className="flex-1 py-3 bg-indigo-500 hover:bg-indigo-600 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl transition-colors shadow-md text-center cursor-pointer"
-                >
-                  Complete practice & close
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Nutrition and Skincare Infusion */}
         <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -2571,6 +2482,108 @@ const Dashboard: React.FC<DashboardProps> = ({
           user={user}
           setUser={setUser as any}
         />
+      )}
+
+      {/* Simulated Tutorial Video Modal for Pregnancy, Postpartum, & Cycle Workouts */}
+      {simulatedVideo && createPortal(
+        <div className="fixed inset-0 bg-stone-950/85 backdrop-blur-xl z-[9999] flex items-center justify-center p-4 animate-fadeIn overflow-y-auto">
+          <div className="bg-slate-900 rounded-[2.5rem] p-6 md:p-8 max-w-2xl w-full space-y-5 shadow-2xl border border-slate-800 overflow-y-auto max-h-[95vh] flex flex-col text-white my-auto">
+            
+            {/* Header Info */}
+            <div className="flex justify-between items-start gap-4">
+              <div className="flex items-center gap-3 text-left">
+                <span className="text-3xl text-pink-400">🧘‍♀️</span>
+                <div>
+                  <h4 className="text-lg md:text-xl font-serif italic text-pink-300 font-bold">{simulatedVideo.name}</h4>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Pregnancy & Postpartum Guided Sanctuary • {simulatedVideo.duration}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSimulatedVideo(null)}
+                className="p-2 hover:bg-slate-800 rounded-full text-slate-400 hover:text-white transition-colors text-sm font-bold cursor-pointer"
+                title="Close player"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Video Area / Procedural AI Video Player */}
+            <div className="relative w-full aspect-video bg-stone-950 rounded-2xl overflow-hidden shadow-inner flex flex-col items-center justify-center border border-slate-800">
+              {videoLoading ? (
+                <div className="space-y-4 text-center py-12">
+                  <div className="w-12 h-12 border-4 border-indigo-500/20 border-t-pink-500 rounded-full animate-spin mx-auto"></div>
+                  <p className="text-xs text-pink-300 italic font-semibold animate-pulse">Initializing AI Somatic Guide, mama...</p>
+                </div>
+              ) : (
+                <div className="w-full h-full p-4 flex flex-col items-center justify-between relative">
+                  {/* Live procedural graphic */}
+                  <div className="flex-1 w-full flex items-center justify-center min-h-[160px]">
+                    {renderPregnancyPostpartumExerciseSVG(simulatedVideo.name)}
+                  </div>
+
+                  {/* Floating HUD Indicators */}
+                  <div className="absolute top-3 left-3 bg-slate-900/90 border border-slate-700/50 px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-md">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                    <span className="text-[9px] font-mono font-bold text-slate-300">LIVE AI PROCEDURAL COACHING</span>
+                  </div>
+
+                  <div className="absolute top-3 right-3 bg-slate-900/90 border border-slate-700/50 px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-md">
+                    <span className="text-[9px] font-mono font-bold text-pink-400">💨 {dashBreathState}...</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Dynamic Biofeedback HUD Controls */}
+            {!videoLoading && (
+              <div className="grid grid-cols-3 gap-3 w-full text-left">
+                <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800 flex items-center gap-2">
+                  <Heart size={16} className="text-rose-400 animate-pulse shrink-0" />
+                  <div>
+                    <p className="text-[8px] uppercase text-stone-500 font-bold tracking-widest">Somatic Heart</p>
+                    <p className="text-xs font-mono font-bold text-slate-200">{simulatedHeartRate} bpm</p>
+                  </div>
+                </div>
+                <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800 flex items-center gap-2">
+                  <Activity size={16} className="text-emerald-400 shrink-0" />
+                  <div>
+                    <p className="text-[8px] uppercase text-stone-500 font-bold tracking-widest">Pelvic Alignment</p>
+                    <p className="text-xs font-mono font-bold text-slate-200">{simulatedAlignment}%</p>
+                  </div>
+                </div>
+                <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800 flex items-center gap-2">
+                  <span className="text-sm shrink-0">⏳</span>
+                  <div>
+                    <p className="text-[8px] uppercase text-stone-500 font-bold tracking-widest">Rhythm Pacing</p>
+                    <p className="text-xs font-mono font-bold text-slate-200">{(dashBreathTime).toFixed(1)}s</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Instructions / Safety Check bottom pane */}
+            <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-800 text-left space-y-1.5">
+              <p className="text-[10px] font-black uppercase tracking-widest text-amber-400 flex items-center gap-1">
+                <span>💡</span> Sanctuary Guide Instructions & Safety
+              </p>
+              <p className="text-xs text-stone-300 font-serif italic leading-relaxed">
+                {getCoachInstructions(simulatedVideo.name)[coachInstructionIndex % getCoachInstructions(simulatedVideo.name).length] || 
+                  "Focus on your breathing, inhale deeply through your nose, expand your abdomen, and exhale completely. Discontinue immediately if you feel dizzy."}
+              </p>
+            </div>
+
+            {/* Bottom Actions */}
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setSimulatedVideo(null)}
+                className="flex-1 py-3 bg-indigo-500 hover:bg-indigo-600 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl transition-colors shadow-md text-center cursor-pointer"
+              >
+                Complete practice & close
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

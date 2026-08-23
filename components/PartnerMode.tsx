@@ -3997,7 +3997,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
               { key: 'partnerMessages', label: 'Partner Messages', desc: 'Receive shared updates and appreciation notes.' },
               { key: 'educationalInsights', label: 'Educational Insights', desc: 'Receive learning content about menstrual health and cycle phases.' },
             ].map((pref) => {
-              const currentVal = user.partnerNotificationPreferences?.[pref.key as keyof PartnerNotificationPreferences] ?? true;
+              const currentVal = Boolean(user.partnerNotificationPreferences?.[pref.key as keyof PartnerNotificationPreferences] ?? true);
               return (
                 <div key={pref.key} className="flex items-start justify-between p-4 bg-purple-50/20 hover:bg-purple-50/50 rounded-2xl border border-purple-100/60 transition-all">
                   <div className="pr-4">
@@ -4016,13 +4016,46 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                         }),
                         [pref.key]: e.target.checked
                       };
-                      const updatedUser = {
+                      const existingNotifSettings = user.notificationSettings || {
+                        enabled: true,
+                        toneStyle: 'supportive' as const,
+                        reminderDaysBefore: 2,
+                        quietHours: { enabled: false, startTime: '22:00', endTime: '07:00' },
+                        types: {
+                          periodStarting: true,
+                          periodStarted: true,
+                          periodEnding: true,
+                          ovulation: true,
+                          fertileWindow: true,
+                          lutealPhase: true,
+                          pregnancyRisk: true
+                        },
+                        partnerNotificationsEnabled: true,
+                        partnerReceiveTypes: {
+                          periodStarting: true,
+                          periodStarted: true,
+                          periodEnding: true,
+                          ovulation: true,
+                          fertileWindow: true,
+                          pregnancyRisk: true
+                        },
+                        pregnancyEnabled: false,
+                        partnerPregnancyEnabled: false,
+                        pregnancyReminderTime: '09:00',
+                        pregnancyTypes: {
+                          welcome: true, weeklyBabyDev: true, babySizeUpdate: true, appointment: true, medicationVitamin: true, hydration: true, rest: true, kickCounter: true, symptomCheck: true, dueDateCountdown: true, laborNear: true, encouragement: true, hospitalBag: true, contractionTimer: true, breastfeedingPrep: true, birthPlan: true, postpartumPrep: true
+                        },
+                        partnerPregnancyReceiveTypes: {
+                          welcome: true, weeklyBabyDev: true, appointment: true, rest: true, symptomSupport: true, dueDateCountdown: true, laborNear: true, encouragement: true
+                        }
+                      };
+                      const updatedUser: User = {
                         ...user,
                         partnerNotificationPreferences: updatedPrefs,
                         notificationSettings: {
-                          ...(user.notificationSettings || {}),
+                          ...existingNotifSettings,
                           partnerReceiveTypes: {
-                            ...(user.notificationSettings?.partnerReceiveTypes || {}),
+                            ...existingNotifSettings.partnerReceiveTypes,
                             [pref.key]: e.target.checked
                           }
                         }

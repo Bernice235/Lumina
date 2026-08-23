@@ -100,15 +100,26 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
   const [deletePeriodConfirmId, setDeletePeriodConfirmId] = useState<string | null>(null);
   const [activeGraphTab, setActiveGraphTab] = useState<'cycle-length' | 'period-length' | 'symptoms' | 'moods' | 'flows' | 'fertility' | 'pregnancy'>(user.isPregnancyMode ? 'pregnancy' : 'cycle-length');
   const [pregnancyWeightLogs, setPregnancyWeightLogs] = useState<{ week: number; weight: number }[]>(() => {
-    const local = localStorage.getItem(`pregnancy_weight_${user.id}`);
-    return local ? JSON.parse(local) : [
-      { week: 4, weight: 62.0 },
-      { week: 8, weight: 62.8 },
-      { week: 12, weight: 63.5 },
-      { week: 16, weight: 64.8 },
-      { week: 20, weight: 66.2 },
-      { week: 24, weight: 68.0 },
-    ];
+    try {
+      const local = localStorage.getItem(`pregnancy_weight_${user?.id || 'default'}`);
+      return local ? JSON.parse(local) : [
+        { week: 4, weight: 62.0 },
+        { week: 8, weight: 62.8 },
+        { week: 12, weight: 63.5 },
+        { week: 16, weight: 64.8 },
+        { week: 20, weight: 66.2 },
+        { week: 24, weight: 68.0 },
+      ];
+    } catch {
+      return [
+        { week: 4, weight: 62.0 },
+        { week: 8, weight: 62.8 },
+        { week: 12, weight: 63.5 },
+        { week: 16, weight: 64.8 },
+        { week: 20, weight: 66.2 },
+        { week: 24, weight: 68.0 },
+      ];
+    }
   });
   const [newWeightVal, setNewWeightVal] = useState('');
   const [newWeightWeek, setNewWeightWeek] = useState('25');

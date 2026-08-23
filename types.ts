@@ -106,8 +106,11 @@ export interface User {
   timezone?: string;
   partnerName: string;
   partnerId?: string;
+  partnerEmail?: string;
   partnerCode?: string;
   isPartnerLinked: boolean;
+  isSharingPaused?: boolean;
+  todaySymptomLog?: any;
   cycleLength: number;
   periodLength: number;
   lastPeriodStart: string;
@@ -170,6 +173,37 @@ export interface User {
   yogaLogs?: { id: string; date: string; poseName: string; duration: number; benefit: string }[];
   latePeriodCheckIn?: { acknowledgedDate: string; daysLate: number; response: 'not_yet' | 'yes' | 'edited' };
   latePeriodDismissedDate?: string;
+  endoPainLogs?: EndoPainLog[];
+  endoMentalLogs?: EndoMentalLog[];
+  endoSpecialistQuestions?: EndoSpecialistQuestion[];
+}
+
+export interface EndoPainLog {
+  id: string;
+  date: string;
+  locations: string[];
+  intensity: number; // 1-10
+  duration: string;
+  triggers: string[];
+  characteristics?: string[];
+  notes?: string;
+}
+
+export interface EndoMentalLog {
+  id: string;
+  date: string;
+  mood: string;
+  stressLevel: 'Low' | 'Moderate' | 'High' | 'Severe';
+  impactOnDailyActivities: 'None' | 'Mild' | 'Moderate (Breaks needed)' | 'Severe (Unable to do tasks)' | 'Bedrest Required';
+  notes?: string;
+}
+
+export interface EndoSpecialistQuestion {
+  id: string;
+  question: string;
+  isChecked: boolean;
+  category: string;
+  isCustom?: boolean;
 }
 
 export interface BillingItem {
@@ -314,6 +348,7 @@ export interface Playlist {
 export interface Reminder {
   id: string;
   text: string;
+  title?: string;
   time: string;
   isCompleted: boolean;
 }
