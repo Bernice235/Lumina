@@ -1,5 +1,4 @@
 import { User } from '../types';
-import { decodeBase64, decodeAudioData } from './audio';
 
 export interface WelcomeGreeting {
   displayText: string;
@@ -10,12 +9,30 @@ export interface WelcomeGreeting {
   firstName: string;
 }
 
-let activeAudioSource: AudioBufferSourceNode | null = null;
-let activeAudioContext: AudioContext | null = null;
-// Keep a module-level reference to prevent garbage collection in Chrome
-let activeUtterance: SpeechSynthesisUtterance | null = null;
-let unlockListenerAttached = false;
+// Global references to prevent garbage collection in Chromium / WebKit
+declare global {
+  interface Window {
+    _luminaUtterance?: SpeechSynthesisUtterance | null;
+    _luminaAudioCtx?: AudioContext | null;
+    _luminaVoiceUnlocked?: boolean;
+    _luminaSpeechInterval?: any;
+  }
+}
+
+let unlockListenersAttached = false;
 let isAudioUnlocked = false;
+
+// Preload speech synthesis voices early
+if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+  try {
+    window.speechSynthesis.getVoices();
+    window.speechSynthesis.onvoiceschanged = () => {
+      try {
+        window.speechSynthesis.getVoices();
+      } catch {}
+    };
+  } catch {}
+}
 
 export function getUserFirstName(user?: Partial<User> | null): string {
   if (!user) return 'Beautiful';
@@ -149,33 +166,34 @@ export function playSoothingChime(): void {
     const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
     if (!AudioCtx) return;
     const ctx = new AudioCtx();
+    window._luminaAudioCtx = ctx;
     const now = ctx.currentTime;
     
-    // Create gentle warm dual chime
+    // Create gentle warm dual harmonic chime (528Hz Solfeggio Love tone)
     const osc1 = ctx.createOscillator();
     const osc2 = ctx.createOscillator();
     const gainNode = ctx.createGain();
 
     osc1.type = 'sine';
-    osc1.frequency.setValueAtTime(528, now); // 528Hz Solfeggio Love frequency
-    osc1.frequency.exponentialRampToValueAtTime(660, now + 0.6);
+    osc1.frequency.setValueAtTime(528, now);
+    osc1.frequency.exponentialRampToValueAtTime(660, now + 0.5);
 
     osc2.type = 'sine';
     osc2.frequency.setValueAtTime(792, now);
-    osc2.frequency.exponentialRampToValueAtTime(880, now + 0.7);
+    osc2.frequency.exponentialRampToValueAtTime(880, now + 0.6);
 
     gainNode.gain.setValueAtTime(0.001, now);
-    gainNode.gain.linearRampToValueAtTime(0.08, now + 0.08);
-    gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
+    gainNode.gain.linearRampToValueAtTime(0.05, now + 0.06);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.8);
 
     osc1.connect(gainNode);
     osc2.connect(gainNode);
     gainNode.connect(ctx.destination);
 
     osc1.start(now);
-    osc2.start(now + 0.05);
-    osc1.stop(now + 1.3);
-    osc2.stop(now + 1.3);
+    osc2.start(now + 0.04);
+    osc1.stop(now + 0.9);
+    osc2.stop(now + 0.9);
 
     setTimeout(() => {
       try {
@@ -183,7 +201,7 @@ export function playSoothingChime(): void {
           ctx.close().catch(() => {});
         }
       } catch {}
-    }, 1500);
+    }, 1000);
   } catch (e) {
     // Ignore audio chime errors
   }
@@ -191,30 +209,53 @@ export function playSoothingChime(): void {
 
 export function stopWelcomeVoice(): void {
   try {
-    if (activeAudioSource) {
-      activeAudioSource.stop();
-      activeAudioSource.disconnect();
-      activeAudioSource = null;
-    }
-  } catch {}
-
-  try {
-    if (activeAudioContext && activeAudioContext.state !== 'closed') {
-      activeAudioContext.close().catch(() => {});
-      activeAudioContext = null;
-    }
-  } catch {}
-
-  try {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
-      activeUtterance = null;
+      window._luminaUtterance = null;
+    }
+  } catch {}
+
+  try {
+    if (window._luminaSpeechInterval) {
+      clearInterval(window._luminaSpeechInterval);
+      window._luminaSpeechInterval = null;
     }
   } catch {}
 }
 
-// Ensure Web Speech Synthesis is active and speaks reliably
-function speakNativeSpeech(
+// Find best natural voice available
+function getBestVoice(): SpeechSynthesisVoice | null {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return null;
+  try {
+    const voices = window.speechSynthesis.getVoices();
+    if (!voices || voices.length === 0) return null;
+
+    // Prioritize natural warm female English voices
+    const preferredVoice = voices.find(v => 
+      v.name.includes('Google US English') ||
+      v.name.includes('Natural') ||
+      v.name.includes('Samantha') ||
+      v.name.includes('Victoria') ||
+      v.name.includes('Karen') ||
+      v.name.includes('Moira') ||
+      v.name.includes('Zira') ||
+      v.name.includes('Jenny') ||
+      v.name.includes('Aria') ||
+      v.name.includes('Microsoft Zira') ||
+      (v.lang.startsWith('en') && v.name.toLowerCase().includes('female'))
+    );
+
+    if (preferredVoice) return preferredVoice;
+
+    // Fallback to any en-US or en voice
+    return voices.find(v => v.lang.startsWith('en-US') || v.lang.startsWith('en')) || voices[0] || null;
+  } catch {
+    return null;
+  }
+}
+
+// Ensure Web Speech Synthesis speaks synchronously & reliably in the user gesture call stack
+export function speakNativeSpeech(
   text: string, 
   onEnd?: () => void, 
   onError?: (err: any) => void
@@ -224,67 +265,68 @@ function speakNativeSpeech(
   }
 
   try {
+    // Unblock speech engine
     window.speechSynthesis.cancel();
-    window.speechSynthesis.resume();
+    if (window.speechSynthesis.paused) {
+      window.speechSynthesis.resume();
+    }
 
     const utterance = new SpeechSynthesisUtterance(text);
-    activeUtterance = utterance; // Retain reference against GC
-    utterance.rate = 0.93;
-    utterance.pitch = 1.05;
+    // Pin to global window to prevent Chromium garbage collection bug during speech
+    window._luminaUtterance = utterance;
+
+    utterance.lang = 'en-US';
+    utterance.rate = 0.92; // Pleasant, warm pace
+    utterance.pitch = 1.04; // Gentle, uplifting pitch
     utterance.volume = 1.0;
 
-    const applyBestVoice = () => {
-      try {
-        const voices = window.speechSynthesis.getVoices();
-        if (voices && voices.length > 0) {
-          const femaleVoice = voices.find(v => 
-            v.name.includes('Google US English') ||
-            v.name.includes('Natural') ||
-            v.name.includes('Samantha') ||
-            v.name.includes('Victoria') ||
-            v.name.includes('Karen') ||
-            v.name.includes('Moira') ||
-            v.name.includes('Zira') ||
-            v.name.includes('Jenny') ||
-            v.name.includes('Aria') ||
-            (v.lang.startsWith('en') && v.name.toLowerCase().includes('female')) ||
-            v.lang.startsWith('en-US') ||
-            v.lang.startsWith('en-')
-          );
-          if (femaleVoice) {
-            utterance.voice = femaleVoice;
-          }
-        }
-      } catch {}
-    };
-
-    applyBestVoice();
+    const voice = getBestVoice();
+    if (voice) {
+      utterance.voice = voice;
+    }
 
     utterance.onend = () => {
-      activeUtterance = null;
+      window._luminaUtterance = null;
+      if (window._luminaSpeechInterval) {
+        clearInterval(window._luminaSpeechInterval);
+        window._luminaSpeechInterval = null;
+      }
       if (onEnd) {
         try { onEnd(); } catch {}
       }
     };
 
     utterance.onerror = (e) => {
-      activeUtterance = null;
+      window._luminaUtterance = null;
+      if (window._luminaSpeechInterval) {
+        clearInterval(window._luminaSpeechInterval);
+        window._luminaSpeechInterval = null;
+      }
       if (onError) {
         try { onError(e); } catch {}
       }
     };
 
+    // Keep Chrome alive for longer speech synthesis strings
+    if (window._luminaSpeechInterval) {
+      clearInterval(window._luminaSpeechInterval);
+    }
+    window._luminaSpeechInterval = setInterval(() => {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        if (window.speechSynthesis.speaking) {
+          window.speechSynthesis.resume();
+        } else {
+          clearInterval(window._luminaSpeechInterval);
+          window._luminaSpeechInterval = null;
+        }
+      }
+    }, 4000);
+
     window.speechSynthesis.speak(utterance);
 
+    // Extra kickstart for Safari / Chrome
     if (window.speechSynthesis.paused) {
       window.speechSynthesis.resume();
-    }
-
-    if (window.speechSynthesis.getVoices().length === 0) {
-      window.speechSynthesis.onvoiceschanged = () => {
-        applyBestVoice();
-        window.speechSynthesis.onvoiceschanged = null;
-      };
     }
 
     return true;
@@ -331,91 +373,35 @@ export async function playWelcomeVoiceGreeting(
 
     stopWelcomeVoice();
 
-    // 1. First trigger subtle pleasant entry chime
+    // 1. Play subtle musical chime
     playSoothingChime();
 
-    // 2. Attempt High Quality Gemini TTS Proxy first (with short 3.5s timeout)
-    let ttsPlayed = false;
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3500);
+    // 2. Immediately speak with high quality Web Speech Synthesis (zero network lag, instant audio)
+    const spoke = speakNativeSpeech(
+      greeting.speechText,
+      options?.onEnd,
+      options?.onError
+    );
 
-      const response = await fetch('/api/gemini/welcome-voice', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: greeting.firstName,
-          text: greeting.speechText
-        }),
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data?.base64Audio) {
-          const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-          if (AudioCtx) {
-            const audioContext = new AudioCtx({ sampleRate: 24000 });
-            activeAudioContext = audioContext;
-            if (audioContext.state === 'suspended') {
-              await audioContext.resume().catch(() => {});
-            }
-            if (audioContext.state === 'running') {
-              const audioBuffer = await decodeAudioData(
-                decodeBase64(data.base64Audio),
-                audioContext,
-                24000,
-                1
-              );
-              const source = audioContext.createBufferSource();
-              source.buffer = audioBuffer;
-              source.connect(audioContext.destination);
-              activeAudioSource = source;
-              source.onended = () => {
-                activeAudioSource = null;
-                if (options?.onEnd) {
-                  try { options.onEnd(); } catch {}
-                }
-              };
-              source.start();
-              ttsPlayed = true;
-              isAudioUnlocked = true;
-              return greeting;
-            }
-          }
-        }
-      }
-    } catch (err) {
-      // Proceed to native speech immediately
+    if (spoke) {
+      isAudioUnlocked = true;
+      window._luminaVoiceUnlocked = true;
     }
 
-    // 3. Fallback to Web Speech Synthesis immediately
-    if (!ttsPlayed) {
-      const spoke = speakNativeSpeech(
-        greeting.speechText,
-        options?.onEnd,
-        options?.onError
-      );
-
-      if (spoke) {
-        isAudioUnlocked = true;
-      }
-    }
-
-    // 4. Setup auto-unlock on first user interaction if browser blocked autoplay
-    if (!isAudioUnlocked && !unlockListenerAttached && typeof window !== 'undefined') {
-      unlockListenerAttached = true;
+    // 3. Setup auto-unlock on first user interaction if browser blocked background autoplay
+    if (!unlockListenersAttached && typeof window !== 'undefined' && !window._luminaVoiceUnlocked) {
+      unlockListenersAttached = true;
       const unlockHandler = () => {
         isAudioUnlocked = true;
-        unlockListenerAttached = false;
+        window._luminaVoiceUnlocked = true;
+        unlockListenersAttached = false;
         window.removeEventListener('pointerdown', unlockHandler);
         window.removeEventListener('click', unlockHandler);
         window.removeEventListener('touchstart', unlockHandler);
         window.removeEventListener('keydown', unlockHandler);
         
-        // Play immediately upon first user touch/click if not already completed
-        playWelcomeVoiceGreeting(user, { force: true, customGreeting: greeting }).catch(() => {});
+        // Speak greeting immediately upon first user tap anywhere
+        speakNativeSpeech(greeting.speechText, options?.onEnd, options?.onError);
       };
 
       window.addEventListener('pointerdown', unlockHandler, { once: true });
@@ -433,3 +419,4 @@ export async function playWelcomeVoiceGreeting(
     return null;
   }
 }
+
