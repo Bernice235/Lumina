@@ -51,6 +51,7 @@ import {
   getWelcomeGreeting, 
   getUserFirstName, 
   stopWelcomeVoice, 
+  isSessionGreetingPlayed,
   WelcomeGreeting 
 } from './services/welcomeVoiceService';
 import { THEMES, SONGS, THEME_PALETTES } from './constants';
@@ -261,29 +262,24 @@ const App: React.FC = () => {
     }
   }, [welcomeGreetingToast]);
 
-  // Play personalized Welcome Voice greeting every time the user opens Lumina
+  // Play personalized Welcome Voice greeting automatically every time the user opens Lumina
   useEffect(() => {
     if (user && (user.onboardingCompleted || user.isPartner)) {
-      if (welcomeVoicePlayedRef.current !== user.id) {
-        welcomeVoicePlayedRef.current = user.id;
-        const timer = setTimeout(() => {
-          try {
-            const isVoiceEnabled = user.welcomeVoiceEnabled !== false && (user.notificationSettings?.welcomeVoiceEnabled !== false);
-            if (isVoiceEnabled) {
-              playWelcomeVoiceGreeting(user).catch(() => {});
-            } else {
-              // If user disabled welcome voice, show text greeting card on app launch
-              const greeting = getWelcomeGreeting(user);
+      const timer = setTimeout(() => {
+        try {
+          // Trigger welcome voice greeting automatically upon session restoration / login
+          playWelcomeVoiceGreeting(user, {
+            onStart: (greeting) => {
               setWelcomeGreetingToast(greeting);
             }
-          } catch (e) {
-            console.warn("Could not play welcome greeting:", e);
-          }
-        }, 700);
-        return () => clearTimeout(timer);
-      }
+          }).catch(() => {});
+        } catch (e) {
+          console.warn("Could not trigger welcome greeting:", e);
+        }
+      }, 400);
+      return () => clearTimeout(timer);
     }
-  }, [user]);
+  }, [user?.id]);
 
   // Synchronize CSS custom properties with the selected theme color palette
   useEffect(() => {

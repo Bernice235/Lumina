@@ -1749,25 +1749,96 @@ const Settings: React.FC<SettingsProps> = ({
       /* ========================================================================= */
       ) : activeSubTab === 'notifications' ? (
         <div className="space-y-6 animate-fadeIn">
-          {/* Main Push Notification Master Toggle */}
-          <div className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-pink-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div className="space-y-1 max-w-md">
+          {/* Master Notification & Companion Controls */}
+          <div className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-pink-50 space-y-5">
+            <div className="space-y-1">
               <h3 className="text-lg font-serif font-bold text-stone-800 flex items-center gap-2">
                 <Bell size={20} className="text-pink-500" />
-                Reminders & Notifications
+                Notification & Companion Preferences
               </h3>
               <p className="text-xs text-stone-500 leading-relaxed">
-                Receive personalized companion reminders & affirmations on your device based on your cycle and wellness.
+                Customize your daily greetings, cycle alerts, mindful affirmations, and shared partner updates.
               </p>
             </div>
-            <button 
-              onClick={() => updateSettings({ enabled: !settings.enabled })}
-              className={`w-14 h-8 rounded-full p-1 transition-colors duration-300 ease-in-out flex items-center cursor-pointer ${
-                settings.enabled ? 'bg-pink-500 justify-end' : 'bg-pink-100 justify-start'
-              }`}
-            >
-              <span className="w-6 h-6 rounded-full bg-white shadow-sm transition-transform duration-300"></span>
-            </button>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 pt-1">
+              {/* 1. Voice Greetings ON/OFF */}
+              <div className="p-4 bg-gradient-to-br from-pink-50/50 to-rose-50/30 rounded-2xl border border-pink-100/60 flex items-center justify-between gap-3">
+                <div className="space-y-0.5">
+                  <p className="text-xs font-bold text-stone-800 flex items-center gap-1.5">
+                    <Volume2 size={15} className="text-pink-500" />
+                    Voice Greetings
+                  </p>
+                  <p className="text-[11px] text-stone-400">Time-of-day audio greeting on app launch</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                  <input 
+                    type="checkbox" 
+                    className="sr-only peer"
+                    checked={Boolean(settings.welcomeVoiceEnabled ?? user.welcomeVoiceEnabled ?? true)}
+                    onChange={(e) => {
+                      const val = e.target.checked;
+                      updateSettings({ welcomeVoiceEnabled: val, voiceGreetingsEnabled: val });
+                      const updatedUser = { ...user, welcomeVoiceEnabled: val, voiceGreetingsEnabled: val };
+                      setUser(updatedUser);
+                      localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+                      syncUser(updatedUser);
+                    }}
+                  />
+                  <div className="w-11 h-6 bg-pink-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-pink-500 peer-checked:to-rose-400"></div>
+                </label>
+              </div>
+
+              {/* 2. Daily Affirmations ON/OFF */}
+              <div className="p-4 bg-gradient-to-br from-amber-50/40 to-pink-50/30 rounded-2xl border border-pink-100/60 flex items-center justify-between gap-3">
+                <div className="space-y-0.5">
+                  <p className="text-xs font-bold text-stone-800 flex items-center gap-1.5">
+                    <Sparkles size={15} className="text-amber-500" />
+                    Daily Affirmations
+                  </p>
+                  <p className="text-[11px] text-stone-400">Poetic, empowering mindset nudges</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                  <input 
+                    type="checkbox" 
+                    className="sr-only peer"
+                    checked={Boolean(settings.dailyAffirmationsEnabled ?? user.dailyAffirmationsEnabled ?? true)}
+                    onChange={(e) => {
+                      const val = e.target.checked;
+                      updateSettings({ dailyAffirmationsEnabled: val });
+                      const updatedUser = { ...user, dailyAffirmationsEnabled: val };
+                      setUser(updatedUser);
+                      localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+                      syncUser(updatedUser);
+                    }}
+                  />
+                  <div className="w-11 h-6 bg-amber-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-amber-500 peer-checked:to-rose-400"></div>
+                </label>
+              </div>
+
+              {/* 3. Partner Notifications ON/OFF */}
+              <div className="p-4 bg-gradient-to-br from-purple-50/50 to-pink-50/30 rounded-2xl border border-purple-100/60 flex items-center justify-between gap-3">
+                <div className="space-y-0.5">
+                  <p className="text-xs font-bold text-stone-800 flex items-center gap-1.5">
+                    <Heart size={15} className="text-purple-500" />
+                    Partner Notifications
+                  </p>
+                  <p className="text-[11px] text-stone-400">Sync cycle & care alerts to linked partner</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                  <input 
+                    type="checkbox" 
+                    className="sr-only peer"
+                    checked={Boolean(settings.partnerNotificationsEnabled ?? true)}
+                    onChange={(e) => {
+                      const val = e.target.checked;
+                      updateSettings({ partnerNotificationsEnabled: val });
+                    }}
+                  />
+                  <div className="w-11 h-6 bg-purple-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-purple-500 peer-checked:to-indigo-500"></div>
+                </label>
+              </div>
+            </div>
           </div>
 
           {/* Welcome Voice Greeting Card */}
@@ -1783,27 +1854,18 @@ const Settings: React.FC<SettingsProps> = ({
                   </h4>
                 </div>
                 <p className="text-xs text-stone-500 leading-relaxed">
-                  Play a personalized soothing voice greeting every time you open Lumina.
+                  Greets you automatically every time you open Lumina without requiring any button press.
                 </p>
               </div>
 
               <div className="flex items-center gap-3 shrink-0">
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    className="sr-only peer"
-                    checked={Boolean(settings.welcomeVoiceEnabled ?? user.welcomeVoiceEnabled ?? true)}
-                    onChange={(e) => {
-                      const val = e.target.checked;
-                      updateSettings({ welcomeVoiceEnabled: val });
-                      const updatedUser = { ...user, welcomeVoiceEnabled: val };
-                      setUser(updatedUser);
-                      localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
-                      syncUser(updatedUser);
-                    }}
-                  />
-                  <div className="w-12 h-6 bg-pink-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-pink-500 peer-checked:to-rose-400"></div>
-                </label>
+                <span className={`text-xs font-bold px-3 py-1 rounded-full ${
+                  Boolean(settings.welcomeVoiceEnabled ?? user.welcomeVoiceEnabled ?? true)
+                    ? 'bg-pink-100 text-pink-700'
+                    : 'bg-stone-100 text-stone-500'
+                }`}>
+                  {Boolean(settings.welcomeVoiceEnabled ?? user.welcomeVoiceEnabled ?? true) ? 'Voice Active 🌸' : 'Muted (Banner Only)'}
+                </span>
               </div>
             </div>
 
@@ -1816,8 +1878,8 @@ const Settings: React.FC<SettingsProps> = ({
                       <span>{currentPreviewGreeting.emoji}</span>
                       <span>Current Schedule: {currentPreviewGreeting.timeLabel}</span>
                     </span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-pink-100/70 text-pink-700 font-semibold">
-                      Personalized for {userFirstName}
+                    <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-pink-100/70 text-pink-700 font-semibold">
+                      Personalized for {userFirstName} 🌸
                     </span>
                   </div>
                   <p className="text-xs font-serif italic text-stone-700 leading-relaxed bg-white/80 p-3 rounded-xl border border-pink-100/40">
@@ -1831,43 +1893,43 @@ const Settings: React.FC<SettingsProps> = ({
                     Personalized Time-of-Day Schedule
                   </span>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    <div className="p-3 bg-pink-50/20 rounded-xl border border-pink-100/40 space-y-1">
+                    <div className="p-3.5 bg-pink-50/20 rounded-2xl border border-pink-100/40 space-y-1">
                       <div className="flex items-center gap-1.5 text-xs font-bold text-stone-800">
                         <span>🌸</span>
                         <span>Morning (5:00 AM – 11:59 AM)</span>
                       </div>
                       <p className="text-[11px] text-stone-500 leading-snug">
-                        “Good morning, {userFirstName}. 🌸 Welcome back to Lumina. Let’s start today with balance and care.”
+                        “Good morning, {userFirstName} 🌸. Welcome back to Lumina: Bloom & Balance. I hope you have a beautiful day ahead.”
                       </p>
                     </div>
 
-                    <div className="p-3 bg-pink-50/20 rounded-xl border border-pink-100/40 space-y-1">
+                    <div className="p-3.5 bg-pink-50/20 rounded-2xl border border-pink-100/40 space-y-1">
                       <div className="flex items-center gap-1.5 text-xs font-bold text-stone-800">
                         <span>🌸</span>
                         <span>Afternoon (12:00 PM – 4:59 PM)</span>
                       </div>
                       <p className="text-[11px] text-stone-500 leading-snug">
-                        “Good afternoon, {userFirstName}. 🌸 Welcome back to Lumina. I hope your day is going well.”
+                        “Good afternoon, {userFirstName} 🌸. Welcome back to Lumina. How are you feeling today?”
                       </p>
                     </div>
 
-                    <div className="p-3 bg-pink-50/20 rounded-xl border border-pink-100/40 space-y-1">
+                    <div className="p-3.5 bg-pink-50/20 rounded-2xl border border-pink-100/40 space-y-1">
                       <div className="flex items-center gap-1.5 text-xs font-bold text-stone-800">
                         <span>🌸</span>
                         <span>Evening (5:00 PM – 8:59 PM)</span>
                       </div>
                       <p className="text-[11px] text-stone-500 leading-snug">
-                        “Good evening, {userFirstName}. 🌸 Welcome back to Lumina. Take a moment for yourself today.”
+                        “Good evening, {userFirstName} 🌸. Welcome back to your wellness sanctuary.”
                       </p>
                     </div>
 
-                    <div className="p-3 bg-pink-50/20 rounded-xl border border-pink-100/40 space-y-1">
+                    <div className="p-3.5 bg-pink-50/20 rounded-2xl border border-pink-100/40 space-y-1">
                       <div className="flex items-center gap-1.5 text-xs font-bold text-stone-800">
                         <span>🌙</span>
                         <span>Night (9:00 PM – 4:59 AM)</span>
                       </div>
                       <p className="text-[11px] text-stone-500 leading-snug">
-                        “Good evening, {userFirstName}. 🌙 Welcome back to Lumina. Remember to rest and take care of yourself.”
+                        “Good evening, {userFirstName} 🌸. Welcome back to Lumina. Remember to take time to rest and care for yourself.”
                       </p>
                     </div>
                   </div>
@@ -1897,13 +1959,13 @@ const Settings: React.FC<SettingsProps> = ({
                 </div>
 
                 <p className="text-[10px] text-stone-400 text-center">
-                  💡 Plays once per app launch automatically. If device volume is muted or disabled, a soft greeting card displays on screen.
+                  💡 Plays automatically on app launch. The test button is for auditioning voices and is not required for greetings to play.
                 </p>
               </div>
             ) : (
               <div className="p-4 bg-stone-50 rounded-2xl text-center space-y-1 border border-stone-100">
-                <p className="text-xs font-semibold text-stone-600">Welcome Voice is disabled</p>
-                <p className="text-[11px] text-stone-400">A visual text greeting card will be shown instead when you open Lumina.</p>
+                <p className="text-xs font-semibold text-stone-600">Voice Greeting Audio is Off</p>
+                <p className="text-[11px] text-stone-400">A visual text greeting card will be shown on screen whenever you open Lumina.</p>
               </div>
             )}
           </div>

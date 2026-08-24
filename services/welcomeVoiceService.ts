@@ -16,11 +16,13 @@ declare global {
     _luminaAudioCtx?: AudioContext | null;
     _luminaVoiceUnlocked?: boolean;
     _luminaSpeechInterval?: any;
+    _luminaPendingGreeting?: WelcomeGreeting | null;
   }
 }
 
+const SESSION_STORAGE_KEY = 'lumina_session_welcome_played';
+
 let unlockListenersAttached = false;
-let isAudioUnlocked = false;
 
 // Preload speech synthesis voices early
 if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
@@ -31,6 +33,29 @@ if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
         window.speechSynthesis.getVoices();
       } catch {}
     };
+  } catch {}
+}
+
+export function isSessionGreetingPlayed(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return sessionStorage.getItem(SESSION_STORAGE_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+export function markSessionGreetingPlayed(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    sessionStorage.setItem(SESSION_STORAGE_KEY, 'true');
+  } catch {}
+}
+
+export function resetSessionGreeting(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    sessionStorage.removeItem(SESSION_STORAGE_KEY);
   } catch {}
 }
 
@@ -45,114 +70,78 @@ export function getUserFirstName(user?: Partial<User> | null): string {
   return user.isPartner ? 'Partner' : 'Beautiful';
 }
 
+/**
+ * Returns the exact personalized time-of-day greeting
+ * 
+ * Morning (5am–11:59am):
+ * “Good morning, {name} 🌸. Welcome back to Lumina: Bloom & Balance. I hope you have a beautiful day ahead.”
+ * 
+ * Afternoon (12pm–4:59pm):
+ * “Good afternoon, {name} 🌸. Welcome back to Lumina. How are you feeling today?”
+ * 
+ * Evening (5pm–8:59pm):
+ * “Good evening, {name} 🌸. Welcome back to your wellness sanctuary.”
+ * 
+ * Night (9pm–4:59am):
+ * “Good evening, {name} 🌸. Welcome back to Lumina. Remember to take time to rest and care for yourself.”
+ */
 export function getWelcomeGreeting(user?: Partial<User> | null, customDate?: Date, rotationOffset?: number): WelcomeGreeting {
   const name = getUserFirstName(user);
   const now = customDate || new Date();
   const hour = now.getHours();
 
-  // Rotation index based on day-of-month or offset for variety
-  const dayIndex = now.getDate() + (rotationOffset !== undefined ? rotationOffset : 0);
-
   let timeOfDay: 'morning' | 'afternoon' | 'evening' | 'night' = 'morning';
   let timeLabel = 'Morning (5:00 AM – 11:59 AM)';
   let emoji = '🌸';
-  let options: { display: string; speech: string }[] = [];
+  let displayText = '';
+  let speechText = '';
 
   if (hour >= 5 && hour < 12) {
     timeOfDay = 'morning';
     timeLabel = 'Morning (5:00 AM – 11:59 AM)';
     emoji = '🌸';
-    options = [
-      {
-        display: `Good morning, ${name}. 🌸 Welcome back to Lumina. Let’s start today with balance and care.`,
-        speech: `Good morning, ${name}. Welcome back to Lumina. Let's start today with balance and care.`
-      },
-      {
-        display: `Good morning, ${name}. 🌸 Ready for another beautiful day?`,
-        speech: `Good morning, ${name}. Ready for another beautiful day?`
-      },
-      {
-        display: `Welcome back, ${name}. 🌸 Take a deep breath and let’s check in with your wellbeing.`,
-        speech: `Welcome back, ${name}. Take a deep breath and let's check in with your wellbeing.`
-      },
-      {
-        display: `Welcome back, ${name}. 🌸 Your wellness journey continues today.`,
-        speech: `Welcome back, ${name}. Your wellness journey continues today.`
-      }
-    ];
+    displayText = `Good morning, ${name} 🌸. Welcome back to Lumina: Bloom & Balance. I hope you have a beautiful day ahead.`;
+    speechText = `Good morning, ${name}. Welcome back to Lumina: Bloom and Balance. I hope you have a beautiful day ahead.`;
   } else if (hour >= 12 && hour < 17) {
     timeOfDay = 'afternoon';
     timeLabel = 'Afternoon (12:00 PM – 4:59 PM)';
     emoji = '🌸';
-    options = [
-      {
-        display: `Good afternoon, ${name}. 🌸 Welcome back to Lumina. I hope your day is going well.`,
-        speech: `Good afternoon, ${name}. Welcome back to Lumina. I hope your day is going well.`
-      },
-      {
-        display: `Hello ${name}. 🌸 Take a deep breath and let’s check in with your wellbeing.`,
-        speech: `Hello ${name}. Take a deep breath and let's check in with your wellbeing.`
-      },
-      {
-        display: `Welcome back, ${name}. 🌸 Your wellness journey continues today.`,
-        speech: `Welcome back, ${name}. Your wellness journey continues today.`
-      },
-      {
-        display: `Good afternoon, ${name}. 🌸 Pause for a gentle moment and celebrate how far you’ve come today.`,
-        speech: `Good afternoon, ${name}. Pause for a gentle moment and celebrate how far you've come today.`
-      }
-    ];
+    displayText = `Good afternoon, ${name} 🌸. Welcome back to Lumina. How are you feeling today?`;
+    speechText = `Good afternoon, ${name}. Welcome back to Lumina. How are you feeling today?`;
   } else if (hour >= 17 && hour < 21) {
     timeOfDay = 'evening';
     timeLabel = 'Evening (5:00 PM – 8:59 PM)';
     emoji = '🌸';
-    options = [
-      {
-        display: `Good evening, ${name}. 🌸 Welcome back to Lumina. Take a moment for yourself today.`,
-        speech: `Good evening, ${name}. Welcome back to Lumina. Take a moment for yourself today.`
-      },
-      {
-        display: `Welcome back, ${name}. 🌸 Your wellness journey continues today.`,
-        speech: `Welcome back, ${name}. Your wellness journey continues today.`
-      },
-      {
-        display: `Hello ${name}. 🌸 Take a deep breath and let’s check in with your wellbeing.`,
-        speech: `Hello ${name}. Take a deep breath and let's check in with your wellbeing.`
-      },
-      {
-        display: `Good evening, ${name}. 🌸 Unwind and let the warmth of this evening surround you.`,
-        speech: `Good evening, ${name}. Unwind and let the warmth of this evening surround you.`
-      }
-    ];
+    displayText = `Good evening, ${name} 🌸. Welcome back to your wellness sanctuary.`;
+    speechText = `Good evening, ${name}. Welcome back to your wellness sanctuary.`;
   } else {
     timeOfDay = 'night';
     timeLabel = 'Night (9:00 PM – 4:59 AM)';
     emoji = '🌙';
-    options = [
-      {
-        display: `Good evening, ${name}. 🌙 Welcome back to Lumina. Remember to rest and take care of yourself.`,
-        speech: `Good evening, ${name}. Welcome back to Lumina. Remember to rest and take care of yourself.`
-      },
-      {
-        display: `Good night, ${name}. 🌙 Welcome back to Lumina. Rest peacefully and restore your inner light.`,
-        speech: `Good night, ${name}. Welcome back to Lumina. Rest peacefully and restore your inner light.`
-      },
-      {
-        display: `Welcome back, ${name}. 🌙 Time to slow down, soften your thoughts, and nurture your peace.`,
-        speech: `Welcome back, ${name}. Time to slow down, soften your thoughts, and nurture your peace.`
-      },
-      {
-        display: `Peaceful evening, ${name}. 🌙 You did wonderfully today. Let yourself rest deeply.`,
-        speech: `Peaceful evening, ${name}. You did wonderfully today. Let yourself rest deeply.`
-      }
-    ];
+    displayText = `Good evening, ${name} 🌸. Welcome back to Lumina. Remember to take time to rest and care for yourself.`;
+    speechText = `Good evening, ${name}. Welcome back to Lumina. Remember to take time to rest and care for yourself.`;
   }
 
-  const selected = options[dayIndex % options.length] || options[0];
+  // If rotation offset is provided for the Settings preview button
+  if (rotationOffset && rotationOffset % 2 !== 0) {
+    if (timeOfDay === 'morning') {
+      displayText = `Good morning, ${name} 🌸. Let's start today with grace, balance, and care.`;
+      speechText = `Good morning, ${name}. Let's start today with grace, balance, and care.`;
+    } else if (timeOfDay === 'afternoon') {
+      displayText = `Good afternoon, ${name} 🌸. Pause for a gentle moment and celebrate how far you’ve come today.`;
+      speechText = `Good afternoon, ${name}. Pause for a gentle moment and celebrate how far you've come today.`;
+    } else if (timeOfDay === 'evening') {
+      displayText = `Good evening, ${name} 🌸. Unwind and let the warmth of this evening surround you.`;
+      speechText = `Good evening, ${name}. Unwind and let the warmth of this evening surround you.`;
+    } else {
+      displayText = `Good night, ${name} 🌙. Welcome back to Lumina. Rest peacefully and restore your inner light.`;
+      speechText = `Good night, ${name}. Welcome back to Lumina. Rest peacefully and restore your inner light.`;
+    }
+  }
 
   return {
-    displayText: selected.display,
-    speechText: selected.speech,
+    displayText,
+    speechText,
     timeOfDay,
     timeLabel,
     emoji,
@@ -285,7 +274,12 @@ export function speakNativeSpeech(
       utterance.voice = voice;
     }
 
+    utterance.onstart = () => {
+      markSessionGreetingPlayed();
+    };
+
     utterance.onend = () => {
+      markSessionGreetingPlayed();
       window._luminaUtterance = null;
       if (window._luminaSpeechInterval) {
         clearInterval(window._luminaSpeechInterval);
@@ -320,7 +314,7 @@ export function speakNativeSpeech(
           window._luminaSpeechInterval = null;
         }
       }
-    }, 4000);
+    }, 3000);
 
     window.speechSynthesis.speak(utterance);
 
@@ -338,6 +332,12 @@ export function speakNativeSpeech(
   }
 }
 
+/**
+ * Trigger personalized voice greeting.
+ * If called on app launch, plays automatically without requiring a button press.
+ * If the browser's autoplay policy temporarily holds speech, it seamlessly auto-unmutes
+ * and speaks on the very first touch/click anywhere on the screen.
+ */
 export async function playWelcomeVoiceGreeting(
   user?: Partial<User> | null,
   options?: {
@@ -349,22 +349,30 @@ export async function playWelcomeVoiceGreeting(
   }
 ): Promise<WelcomeGreeting | null> {
   try {
-    const isEnabled = user?.welcomeVoiceEnabled !== false && (user?.notificationSettings?.welcomeVoiceEnabled !== false);
-
-    if (!options?.force) {
-      // Check if user disabled welcome voice
-      if (!isEnabled) {
-        return null;
-      }
-    }
+    const isEnabled = 
+      user?.welcomeVoiceEnabled !== false && 
+      (user?.notificationSettings?.welcomeVoiceEnabled !== false) &&
+      user?.voiceGreetingsEnabled !== false &&
+      (user?.notificationSettings?.voiceGreetingsEnabled !== false);
 
     const greeting = options?.customGreeting || getWelcomeGreeting(user);
 
-    // Dispatch custom event so app UI can display a text greeting banner / toast
+    // Always dispatch custom event so app UI displays the visual greeting banner / toast immediately (Requirement 5)
     if (typeof window !== 'undefined') {
       try {
         window.dispatchEvent(new CustomEvent('lumina:welcome-greeting', { detail: greeting }));
       } catch (e) {}
+    }
+
+    // Check if voice greetings are disabled by user settings
+    if (!options?.force && !isEnabled) {
+      markSessionGreetingPlayed();
+      return greeting;
+    }
+
+    // If not forced, check if this session has already been greeted
+    if (!options?.force && isSessionGreetingPlayed()) {
+      return greeting;
     }
 
     if (options?.onStart) {
@@ -376,38 +384,61 @@ export async function playWelcomeVoiceGreeting(
     // 1. Play subtle musical chime
     playSoothingChime();
 
-    // 2. Immediately speak with high quality Web Speech Synthesis (zero network lag, instant audio)
-    const spoke = speakNativeSpeech(
+    // Store pending greeting on window for instant auto-unlock if browser delays initial audio
+    window._luminaPendingGreeting = greeting;
+
+    // 2. Trigger Web Speech Synthesis
+    speakNativeSpeech(
       greeting.speechText,
-      options?.onEnd,
-      options?.onError
+      () => {
+        markSessionGreetingPlayed();
+        window._luminaPendingGreeting = null;
+        if (options?.onEnd) options.onEnd();
+      },
+      (err) => {
+        if (options?.onError) options.onError(err);
+      }
     );
 
-    if (spoke) {
-      isAudioUnlocked = true;
-      window._luminaVoiceUnlocked = true;
-    }
-
-    // 3. Setup auto-unlock on first user interaction if browser blocked background autoplay
-    if (!unlockListenersAttached && typeof window !== 'undefined' && !window._luminaVoiceUnlocked) {
+    // 3. Register seamless global unlock listener:
+    // If the browser's background autoplay policy queued or suspended the initial speech,
+    // the very first tap or touch anywhere in the app immediately triggers resume/speak.
+    if (!unlockListenersAttached && typeof window !== 'undefined') {
       unlockListenersAttached = true;
       const unlockHandler = () => {
-        isAudioUnlocked = true;
-        window._luminaVoiceUnlocked = true;
         unlockListenersAttached = false;
-        window.removeEventListener('pointerdown', unlockHandler);
-        window.removeEventListener('click', unlockHandler);
-        window.removeEventListener('touchstart', unlockHandler);
-        window.removeEventListener('keydown', unlockHandler);
-        
-        // Speak greeting immediately upon first user tap anywhere
-        speakNativeSpeech(greeting.speechText, options?.onEnd, options?.onError);
+        window.removeEventListener('pointerdown', unlockHandler, true);
+        window.removeEventListener('click', unlockHandler, true);
+        window.removeEventListener('touchstart', unlockHandler, true);
+        window.removeEventListener('keydown', unlockHandler, true);
+
+        if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+          try {
+            if (window.speechSynthesis.paused) {
+              window.speechSynthesis.resume();
+            }
+          } catch {}
+        }
+
+        // If the greeting hasn't played yet this session, speak it now with the user's active gesture!
+        if (!isSessionGreetingPlayed() && window._luminaPendingGreeting) {
+          const pending = window._luminaPendingGreeting;
+          window._luminaPendingGreeting = null;
+          speakNativeSpeech(
+            pending.speechText,
+            () => {
+              markSessionGreetingPlayed();
+              if (options?.onEnd) options.onEnd();
+            },
+            options?.onError
+          );
+        }
       };
 
-      window.addEventListener('pointerdown', unlockHandler, { once: true });
-      window.addEventListener('click', unlockHandler, { once: true });
-      window.addEventListener('touchstart', unlockHandler, { once: true });
-      window.addEventListener('keydown', unlockHandler, { once: true });
+      window.addEventListener('pointerdown', unlockHandler, { capture: true, once: true });
+      window.addEventListener('click', unlockHandler, { capture: true, once: true });
+      window.addEventListener('touchstart', unlockHandler, { capture: true, once: true });
+      window.addEventListener('keydown', unlockHandler, { capture: true, once: true });
     }
 
     return greeting;
@@ -419,4 +450,3 @@ export async function playWelcomeVoiceGreeting(
     return null;
   }
 }
-

@@ -139,6 +139,8 @@ export interface User {
   receivedComforts?: ReceivedComfort[];
   tempUnit?: 'C' | 'F';
   welcomeVoiceEnabled?: boolean;
+  voiceGreetingsEnabled?: boolean;
+  dailyAffirmationsEnabled?: boolean;
   moodLogs?: MoodLog[];
   sexualActivityLogs?: SexualActivityLog[];
   symptoms?: Symptom[];
@@ -236,6 +238,9 @@ export interface NotificationSettings {
     pregnancyRisk: boolean;
   };
   partnerNotificationsEnabled: boolean;
+  dailyAffirmationsEnabled?: boolean;
+  voiceGreetingsEnabled?: boolean;
+  welcomeVoiceEnabled?: boolean;
   partnerReceiveTypes: {
     periodStarting: boolean;
     periodStarted: boolean;
@@ -247,7 +252,6 @@ export interface NotificationSettings {
   pregnancyEnabled: boolean;
   partnerPregnancyEnabled: boolean;
   pregnancyReminderTime: string;
-  welcomeVoiceEnabled?: boolean;
   pregnancyTypes: {
     welcome: boolean;
     weeklyBabyDev: boolean;
