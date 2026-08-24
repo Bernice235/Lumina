@@ -515,7 +515,7 @@ const MusicRoom: React.FC<MusicRoomProps> = ({
   }, [fullLibrary, favorites]);
 
   const recentSongsCollected = useMemo(() => {
-    return recentlyPlayed.map(id => fullLibrary.find(s => s.id === id)).filter(Boolean) as Song[];
+    return recentlyPlayed.map(id => fullLibrary.find(s => s.id === id)).filter((s): s is (typeof fullLibrary)[0] => Boolean(s));
   }, [fullLibrary, recentlyPlayed]);
 
   // Smart lyric generator for extreme aesthetic value

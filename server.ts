@@ -215,12 +215,13 @@ app.post("/api/gemini/product-advice", async (req, res) => {
 });
 
 app.post("/api/gemini/welcome-voice", async (req, res) => {
-  const { name } = req.body;
+  const { name, text: customText } = req.body;
   try {
     if (!apiKey || isGeminiBlocked) throw new Error("No Gemini API key configured.");
+    const spokenText = customText?.trim() || `Hello ${name || 'Beautiful'}. Welcome back to your sanctuary. I hope you're feeling wonderful today.`;
     const response = await ai.models.generateContent({
       model: "gemini-3.1-flash-tts-preview",
-      contents: [{ parts: [{ text: `Hello ${name}. Welcome back to your sanctuary. I hope you're feeling wonderful today.` }] }],
+      contents: [{ parts: [{ text: spokenText }] }],
       config: {
         responseModalities: [Modality.AUDIO],
         speechConfig: {

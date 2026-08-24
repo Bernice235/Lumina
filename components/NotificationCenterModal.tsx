@@ -84,7 +84,7 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
       );
       if (!existingNotif) {
         const partnerName = user.partnerRequest?.partnerName || user.partnerName || 'Your partner';
-        const notifObj = {
+        const notifObj: AppNotification = {
           id: `notif_partner_req_${Date.now()}`,
           title: '💕 New Partner Connection Request',
           body: `${partnerName} requested to connect on Partner Mode. Tap to review and accept or decline.`,

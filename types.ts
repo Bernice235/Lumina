@@ -138,6 +138,7 @@ export interface User {
   wishlist?: string[];      
   receivedComforts?: ReceivedComfort[];
   tempUnit?: 'C' | 'F';
+  welcomeVoiceEnabled?: boolean;
   moodLogs?: MoodLog[];
   sexualActivityLogs?: SexualActivityLog[];
   symptoms?: Symptom[];
@@ -246,6 +247,7 @@ export interface NotificationSettings {
   pregnancyEnabled: boolean;
   partnerPregnancyEnabled: boolean;
   pregnancyReminderTime: string;
+  welcomeVoiceEnabled?: boolean;
   pregnancyTypes: {
     welcome: boolean;
     weeklyBabyDev: boolean;

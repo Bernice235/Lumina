@@ -457,7 +457,7 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
       const exists = currentDates.includes(dateStr);
       
       const newDates = exists ? currentDates.filter(d => d !== dateStr) : [...currentDates, dateStr];
-      const newLogs = exists ? currentLogs.filter(l => l.date !== dateStr) : [...currentLogs, { date: dateStr, intensity: 'medium' }];
+      const newLogs: PeriodLog[] = exists ? currentLogs.filter(l => l.date !== dateStr) : [...currentLogs, { date: dateStr, intensity: 'medium' as const }];
       
       return {
         ...prev,

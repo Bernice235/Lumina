@@ -183,11 +183,12 @@ export const EndometriosisCare: React.FC<EndometriosisCareProps> = ({ user, setU
   const [breathCounter, setBreathCounter] = useState<number>(4);
 
   // Initialize or fetch questions
-  const specialistQuestions = user.endoSpecialistQuestions || DEFAULT_SPECIALIST_QUESTIONS.map(q => ({
+  const specialistQuestions: EndoSpecialistQuestion[] = user.endoSpecialistQuestions || DEFAULT_SPECIALIST_QUESTIONS.map(q => ({
     id: q.id,
     category: q.category,
     question: q.question,
-    isChecked: false
+    isChecked: false,
+    isCustom: false
   }));
 
   const painLogs = user.endoPainLogs || [];

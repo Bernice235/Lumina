@@ -46,6 +46,13 @@ import DoctorReport from './components/DoctorReport';
 import { NotificationCenterModal } from './components/NotificationCenterModal';
 import { CycleGraph } from './components/CycleGraph';
 import { playWelcomeVoice } from './services/gemini';
+import { 
+  playWelcomeVoiceGreeting, 
+  getWelcomeGreeting, 
+  getUserFirstName, 
+  stopWelcomeVoice, 
+  WelcomeGreeting 
+} from './services/welcomeVoiceService';
 import { THEMES, SONGS, THEME_PALETTES } from './constants';
 import { WALLPAPER_LIST } from './components/WallpapersAndThemesModal';
 import { syncUser, subscribeToGifts, subscribeToUser, acceptInvite, subscribeToPartnerRequests, getCleanName } from './services/firebaseService';
@@ -169,7 +176,7 @@ const App: React.FC = () => {
     }
     return 'dashboard';
   });
-  const [settingsSubTab, setSettingsSubTab] = useState<'notifications' | 'general' | 'billing'>('billing');
+  const [settingsSubTab, setSettingsSubTab] = useState<'account' | 'cycle' | 'notifications' | 'music' | 'partner' | 'premium' | 'privacy' | 'about' | 'general' | 'billing' | 'invite' | 'mobile' | 'menu' | 'profile' | 'backup_sync' | 'help_support'>('menu');
   const [isGlobalNotificationsOpen, setIsGlobalNotificationsOpen] = useState(false);
   const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
   const [selectedNotifForModal, setSelectedNotifForModal] = useState<AppNotification | null>(null);
@@ -229,21 +236,50 @@ const App: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Track played welcome voice per user session
+  // Welcome Voice & Greeting Toast State
+  const [welcomeGreetingToast, setWelcomeGreetingToast] = useState<WelcomeGreeting | null>(null);
   const welcomeVoicePlayedRef = useRef<string | null>(null);
 
-  // Play "Welcome Back" voice greeting on reload/returning session or partner entry
+  // Listen for custom welcome greeting events across the app
+  useEffect(() => {
+    const handleGreetingEvent = (e: any) => {
+      if (e.detail) {
+        setWelcomeGreetingToast(e.detail);
+      }
+    };
+    window.addEventListener('lumina:welcome-greeting', handleGreetingEvent);
+    return () => window.removeEventListener('lumina:welcome-greeting', handleGreetingEvent);
+  }, []);
+
+  // Auto-dismiss greeting toast after 7.5 seconds
+  useEffect(() => {
+    if (welcomeGreetingToast) {
+      const timer = setTimeout(() => {
+        setWelcomeGreetingToast(null);
+      }, 7500);
+      return () => clearTimeout(timer);
+    }
+  }, [welcomeGreetingToast]);
+
+  // Play personalized Welcome Voice greeting every time the user opens Lumina
   useEffect(() => {
     if (user && (user.onboardingCompleted || user.isPartner)) {
       if (welcomeVoicePlayedRef.current !== user.id) {
         welcomeVoicePlayedRef.current = user.id;
         const timer = setTimeout(() => {
           try {
-            playWelcomeVoice(user.name || (user.isPartner ? 'Partner' : 'Beautiful'));
+            const isVoiceEnabled = user.welcomeVoiceEnabled !== false && (user.notificationSettings?.welcomeVoiceEnabled !== false);
+            if (isVoiceEnabled) {
+              playWelcomeVoiceGreeting(user).catch(() => {});
+            } else {
+              // If user disabled welcome voice, show text greeting card on app launch
+              const greeting = getWelcomeGreeting(user);
+              setWelcomeGreetingToast(greeting);
+            }
           } catch (e) {
-            console.warn("Could not play welcome back voice:", e);
+            console.warn("Could not play welcome greeting:", e);
           }
-        }, 500);
+        }, 700);
         return () => clearTimeout(timer);
       }
     }
@@ -1096,7 +1132,7 @@ const App: React.FC = () => {
     }
 
     setWaterGoal(fullUser.waterGoal || 8);
-    playWelcomeVoice(fullUser.name);
+    playWelcomeVoiceGreeting(fullUser, { force: true }).catch(() => {});
 
     if (fullUser.isPartner) {
       setActiveTab('partner'); // Routes explicitly to Partner Dashboard / Connect experience
@@ -1683,7 +1719,7 @@ const App: React.FC = () => {
               }
               syncUser(completedUser);
               try {
-                playWelcomeVoice(completedUser.name || 'Beautiful');
+                playWelcomeVoiceGreeting(completedUser, { force: true }).catch(() => {});
               } catch (e) {
                 console.warn("TTS Welcome Voice skip:", e);
               }
@@ -1778,7 +1814,9 @@ const App: React.FC = () => {
 
         {/* Content body with custom padding inside the mobile container */}
         <main className="flex-1 overflow-y-auto px-4 py-4 scrollbar-none pb-32">
-          {renderContent()}
+          <ErrorBoundary onReset={() => setActiveTab('dashboard')}>
+            {renderContent()}
+          </ErrorBoundary>
         </main>
 
         {/* Global Notification Center Modal */}
@@ -2088,6 +2126,20 @@ const App: React.FC = () => {
                 />
               </div>
 
+              {/* Welcome Voice Trigger Button */}
+              <button
+                onClick={() => {
+                  if (user) {
+                    playWelcomeVoiceGreeting(user, { force: true }).catch(() => {});
+                  }
+                }}
+                className="p-2 rounded-full bg-pink-50/90 hover:bg-pink-100 text-pink-600 transition-all cursor-pointer active:scale-95 flex items-center justify-center border border-pink-100/80 shadow-sm"
+                title="Play Welcome Voice Greeting"
+                id="global-header-welcome-voice-btn"
+              >
+                <span className="text-sm">🌸</span>
+              </button>
+
               {/* Global Notification Bell Button */}
               {(() => {
                 const unreadNotifCount = (user?.notifications || []).filter(n => {
@@ -2302,6 +2354,50 @@ const App: React.FC = () => {
           </nav>
         </>
       )}
+
+      {/* Welcome Greeting Toast / Card */}
+      {welcomeGreetingToast && (
+        <div 
+          id="welcome-greeting-card"
+          className="fixed top-4 left-1/2 -translate-x-1/2 z-[250] w-[92%] max-w-md bg-white/95 backdrop-blur-xl p-4 rounded-3xl shadow-[0_15px_40px_rgba(244,114,182,0.18)] border border-pink-100 flex items-start gap-3 animate-fadeIn"
+        >
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-pink-400 to-rose-400 text-white flex items-center justify-center text-xl shrink-0 shadow-sm shadow-pink-200">
+            {welcomeGreetingToast.emoji}
+          </div>
+          <div className="flex-1 min-w-0 pr-1">
+            <div className="flex items-center justify-between gap-1 mb-0.5">
+              <span className="text-[9.5px] font-black uppercase tracking-widest text-pink-500">
+                Lumina Sanctuary • {welcomeGreetingToast.timeLabel.split(' ')[0]}
+              </span>
+              <button 
+                onClick={() => setWelcomeGreetingToast(null)}
+                className="text-stone-400 hover:text-stone-600 p-0.5 transition-colors cursor-pointer"
+                title="Dismiss greeting"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="text-xs font-medium text-stone-800 leading-snug">
+              {welcomeGreetingToast.displayText}
+            </p>
+            <div className="flex items-center justify-between gap-3 mt-2.5 pt-2 border-t border-pink-50 text-[11px] font-semibold text-pink-600">
+              <button
+                onClick={() => {
+                  if (user) {
+                    playWelcomeVoiceGreeting(user, { force: true, customGreeting: welcomeGreetingToast }).catch(() => {});
+                  }
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-pink-500 to-rose-400 text-white shadow-sm hover:opacity-90 active:scale-95 transition-all cursor-pointer text-xs font-bold"
+              >
+                <span>🔊</span>
+                <span>Play Voice Greeting</span>
+              </button>
+              <span className="text-stone-400 text-[10px] font-medium truncate">Welcome back, {welcomeGreetingToast.firstName}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Simulated Phone Push Notification Lock Screen Card */}
       {simulatedNotify && (
         <div 

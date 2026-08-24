@@ -224,7 +224,7 @@ export const logCrashReport = async (
       timestamp,
     };
 
-    console.error(`[Crashlytics - ${category}]`, errorMessage, crashReport);
+    console.warn(`[Analytics Diagnostics - ${category}]`, errorMessage);
 
     // Track as Firebase event
     if (firebaseAnalyticsInstance) {
@@ -255,7 +255,7 @@ export const logCrashReport = async (
       addDoc(collection(db, 'crash_reports'), crashReport).catch(() => {});
     }
   } catch (e) {
-    console.error('[Crashlytics] Failed to record crash report:', e);
+    console.warn('[Analytics] Failed to record exception report:', e);
   }
 };
 
@@ -263,8 +263,9 @@ export const logCrashReport = async (
 if (typeof window !== 'undefined') {
   window.addEventListener('error', (event) => {
     const rawMsg = event.error?.message || (typeof event.message === 'string' ? event.message : '') || '';
-    // Filter out benign network / third-party analytics / adblocker / resize errors / autoplay
+    // Filter out benign network / third-party analytics / adblocker / resize errors / autoplay / speech / audio
     if (
+      !rawMsg ||
       rawMsg.includes('Load failed') ||
       rawMsg.includes('Failed to fetch') ||
       rawMsg.includes('NetworkError') ||
@@ -275,7 +276,11 @@ if (typeof window !== 'undefined') {
       rawMsg.includes('NotAllowedError') ||
       rawMsg.includes('play()') ||
       rawMsg.includes('speechSynthesis') ||
-      rawMsg.includes('canceled')
+      rawMsg.includes('canceled') ||
+      rawMsg.includes('interrupted') ||
+      rawMsg.includes('AudioContext') ||
+      rawMsg.includes('permission') ||
+      rawMsg.includes('quota')
     ) {
       return;
     }
@@ -290,6 +295,7 @@ if (typeof window !== 'undefined') {
     const reasonStr = String(event.reason?.message || event.reason || '');
     // Filter out benign network / third-party analytics / offline promise rejections / autoplay restrictions
     if (
+      !reasonStr ||
       reasonStr.includes('Load failed') ||
       reasonStr.includes('Failed to fetch') ||
       reasonStr.includes('NetworkError') ||
@@ -300,7 +306,10 @@ if (typeof window !== 'undefined') {
       reasonStr.includes('interrupted') ||
       reasonStr.includes('speechSynthesis') ||
       reasonStr.includes('canceled') ||
-      reasonStr.includes('The user aborted a request')
+      reasonStr.includes('The user aborted a request') ||
+      reasonStr.includes('AudioContext') ||
+      reasonStr.includes('permission-denied') ||
+      reasonStr.includes('Missing or insufficient permissions')
     ) {
       return;
     }

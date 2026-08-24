@@ -47,6 +47,7 @@ export function getDefaultNotificationSettings(): NotificationSettings {
     pregnancyEnabled: true,
     partnerPregnancyEnabled: false,
     pregnancyReminderTime: '09:00',
+    welcomeVoiceEnabled: true,
     pregnancyTypes: {
       welcome: true,
       weeklyBabyDev: true,

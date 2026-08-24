@@ -92,78 +92,11 @@ export async function getProductAdvice(product: string, concern: string): Promis
 }
 
 export async function playWelcomeVoice(name: string): Promise<void> {
-  const cleanName = name?.trim() || 'Beautiful';
-
   try {
-    const data = await fetchGeminiProxy("welcome-voice", { name: cleanName });
-    const base64Audio = data?.base64Audio;
-    if (base64Audio) {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      if (AudioCtx) {
-        const audioContext = new AudioCtx({ sampleRate: 24000 });
-        if (audioContext.state === 'suspended') {
-          await audioContext.resume().catch(() => {});
-        }
-        const audioBuffer = await decodeAudioData(
-          decodeBase64(base64Audio),
-          audioContext,
-          24000,
-          1
-        );
-        const source = audioContext.createBufferSource();
-        source.buffer = audioBuffer;
-        source.connect(audioContext.destination);
-        source.start();
-        return;
-      }
-    }
-  } catch (error: any) {
-    console.warn("Welcome Voice proxy notice, using Web Speech synthesis:", error?.message || error);
-  }
-
-  // Fallback using native Web Speech Synthesis
-  try {
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.resume();
-
-      const text = `Welcome back to your sanctuary, ${cleanName}. You are safe, and you are exactly where you need to be.`;
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 0.9;
-      utterance.pitch = 1.0;
-      utterance.volume = 1.0;
-
-      const speakWithVoices = () => {
-        const voices = window.speechSynthesis.getVoices();
-        if (voices && voices.length > 0) {
-          const sweetVoice = voices.find(v => 
-            v.name.includes('Google US English') || 
-            v.name.includes('Natural') || 
-            v.name.includes('Samantha') || 
-            v.name.includes('Victoria') ||
-            v.name.includes('Karen') ||
-            v.name.includes('Zira') ||
-            v.lang.startsWith('en-')
-          );
-          if (sweetVoice) {
-            utterance.voice = sweetVoice;
-          }
-        }
-        window.speechSynthesis.speak(utterance);
-      };
-
-      if (window.speechSynthesis.getVoices().length === 0) {
-        window.speechSynthesis.onvoiceschanged = () => {
-          speakWithVoices();
-          window.speechSynthesis.onvoiceschanged = null;
-        };
-        setTimeout(speakWithVoices, 200);
-      } else {
-        speakWithVoices();
-      }
-    }
-  } catch (synthError) {
-    console.warn("Web speech synthesis notice:", synthError);
+    const { playWelcomeVoiceGreeting } = await import("./welcomeVoiceService");
+    await playWelcomeVoiceGreeting({ name, firstName: name }, { force: true });
+  } catch (e) {
+    console.warn("playWelcomeVoice notice:", e);
   }
 }
 

@@ -35,7 +35,10 @@ import {
   Shield,
   CheckCircle2,
   X,
-  Smartphone
+  Smartphone,
+  Users,
+  Baby,
+  HeartHandshake
 } from 'lucide-react';
 import { 
   getCyclePredictions, 
@@ -45,6 +48,13 @@ import {
   getBabySize,
   generatePregnancyNotificationText
 } from '../services/notificationService';
+import { 
+  getWelcomeGreeting, 
+  getUserFirstName, 
+  playWelcomeVoiceGreeting, 
+  stopWelcomeVoice, 
+  WelcomeGreeting 
+} from '../services/welcomeVoiceService';
 import { syncUser, blockPartner, unblockPartner, deleteUserAccount } from '../services/firebaseService';
 import { 
   REVENUECAT_PLANS, 
@@ -458,6 +468,79 @@ const Settings: React.FC<SettingsProps> = ({
          [key]: value
       }
     });
+  };
+
+  const updatePartnerReceiveTypes = (key: keyof NotificationSettings['partnerReceiveTypes'], value: boolean) => {
+    updateSettings({
+      partnerReceiveTypes: {
+        ...(settings.partnerReceiveTypes || {
+          periodStarting: true,
+          periodStarted: true,
+          periodEnding: true,
+          ovulation: true,
+          fertileWindow: true,
+          pregnancyRisk: true,
+        }),
+        [key]: value
+      }
+    });
+  };
+
+  const updatePartnerPregnancyReceiveTypes = (key: keyof NotificationSettings['partnerPregnancyReceiveTypes'], value: boolean) => {
+    updateSettings({
+      partnerPregnancyReceiveTypes: {
+        ...(settings.partnerPregnancyReceiveTypes || {
+          welcome: true,
+          weeklyBabyDev: true,
+          appointment: true,
+          rest: true,
+          symptomSupport: true,
+          dueDateCountdown: true,
+          laborNear: true,
+          encouragement: true,
+        }),
+        [key]: value
+      }
+    });
+  };
+
+  const updatePartnerPref = (key: string, value: boolean) => {
+    if (!user) return;
+    const updatedUser = {
+      ...user,
+      partnerNotificationPreferences: {
+        ...(user.partnerNotificationPreferences || {}),
+        [key]: value
+      }
+    };
+    setUser(updatedUser);
+    localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+    syncUser(updatedUser);
+  };
+
+  const [isPlayingVoiceTest, setIsPlayingVoiceTest] = useState(false);
+  const [greetingRotationOffset, setGreetingRotationOffset] = useState(0);
+
+  const userFirstName = getUserFirstName(user);
+  const currentPreviewGreeting = getWelcomeGreeting(user, undefined, greetingRotationOffset);
+
+  const handleTestWelcomeVoice = async () => {
+    setIsPlayingVoiceTest(true);
+    try {
+      await playWelcomeVoiceGreeting(user, {
+        force: true,
+        customGreeting: currentPreviewGreeting,
+        onEnd: () => setIsPlayingVoiceTest(false),
+        onError: () => setIsPlayingVoiceTest(false),
+      });
+    } catch (e) {
+      console.warn("Welcome voice test notice:", e);
+      setIsPlayingVoiceTest(false);
+    }
+  };
+
+  const handleRotatePreview = () => {
+    setGreetingRotationOffset((prev) => prev + 1);
   };
 
   const triggerSimulation = (
@@ -1687,6 +1770,144 @@ const Settings: React.FC<SettingsProps> = ({
             </button>
           </div>
 
+          {/* Welcome Voice Greeting Card */}
+          <div className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-pink-50 space-y-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-pink-100 text-pink-500 flex items-center justify-center">
+                    <Volume2 className="w-4 h-4" />
+                  </div>
+                  <h4 className="text-lg font-serif font-bold text-stone-800">
+                    Welcome Voice Greeting
+                  </h4>
+                </div>
+                <p className="text-xs text-stone-500 leading-relaxed">
+                  Play a personalized soothing voice greeting every time you open Lumina.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3 shrink-0">
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    className="sr-only peer"
+                    checked={Boolean(settings.welcomeVoiceEnabled ?? user.welcomeVoiceEnabled ?? true)}
+                    onChange={(e) => {
+                      const val = e.target.checked;
+                      updateSettings({ welcomeVoiceEnabled: val });
+                      const updatedUser = { ...user, welcomeVoiceEnabled: val };
+                      setUser(updatedUser);
+                      localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+                      syncUser(updatedUser);
+                    }}
+                  />
+                  <div className="w-12 h-6 bg-pink-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-pink-500 peer-checked:to-rose-400"></div>
+                </label>
+              </div>
+            </div>
+
+            {Boolean(settings.welcomeVoiceEnabled ?? user.welcomeVoiceEnabled ?? true) ? (
+              <div className="space-y-4 animate-fadeIn">
+                {/* Current Live Greeting Preview based on Time */}
+                <div className="p-4 bg-gradient-to-br from-pink-50/60 to-rose-50/40 rounded-2xl border border-pink-100/60 space-y-2">
+                  <div className="flex items-center justify-between text-[11px] font-bold text-pink-600 flex-wrap gap-1">
+                    <span className="flex items-center gap-1.5 uppercase tracking-wider text-[10px]">
+                      <span>{currentPreviewGreeting.emoji}</span>
+                      <span>Current Schedule: {currentPreviewGreeting.timeLabel}</span>
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-pink-100/70 text-pink-700 font-semibold">
+                      Personalized for {userFirstName}
+                    </span>
+                  </div>
+                  <p className="text-xs font-serif italic text-stone-700 leading-relaxed bg-white/80 p-3 rounded-xl border border-pink-100/40">
+                    “{currentPreviewGreeting.displayText}”
+                  </p>
+                </div>
+
+                {/* Time-Based Schedule Table */}
+                <div className="space-y-2 pt-1">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-pink-600 block">
+                    Personalized Time-of-Day Schedule
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div className="p-3 bg-pink-50/20 rounded-xl border border-pink-100/40 space-y-1">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-stone-800">
+                        <span>🌸</span>
+                        <span>Morning (5:00 AM – 11:59 AM)</span>
+                      </div>
+                      <p className="text-[11px] text-stone-500 leading-snug">
+                        “Good morning, {userFirstName}. 🌸 Welcome back to Lumina. Let’s start today with balance and care.”
+                      </p>
+                    </div>
+
+                    <div className="p-3 bg-pink-50/20 rounded-xl border border-pink-100/40 space-y-1">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-stone-800">
+                        <span>🌸</span>
+                        <span>Afternoon (12:00 PM – 4:59 PM)</span>
+                      </div>
+                      <p className="text-[11px] text-stone-500 leading-snug">
+                        “Good afternoon, {userFirstName}. 🌸 Welcome back to Lumina. I hope your day is going well.”
+                      </p>
+                    </div>
+
+                    <div className="p-3 bg-pink-50/20 rounded-xl border border-pink-100/40 space-y-1">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-stone-800">
+                        <span>🌸</span>
+                        <span>Evening (5:00 PM – 8:59 PM)</span>
+                      </div>
+                      <p className="text-[11px] text-stone-500 leading-snug">
+                        “Good evening, {userFirstName}. 🌸 Welcome back to Lumina. Take a moment for yourself today.”
+                      </p>
+                    </div>
+
+                    <div className="p-3 bg-pink-50/20 rounded-xl border border-pink-100/40 space-y-1">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-stone-800">
+                        <span>🌙</span>
+                        <span>Night (9:00 PM – 4:59 AM)</span>
+                      </div>
+                      <p className="text-[11px] text-stone-500 leading-snug">
+                        “Good evening, {userFirstName}. 🌙 Welcome back to Lumina. Remember to rest and take care of yourself.”
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Preview Controls */}
+                <div className="pt-2 flex flex-col sm:flex-row gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => handleTestWelcomeVoice()}
+                    disabled={isPlayingVoiceTest}
+                    className="flex-1 py-3.5 bg-gradient-to-r from-pink-500 to-rose-400 text-white font-bold text-xs rounded-2xl shadow-md hover:opacity-90 active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    <Volume2 size={15} className={isPlayingVoiceTest ? 'animate-bounce' : ''} />
+                    <span>{isPlayingVoiceTest ? 'Playing Voice Greeting...' : '🔊 Test Welcome Voice Greeting'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleRotatePreview()}
+                    className="px-4 py-3.5 bg-pink-50 hover:bg-pink-100 text-pink-700 font-bold text-xs rounded-2xl border border-pink-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+                    title="Rotate greeting variation"
+                  >
+                    <Sparkles size={14} className="text-pink-500" />
+                    <span>Rotate Message</span>
+                  </button>
+                </div>
+
+                <p className="text-[10px] text-stone-400 text-center">
+                  💡 Plays once per app launch automatically. If device volume is muted or disabled, a soft greeting card displays on screen.
+                </p>
+              </div>
+            ) : (
+              <div className="p-4 bg-stone-50 rounded-2xl text-center space-y-1 border border-stone-100">
+                <p className="text-xs font-semibold text-stone-600">Welcome Voice is disabled</p>
+                <p className="text-[11px] text-stone-400">A visual text greeting card will be shown instead when you open Lumina.</p>
+              </div>
+            )}
+          </div>
+
           {settings.enabled && (
             <div className="space-y-6">
               {/* Notification Tone Selection */}
@@ -1785,6 +2006,221 @@ const Settings: React.FC<SettingsProps> = ({
                     </div>
                   ))}
                 </div>
+              </div>
+
+              {/* Choose which notifications you would like your partner to receive */}
+              <div className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-purple-100/80 space-y-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-purple-100/70 text-purple-600 flex items-center justify-center text-base">
+                        <Heart className="w-4 h-4 fill-purple-400 text-purple-500" />
+                      </div>
+                      <h4 className="text-lg font-serif font-bold text-stone-800">
+                        Choose which notifications you would like your partner to receive
+                      </h4>
+                    </div>
+                    <p className="text-xs text-stone-500 leading-relaxed">
+                      Select which cycle updates, fertile windows, and gentle care nudges are shared with your partner.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-3 shrink-0">
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        className="sr-only peer"
+                        checked={Boolean(settings.partnerNotificationsEnabled)}
+                        onChange={(e) => updateSettings({ partnerNotificationsEnabled: e.target.checked })}
+                      />
+                      <div className="w-12 h-6 bg-purple-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-purple-500 peer-checked:to-indigo-500"></div>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Partner status banner */}
+                <div className="p-3.5 bg-purple-50/40 rounded-2xl border border-purple-100/60 flex items-center justify-between gap-2 text-xs">
+                  <div className="flex items-center gap-2 text-purple-900 font-medium">
+                    <Users className="w-4 h-4 text-purple-500" />
+                    <span>
+                      {user.partnerName || user.isPartnerLinked ? (
+                        <>Connected Partner: <strong className="font-bold text-purple-700">{user.partnerName || 'Partner'}</strong></>
+                      ) : (
+                        <>No partner linked yet — preferences will automatically apply once linked in Partner Mode.</>
+                      )}
+                    </span>
+                  </div>
+                  {(!user.partnerName && !user.isPartnerLinked) && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveSubTab('partner')}
+                      className="text-[11px] font-bold text-purple-600 hover:text-purple-800 underline shrink-0 cursor-pointer"
+                    >
+                      Connect &rarr;
+                    </button>
+                  )}
+                </div>
+
+                {settings.partnerNotificationsEnabled ? (
+                  <div className="space-y-4 animate-fadeIn">
+                    <div className="space-y-2.5">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-purple-600 block">Cycle & Fertility Alerts</span>
+                      <div className="space-y-2.5">
+                        {[
+                          { 
+                            key: 'periodStarting' as const, 
+                            label: 'Period Approaching', 
+                            desc: 'Gentle heads up 2 days before your period so your partner can prepare extra comfort and care' 
+                          },
+                          { 
+                            key: 'periodStarted' as const, 
+                            label: 'Period Day 1 Check-In', 
+                            desc: 'Notifies your partner when your period begins' 
+                          },
+                          { 
+                            key: 'fertileWindow' as const, 
+                            label: 'Fertile Window Begins', 
+                            desc: 'Alerts your partner when your estimated fertile window starts' 
+                          },
+                          { 
+                            key: 'ovulation' as const, 
+                            label: 'Peak Ovulation Day', 
+                            desc: 'Shared reminder on your estimated peak ovulation day' 
+                          },
+                          { 
+                            key: 'periodEnding' as const, 
+                            label: 'Period Ending', 
+                            desc: 'Updates your partner as your bleeding concludes' 
+                          },
+                          { 
+                            key: 'pregnancyRisk' as const, 
+                            label: 'Luteal Phase & Wellness Nudges', 
+                            desc: 'Supportive suggestions for rest, comfort foods, and hydration during the luteal phase' 
+                          },
+                        ].map((item) => (
+                          <div key={item.key} className="flex items-center justify-between p-3.5 bg-purple-50/20 hover:bg-purple-50/40 rounded-2xl border border-purple-100/50 transition-all">
+                            <div className="space-y-0.5 pr-3">
+                              <p className="text-xs font-bold text-stone-800">{item.label}</p>
+                              <p className="text-[11px] text-stone-400 leading-snug">{item.desc}</p>
+                            </div>
+                            <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                              <input 
+                                type="checkbox" 
+                                className="sr-only peer"
+                                checked={Boolean(settings.partnerReceiveTypes?.[item.key] ?? true)}
+                                onChange={(e) => updatePartnerReceiveTypes(item.key, e.target.checked)}
+                              />
+                              <div className="w-9 h-5 bg-purple-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-purple-500 peer-checked:to-indigo-500"></div>
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Mood & Support preferences */}
+                    <div className="space-y-2.5 pt-2">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-purple-600 block">Support & Mood Updates</span>
+                      <div className="space-y-2.5">
+                        {[
+                          {
+                            key: 'moodUpdates',
+                            label: 'Mood & Energy Updates',
+                            desc: 'Notify partner when you share a mood check-in or low energy state so they can support you'
+                          },
+                          {
+                            key: 'supportReminders',
+                            label: 'Comfort & Care Reminders',
+                            desc: 'Gentle ideas for your partner to bring warm tea, snacks, or run a soothing bath'
+                          },
+                          {
+                            key: 'educationalInsights',
+                            label: 'Cycle & Educational Tips',
+                            desc: 'Bite-sized cycle facts and empathy tips to help your partner better understand your rhythm'
+                          }
+                        ].map((item) => (
+                          <div key={item.key} className="flex items-center justify-between p-3.5 bg-purple-50/20 hover:bg-purple-50/40 rounded-2xl border border-purple-100/50 transition-all">
+                            <div className="space-y-0.5 pr-3">
+                              <p className="text-xs font-bold text-stone-800">{item.label}</p>
+                              <p className="text-[11px] text-stone-400 leading-snug">{item.desc}</p>
+                            </div>
+                            <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                              <input 
+                                type="checkbox" 
+                                className="sr-only peer"
+                                checked={Boolean(user.partnerNotificationPreferences?.[item.key as keyof typeof user.partnerNotificationPreferences] ?? true)}
+                                onChange={(e) => updatePartnerPref(item.key, e.target.checked)}
+                              />
+                              <div className="w-9 h-5 bg-purple-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-purple-500 peer-checked:to-indigo-500"></div>
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Pregnancy Companion Alerts for Partner if in pregnancy mode */}
+                    {user.isPregnancyMode && (
+                      <div className="space-y-3 pt-3 border-t border-purple-100/60">
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-amber-600 flex items-center gap-1">
+                              <Baby className="w-3.5 h-3.5" />
+                              Pregnancy Companion Alerts
+                            </span>
+                            <p className="text-[11px] text-stone-400">Share gestational progress and doctor check-ins</p>
+                          </div>
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input 
+                              type="checkbox" 
+                              className="sr-only peer"
+                              checked={Boolean(settings.partnerPregnancyEnabled)}
+                              onChange={(e) => updateSettings({ partnerPregnancyEnabled: e.target.checked })}
+                            />
+                            <div className="w-9 h-5 bg-amber-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-amber-400 peer-checked:to-rose-400"></div>
+                          </label>
+                        </div>
+
+                        {settings.partnerPregnancyEnabled && (
+                          <div className="space-y-2 pl-2">
+                            {[
+                              { key: 'weeklyBabyDev' as const, label: 'Weekly Baby Growth & Milestones' },
+                              { key: 'appointment' as const, label: 'Prenatal Doctor & Ultrasound Reminders' },
+                              { key: 'rest' as const, label: 'Rest & Hydration Support Nudges' },
+                              { key: 'dueDateCountdown' as const, label: 'Due Date Countdown & Trimester Updates' },
+                              { key: 'laborNear' as const, label: 'Labor & Hospital Bag Readiness' },
+                            ].map((pItem) => (
+                              <div key={pItem.key} className="flex items-center justify-between p-3 bg-amber-50/20 rounded-xl border border-amber-100/40">
+                                <span className="text-xs font-semibold text-stone-700">{pItem.label}</span>
+                                <input 
+                                  type="checkbox"
+                                  checked={Boolean(settings.partnerPregnancyReceiveTypes?.[pItem.key] ?? true)}
+                                  onChange={(e) => updatePartnerPregnancyReceiveTypes(pItem.key, e.target.checked)}
+                                  className="w-4 h-4 text-amber-500 rounded border-amber-200 accent-amber-500 cursor-pointer"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Preview Partner Notification Button */}
+                    <div className="pt-2">
+                      <button
+                        type="button"
+                        onClick={() => triggerSimulation('periodStarting', true)}
+                        className="w-full py-3.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold text-xs rounded-2xl shadow-md hover:opacity-90 active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <HeartHandshake size={15} />
+                        <span>Preview What Partner Sees 💕</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-4 bg-stone-50 rounded-2xl text-center space-y-1 border border-stone-100">
+                    <p className="text-xs font-semibold text-stone-600">Partner notifications are paused</p>
+                    <p className="text-[11px] text-stone-400">Toggle the switch above on to choose which reminders your partner receives.</p>
+                  </div>
+                )}
               </div>
             </div>
           )}
