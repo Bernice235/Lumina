@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { User, AppTheme, Symptom, NotificationSettings } from '../types';
+import { User, AppTheme, Symptom, NotificationSettings, AvatarId, SkinTone, UserAvatar } from '../types';
 import { THEMES } from '../constants';
 import { motion, AnimatePresence } from 'framer-motion';
+import { AvatarVisual } from './AvatarVisual';
+import { AVATAR_PRESETS, SKIN_TONE_PALETTES } from '../services/avatarService';
 import { 
   Sparkles, 
   Calendar, 
@@ -36,11 +38,15 @@ interface OnboardingWizardProps {
 
 export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUser, onComplete }) => {
   const [step, setStep] = useState(1);
-  const totalSteps = 11;
+  const totalSteps = 12;
 
   // Local values prefilled with user defaults if available
   const [name, setName] = useState(user.firstName || user.name || '');
   const [dob, setDob] = useState(user.dob || '');
+
+  // Avatar selection states
+  const [selectedAvatarId, setSelectedAvatarId] = useState<AvatarId>(user.avatar?.id || 'amara');
+  const [selectedSkinTone, setSelectedSkinTone] = useState<SkinTone>(user.avatar?.skinTone || 'amber');
   
   const [lastPeriodStart, setLastPeriodStart] = useState(() => {
     if (user.lastPeriodStart) {
@@ -121,6 +127,34 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
     // Populate notification settings based on choices
     const finalRemindersEnabled = notificationsAllowed === true;
 
+    const preset = AVATAR_PRESETS[selectedAvatarId] || AVATAR_PRESETS.amara;
+    const initialAvatar: UserAvatar = user.avatar ? {
+      ...user.avatar,
+      id: selectedAvatarId,
+      name: preset.name,
+      title: preset.title,
+      personality: preset.personality,
+      skinTone: selectedSkinTone
+    } : {
+      id: selectedAvatarId,
+      name: preset.name,
+      title: preset.title,
+      personality: preset.personality,
+      skinTone: selectedSkinTone,
+      hairstyle: preset.hairstyle,
+      headwrap: preset.headwrap,
+      glasses: preset.glasses,
+      outfit: preset.outfit,
+      tier: 'seedling',
+      level: 1,
+      xp: 0,
+      wellnessStreak: 1,
+      selfCareScore: 78,
+      unlockedOutfits: ['floral_sundress', 'cozy_kimono', 'linen_loungewear', 'athleisure_wrap'],
+      unlockedAccessories: ['floral_crown', 'minimal_band', 'round'],
+      actionHistory: []
+    };
+
     // Create updated user object
     const updatedUser: User = {
       ...user,
@@ -129,6 +163,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
       displayName: name.trim(),
       dob: dob || undefined,
       age: calculatedAge,
+      avatar: initialAvatar,
       cycleLength: cycleLength,
       periodLength: periodLength,
       lastPeriodStart: new Date(lastPeriodStart).toISOString(),
@@ -377,7 +412,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
               </motion.div>
             )}
 
-            {/* STEP 3: Cycle Information */}
+            {/* STEP 3: Choose Your Wellness Avatar Companion */}
             {step === 3 && (
               <motion.div
                 key="step3"
@@ -386,8 +421,124 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                 exit="exit"
                 custom={1}
                 variants={slideVariants}
-                className="space-y-5 text-center md:text-left"
+                className="space-y-4"
                 id="onboarding_step_3"
+              >
+                <div className="space-y-1 text-center md:text-left">
+                  <div className="inline-flex w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-950/20 items-center justify-center text-pink-500 mb-1">
+                    <Sparkles size={20} />
+                  </div>
+                  <h2 className="text-2xl font-serif italic text-stone-900 dark:text-stone-100 font-bold">
+                    Choose Your Wellness Avatar Companion
+                  </h2>
+                  <p className="text-xs text-stone-400 dark:text-stone-500">
+                    Select a visual companion to encourage, guide, and walk with you every day.
+                  </p>
+                </div>
+
+                {/* Preview Box */}
+                <div className="bg-gradient-to-r from-pink-50/80 to-rose-50/60 p-4 rounded-3xl border border-pink-100 flex items-center gap-4 shadow-sm">
+                  <AvatarVisual
+                    avatar={{
+                      id: selectedAvatarId,
+                      name: AVATAR_PRESETS[selectedAvatarId]?.name,
+                      skinTone: selectedSkinTone,
+                      hairstyle: AVATAR_PRESETS[selectedAvatarId]?.hairstyle,
+                      headwrap: AVATAR_PRESETS[selectedAvatarId]?.headwrap,
+                      glasses: AVATAR_PRESETS[selectedAvatarId]?.glasses,
+                      outfit: AVATAR_PRESETS[selectedAvatarId]?.outfit
+                    }}
+                    size="lg"
+                  />
+                  <div className="text-left flex-1 min-w-0">
+                    <h4 className="font-serif font-bold text-sm text-pink-700">
+                      {AVATAR_PRESETS[selectedAvatarId]?.name} • {AVATAR_PRESETS[selectedAvatarId]?.title}
+                    </h4>
+                    <p className="text-[10px] text-gray-500 italic leading-snug">
+                      "{AVATAR_PRESETS[selectedAvatarId]?.quote}"
+                    </p>
+                    <span className="inline-block mt-1 text-[8.5px] font-bold text-pink-600 bg-white px-2 py-0.5 rounded-full border border-pink-100">
+                      {AVATAR_PRESETS[selectedAvatarId]?.personality}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Companions Grid */}
+                <div className="grid grid-cols-3 gap-2">
+                  {(Object.keys(AVATAR_PRESETS) as AvatarId[]).map((id) => {
+                    const preset = AVATAR_PRESETS[id];
+                    const isSelected = selectedAvatarId === id;
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedAvatarId(id);
+                          setSelectedSkinTone(preset.skinTone);
+                        }}
+                        className={`p-2 rounded-2xl border text-center transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-pink-50 border-pink-400 ring-2 ring-pink-300 shadow-sm'
+                            : 'bg-white border-stone-200 hover:bg-stone-50'
+                        }`}
+                      >
+                        <AvatarVisual
+                          avatar={{
+                            id,
+                            skinTone: preset.skinTone,
+                            hairstyle: preset.hairstyle,
+                            headwrap: preset.headwrap,
+                            glasses: preset.glasses,
+                            outfit: preset.outfit
+                          }}
+                          size="sm"
+                          className="mx-auto mb-1"
+                        />
+                        <span className="font-serif font-bold text-xs text-stone-800 block truncate">
+                          {preset.name}
+                        </span>
+                        <span className="text-[8px] text-stone-400 uppercase font-mono block">
+                          {preset.emoji}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Skin Tone Selector */}
+                <div className="space-y-1 pt-1">
+                  <label className="text-[9px] font-black uppercase tracking-wider text-pink-400 block text-left">
+                    Preferred Skin Tone
+                  </label>
+                  <div className="flex gap-2 justify-center sm:justify-start overflow-x-auto pb-1">
+                    {(Object.keys(SKIN_TONE_PALETTES) as SkinTone[]).map((tone) => (
+                      <button
+                        key={tone}
+                        type="button"
+                        onClick={() => setSelectedSkinTone(tone)}
+                        className={`w-6 h-6 rounded-full border-2 transition-all cursor-pointer ${
+                          selectedSkinTone === tone ? 'border-pink-500 scale-110 shadow-sm' : 'border-white'
+                        }`}
+                        style={{ backgroundColor: SKIN_TONE_PALETTES[tone].base }}
+                        title={SKIN_TONE_PALETTES[tone].label}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* STEP 4: Cycle Information */}
+            {step === 4 && (
+              <motion.div
+                key="step4"
+                initial="enter"
+                animate="center"
+                exit="exit"
+                custom={1}
+                variants={slideVariants}
+                className="space-y-5 text-center md:text-left"
+                id="onboarding_step_4"
               >
                 <div className="space-y-2">
                   <div className="inline-flex w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-950/20 items-center justify-center text-pink-500 mb-1">
@@ -416,17 +567,17 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
               </motion.div>
             )}
 
-            {/* STEP 4: Cycle Length */}
-            {step === 4 && (
+            {/* STEP 5: Cycle Length */}
+            {step === 5 && (
               <motion.div
-                key="step4"
+                key="step5"
                 initial="enter"
                 animate="center"
                 exit="exit"
                 custom={1}
                 variants={slideVariants}
                 className="space-y-5"
-                id="onboarding_step_4"
+                id="onboarding_step_5"
               >
                 <div className="space-y-2 text-center md:text-left">
                   <div className="inline-flex w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-950/20 items-center justify-center text-pink-500 mb-1">
@@ -462,17 +613,17 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
               </motion.div>
             )}
 
-            {/* STEP 5: Period Length */}
-            {step === 5 && (
+            {/* STEP 6: Period Length */}
+            {step === 6 && (
               <motion.div
-                key="step5"
+                key="step6"
                 initial="enter"
                 animate="center"
                 exit="exit"
                 custom={1}
                 variants={slideVariants}
                 className="space-y-5"
-                id="onboarding_step_5"
+                id="onboarding_step_6"
               >
                 <div className="space-y-2 text-center md:text-left">
                   <div className="inline-flex w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-950/20 items-center justify-center text-pink-500 mb-1">
@@ -505,17 +656,17 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
               </motion.div>
             )}
 
-            {/* STEP 6: Wellness Goals */}
-            {step === 6 && (
+            {/* STEP 7: Wellness Goals */}
+            {step === 7 && (
               <motion.div
-                key="step6"
+                key="step7"
                 initial="enter"
                 animate="center"
                 exit="exit"
                 custom={1}
                 variants={slideVariants}
                 className="space-y-5"
-                id="onboarding_step_6"
+                id="onboarding_step_7"
               >
                 <div className="space-y-2 text-center md:text-left">
                   <div className="inline-flex w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-950/20 items-center justify-center text-pink-500 mb-1">
@@ -567,17 +718,17 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
               </motion.div>
             )}
 
-            {/* STEP 7: Reminder Preferences */}
-            {step === 7 && (
+            {/* STEP 8: Reminder Preferences */}
+            {step === 8 && (
               <motion.div
-                key="step7"
+                key="step8"
                 initial="enter"
                 animate="center"
                 exit="exit"
                 custom={1}
                 variants={slideVariants}
                 className="space-y-5"
-                id="onboarding_step_7"
+                id="onboarding_step_8"
               >
                 <div className="space-y-2 text-center md:text-left">
                   <div className="inline-flex w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-950/20 items-center justify-center text-pink-500 mb-1">
@@ -625,17 +776,17 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
               </motion.div>
             )}
 
-            {/* STEP 8: Partner Mode */}
-            {step === 8 && (
+            {/* STEP 9: Partner Mode */}
+            {step === 9 && (
               <motion.div
-                key="step8"
+                key="step9"
                 initial="enter"
                 animate="center"
                 exit="exit"
                 custom={1}
                 variants={slideVariants}
                 className="space-y-5"
-                id="onboarding_step_8"
+                id="onboarding_step_9"
               >
                 <div className="space-y-2 text-center md:text-left">
                   <div className="inline-flex w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-950/20 items-center justify-center text-pink-500 mb-1">
@@ -689,17 +840,17 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
               </motion.div>
             )}
 
-            {/* STEP 9: Sanctuary Preferences */}
-            {step === 9 && (
+            {/* STEP 10: Sanctuary Preferences */}
+            {step === 10 && (
               <motion.div
-                key="step9"
+                key="step10"
                 initial="enter"
                 animate="center"
                 exit="exit"
                 custom={1}
                 variants={slideVariants}
                 className="space-y-5"
-                id="onboarding_step_9"
+                id="onboarding_step_10"
               >
                 <div className="space-y-2 text-center md:text-left">
                   <div className="inline-flex w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-950/20 items-center justify-center text-pink-500 mb-1">
@@ -750,17 +901,17 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
               </motion.div>
             )}
 
-            {/* STEP 10: Notifications Permission */}
-            {step === 10 && (
+            {/* STEP 11: Notifications Permission */}
+            {step === 11 && (
               <motion.div
-                key="step10"
+                key="step11"
                 initial="enter"
                 animate="center"
                 exit="exit"
                 custom={1}
                 variants={slideVariants}
                 className="space-y-5"
-                id="onboarding_step_10"
+                id="onboarding_step_11"
               >
                 <div className="space-y-2 text-center md:text-left">
                   <div className="inline-flex w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-950/20 items-center justify-center text-pink-500 mb-1">
@@ -801,17 +952,17 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
               </motion.div>
             )}
 
-            {/* STEP 11: Complete */}
-            {step === 11 && (
+            {/* STEP 12: Complete */}
+            {step === 12 && (
               <motion.div
-                key="step11"
+                key="step12"
                 initial="enter"
                 animate="center"
                 exit="exit"
                 custom={1}
                 variants={slideVariants}
                 className="space-y-6 text-center"
-                id="onboarding_step_11"
+                id="onboarding_step_12"
               >
                 <div className="flex justify-center">
                   <div className="w-20 h-20 rounded-full bg-pink-100 dark:bg-pink-950/30 flex items-center justify-center text-3xl animate-bounce">
@@ -848,7 +999,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
           )}
 
           {step < totalSteps ? (
-            step !== 10 ? (
+            step !== 11 ? (
               <button
                 type="button"
                 onClick={handleNext}

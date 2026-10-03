@@ -3,6 +3,14 @@ import { createPortal } from 'react-dom';
 import { User, Symptom, Reminder, ReceivedComfort } from '../types';
 import { ExpectedPeriodCheckInCard } from './ExpectedPeriodCheckInCard';
 import { WallpapersAndThemesModal } from './WallpapersAndThemesModal';
+import { AvatarDashboardModal } from './AvatarDashboardModal';
+import { AvatarVisual } from './AvatarVisual';
+import { 
+  getOrCreateUserAvatar, 
+  calculateAvatarProgression, 
+  getAvatarCompanionSpeech,
+  logAvatarActionReward
+} from '../services/avatarService';
 import { getDailyAffirmation } from '../services/gemini';
 import { syncUser, updatePartnerRequestStatus, addNotificationToUser } from '../services/firebaseService';
 import { SONGS, MOODS, BABY_SIZES } from '../constants';
@@ -95,6 +103,12 @@ const Dashboard: React.FC<DashboardProps> = ({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isWallpapersOpen, setIsWallpapersOpen] = useState(false);
+  const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
+
+  // Avatar System integration
+  const currentAvatar = getOrCreateUserAvatar(user);
+  const avatarProgression = calculateAvatarProgression(user, currentAvatar);
+  const avatarSpeech = getAvatarCompanionSpeech(user, currentAvatar);
 
   // Pregnancy and Postpartum Custom states
   const [exerciseTrimester, setExerciseTrimester] = useState<1 | 2 | 3>(1);
@@ -1037,6 +1051,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   const handlePostpartumCheckin = (e: React.FormEvent) => {
     e.preventDefault();
     setCheckinSuccess(true);
+    logAvatarActionReward(user, 'self_care_challenge', 'Postpartum Healing Check-in', setUser);
     setTimeout(() => {
       setCheckinSuccess(false);
     }, 4000);
@@ -2016,20 +2031,72 @@ const Dashboard: React.FC<DashboardProps> = ({
         </button>
       </header>
 
-      {/* Personalized Greeting & Short Inspirational Message Section */}
-      <section className="bg-gradient-to-br from-white/80 via-pink-50/20 to-amber-50/10 backdrop-blur-md p-6 md:p-8 rounded-[2.5rem] border border-white/90 shadow-[inset_0_3px_5px_rgba(255,255,255,0.85),_0_12px_36px_rgba(244,114,182,0.04)] relative overflow-hidden transition-all duration-500">
+      {/* Home Screen Avatar Companion & Personalized Sanctuary Header */}
+      <section className="bg-gradient-to-br from-white/85 via-pink-50/30 to-amber-50/15 backdrop-blur-md p-6 md:p-8 rounded-[2.5rem] border border-white/90 shadow-[inset_0_3px_5px_rgba(255,255,255,0.85),_0_12px_36px_rgba(244,114,182,0.04)] relative overflow-hidden transition-all duration-500">
         {/* Claymorphic blobs inside greeting for fluid background */}
-        <div className="absolute -top-12 -left-12 w-32 h-32 bg-gradient-to-tr from-pink-300/10 to-rose-300/10 rounded-full blur-2xl pointer-events-none" />
-        <div className="absolute -bottom-16 -right-16 w-36 h-36 bg-gradient-to-tr from-amber-200/10 to-pink-300/10 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute -top-12 -left-12 w-36 h-36 bg-gradient-to-tr from-pink-300/15 to-rose-300/15 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute -bottom-16 -right-16 w-40 h-40 bg-gradient-to-tr from-amber-200/15 to-pink-300/15 rounded-full blur-2xl pointer-events-none" />
         
-        <div className="relative z-10 space-y-2">
-          <p className="text-[10px] font-black uppercase tracking-widest text-pink-400">Welcome to your sanctuary</p>
-          <h1 className="text-3xl md:text-4xl font-serif italic text-pink-600 font-black leading-tight">
-            {getGreeting()}, {user.firstName || user.name || "Ella"} ✨
-          </h1>
-          <p className="text-xs md:text-sm text-stone-500 leading-relaxed italic font-serif">
-            "{affirmation || 'You are not just your cycle, you are the whole universe in motion.'}"
-          </p>
+        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          {/* Avatar Visual & Identity Tag */}
+          <div className="flex items-center gap-4">
+            <div 
+              onClick={() => setIsAvatarModalOpen(true)}
+              className="relative cursor-pointer group shrink-0"
+              title="Open Lumina Avatar Sanctuary Dashboard"
+            >
+              <AvatarVisual 
+                avatar={currentAvatar} 
+                size="lg" 
+                showTierBadge 
+                interactive 
+                className="ring-4 ring-white/80 shadow-md group-hover:scale-105 transition-all"
+              />
+              <span className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-pink-500 text-white text-[10px] font-black flex items-center justify-center border-2 border-white shadow-xs">
+                ✨
+              </span>
+            </div>
+
+            <div className="space-y-1">
+              {/* Top Avatar Tag: 🌸 Amara */}
+              <div 
+                onClick={() => setIsAvatarModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-pink-100/70 hover:bg-pink-100 text-pink-700 text-[10px] font-black uppercase tracking-wider border border-pink-200/60 cursor-pointer transition-all shadow-xs"
+              >
+                <span>🌸</span>
+                <span>{currentAvatar.name || 'Amara'}</span>
+                <span className="text-[8.5px] opacity-75 font-normal ml-0.5">• Level {avatarProgression.level}</span>
+              </div>
+
+              {/* Main Greeting: Good Morning (username) */}
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-serif italic text-pink-600 font-black leading-tight">
+                {getGreeting()} {user.firstName || user.name || "Ella"}
+              </h1>
+
+              {/* Cycle Day & Fertile Window Status */}
+              <p className="text-xs sm:text-sm font-semibold text-stone-700 leading-snug">
+                {avatarSpeech.cycleStatusText}
+              </p>
+
+              {/* Companion Speech Bubble */}
+              <div className="pt-1">
+                <p className="text-xs text-stone-500 italic font-serif bg-white/70 backdrop-blur-sm px-3.5 py-2 rounded-2xl border border-pink-100/60 shadow-xs inline-block max-w-xl">
+                  "{avatarSpeech.companionMessage}"
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Avatar Dashboard Launcher Pill */}
+          <div className="shrink-0 self-stretch md:self-auto flex md:flex-col justify-end gap-2">
+            <button
+              onClick={() => setIsAvatarModalOpen(true)}
+              className="px-4 py-2.5 bg-gradient-to-r from-pink-500 to-rose-400 hover:from-pink-600 hover:to-rose-500 text-white rounded-2xl font-black text-[9px] uppercase tracking-widest shadow-md transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
+            >
+              <span>🌸 Avatar Studio</span>
+              <span className="text-[10px]">→</span>
+            </button>
+          </div>
         </div>
       </section>
 
@@ -2055,6 +2122,32 @@ const Dashboard: React.FC<DashboardProps> = ({
 
               {/* Menu List */}
               <div className="space-y-4">
+                {/* Lumina Avatar Companion Sanctuary */}
+                <div className="bg-gradient-to-br from-pink-500/15 via-rose-400/15 to-amber-400/15 p-4 rounded-3xl border border-pink-200/60 shadow-[0_4px_15px_rgba(244,114,182,0.06)] space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[9px] font-black uppercase tracking-wider text-pink-600">Wellness Companion</p>
+                    <span className="text-[8px] font-black px-2 py-0.5 rounded-full bg-pink-100 text-pink-700 uppercase">
+                      Lvl {avatarProgression.level}
+                    </span>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      setIsAvatarModalOpen(true);
+                      setIsMenuOpen(false);
+                    }}
+                    className="w-full py-2.5 px-4 bg-white hover:bg-pink-50/70 border border-pink-200/60 rounded-2xl text-[10px] font-black uppercase tracking-widest text-pink-600 transition-all active:scale-[0.98] shadow-sm flex items-center justify-between cursor-pointer"
+                  >
+                    <span className="flex items-center gap-2">
+                      <AvatarVisual avatar={currentAvatar} size="sm" />
+                      <span className="truncate">{currentAvatar.name || 'Amara'} Studio</span>
+                    </span>
+                    <span className="text-xs">➔</span>
+                  </button>
+                  <p className="text-[8.5px] text-gray-500 italic text-center">
+                    Dashboard, customizations, styles & rewards
+                  </p>
+                </div>
+
                 {/* Personal Diary Card */}
                 <div className="bg-gradient-to-br from-amber-500/10 via-rose-500/10 to-pink-500/10 p-4 rounded-3xl border border-pink-100 shadow-[0_4px_15px_rgba(244,114,182,0.04)]">
                   <p className="text-[9px] font-black uppercase tracking-wider text-rose-600 mb-2">Personal Sanctuary</p>
@@ -2575,16 +2668,33 @@ const Dashboard: React.FC<DashboardProps> = ({
             {/* Bottom Actions */}
             <div className="flex gap-3 pt-2">
               <button
-                onClick={() => setSimulatedVideo(null)}
+                onClick={() => {
+                  logAvatarActionReward(user, 'postpartum_yoga', `Completed: ${simulatedVideo.name}`, setUser);
+                  setSimulatedVideo(null);
+                }}
                 className="flex-1 py-3 bg-indigo-500 hover:bg-indigo-600 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl transition-colors shadow-md text-center cursor-pointer"
               >
-                Complete practice & close
+                Complete practice & close (+25 XP)
               </button>
             </div>
           </div>
         </div>,
         document.body
       )}
+
+      {/* Lumina Avatar System Companion Dashboard & Customization Modal */}
+      <AvatarDashboardModal
+        isOpen={isAvatarModalOpen}
+        onClose={() => setIsAvatarModalOpen(false)}
+        user={user}
+        setUser={setUser}
+        onOpenLogModal={onOpenLogModal}
+        onNavigateTab={(tab) => {
+          setIsAvatarModalOpen(false);
+          if (onTabChange) onTabChange(tab);
+          else setActiveTab(tab);
+        }}
+      />
     </div>
   );
 };

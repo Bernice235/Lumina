@@ -67,7 +67,9 @@ export interface CycleAnalyticsSummary {
 export function formatDayDisplay(days: number): string {
   if (isNaN(days) || days <= 0) return '0 Days';
   const rounded = Math.round(days * 10) / 10;
-  return `${rounded} Days`;
+  // If user requested e.g. 28.3 Days or 5.3 Days
+  const str = Number.isInteger(rounded) ? `${rounded} Days` : `${rounded.toFixed(1)} Days`;
+  return str;
 }
 
 /**

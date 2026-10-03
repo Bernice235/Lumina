@@ -158,6 +158,7 @@ export interface User {
   notificationSettings?: NotificationSettings;
   pregnancyAppointments?: { id: string; date: string; title: string; notes?: string }[];
   pregnancySupplements?: string[];
+  avatar?: UserAvatar;
   pregnancyNotes?: string;
   isPremium?: boolean;
   subscriptionPlan?: 'free' | 'monthly' | '6month' | 'yearly';
@@ -359,3 +360,79 @@ export interface Reminder {
   time: string;
   isCompleted: boolean;
 }
+
+// ================= Lumina Wellness Avatar System =================
+export type AvatarId = 'amara' | 'zainab' | 'kemi' | 'nia' | 'maya' | 'aria';
+export type AvatarTier = 'seedling' | 'blooming' | 'radiant' | 'flourishing';
+
+export type SkinTone = 
+  | 'fair' 
+  | 'peach' 
+  | 'honey' 
+  | 'amber' 
+  | 'chestnut' 
+  | 'espresso' 
+  | 'obsidian';
+
+export type Hairstyle = 
+  | 'afro_puffs' 
+  | 'sleek_bob' 
+  | 'braided_crown' 
+  | 'long_curls' 
+  | 'high_bun' 
+  | 'box_braids' 
+  | 'short_waves' 
+  | 'pixie';
+
+export type Headwrap = 
+  | 'none' 
+  | 'silk_wrap' 
+  | 'floral_crown' 
+  | 'minimal_band';
+
+export type Glasses = 
+  | 'none' 
+  | 'round' 
+  | 'cat_eye' 
+  | 'square';
+
+export type Outfit = 
+  | 'cozy_kimono' 
+  | 'linen_loungewear' 
+  | 'floral_sundress' 
+  | 'athleisure_wrap'
+  | 'maternity_wrap' 
+  | 'bump_loungewear' 
+  | 'flowing_tunic'
+  | 'nursing_robe' 
+  | 'restore_kimono' 
+  | 'skin_to_skin';
+
+export interface AvatarActionLog {
+  id: string;
+  action: 'log_cycle' | 'track_symptoms' | 'postpartum_yoga' | 'read_guide' | 'self_care_challenge' | 'log_water' | 'log_mood';
+  points: number;
+  label: string;
+  timestamp: string;
+}
+
+export interface UserAvatar {
+  id: AvatarId;
+  name: string;
+  title: string;
+  personality: string;
+  skinTone: SkinTone;
+  hairstyle: Hairstyle;
+  headwrap: Headwrap;
+  glasses: Glasses;
+  outfit: Outfit;
+  tier: AvatarTier;
+  level: number;
+  xp: number;
+  wellnessStreak: number;
+  selfCareScore: number;
+  unlockedOutfits?: Outfit[];
+  unlockedAccessories?: string[];
+  actionHistory?: AvatarActionLog[];
+}
+

@@ -26,6 +26,7 @@ import TemperatureTracker from './TemperatureTracker';
 import { ExpectedPeriodCheckInCard } from './ExpectedPeriodCheckInCard';
 import { CycleGraph } from './CycleGraph';
 import { getCycleAnalytics } from '../services/cycleAnalyticsService';
+import { logAvatarActionReward } from '../services/avatarService';
 import { 
   BarChart, 
   Bar, 
@@ -414,6 +415,10 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
       periodLogs: newLogs,
       lastPeriodStart: allPeriods[0]?.startDate || prev.lastPeriodStart
     } : null);
+    
+    if (user) {
+      logAvatarActionReward(user, 'log_cycle', 'Logged Completed Cycle', setUser);
+    }
     
     setIsAddingPeriod(false);
   };

@@ -58,6 +58,7 @@ import { THEMES, SONGS, THEME_PALETTES } from './constants';
 import { WALLPAPER_LIST } from './components/WallpapersAndThemesModal';
 import { syncUser, subscribeToGifts, subscribeToUser, acceptInvite, subscribeToPartnerRequests, getCleanName } from './services/firebaseService';
 import { getDefaultNotificationSettings, calculateScheduledNotifications, sanitizeUserNotifications, scheduleNativeLocalNotification } from './services/notificationService';
+import { logAvatarActionReward } from './services/avatarService';
 import { auth } from './services/firebase';
 import { onAuthStateChanged, setPersistence, browserSessionPersistence, indexedDBLocalPersistence } from 'firebase/auth';
 import { SplashScreen } from './components/SplashScreen';
@@ -1360,6 +1361,7 @@ const App: React.FC = () => {
       periods: allPeriods,
       lastPeriodStart: allPeriods[0]?.startDate || user.lastPeriodStart
     });
+    logAvatarActionReward(user, 'log_cycle', 'Logged Completed Cycle', setUser);
     setIsLogModalOpen(false);
   };
 
@@ -1375,6 +1377,7 @@ const App: React.FC = () => {
       ...user,
       moodLogs: [...(user.moodLogs || []), newMoodEntry]
     });
+    logAvatarActionReward(user, 'log_mood', 'Logged Mood & Emotion', setUser);
   };
 
   const handleLogSexualActivity = (isProtected: boolean, notes?: string) => {
@@ -1401,6 +1404,7 @@ const App: React.FC = () => {
     };
     // Prior to Firebase we were using a separate symptoms state
     setSymptoms(prev => [...prev, newSymptom]);
+    logAvatarActionReward(user, 'track_symptoms', `Tracked Symptom: ${type}`, setUser);
   };
 
   const toggleFavoriteSong = (songId: string) => {
@@ -2002,7 +2006,7 @@ const App: React.FC = () => {
       case 'diary':
         return <Diary entries={diaryEntries} setEntries={setDiaryEntries} user={user} />;
       case 'selfcare':
-        return <SelfCare tasks={selfCareTasks} setTasks={setSelfCareTasks} />;
+        return <SelfCare tasks={selfCareTasks} setTasks={setSelfCareTasks} user={user} setUser={setUser} />;
       case 'partner':
         return (
           <PartnerMode 

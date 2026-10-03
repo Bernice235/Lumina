@@ -1,14 +1,23 @@
 import React from 'react';
-import { SelfCareTask } from '../types';
+import { SelfCareTask, User } from '../types';
+import { logAvatarActionReward } from '../services/avatarService';
 
 interface SelfCareProps {
   tasks: SelfCareTask[];
   setTasks: React.Dispatch<React.SetStateAction<SelfCareTask[]>>;
+  user?: User;
+  setUser?: React.Dispatch<React.SetStateAction<User | null>> | ((u: any) => void);
 }
 
-const SelfCare: React.FC<SelfCareProps> = ({ tasks, setTasks }) => {
+const SelfCare: React.FC<SelfCareProps> = ({ tasks, setTasks, user, setUser }) => {
   const toggleTask = (id: string) => {
-    setTasks(tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
+    const task = tasks.find(t => t.id === id);
+    const willBeCompleted = task ? !task.completed : false;
+    setTasks(tasks.map(t => t.id === id ? { ...t, completed: willBeCompleted } : t));
+    
+    if (willBeCompleted && user) {
+      logAvatarActionReward(user, 'self_care_challenge', `Completed: ${task?.task || 'Self-Care Ritual'}`, setUser);
+    }
   };
 
   const rituals = [
