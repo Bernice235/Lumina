@@ -25,6 +25,7 @@ import { SYMPTOMS } from '../constants';
 import TemperatureTracker from './TemperatureTracker';
 import { ExpectedPeriodCheckInCard } from './ExpectedPeriodCheckInCard';
 import { CycleGraph } from './CycleGraph';
+import { getCycleAnalytics } from '../services/cycleAnalyticsService';
 import { 
   BarChart, 
   Bar, 
@@ -882,7 +883,7 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
   };
 
   const renderStats = () => {
-    return <CycleGraph user={user} />;
+    return <CycleGraph user={user} setUser={setUser} symptoms={symptoms} />;
   };
 
   const renderHistory = () => {
@@ -2180,104 +2181,7 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
   const renderCycleTrendsModal = () => {
     if (!isViewingTrends) return null;
 
-    // Get the trend data chronologically (oldest to newest)
-    const sortedPeriods = [...(user.periods || [])].sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
-    
-    const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-
-    const trendsData = sortedPeriods.map((period, idx) => {
-      const start = new Date(period.startDate);
-      const end = new Date(period.endDate);
-      const periodLength = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1);
-      
-      let cycleLength = user.cycleLength || 28;
-      // Chronological next starting date is at idx + 1
-      if (idx < sortedPeriods.length - 1 && sortedPeriods[idx + 1]) {
-        const nextStart = new Date(sortedPeriods[idx + 1].startDate);
-        const diff = Math.round((nextStart.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-        if (diff > 15 && diff < 50) {
-          cycleLength = diff;
-        }
-      }
-
-      return {
-        id: period.id,
-        startDate: period.startDate,
-        start,
-        formattedDate: start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-        cycleLength,
-        periodLength,
-        isBaseline: false
-      };
-    }).filter(p => p.start >= sixMonthsAgo);
-
-    const hasRealData = trendsData.length > 0;
-    const realLoggedCount = trendsData.length;
-
-    // Fallback data generation for beautiful visualization if empty or too small
-    let displayData = [...trendsData];
-    if (displayData.length === 0) {
-      for (let i = 4; i >= 1; i--) {
-        const d = new Date();
-        d.setMonth(d.getMonth() - i);
-        displayData.push({
-          id: `fallback-${i}`,
-          startDate: d.toISOString().split('T')[0],
-          start: d,
-          formattedDate: d.toLocaleDateString(undefined, { month: 'short' }),
-          cycleLength: user.cycleLength || 28,
-          periodLength: user.periodLength || 5,
-          isBaseline: true
-        });
-      }
-    } else if (displayData.length === 1) {
-      // Add a baseline point preceding it so line chart is beautiful
-      const d = new Date(displayData[0].start);
-      d.setMonth(d.getMonth() - 2);
-      displayData.unshift({
-        id: 'fallback-pre',
-        startDate: d.toISOString().split('T')[0],
-        start: d,
-        formattedDate: d.toLocaleDateString(undefined, { month: 'short' }),
-        cycleLength: user.cycleLength || 28,
-        periodLength: user.periodLength || 5,
-        isBaseline: true
-      });
-    }
-
-    // Calculations based on real logged cycles in the last 6 months
-    const loggedCycles = trendsData;
-    const avgCycleLength = loggedCycles.length > 0
-      ? Math.round(loggedCycles.reduce((acc, curr) => acc + curr.cycleLength, 0) / loggedCycles.length)
-      : user.cycleLength || 28;
-
-    const minCycle = loggedCycles.length > 0
-      ? Math.min(...loggedCycles.map(d => d.cycleLength))
-      : user.cycleLength || 28;
-
-    const maxCycle = loggedCycles.length > 0
-      ? Math.max(...loggedCycles.map(d => d.cycleLength))
-      : user.cycleLength || 28;
-
-    const variation = maxCycle - minCycle;
-    let regularityText = 'Highly Regular';
-    let regularityDesc = 'Minimal variation in cycle length.';
-    let regularityColor = 'text-green-600 bg-green-50';
-
-    if (loggedCycles.length < 2) {
-      regularityText = 'Awaiting Logs';
-      regularityDesc = 'Add more past periods to compute regularity.';
-      regularityColor = 'text-gray-500 bg-gray-50';
-    } else if (variation > 6) {
-      regularityText = 'Variable';
-      regularityDesc = 'More than 6 days difference between cycles.';
-      regularityColor = 'text-amber-600 bg-amber-50';
-    } else if (variation > 3) {
-      regularityText = 'Regular';
-      regularityDesc = 'Healthy and stable monthly rhythm.';
-      regularityColor = 'text-pink-600 bg-pink-50';
-    }
+    const analytics = getCycleAnalytics(user, symptoms);
 
     return (
       <div className="fixed inset-0 bg-black/40 backdrop-blur-md z-50 flex items-center justify-center p-4">
@@ -2291,7 +2195,7 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
             <div className="text-left">
               <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-pink-400">Analytics Sanctuary</span>
               <h3 className="text-2xl font-serif text-pink-600 font-bold italic mt-1">Cycle Trends</h3>
-              <p className="text-[11px] text-gray-400 italic">6-Month Historical Cycle Length Analysis</p>
+              <p className="text-[11px] text-gray-400 italic">Historical Cycle Length & Pattern Analysis</p>
             </div>
             <button 
               onClick={() => setIsViewingTrends(false)}
@@ -2301,36 +2205,95 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
             </button>
           </div>
 
-          <div className="p-6 md:p-8 overflow-y-auto space-y-6 flex-1">
-            {/* Status Alert if showing simulated baseline */}
-            {!hasRealData && (
-              <div className="bg-pink-50/40 border border-pink-100/60 p-4 rounded-2xl flex items-start gap-3">
-                <span className="text-xl">📈</span>
-                <div className="text-left">
-                  <h4 className="text-xs font-bold text-pink-700">Displaying Configured Baseline</h4>
-                  <p className="text-[10.5px] text-pink-600/80 leading-relaxed">
-                    You haven't logged enough periods in the last 6 months yet. We are displaying your onboarding configured default cycle length of <span className="font-extrabold">{user.cycleLength || 28} days</span> as a reference. Add more past cycles to begin plotting real trends!
+          <div className="p-6 md:p-8 overflow-y-auto space-y-6 flex-1 text-left">
+            {/* 6. Trend Notifications: Clinical Alert Banner */}
+            {analytics.hasSignificantTrendAlert && (
+              <div className="bg-amber-50 border-2 border-amber-200 p-4 rounded-2xl flex items-start gap-3 shadow-xs">
+                <span className="text-2xl shrink-0">🩺</span>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[9px] font-black uppercase tracking-wider text-amber-800 bg-amber-200/60 px-2 py-0.5 rounded-full">
+                      Clinical Trend Notice
+                    </span>
+                    <span className="text-xs text-amber-700 font-bold">Repeated Shifts Detected</span>
+                  </div>
+                  <p className="text-xs font-serif italic text-amber-950 font-bold leading-relaxed">
+                    "{analytics.significantTrendMessage}"
                   </p>
                 </div>
               </div>
             )}
 
-            {/* Recharts Line Graph */}
+            {/* 2. Accurate Cycle Trend Tracking Header Component */}
+            <div className="bg-gradient-to-br from-pink-500 to-rose-500 rounded-3xl p-5 sm:p-6 text-white shadow-md relative overflow-hidden">
+              <div className="flex justify-between items-center border-b border-white/20 pb-3 mb-4">
+                <span className="text-[10px] font-black uppercase tracking-wider text-pink-100">
+                  Accurate Cycle Trend Tracking
+                </span>
+                <span className="px-2.5 py-1 rounded-full bg-white/20 text-white font-extrabold text-[9px] uppercase tracking-wider border border-white/25">
+                  {analytics.trendDirectionLabel}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="bg-white/15 backdrop-blur-md rounded-2xl p-3.5 border border-white/20">
+                  <span className="text-[9px] font-extrabold uppercase tracking-wider text-pink-100 block">
+                    Previous Cycle Length
+                  </span>
+                  <p className="text-2xl font-serif font-black text-white mt-0.5">
+                    {analytics.previousCycleLength} <span className="text-xs font-sans font-bold text-pink-100">days</span>
+                  </p>
+                </div>
+
+                <div className="bg-white/25 backdrop-blur-md rounded-2xl p-3.5 border border-white/35 shadow-sm">
+                  <span className="text-[9px] font-extrabold uppercase tracking-wider text-pink-100 block">
+                    Current Cycle Length
+                  </span>
+                  <p className="text-2xl font-serif font-black text-white mt-0.5">
+                    {analytics.currentCycleLength} <span className="text-xs font-sans font-bold text-pink-100">days</span>
+                  </p>
+                </div>
+
+                <div className="bg-white/15 backdrop-blur-md rounded-2xl p-3.5 border border-white/20">
+                  <span className="text-[9px] font-extrabold uppercase tracking-wider text-pink-100 block">
+                    Change
+                  </span>
+                  <p className="text-2xl font-serif font-black text-white mt-0.5">
+                    {analytics.cycleChangeFormatted}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Status Alert if showing simulated baseline */}
+            {!analytics.hasRealCompletedCycles && (
+              <div className="bg-pink-50/40 border border-pink-100/60 p-4 rounded-2xl flex items-start gap-3">
+                <span className="text-xl">📈</span>
+                <div>
+                  <h4 className="text-xs font-bold text-pink-700">Displaying Configured Baseline</h4>
+                  <p className="text-[10.5px] text-pink-600/80 leading-relaxed">
+                    You haven't logged enough consecutive periods yet. We are displaying your onboarding configured default cycle length of <span className="font-extrabold">{user.cycleLength || 28} days</span> as a reference. Add more past cycles to begin plotting real trends!
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Recharts Line Graph reflecting cycle changes */}
             <div className="bg-pink-50/10 border border-pink-50/40 rounded-3xl p-4 md:p-6 shadow-sm">
               <div className="flex justify-between items-center mb-4">
                 <span className="text-[10px] font-bold text-pink-400 uppercase tracking-wider">Cycle Duration (Days)</span>
                 <span className="text-[10px] text-gray-400 font-bold italic">
-                  {hasRealData ? `${realLoggedCount} Logged Cycles` : 'Configured Reference'}
+                  {analytics.hasRealCompletedCycles ? `${analytics.totalLoggedCycles} Completed Cycles` : 'Configured Reference'}
                 </span>
               </div>
 
               <div className="h-64 w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={displayData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                  <LineChart data={analytics.chartData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#fdf2f8" />
                     <XAxis 
-                      dataKey="formattedDate" 
-                      tick={{ fontSize: 10, fill: '#f472b6' }} 
+                      dataKey="name" 
+                      tick={{ fontSize: 10, fill: '#f472b6', fontWeight: 'bold' }} 
                       axisLine={false}
                       tickLine={false}
                     />
@@ -2346,7 +2309,7 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
                           const data = payload[0].payload;
                           return (
                             <div className="bg-white/95 backdrop-blur-sm border border-pink-100 p-3 rounded-2xl shadow-xl text-left">
-                              <p className="text-[10px] text-pink-400 font-bold uppercase">{data.formattedDate}</p>
+                              <p className="text-[10px] text-pink-400 font-bold uppercase">{data.name}</p>
                               <p className="text-xs font-serif italic text-pink-600 font-bold mt-1">
                                 Cycle Length: <span className="text-sm font-sans font-extrabold">{data.cycleLength} days</span>
                               </p>
@@ -2365,11 +2328,11 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
                       }}
                     />
                     <ReferenceLine 
-                      y={user.cycleLength || 28} 
+                      y={analytics.averageCycleLength} 
                       stroke="#ec4899" 
                       strokeDasharray="5 5" 
                       label={{ 
-                        value: `Baseline (${user.cycleLength || 28}d)`, 
+                        value: `Avg (${analytics.averageCycleDisplay})`, 
                         fill: '#db2777', 
                         fontSize: 9, 
                         position: 'insideBottomRight',
@@ -2389,45 +2352,85 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
               </div>
             </div>
 
-            {/* Analytics Summary Statistics Cards */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white border border-pink-100 p-4 rounded-3xl text-left space-y-1 shadow-sm">
-                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Average Cycle</span>
-                <p className="text-2xl font-serif text-pink-600 font-extrabold italic">
-                  {avgCycleLength} <span className="text-xs font-sans not-italic font-bold text-gray-400">days</span>
+            {/* 3, 4, 5. Analytics Summary Statistics Cards (8 Cards) */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="bg-white border border-pink-100 p-4 rounded-2xl space-y-1 shadow-sm">
+                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Average Cycle Length</span>
+                <p className="text-xl font-serif text-pink-600 font-extrabold italic">
+                  {analytics.averageCycleDisplay}
                 </p>
-                <p className="text-[9.5px] text-gray-400 italic">
-                  {hasRealData ? 'Computed from last 6 months' : 'From your onboarding baseline'}
+                <p className="text-[9px] text-gray-400 italic">
+                  {analytics.hasRealCompletedCycles ? 'Completed cycles' : 'Onboarding baseline'}
                 </p>
               </div>
 
-              <div className="bg-white border border-pink-100 p-4 rounded-3xl text-left space-y-1 shadow-sm">
+              <div className="bg-white border border-pink-100 p-4 rounded-2xl space-y-1 shadow-sm">
+                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Average Period Length</span>
+                <p className="text-xl font-serif text-rose-600 font-extrabold italic">
+                  {analytics.averagePeriodDisplay}
+                </p>
+                <p className="text-[9px] text-gray-400 italic">
+                  Actual logged periods
+                </p>
+              </div>
+
+              <div className="bg-white border border-pink-100 p-4 rounded-2xl space-y-1 shadow-sm">
                 <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Cycle Regularity</span>
-                <p className={`text-[10px] font-bold uppercase tracking-wider ${regularityColor} px-2.5 py-1 rounded-full inline-block mt-1`}>
-                  {regularityText}
+                <p className={`text-[10px] font-bold uppercase tracking-wider ${analytics.regularityBadgeClass} px-2 py-0.5 rounded-full inline-block mt-0.5`}>
+                  {analytics.cycleRegularity}
                 </p>
-                <p className="text-[9.5px] text-gray-400 italic mt-1 leading-tight">
-                  {regularityDesc}
+                <p className="text-[9px] text-teal-700 font-semibold mt-1">
+                  Avg Variation: {analytics.averageVariationDisplay}
                 </p>
               </div>
 
-              <div className="bg-white border border-pink-100 p-4 rounded-3xl text-left space-y-1 shadow-sm">
+              <div className="bg-white border border-pink-100 p-4 rounded-2xl space-y-1 shadow-sm">
+                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Trend Direction</span>
+                <p className="text-xs font-serif text-pink-700 font-bold mt-1">
+                  {analytics.trendDirectionLabel}
+                </p>
+                <p className="text-[9px] text-gray-400 italic mt-0.5">
+                  Change: {analytics.cycleChangeFormatted}
+                </p>
+              </div>
+
+              <div className="bg-white border border-pink-100 p-4 rounded-2xl space-y-1 shadow-sm">
                 <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Shortest Cycle</span>
                 <p className="text-xl font-serif text-pink-600 font-extrabold italic">
-                  {minCycle} <span className="text-xs font-sans not-italic font-bold text-gray-400">days</span>
+                  {analytics.shortestCycle} <span className="text-xs font-sans not-italic font-bold text-gray-400">days</span>
                 </p>
-                <p className="text-[9.5px] text-gray-400 italic">
-                  {hasRealData ? 'Minimum logged length' : 'Configured baseline'}
+                <p className="text-[9px] text-gray-400 italic">
+                  Minimum logged interval
                 </p>
               </div>
 
-              <div className="bg-white border border-pink-100 p-4 rounded-3xl text-left space-y-1 shadow-sm">
+              <div className="bg-white border border-pink-100 p-4 rounded-2xl space-y-1 shadow-sm">
                 <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Longest Cycle</span>
                 <p className="text-xl font-serif text-pink-600 font-extrabold italic">
-                  {maxCycle} <span className="text-xs font-sans not-italic font-bold text-gray-400">days</span>
+                  {analytics.longestCycle} <span className="text-xs font-sans not-italic font-bold text-gray-400">days</span>
                 </p>
-                <p className="text-[9.5px] text-gray-400 italic">
-                  {hasRealData ? 'Maximum logged length' : 'Configured baseline'}
+                <p className="text-[9px] text-gray-400 italic">
+                  Maximum logged interval
+                </p>
+              </div>
+
+              <div className="bg-white border border-pink-100 p-4 rounded-2xl space-y-1 shadow-sm">
+                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Monthly Symptoms</span>
+                <p className="text-xl font-serif text-pink-600 font-extrabold italic">
+                  {analytics.averageMonthlySymptoms}
+                </p>
+                <p className="text-[9px] text-gray-400 italic">
+                  {analytics.totalSymptomsCount} symptoms tracked
+                </p>
+              </div>
+
+              <div className="bg-white border border-pink-100 p-4 rounded-2xl space-y-1 shadow-sm">
+                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Total Logged Cycles</span>
+                <p className="text-xl font-serif text-pink-600 font-extrabold italic">
+                  {analytics.totalLoggedCycles} <span className="text-xs font-sans not-italic font-bold text-gray-400">{analytics.totalLoggedCycles === 1 ? 'cycle' : 'cycles'}</span>
+                </p>
+                <p className="text-[9px] text-gray-400 italic">
+                  {analytics.totalLoggedPeriods} periods logged
                 </p>
               </div>
             </div>

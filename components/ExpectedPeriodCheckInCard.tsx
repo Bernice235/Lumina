@@ -177,6 +177,7 @@ export const ExpectedPeriodCheckInCard: React.FC<ExpectedPeriodCheckInCardProps>
   const handleUpdateCycleLength = (newLen: number) => {
     const updatedUser: User = {
       ...user,
+      previousCycleLength: user.cycleLength || 28,
       cycleLength: newLen,
       latePeriodCheckIn: undefined
     };
@@ -189,6 +190,7 @@ export const ExpectedPeriodCheckInCard: React.FC<ExpectedPeriodCheckInCardProps>
   const handleSavePredictionEdit = () => {
     const updatedUser: User = {
       ...user,
+      previousCycleLength: user.cycleLength || 28,
       cycleLength: editCycleLenInput,
       latePeriodCheckIn: undefined
     };

@@ -7,6 +7,7 @@ import {
   Sparkles, Weight, Clock, HeartHandshake, Eye, AlertCircle, Dumbbell
 } from 'lucide-react';
 import { getPregnancyStats, getBabySize } from '../services/notificationService';
+import { getCycleAnalytics } from '../services/cycleAnalyticsService';
 
 interface DoctorReportProps {
   isOpen: boolean;
@@ -99,14 +100,17 @@ const DoctorReport: React.FC<DoctorReportProps> = ({ isOpen, onClose, user, symp
   const currentTrimester = Math.min(3, Math.floor((pregnancyWeek - 1) / 13) + 1);
 
   // Cycle stats (standard mode)
-  const averageCycle = user.cycleLength || 28;
-  const averagePeriod = user.periodLength || 5;
+  const cycleAnalytics = getCycleAnalytics(user, symptoms);
+  const averageCycle = cycleAnalytics.averageCycleLength;
+  const averagePeriod = cycleAnalytics.averagePeriodLength;
+  const averageCycleDisplay = cycleAnalytics.averageCycleDisplay;
+  const averagePeriodDisplay = cycleAnalytics.averagePeriodDisplay;
   const lastPeriodStart = user.lastPeriodStart ? new Date(user.lastPeriodStart) : null;
   
   let nextExpectedPeriod = "Unavailable";
   let nextExpectedPeriodDate: Date | null = null;
   if (lastPeriodStart) {
-    nextExpectedPeriodDate = new Date(lastPeriodStart.getTime() + averageCycle * 24 * 60 * 60 * 1000);
+    nextExpectedPeriodDate = new Date(lastPeriodStart.getTime() + Math.round(averageCycle) * 24 * 60 * 60 * 1000);
     nextExpectedPeriod = nextExpectedPeriodDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
@@ -382,8 +386,8 @@ const DoctorReport: React.FC<DoctorReportProps> = ({ isOpen, onClose, user, symp
     } else {
       if (selectedOptions.cycleHistory) {
         text += `CLINICAL CYCLE TRACKS:\n`;
-        if (selectedOptions.cycleLength) text += `- Average Cycle Duration: ${averageCycle} Days\n`;
-        if (selectedOptions.periodLength) text += `- Average Bleeding Span: ${averagePeriod} Days\n`;
+        if (selectedOptions.cycleLength) text += `- Average Cycle Duration: ${averageCycleDisplay}\n`;
+        if (selectedOptions.periodLength) text += `- Average Bleeding Span: ${averagePeriodDisplay}\n`;
         text += `- Last Period Initialized: ${user.lastPeriodStart || "None configured"}\n`;
         text += `- Next Predicted Initiation: ${nextExpectedPeriod}\n`;
       }
@@ -777,14 +781,14 @@ const DoctorReport: React.FC<DoctorReportProps> = ({ isOpen, onClose, user, symp
                           <div className="grid grid-cols-3 gap-3">
                             {selectedOptions.cycleLength && (
                               <div className="data-box bg-slate-50 p-3.5 rounded-xl border text-center">
-                                <div className="value text-xl font-black">{averageCycle} Days</div>
+                                <div className="value text-xl font-black">{averageCycleDisplay}</div>
                                 <div className="label text-[8px] text-slate-400 font-bold uppercase">Average Cycle Length</div>
                               </div>
                             )}
 
                             {selectedOptions.periodLength && (
                               <div className="data-box bg-slate-50 p-3.5 rounded-xl border text-center">
-                                <div className="value text-xl font-black">{averagePeriod} Days</div>
+                                <div className="value text-xl font-black">{averagePeriodDisplay}</div>
                                 <div className="label text-[8px] text-slate-400 font-bold uppercase">Mean Bleeding Span</div>
                               </div>
                             )}

@@ -2019,7 +2019,7 @@ const App: React.FC = () => {
           />
         );
       case 'graphs':
-        return <CycleGraph user={user} />;
+        return <CycleGraph user={user} setUser={setUser} symptoms={symptoms} />;
       case 'settings':
         return (
           <Settings 

@@ -112,6 +112,7 @@ export interface User {
   isSharingPaused?: boolean;
   todaySymptomLog?: any;
   cycleLength: number;
+  previousCycleLength?: number;
   periodLength: number;
   lastPeriodStart: string;
   isPartner: boolean;

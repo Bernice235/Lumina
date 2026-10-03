@@ -1025,7 +1025,12 @@ const Settings: React.FC<SettingsProps> = ({
                   value={user.cycleLength ?? 28} 
                   onChange={(e) => {
                     const val = parseInt(e.target.value) || 28;
-                    const updatedUser = { ...user, cycleLength: val };
+                    const prevVal = user.cycleLength ?? 28;
+                    const updatedUser = { 
+                      ...user, 
+                      previousCycleLength: user.previousCycleLength || (prevVal !== val ? prevVal : undefined),
+                      cycleLength: val 
+                    };
                     setUser(updatedUser);
                     localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
                     syncUser(updatedUser);
