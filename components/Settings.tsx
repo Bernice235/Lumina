@@ -1855,11 +1855,11 @@ const Settings: React.FC<SettingsProps> = ({
                     <Volume2 className="w-4 h-4" />
                   </div>
                   <h4 className="text-lg font-serif font-bold text-stone-800">
-                    Welcome Voice Greeting
+                    Avatar Companion Greetings
                   </h4>
                 </div>
                 <p className="text-xs text-stone-500 leading-relaxed">
-                  Greets you automatically every time you open Lumina without requiring any button press.
+                  Your selected wellness companion greets you with time-aware and dynamic health reflections every time you open Lumina.
                 </p>
               </div>
 
@@ -1900,11 +1900,11 @@ const Settings: React.FC<SettingsProps> = ({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     <div className="p-3.5 bg-pink-50/20 rounded-2xl border border-pink-100/40 space-y-1">
                       <div className="flex items-center gap-1.5 text-xs font-bold text-stone-800">
-                        <span>🌸</span>
+                        <span>🌞</span>
                         <span>Morning (5:00 AM – 11:59 AM)</span>
                       </div>
                       <p className="text-[11px] text-stone-500 leading-snug">
-                        “Good morning, {userFirstName} 🌸. Welcome back to Lumina: Bloom & Balance. I hope you have a beautiful day ahead.”
+                        “Good morning, {userFirstName} 🌞. I hope you slept well.”
                       </p>
                     </div>
 
@@ -1914,17 +1914,17 @@ const Settings: React.FC<SettingsProps> = ({
                         <span>Afternoon (12:00 PM – 4:59 PM)</span>
                       </div>
                       <p className="text-[11px] text-stone-500 leading-snug">
-                        “Good afternoon, {userFirstName} 🌸. Welcome back to Lumina. How are you feeling today?”
+                        “Good afternoon, {userFirstName} 🌸. How are you feeling today?”
                       </p>
                     </div>
 
                     <div className="p-3.5 bg-pink-50/20 rounded-2xl border border-pink-100/40 space-y-1">
                       <div className="flex items-center gap-1.5 text-xs font-bold text-stone-800">
-                        <span>🌸</span>
+                        <span>✨</span>
                         <span>Evening (5:00 PM – 8:59 PM)</span>
                       </div>
                       <p className="text-[11px] text-stone-500 leading-snug">
-                        “Good evening, {userFirstName} 🌸. Welcome back to your wellness sanctuary.”
+                        “Good evening, {userFirstName} ✨. Let’s take a moment to check in with your wellness journey.”
                       </p>
                     </div>
 
@@ -1934,7 +1934,7 @@ const Settings: React.FC<SettingsProps> = ({
                         <span>Night (9:00 PM – 4:59 AM)</span>
                       </div>
                       <p className="text-[11px] text-stone-500 leading-snug">
-                        “Good evening, {userFirstName} 🌸. Welcome back to Lumina. Remember to take time to rest and care for yourself.”
+                        “Good night, {userFirstName} 🌙. Remember to take care of yourself and get enough rest.”
                       </p>
                     </div>
                   </div>

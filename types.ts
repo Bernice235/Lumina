@@ -362,8 +362,29 @@ export interface Reminder {
 }
 
 // ================= Lumina Wellness Avatar System =================
-export type AvatarId = 'amara' | 'zainab' | 'kemi' | 'nia' | 'maya' | 'aria';
+export type AvatarId = 'amara' | 'zainab' | 'naomi' | 'amina' | 'kemi' | 'nia' | 'maya' | 'aria';
 export type AvatarTier = 'seedling' | 'blooming' | 'radiant' | 'flourishing';
+
+export type CompanionRelationshipStage = 
+  | 'New Friend' 
+  | 'Companion' 
+  | 'Wellness Partner' 
+  | 'Trusted Friend' 
+  | 'Inner Circle';
+
+export type AvatarPersonalityStyle = 'supportive' | 'cheerful' | 'mindful' | 'scientific' | 'motivational' | 'calm';
+export type AvatarAccent = 'us' | 'uk' | 'australian' | 'west_african' | 'irish';
+export type AvatarMood = 'radiant' | 'cozy' | 'serene' | 'nurturing' | 'energized';
+
+export interface CompanionChatMessage {
+  id: string;
+  sender: 'companion' | 'user';
+  text: string;
+  timestamp: string;
+  avatarId?: AvatarId;
+  suggestedPrompts?: string[];
+  healthTopic?: 'cycle' | 'symptoms' | 'pregnancy' | 'postpartum' | 'hydration' | 'selfcare' | 'general';
+}
 
 export type SkinTone = 
   | 'fair' 
@@ -434,5 +455,13 @@ export interface UserAvatar {
   unlockedOutfits?: Outfit[];
   unlockedAccessories?: string[];
   actionHistory?: AvatarActionLog[];
+  // Companion upgrade fields
+  personalityStyle?: AvatarPersonalityStyle;
+  accent?: AvatarAccent;
+  mood?: AvatarMood;
+  voiceTone?: string;
+  hasIntroduced?: boolean;
+  speechRate?: number;
+  speechPitch?: number;
 }
 

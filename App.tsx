@@ -45,6 +45,9 @@ import LogModal from './components/LogModal';
 import DoctorReport from './components/DoctorReport';
 import { NotificationCenterModal } from './components/NotificationCenterModal';
 import { CycleGraph } from './components/CycleGraph';
+import { AvatarVisual } from './components/AvatarVisual';
+import { CompanionChat } from './components/CompanionChat';
+import { getOrCreateUserAvatar } from './services/avatarService';
 import { playWelcomeVoice } from './services/gemini';
 import { 
   playWelcomeVoiceGreeting, 
@@ -1362,6 +1365,9 @@ const App: React.FC = () => {
       lastPeriodStart: allPeriods[0]?.startDate || user.lastPeriodStart
     });
     logAvatarActionReward(user, 'log_cycle', 'Logged Completed Cycle', setUser);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('lumina:checkin-completed', { detail: { type: 'period' } }));
+    }
     setIsLogModalOpen(false);
   };
 
@@ -1378,6 +1384,9 @@ const App: React.FC = () => {
       moodLogs: [...(user.moodLogs || []), newMoodEntry]
     });
     logAvatarActionReward(user, 'log_mood', 'Logged Mood & Emotion', setUser);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('lumina:symptom-logged', { detail: { type: mood } }));
+    }
   };
 
   const handleLogSexualActivity = (isProtected: boolean, notes?: string) => {
@@ -1405,6 +1414,9 @@ const App: React.FC = () => {
     // Prior to Firebase we were using a separate symptoms state
     setSymptoms(prev => [...prev, newSymptom]);
     logAvatarActionReward(user, 'track_symptoms', `Tracked Symptom: ${type}`, setUser);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('lumina:symptom-logged', { detail: { type, intensity } }));
+    }
   };
 
   const toggleFavoriteSong = (songId: string) => {
@@ -1914,6 +1926,19 @@ const App: React.FC = () => {
     }
 
     switch (activeTab) {
+      case 'companion_chat':
+        return (
+          <CompanionChat 
+            user={user} 
+            setUser={setUser}
+            symptoms={symptoms}
+            waterIntake={waterIntake}
+            waterGoal={waterGoal}
+            reminders={reminders}
+            onClose={() => setActiveTab('dashboard')}
+            onOpenLogModal={() => setIsLogModalOpen(true)}
+          />
+        );
       case 'dashboard':
         return (
           <Dashboard 
@@ -1935,6 +1960,7 @@ const App: React.FC = () => {
             onTabChange={setActiveTab}
             setActiveTab={setActiveTab}
             onOpenLogModal={() => setIsLogModalOpen(true)}
+            onOpenCompanionChat={() => setActiveTab('companion_chat')}
             isMusicActive={isMusicActive}
             toggleMusicActive={toggleMusicActive}
             volume={volume}
@@ -2056,6 +2082,7 @@ const App: React.FC = () => {
             setCurrentSongIndex={handleSelectSong} 
             onTabChange={setActiveTab} 
             setActiveTab={setActiveTab}
+            onOpenCompanionChat={() => setActiveTab('companion_chat')}
             isMusicActive={isMusicActive}
             toggleMusicActive={toggleMusicActive}
             volume={volume}
@@ -2348,54 +2375,11 @@ const App: React.FC = () => {
               <span className="text-xl font-black leading-none">+</span>
             </button>
 
-            <NavItem icon="🎵" label="Music" active={activeTab === 'music'} onClick={() => setActiveTab('music')} theme={user.theme} />
             <NavItem icon="📚" label="Learn" active={activeTab === 'edu'} onClick={() => setActiveTab('edu')} theme={user.theme} />
+            <NavItem icon="🎵" label="Music" active={activeTab === 'music'} onClick={() => setActiveTab('music')} theme={user.theme} />
             <NavItem icon="👤" label="Settings" active={activeTab === 'settings'} onClick={() => { setSettingsSubTab('menu'); setActiveTab('settings'); }} theme={user.theme} />
           </nav>
         </>
-      )}
-
-      {/* Welcome Greeting Toast / Card */}
-      {welcomeGreetingToast && (
-        <div 
-          id="welcome-greeting-card"
-          className="fixed top-4 left-1/2 -translate-x-1/2 z-[250] w-[92%] max-w-md bg-white/95 backdrop-blur-xl p-4 rounded-3xl shadow-[0_15px_40px_rgba(244,114,182,0.18)] border border-pink-100 flex items-start gap-3 animate-fadeIn"
-        >
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-pink-400 to-rose-400 text-white flex items-center justify-center text-xl shrink-0 shadow-sm shadow-pink-200">
-            {welcomeGreetingToast.emoji}
-          </div>
-          <div className="flex-1 min-w-0 pr-1">
-            <div className="flex items-center justify-between gap-1 mb-0.5">
-              <span className="text-[9.5px] font-black uppercase tracking-widest text-pink-500">
-                Lumina Sanctuary • {welcomeGreetingToast.timeLabel.split(' ')[0]}
-              </span>
-              <button 
-                onClick={() => setWelcomeGreetingToast(null)}
-                className="text-stone-400 hover:text-stone-600 p-0.5 transition-colors cursor-pointer"
-                title="Dismiss greeting"
-              >
-                ✕
-              </button>
-            </div>
-            <p className="text-xs font-medium text-stone-800 leading-snug">
-              {welcomeGreetingToast.displayText}
-            </p>
-            <div className="flex items-center justify-between gap-3 mt-2.5 pt-2 border-t border-pink-50 text-[11px] font-semibold text-pink-600">
-              <button
-                onClick={() => {
-                  if (user) {
-                    playWelcomeVoiceGreeting(user, { force: true, customGreeting: welcomeGreetingToast }).catch(() => {});
-                  }
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-pink-500 to-rose-400 text-white shadow-sm hover:opacity-90 active:scale-95 transition-all cursor-pointer text-xs font-bold"
-              >
-                <span>🔊</span>
-                <span>Play Voice Greeting</span>
-              </button>
-              <span className="text-stone-400 text-[10px] font-medium truncate">Welcome back, {welcomeGreetingToast.firstName}</span>
-            </div>
-          </div>
-        </div>
       )}
 
       {/* Simulated Phone Push Notification Lock Screen Card */}

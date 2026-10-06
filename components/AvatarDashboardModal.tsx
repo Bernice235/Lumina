@@ -16,7 +16,12 @@ import {
   ChevronRight,
   Droplets,
   BookOpen,
-  ArrowRight
+  ArrowRight,
+  Volume2,
+  VolumeX,
+  Mic,
+  Sliders,
+  Radio
 } from 'lucide-react';
 import { 
   User, 
@@ -27,7 +32,10 @@ import {
   Headwrap, 
   Glasses, 
   Outfit,
-  AvatarTier 
+  AvatarTier,
+  AvatarMood,
+  AvatarAccent,
+  AvatarPersonalityStyle 
 } from '../types';
 import { AvatarVisual } from './AvatarVisual';
 import { 
@@ -40,8 +48,18 @@ import {
   getOrCreateUserAvatar,
   calculateAvatarProgression,
   getAvatarCompanionSpeech,
+  calculateAvatarMood,
   logAvatarActionReward
 } from '../services/avatarService';
+import { 
+  playWelcomeVoiceGreeting, 
+  playAvatarIntroduction, 
+  getAvatarIntroduction, 
+  stopWelcomeVoice, 
+  getWelcomeGreeting,
+  ACCENT_OPTIONS, 
+  PERSONALITY_OPTIONS 
+} from '../services/welcomeVoiceService';
 import { syncUser } from '../services/firebaseService';
 
 interface AvatarDashboardModalProps {
@@ -51,6 +69,7 @@ interface AvatarDashboardModalProps {
   setUser?: React.Dispatch<React.SetStateAction<User | null>> | ((u: any) => void);
   onOpenLogModal?: () => void;
   onNavigateTab?: (tab: string) => void;
+  onOpenChat?: () => void;
 }
 
 export const AvatarDashboardModal: React.FC<AvatarDashboardModalProps> = ({
@@ -59,9 +78,10 @@ export const AvatarDashboardModal: React.FC<AvatarDashboardModalProps> = ({
   user,
   setUser,
   onOpenLogModal,
-  onNavigateTab
+  onNavigateTab,
+  onOpenChat
 }) => {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'customize' | 'rewards'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'customize' | 'voice' | 'rewards'>('dashboard');
   
   // Customization local working state
   const currentAvatar = getOrCreateUserAvatar(user);
@@ -75,12 +95,22 @@ export const AvatarDashboardModal: React.FC<AvatarDashboardModalProps> = ({
   const [outfitFilter, setOutfitFilter] = useState<'all' | 'standard' | 'pregnancy' | 'postpartum'>('all');
   const [savedToast, setSavedToast] = useState(false);
 
+  // Companion Voice & Personality states
+  const [selectedPersonality, setSelectedPersonality] = useState<AvatarPersonalityStyle>(currentAvatar.personalityStyle || 'supportive');
+  const [selectedAccent, setSelectedAccent] = useState<AvatarAccent>(currentAvatar.accent || 'us');
+  const [selectedMood, setSelectedMood] = useState<AvatarMood>(currentAvatar.mood || 'radiant');
+  const [selectedPitch, setSelectedPitch] = useState<number>(currentAvatar.speechPitch ?? 1.05);
+  const [selectedRate, setSelectedRate] = useState<number>(currentAvatar.speechRate ?? 0.93);
+  const [isCompanionSpeaking, setIsCompanionSpeaking] = useState<boolean>(false);
+  const [isCompanionWaving, setIsCompanionWaving] = useState<boolean>(false);
+
   if (!isOpen) return null;
 
   const progression = calculateAvatarProgression(user, currentAvatar);
   const speech = getAvatarCompanionSpeech(user, currentAvatar);
+  const currentMood = calculateAvatarMood(user, currentAvatar);
 
-  // Live preview avatar for customization tab
+  // Live preview avatar for customization and voice tabs
   const previewAvatar: Partial<UserAvatar> = {
     ...currentAvatar,
     id: selectedId,
@@ -90,7 +120,10 @@ export const AvatarDashboardModal: React.FC<AvatarDashboardModalProps> = ({
     hairstyle: selectedHair,
     headwrap: selectedHeadwrap,
     glasses: selectedGlasses,
-    outfit: selectedOutfit
+    outfit: selectedOutfit,
+    personalityStyle: selectedPersonality,
+    accent: selectedAccent,
+    mood: selectedMood
   };
 
   const handleSelectPreset = (id: AvatarId) => {
@@ -102,7 +135,36 @@ export const AvatarDashboardModal: React.FC<AvatarDashboardModalProps> = ({
       setSelectedHeadwrap(preset.headwrap);
       setSelectedGlasses(preset.glasses);
       setSelectedOutfit(user.isPregnancyMode ? 'maternity_wrap' : user.isPostpartumMode ? 'nursing_robe' : preset.outfit);
+      setSelectedPersonality(preset.defaultPersonality || 'supportive');
+      setSelectedAccent(preset.defaultAccent || 'us');
     }
+  };
+
+  const handlePlayVoiceGreeting = () => {
+    if (isCompanionSpeaking) {
+      stopWelcomeVoice();
+      setIsCompanionSpeaking(false);
+      return;
+    }
+    const greeting = getWelcomeGreeting(user);
+    playWelcomeVoiceGreeting(user, {
+      force: true,
+      customGreeting: greeting,
+      onStart: () => setIsCompanionSpeaking(true),
+      onEnd: () => setIsCompanionSpeaking(false),
+      onError: () => setIsCompanionSpeaking(false)
+    }).catch(() => setIsCompanionSpeaking(false));
+  };
+
+  const handlePlayIntroductionVoice = (id: AvatarId = selectedId) => {
+    setIsCompanionWaving(true);
+    setTimeout(() => setIsCompanionWaving(false), 2800);
+    playAvatarIntroduction(id, user, {
+      accent: selectedAccent,
+      personality: selectedPersonality,
+      onStart: () => setIsCompanionSpeaking(true),
+      onEnd: () => setIsCompanionSpeaking(false)
+    }).catch(() => setIsCompanionSpeaking(false));
   };
 
   const handleSaveCustomization = async () => {
@@ -116,7 +178,12 @@ export const AvatarDashboardModal: React.FC<AvatarDashboardModalProps> = ({
       hairstyle: selectedHair,
       headwrap: selectedHeadwrap,
       glasses: selectedGlasses,
-      outfit: selectedOutfit
+      outfit: selectedOutfit,
+      personalityStyle: selectedPersonality,
+      accent: selectedAccent,
+      mood: selectedMood,
+      speechPitch: selectedPitch,
+      speechRate: selectedRate
     };
 
     const updatedUser: User = {
@@ -178,6 +245,7 @@ export const AvatarDashboardModal: React.FC<AvatarDashboardModalProps> = ({
           {[
             { id: 'dashboard', label: 'Companion Dashboard', icon: '🌸' },
             { id: 'customize', label: 'Customize Studio', icon: '🎨' },
+            { id: 'voice', label: 'Voice & Personality', icon: '🎙️' },
             { id: 'rewards', label: 'Actions & Rewards', icon: '🏆' },
           ].map(tab => (
             <button
@@ -203,18 +271,28 @@ export const AvatarDashboardModal: React.FC<AvatarDashboardModalProps> = ({
             <div className="space-y-6 animate-fadeIn">
               
               {/* Hero Companion Speech & Interactive Presence Card */}
-              <div className="bg-gradient-to-br from-pink-500 via-rose-500 to-pink-600 rounded-[2.5rem] p-6 sm:p-7 text-white shadow-xl shadow-pink-200/50 flex flex-col sm:flex-row items-center gap-6 relative overflow-hidden">
+              <div className="bg-gradient-to-br from-pink-500 via-rose-500 to-pink-600 rounded-[2.5rem] p-6 sm:p-7 text-white shadow-xl shadow-pink-200/50 flex flex-col sm:flex-row items-center gap-6 relative overflow-visible">
                 <div className="absolute -right-8 -bottom-8 text-white/10 text-9xl font-black pointer-events-none select-none">
                   🌸
                 </div>
 
-                <div className="relative z-10 flex flex-col items-center text-center sm:text-left sm:items-start shrink-0">
+                <div 
+                  onClick={() => handlePlayIntroductionVoice(currentAvatar.id)}
+                  className="relative z-10 flex flex-col items-center text-center sm:text-left sm:items-start shrink-0 cursor-pointer group"
+                  title="Click to hear companion wave and speak"
+                >
                   <AvatarVisual 
-                    avatar={currentAvatar} 
+                    avatar={{
+                      ...currentAvatar,
+                      mood: currentMood.mood
+                    }} 
                     size="xl" 
-                    showTierBadge 
+                    showTierBadge
+                    showMoodBadge 
                     interactive 
-                    className="shadow-lg shadow-pink-700/20"
+                    isSpeaking={isCompanionSpeaking}
+                    isWaving={isCompanionWaving}
+                    className="shadow-lg shadow-pink-700/20 group-hover:scale-105 transition-all"
                   />
                   <span className="text-[10px] font-extrabold uppercase tracking-widest text-pink-100 mt-2 bg-white/20 px-2.5 py-0.5 rounded-full border border-white/20">
                     Tier: {progression.tierLabel}
@@ -222,9 +300,16 @@ export const AvatarDashboardModal: React.FC<AvatarDashboardModalProps> = ({
                 </div>
 
                 <div className="relative z-10 flex-1 space-y-3 text-center sm:text-left">
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 text-white text-[10px] font-black uppercase tracking-wider border border-white/30 backdrop-blur-md">
-                    <span>{speech.emoji}</span>
-                    <span>{speech.phaseLabel}</span>
+                  <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap">
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 text-white text-[10px] font-black uppercase tracking-wider border border-white/30 backdrop-blur-md">
+                      <span>{speech.emoji}</span>
+                      <span>{speech.phaseLabel}</span>
+                    </div>
+
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 text-white text-[10px] font-bold border border-white/20 backdrop-blur-md">
+                      <span>{currentMood.emoji}</span>
+                      <span>Mood: {currentMood.label}</span>
+                    </div>
                   </div>
 
                   <h4 className="text-xl sm:text-2xl font-serif italic text-white font-bold leading-snug">
@@ -237,20 +322,33 @@ export const AvatarDashboardModal: React.FC<AvatarDashboardModalProps> = ({
 
                   <div className="pt-2 flex flex-wrap items-center justify-center sm:justify-start gap-2">
                     <button
-                      onClick={() => setActiveTab('customize')}
-                      className="px-4 py-2 bg-white text-pink-600 hover:bg-pink-50 rounded-full font-bold text-[9px] uppercase tracking-wider shadow-sm transition-all cursor-pointer flex items-center gap-1.5"
-                    >
-                      <span>🎨 Style & Customization</span>
-                      <ArrowRight size={11} />
-                    </button>
-                    <button
                       onClick={() => {
                         onClose();
-                        if (onOpenLogModal) onOpenLogModal();
+                        onOpenChat?.();
                       }}
-                      className="px-4 py-2 bg-pink-400/50 hover:bg-pink-400 text-white rounded-full font-bold text-[9px] uppercase tracking-wider border border-white/30 transition-all cursor-pointer flex items-center gap-1.5"
+                      className="px-4 py-2 bg-gradient-to-r from-amber-300 via-rose-300 to-pink-300 text-pink-950 hover:opacity-95 rounded-full font-black text-[9px] uppercase tracking-wider shadow-md transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 border border-white/40"
                     >
-                      <span>✨ Log Today (+10 XP)</span>
+                      <span>💬 Chat with {currentAvatar.name || 'Amara'}</span>
+                    </button>
+                    <button
+                      onClick={handlePlayVoiceGreeting}
+                      className="px-4 py-2 bg-white text-pink-600 hover:bg-pink-50 rounded-full font-bold text-[9px] uppercase tracking-wider shadow-sm transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
+                    >
+                      {isCompanionSpeaking ? <VolumeX size={12} /> : <Volume2 size={12} />}
+                      <span>{isCompanionSpeaking ? 'Stop Voice' : 'Play Health Greeting'}</span>
+                    </button>
+                    <button
+                      onClick={() => handlePlayIntroductionVoice(currentAvatar.id)}
+                      className="px-4 py-2 bg-pink-400/50 hover:bg-pink-400 text-white rounded-full font-bold text-[9px] uppercase tracking-wider border border-white/30 transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
+                    >
+                      <span>👋 Wave & Introduce</span>
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('voice')}
+                      className="px-4 py-2 bg-pink-400/30 hover:bg-pink-400/50 text-white rounded-full font-bold text-[9px] uppercase tracking-wider border border-white/20 transition-all cursor-pointer flex items-center gap-1.5"
+                    >
+                      <span>🎙️ Voice Studio</span>
+                      <ArrowRight size={11} />
                     </button>
                   </div>
                 </div>
@@ -673,7 +771,273 @@ export const AvatarDashboardModal: React.FC<AvatarDashboardModalProps> = ({
             </div>
           )}
 
-          {/* ================= TAB 3: ACTIONS & REWARDS ================= */}
+          {/* ================= TAB 3: COMPANION VOICE & PERSONALITY STUDIO ================= */}
+          {activeTab === 'voice' && (
+            <div className="space-y-6 animate-fadeIn">
+              
+              {/* Voice Studio Hero Preview Card */}
+              <div className="bg-gradient-to-r from-pink-50/90 via-rose-50/70 to-amber-50/50 p-5 rounded-3xl border border-pink-100 flex flex-col sm:flex-row items-center gap-5 shadow-sm text-left relative overflow-visible">
+                <div className="shrink-0 relative">
+                  <AvatarVisual
+                    avatar={{
+                      ...previewAvatar,
+                      mood: selectedMood
+                    }}
+                    size="xl"
+                    showMoodBadge
+                    isSpeaking={isCompanionSpeaking}
+                    isWaving={isCompanionWaving}
+                    interactive
+                    onClick={() => handlePlayIntroductionVoice(selectedId)}
+                  />
+                  <span className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-pink-500 text-white text-[10px] font-black flex items-center justify-center border-2 border-white shadow-xs">
+                    {isCompanionSpeaking ? '🔊' : '🎙️'}
+                  </span>
+                </div>
+
+                <div className="flex-1 min-w-0 space-y-2">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <h4 className="font-serif font-black text-base text-pink-700">
+                      {AVATAR_PRESETS[selectedId]?.name}'s Voice & Personality Sanctuary
+                    </h4>
+                    <span className="text-[9px] font-black uppercase tracking-wider text-pink-600 bg-white px-2.5 py-0.5 rounded-full border border-pink-100 shadow-xs">
+                      {selectedPersonality.toUpperCase()} • {selectedAccent.toUpperCase()}
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-stone-600 leading-snug">
+                    Fine-tune how your companion speaks, guides your health check-ins, and embodies unique emotional moods.
+                  </p>
+
+                  <div className="flex items-center gap-2 pt-1 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => handlePlayIntroductionVoice(selectedId)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-pink-500 hover:bg-pink-600 text-white text-[10.5px] font-black uppercase tracking-wider shadow-sm active:scale-95 transition-all cursor-pointer"
+                    >
+                      {isCompanionSpeaking ? <VolumeX className="w-3 h-3" /> : <Volume2 className="w-3 h-3" />}
+                      <span>{isCompanionSpeaking ? 'Speaking...' : 'Test Introduction'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handlePlayVoiceGreeting}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white hover:bg-pink-50 text-pink-700 text-[10.5px] font-bold border border-pink-200/80 shadow-xs active:scale-95 transition-all cursor-pointer"
+                    >
+                      <span>✨ Test Health Check-In</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* 1. Personality Styles */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-black uppercase tracking-wider text-pink-500 flex items-center gap-1.5">
+                    <span>🌸</span>
+                    <span>Avatar Personality Style</span>
+                  </label>
+                  <span className="text-[9px] text-gray-400">Controls speech tone and encouragement style</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {PERSONALITY_OPTIONS.map((p) => {
+                    const isSelected = selectedPersonality === p.id;
+                    return (
+                      <div
+                        key={p.id}
+                        onClick={() => setSelectedPersonality(p.id)}
+                        className={`p-3.5 rounded-2xl border text-left cursor-pointer transition-all ${
+                          isSelected
+                            ? 'bg-pink-50/90 border-pink-400 ring-2 ring-pink-300 shadow-sm'
+                            : 'bg-white border-pink-100 hover:bg-pink-50/40 hover:border-pink-200'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-serif font-bold text-sm text-stone-900 flex items-center gap-1.5">
+                            <span>{p.icon}</span>
+                            <span>{p.label}</span>
+                          </span>
+                          {isSelected && <Check size={14} className="text-pink-600 font-bold" />}
+                        </div>
+                        <p className="text-[10.5px] text-stone-500 leading-snug">
+                          {p.desc}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 2. Accents & Vocal Cadences */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-black uppercase tracking-wider text-pink-500 flex items-center gap-1.5">
+                    <span>🌍</span>
+                    <span>Companion Voice Accent & Cadence</span>
+                  </label>
+                  <span className="text-[9px] text-gray-400">Natural speech synthesis vocal accents</span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                  {ACCENT_OPTIONS.map((acc) => {
+                    const isSelected = selectedAccent === acc.id;
+                    return (
+                      <div
+                        key={acc.id}
+                        onClick={() => setSelectedAccent(acc.id)}
+                        className={`p-3 rounded-2xl border text-left cursor-pointer transition-all ${
+                          isSelected
+                            ? 'bg-pink-50/90 border-pink-400 ring-2 ring-pink-300 shadow-sm'
+                            : 'bg-white border-pink-100 hover:bg-pink-50/40'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-lg">{acc.flag}</span>
+                          {isSelected && <Check size={13} className="text-pink-600" />}
+                        </div>
+                        <h6 className="font-serif font-bold text-xs text-stone-900">
+                          {acc.label}
+                        </h6>
+                        <span className="text-[8.5px] text-gray-400 font-mono block mt-0.5">
+                          {acc.langCodes[0]}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 3. Avatar Moods & Wellness Glow */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-black uppercase tracking-wider text-pink-500 flex items-center gap-1.5">
+                    <span>✨</span>
+                    <span>Avatar Mood & Aura State</span>
+                  </label>
+                  <span className="text-[9px] text-gray-400">Adapts companion visual aura & expressions</span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                  {[
+                    { id: 'radiant', label: 'Radiant', emoji: '🌸', desc: 'Peak vitality & glow' },
+                    { id: 'cozy', label: 'Cozy', emoji: '🍵', desc: 'Rest & comfort' },
+                    { id: 'serene', label: 'Serene', emoji: '🌿', desc: 'Deep calm & peace' },
+                    { id: 'nurturing', label: 'Nurturing', emoji: '🤱🏽', desc: 'Maternal care' },
+                    { id: 'energized', label: 'Energized', emoji: '☀️', desc: 'Active momentum' },
+                  ].map((m) => {
+                    const isSelected = selectedMood === m.id;
+                    return (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => setSelectedMood(m.id as AvatarMood)}
+                        className={`p-2.5 rounded-2xl border text-center transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-pink-50 border-pink-400 ring-2 ring-pink-300 shadow-xs scale-102'
+                            : 'bg-white border-stone-200 hover:bg-stone-50'
+                        }`}
+                      >
+                        <span className="text-xl block mb-0.5">{m.emoji}</span>
+                        <span className="font-serif font-bold text-xs text-stone-800 block">
+                          {m.label}
+                        </span>
+                        <span className="text-[8px] text-stone-400 block truncate">
+                          {m.desc}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 4. Fine Vocal Calibration (Pitch & Pace) */}
+              <div className="bg-pink-50/40 p-4 rounded-3xl border border-pink-100/80 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h5 className="text-[10px] font-black uppercase tracking-wider text-pink-600 flex items-center gap-1.5">
+                    <Sliders size={12} />
+                    <span>Fine-Tune Companion Vocal Pitch & Cadence</span>
+                  </h5>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedPitch(1.05);
+                      setSelectedRate(0.93);
+                    }}
+                    className="text-[9px] font-bold text-stone-400 hover:text-pink-600 underline cursor-pointer"
+                  >
+                    Reset Defaults
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
+                  {/* Pitch slider */}
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-[10px] font-bold text-stone-600">
+                      <span>Vocal Pitch</span>
+                      <span className="text-pink-600">{Math.round(selectedPitch * 100)}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.85"
+                      max="1.25"
+                      step="0.02"
+                      value={selectedPitch}
+                      onChange={(e) => setSelectedPitch(parseFloat(e.target.value))}
+                      className="w-full accent-pink-500 cursor-pointer"
+                    />
+                    <div className="flex justify-between text-[8px] text-stone-400">
+                      <span>Deeper / Grounded</span>
+                      <span>Gentle Warmth</span>
+                      <span>Bright / Uplifting</span>
+                    </div>
+                  </div>
+
+                  {/* Speech Rate slider */}
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-[10px] font-bold text-stone-600">
+                      <span>Speaking Speed</span>
+                      <span className="text-pink-600">{Math.round(selectedRate * 100)}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.80"
+                      max="1.15"
+                      step="0.02"
+                      value={selectedRate}
+                      onChange={(e) => setSelectedRate(parseFloat(e.target.value))}
+                      className="w-full accent-pink-500 cursor-pointer"
+                    />
+                    <div className="flex justify-between text-[8px] text-stone-400">
+                      <span>Meditative Slow</span>
+                      <span>Natural Pace</span>
+                      <span>Spirited Fast</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom Sticky Action Bar */}
+              <div className="pt-2 flex justify-between items-center border-t border-pink-50">
+                <button
+                  onClick={() => setActiveTab('dashboard')}
+                  className="px-5 py-2.5 bg-gray-100 text-gray-600 rounded-2xl font-bold text-xs uppercase tracking-wider hover:bg-gray-200 transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveCustomization}
+                  className="px-8 py-3 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-md hover:scale-[1.02] active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <Check size={14} />
+                  <span>{savedToast ? 'Voice Settings Saved!' : 'Save Voice & Personality'}</span>
+                </button>
+              </div>
+
+            </div>
+          )}
+
+          {/* ================= TAB 4: ACTIONS & REWARDS ================= */}
           {activeTab === 'rewards' && (
             <div className="space-y-6 animate-fadeIn">
               

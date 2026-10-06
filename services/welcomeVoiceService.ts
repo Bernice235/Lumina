@@ -1,4 +1,5 @@
-import { User } from '../types';
+import { User, UserAvatar, AvatarId, AvatarAccent, AvatarPersonalityStyle, AvatarMood } from '../types';
+import { AVATAR_PRESETS, getOrCreateUserAvatar } from './avatarService';
 
 export interface WelcomeGreeting {
   displayText: string;
@@ -7,6 +8,10 @@ export interface WelcomeGreeting {
   timeLabel: string;
   emoji: string;
   firstName: string;
+  avatarName?: string;
+  avatarId?: AvatarId;
+  healthContext?: string;
+  isIntroduction?: boolean;
 }
 
 // Global references to prevent garbage collection in Chromium / WebKit
@@ -70,74 +75,230 @@ export function getUserFirstName(user?: Partial<User> | null): string {
   return user.isPartner ? 'Partner' : 'Beautiful';
 }
 
+export const ACCENT_OPTIONS: { id: AvatarAccent; label: string; flag: string; langCodes: string[]; defaultPitch: number; defaultRate: number }[] = [
+  { id: 'us', label: 'US Natural & Warm', flag: '🇺🇸', langCodes: ['en-US', 'en_US', 'en'], defaultPitch: 1.05, defaultRate: 0.94 },
+  { id: 'uk', label: 'British Nurturing', flag: '🇬🇧', langCodes: ['en-GB', 'en_GB'], defaultPitch: 1.02, defaultRate: 0.92 },
+  { id: 'australian', label: 'Calming Australian', flag: '🇦🇺', langCodes: ['en-AU', 'en_AU'], defaultPitch: 1.06, defaultRate: 0.93 },
+  { id: 'west_african', label: 'Gentle West African', flag: '🌍', langCodes: ['en-NG', 'en-GH', 'en-ZA', 'en-US'], defaultPitch: 1.08, defaultRate: 0.92 },
+  { id: 'irish', label: 'Irish Melodic Warmth', flag: '🇮🇪', langCodes: ['en-IE', 'en_IE', 'en-GB'], defaultPitch: 1.04, defaultRate: 0.92 }
+];
+
+export const PERSONALITY_OPTIONS: { id: AvatarPersonalityStyle; label: string; desc: string; icon: string }[] = [
+  { id: 'supportive', label: 'Nurturing & Supportive', desc: 'Gentle, deeply empathetic, and emotionally validating companion', icon: '🌸' },
+  { id: 'cheerful', label: 'Cheerful & Motivating', desc: 'Bright, joyful, energizing, and celebrative wellness cheerleader', icon: '☀️' },
+  { id: 'mindful', label: 'Calm & Mindful', desc: 'Serene, grounding, breath-centered, and peacefully contemplative', icon: '🌿' },
+  { id: 'scientific', label: 'Direct & Scientific', desc: 'Clear, informative, factual, and empowering biological insights', icon: '🔬' }
+];
+
 /**
- * Returns the exact personalized time-of-day greeting
- * 
- * Morning (5am–11:59am):
- * “Good morning, {name} 🌸. Welcome back to Lumina: Bloom & Balance. I hope you have a beautiful day ahead.”
- * 
- * Afternoon (12pm–4:59pm):
- * “Good afternoon, {name} 🌸. Welcome back to Lumina. How are you feeling today?”
- * 
- * Evening (5pm–8:59pm):
- * “Good evening, {name} 🌸. Welcome back to your wellness sanctuary.”
- * 
- * Night (9pm–4:59am):
- * “Good evening, {name} 🌸. Welcome back to Lumina. Remember to take time to rest and care for yourself.”
+ * Calculates dynamic health state and reaction message based on user data
  */
-export function getWelcomeGreeting(user?: Partial<User> | null, customDate?: Date, rotationOffset?: number): WelcomeGreeting {
+export function getDynamicHealthReaction(user?: Partial<User> | null, personality: AvatarPersonalityStyle = 'supportive'): {
+  healthText: string;
+  phaseLabel: string;
+  emoji: string;
+  cycleDay?: number;
+} {
+  if (!user) {
+    return {
+      healthText: 'Take it easy and stay hydrated today.',
+      phaseLabel: 'Wellness Sanctuary',
+      emoji: '🌸'
+    };
+  }
+
+  // 1. Pregnancy Mode
+  if (user.isPregnancyMode) {
+    const pStart = user.pregnancyStartDate ? new Date(user.pregnancyStartDate) : new Date(Date.now() - 24 * 7 * 86400000);
+    const diffWeeks = Math.max(1, Math.min(42, Math.floor((Date.now() - pStart.getTime()) / (1000 * 60 * 60 * 24 * 7))));
+    
+    if (personality === 'scientific') {
+      return {
+        healthText: `You’re now ${diffWeeks} weeks along in gestational development. Your baby is growing beautifully.`,
+        phaseLabel: `Pregnancy (Week ${diffWeeks})`,
+        emoji: '🤰🏽'
+      };
+    } else if (personality === 'cheerful') {
+      return {
+        healthText: `You’re now ${diffWeeks} weeks along! Your little miracle is growing so beautifully. Celebrate this stage!`,
+        phaseLabel: `Pregnancy (Week ${diffWeeks})`,
+        emoji: '👶🏽'
+      };
+    }
+    return {
+      healthText: `You’re now ${diffWeeks} weeks along. Your baby is growing beautifully.`,
+      phaseLabel: `Pregnancy (Week ${diffWeeks})`,
+      emoji: '🤰🏽'
+    };
+  }
+
+  // 2. Postpartum Mode
+  if (user.isPostpartumMode) {
+    if (personality === 'mindful') {
+      return {
+        healthText: 'You’re doing amazing. Recovery takes time, and every small step matters. Breathe into your healing.',
+        phaseLabel: 'Postpartum Restoration',
+        emoji: '🍵'
+      };
+    } else if (personality === 'cheerful') {
+      return {
+        healthText: 'You’re doing amazing! Recovery takes time, and you are doing so wonderful every step of the way.',
+        phaseLabel: 'Postpartum Restoration',
+        emoji: '💖'
+      };
+    }
+    return {
+      healthText: 'You’re doing amazing. Recovery takes time, and every small step matters.',
+      phaseLabel: 'Postpartum Restoration',
+      emoji: '👶🏽'
+    };
+  }
+
+  // 3. Menstrual & Bio-Cycle Tracking
+  const lastStartStr = user.lastPeriodStart || (user.periods && user.periods[0]?.startDate);
+  const cycleLen = user.cycleLength || 28;
+  const periodLen = user.periodLength || 5;
+
+  let cycleDay = 14;
+  let daysToNextPeriod = 14;
+  let daysToOvulation = 0;
+
+  if (lastStartStr) {
+    const sDate = new Date(lastStartStr);
+    const today = new Date();
+    const diffDays = Math.floor((today.getTime() - sDate.getTime()) / (1000 * 60 * 60 * 24));
+    cycleDay = ((diffDays % cycleLen) + cycleLen) % cycleLen + 1;
+    daysToNextPeriod = cycleLen - cycleDay;
+    const ovulationDay = cycleLen - 14;
+    daysToOvulation = ovulationDay - cycleDay;
+  }
+
+  // Menstrual Phase (Day 1 to periodLen)
+  if (cycleDay <= periodLen) {
+    if (personality === 'scientific') {
+      return {
+        healthText: `You’re on Day ${cycleDay} of your cycle today. Uterine lining renewal is active. Take it easy and maintain electrolytes.`,
+        phaseLabel: `Period (Day ${cycleDay})`,
+        emoji: '🩸',
+        cycleDay
+      };
+    } else if (personality === 'cheerful') {
+      return {
+        healthText: `You’re on Day ${cycleDay} of your cycle today. Give yourself extra grace, cuddle up, and stay hydrated!`,
+        phaseLabel: `Period (Day ${cycleDay})`,
+        emoji: '🌸',
+        cycleDay
+      };
+    }
+    return {
+      healthText: `You’re on Day ${cycleDay} of your cycle today. Take it easy and stay hydrated.`,
+      phaseLabel: `Period (Day ${cycleDay})`,
+      emoji: '🩸',
+      cycleDay
+    };
+  }
+
+  // Ovulation & Fertile Window
+  if (daysToOvulation >= -1 && daysToOvulation <= 2) {
+    if (daysToOvulation === 0) {
+      return {
+        healthText: 'Predicted ovulation is today. You’re currently in your fertile window.',
+        phaseLabel: 'Peak Ovulation Window',
+        emoji: '☀️',
+        cycleDay
+      };
+    }
+    return {
+      healthText: 'You’re currently in your fertile window.',
+      phaseLabel: 'Fertile Window',
+      emoji: '✨',
+      cycleDay
+    };
+  }
+
+  // Follicular Phase (Post-period, Pre-ovulation)
+  if (daysToOvulation > 2) {
+    return {
+      healthText: `You’re on Day ${cycleDay} in your follicular phase. Your natural vitality and energy are on the rise.`,
+      phaseLabel: 'Follicular Phase',
+      emoji: '🌱',
+      cycleDay
+    };
+  }
+
+  // Luteal Phase (Post-ovulation, Pre-period)
+  if (daysToNextPeriod <= 2 && daysToNextPeriod >= 1) {
+    return {
+      healthText: `Your cycle is on Day ${cycleDay}. Your period may arrive in ${daysToNextPeriod} ${daysToNextPeriod === 1 ? 'day' : 'days'}. Honor your body's need to slow down.`,
+      phaseLabel: 'Pre-Menstrual Window',
+      emoji: '🌸',
+      cycleDay
+    };
+  }
+
+  return {
+    healthText: `You’re on Day ${cycleDay} in your luteal phase. Protect your peace and nourish yourself with warm comfort.`,
+    phaseLabel: 'Luteal Phase',
+    emoji: '🍂',
+    cycleDay
+  };
+}
+
+/**
+ * Returns the personalized avatar companion greeting combining:
+ * 1. Time-of-day greeting (Exact format requested)
+ * 2. Dynamic health-aware reaction
+ */
+export function getWelcomeGreeting(
+  user?: Partial<User> | null, 
+  customDate?: Date, 
+  rotationOffset?: number
+): WelcomeGreeting {
   const name = getUserFirstName(user);
   const now = customDate || new Date();
   const hour = now.getHours();
 
+  const avatar = user?.avatar || (user ? getOrCreateUserAvatar(user as User) : undefined);
+  const avatarName = avatar?.name || 'Amara';
+  const avatarId = avatar?.id || 'amara';
+  const personality = avatar?.personalityStyle || 'supportive';
+
   let timeOfDay: 'morning' | 'afternoon' | 'evening' | 'night' = 'morning';
   let timeLabel = 'Morning (5:00 AM – 11:59 AM)';
-  let emoji = '🌸';
-  let displayText = '';
-  let speechText = '';
+  let emoji = '🌞';
+  let timeGreeting = '';
 
   if (hour >= 5 && hour < 12) {
     timeOfDay = 'morning';
     timeLabel = 'Morning (5:00 AM – 11:59 AM)';
-    emoji = '🌸';
-    displayText = `Good morning, ${name} 🌸. Welcome back to Lumina: Bloom & Balance. I hope you have a beautiful day ahead.`;
-    speechText = `Good morning, ${name}. Welcome back to Lumina: Bloom and Balance. I hope you have a beautiful day ahead.`;
+    emoji = '🌞';
+    timeGreeting = `Good morning, ${name} 🌞. I hope you slept well.`;
   } else if (hour >= 12 && hour < 17) {
     timeOfDay = 'afternoon';
     timeLabel = 'Afternoon (12:00 PM – 4:59 PM)';
     emoji = '🌸';
-    displayText = `Good afternoon, ${name} 🌸. Welcome back to Lumina. How are you feeling today?`;
-    speechText = `Good afternoon, ${name}. Welcome back to Lumina. How are you feeling today?`;
+    timeGreeting = `Good afternoon, ${name} 🌸. How are you feeling today?`;
   } else if (hour >= 17 && hour < 21) {
     timeOfDay = 'evening';
     timeLabel = 'Evening (5:00 PM – 8:59 PM)';
-    emoji = '🌸';
-    displayText = `Good evening, ${name} 🌸. Welcome back to your wellness sanctuary.`;
-    speechText = `Good evening, ${name}. Welcome back to your wellness sanctuary.`;
+    emoji = '✨';
+    timeGreeting = `Good evening, ${name} ✨. Let’s take a moment to check in with your wellness journey.`;
   } else {
     timeOfDay = 'night';
     timeLabel = 'Night (9:00 PM – 4:59 AM)';
     emoji = '🌙';
-    displayText = `Good evening, ${name} 🌸. Welcome back to Lumina. Remember to take time to rest and care for yourself.`;
-    speechText = `Good evening, ${name}. Welcome back to Lumina. Remember to take time to rest and care for yourself.`;
+    timeGreeting = `Good night, ${name} 🌙. Remember to take care of yourself and get enough rest.`;
   }
 
-  // If rotation offset is provided for the Settings preview button
-  if (rotationOffset && rotationOffset % 2 !== 0) {
-    if (timeOfDay === 'morning') {
-      displayText = `Good morning, ${name} 🌸. Let's start today with grace, balance, and care.`;
-      speechText = `Good morning, ${name}. Let's start today with grace, balance, and care.`;
-    } else if (timeOfDay === 'afternoon') {
-      displayText = `Good afternoon, ${name} 🌸. Pause for a gentle moment and celebrate how far you’ve come today.`;
-      speechText = `Good afternoon, ${name}. Pause for a gentle moment and celebrate how far you've come today.`;
-    } else if (timeOfDay === 'evening') {
-      displayText = `Good evening, ${name} 🌸. Unwind and let the warmth of this evening surround you.`;
-      speechText = `Good evening, ${name}. Unwind and let the warmth of this evening surround you.`;
-    } else {
-      displayText = `Good night, ${name} 🌙. Welcome back to Lumina. Rest peacefully and restore your inner light.`;
-      speechText = `Good night, ${name}. Welcome back to Lumina. Rest peacefully and restore your inner light.`;
-    }
-  }
+  // Health-aware dynamic context
+  const healthReaction = getDynamicHealthReaction(user, personality);
+
+  // Combine into complete companion speech
+  const displayText = `${timeGreeting} ${healthReaction.healthText}`;
+  // Text for TTS without emoji disruption
+  const cleanTimeGreeting = timeGreeting.replace(/[🌞🌸✨🌙]/g, '').trim();
+  const cleanHealth = healthReaction.healthText.replace(/[🩸☀️🌱🍂🤰🏽👶🏽🍵💖✨]/g, '').trim();
+  const speechText = `${cleanTimeGreeting} ${cleanHealth}`;
 
   return {
     displayText,
@@ -145,7 +306,63 @@ export function getWelcomeGreeting(user?: Partial<User> | null, customDate?: Dat
     timeOfDay,
     timeLabel,
     emoji,
-    firstName: name
+    firstName: name,
+    avatarName,
+    avatarId,
+    healthContext: healthReaction.healthText
+  };
+}
+
+/**
+ * Returns the signature introduction text for an avatar companion
+ * Example: “Hi Bernice 🌸. I’m Amara and I’ll be your wellness companion inside Lumina. I’ll guide you through your cycle, symptoms, wellness goals, and daily check-ins.”
+ */
+export function getAvatarIntroduction(
+  avatarId: AvatarId = 'amara',
+  userName: string = 'friend',
+  personality?: AvatarPersonalityStyle
+): {
+  displayText: string;
+  speechText: string;
+  companionName: string;
+  avatarId: AvatarId;
+  emoji: string;
+} {
+  const preset = AVATAR_PRESETS[avatarId] || AVATAR_PRESETS.amara;
+  const companionName = preset.name;
+  const emoji = preset.emoji || '🌸';
+
+  let introText = `Hi ${userName} ${emoji}. I’m ${companionName} and I’ll be your wellness companion inside Lumina. I’ll guide you through your cycle, symptoms, wellness goals, and daily check-ins.`;
+
+  if (avatarId === 'zainab') {
+    introText = `Hey ${userName}! ⚡ I’m Zainab and I’ll be your motivational wellness coach inside Lumina. Let’s bring empowering energy, healthy habits, and unstoppable motivation to your journey!`;
+  } else if (avatarId === 'naomi') {
+    introText = `Peace and welcome, ${userName} 🌿. I’m Naomi and I’ll be your calm sanctuary guide inside Lumina. I’ll help you embrace stillness, reflect with wisdom, and nurture deep inner balance.`;
+  } else if (avatarId === 'amina') {
+    introText = `Hello sunshine ${userName}! ☀️ I’m Amina and I’m so excited to be your cheerful wellness cheerleader inside Lumina! Let’s celebrate your body, smile together, and make each day wonderfully bright!`;
+  } else if (avatarId === 'kemi') {
+    introText = `Hi ${userName} ☀️. I’m Kemi and I’m thrilled to be your wellness companion inside Lumina! Let’s celebrate your daily strength, track your energy, and make every check-in joyful.`;
+  } else if (avatarId === 'nia') {
+    introText = `Hi ${userName} 🍃. I’m Nia, your holistic companion inside Lumina. I’ll help you stay attuned to your body’s unique rhythm, hydration, and emotional harmony.`;
+  } else if (avatarId === 'maya') {
+    introText = `Hi ${userName} 🌺. I’m Maya and I’ll be your creative wellness companion inside Lumina. We’ll tune into your mood, reflect gently, and celebrate your body’s unfolding wisdom.`;
+  } else if (avatarId === 'aria') {
+    introText = `Hi ${userName} ✨. I’m Aria and I’m so excited to be your wellness companion inside Lumina! Every small milestone and symptom check-in brings you closer to your brightest self.`;
+  }
+
+  // Adjust slightly for chosen personality if custom
+  if (personality === 'scientific') {
+    introText = `Hi ${userName} 🔬. I’m ${companionName} and I’ll be your bio-wellness companion inside Lumina. I’ll provide clear, evidence-based guidance through your cycle phases, biomarkers, and daily wellness logs.`;
+  }
+
+  const cleanSpeech = introText.replace(/[🌸🌿☀️🍃🌺✨🔬]/g, '').trim();
+
+  return {
+    displayText: introText,
+    speechText: cleanSpeech,
+    companionName,
+    avatarId,
+    emoji
   };
 }
 
@@ -158,31 +375,31 @@ export function playSoothingChime(): void {
     window._luminaAudioCtx = ctx;
     const now = ctx.currentTime;
     
-    // Create gentle warm dual harmonic chime (528Hz Solfeggio Love tone)
+    // Warm chime with gentle harmonic harmonics (528Hz Solfeggio Love tone)
     const osc1 = ctx.createOscillator();
     const osc2 = ctx.createOscillator();
     const gainNode = ctx.createGain();
 
     osc1.type = 'sine';
     osc1.frequency.setValueAtTime(528, now);
-    osc1.frequency.exponentialRampToValueAtTime(660, now + 0.5);
+    osc1.frequency.exponentialRampToValueAtTime(660, now + 0.45);
 
     osc2.type = 'sine';
     osc2.frequency.setValueAtTime(792, now);
-    osc2.frequency.exponentialRampToValueAtTime(880, now + 0.6);
+    osc2.frequency.exponentialRampToValueAtTime(880, now + 0.55);
 
     gainNode.gain.setValueAtTime(0.001, now);
-    gainNode.gain.linearRampToValueAtTime(0.05, now + 0.06);
-    gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.8);
+    gainNode.gain.linearRampToValueAtTime(0.045, now + 0.05);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.75);
 
     osc1.connect(gainNode);
     osc2.connect(gainNode);
     gainNode.connect(ctx.destination);
 
     osc1.start(now);
-    osc2.start(now + 0.04);
-    osc1.stop(now + 0.9);
-    osc2.stop(now + 0.9);
+    osc2.start(now + 0.03);
+    osc1.stop(now + 0.8);
+    osc2.stop(now + 0.8);
 
     setTimeout(() => {
       try {
@@ -190,7 +407,7 @@ export function playSoothingChime(): void {
           ctx.close().catch(() => {});
         }
       } catch {}
-    }, 1000);
+    }, 900);
   } catch (e) {
     // Ignore audio chime errors
   }
@@ -212,42 +429,92 @@ export function stopWelcomeVoice(): void {
   } catch {}
 }
 
-// Find best natural voice available
-function getBestVoice(): SpeechSynthesisVoice | null {
-  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return null;
+/**
+ * Finds the best matching voice for a given avatar accent and personality
+ */
+function getCompanionVoice(accent: AvatarAccent = 'us', avatarId?: AvatarId): { voice: SpeechSynthesisVoice | null; rate: number; pitch: number } {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+    return { voice: null, rate: 0.93, pitch: 1.05 };
+  }
+
+  const accentConfig = ACCENT_OPTIONS.find(a => a.id === accent) || ACCENT_OPTIONS[0];
+  let rate = accentConfig.defaultRate;
+  let pitch = accentConfig.defaultPitch;
+
+  // Avatar-specific vocal color tuning
+  if (avatarId === 'zainab') {
+    rate = 0.90; // Slower, serene, grounded
+    pitch = 0.98;
+  } else if (avatarId === 'kemi') {
+    rate = 0.96; // Bright, energetic
+    pitch = 1.10;
+  } else if (avatarId === 'nia') {
+    rate = 0.92; // Balanced, melodic
+    pitch = 1.02;
+  } else if (avatarId === 'maya') {
+    rate = 0.91; // Gentle, poetic
+    pitch = 1.04;
+  } else if (avatarId === 'aria') {
+    rate = 0.95; // Cheerful, crisp
+    pitch = 1.08;
+  }
+
   try {
     const voices = window.speechSynthesis.getVoices();
-    if (!voices || voices.length === 0) return null;
+    if (!voices || voices.length === 0) {
+      return { voice: null, rate, pitch };
+    }
 
-    // Prioritize natural warm female English voices
-    const preferredVoice = voices.find(v => 
+    // Try matching by language code preference
+    for (const code of accentConfig.langCodes) {
+      const match = voices.find(v => {
+        const langMatches = v.lang.toLowerCase().startsWith(code.toLowerCase());
+        const isFemale = v.name.toLowerCase().includes('female') || 
+                         v.name.includes('Samantha') || 
+                         v.name.includes('Victoria') || 
+                         v.name.includes('Karen') || 
+                         v.name.includes('Moira') || 
+                         v.name.includes('Zira') || 
+                         v.name.includes('Jenny') || 
+                         v.name.includes('Aria') ||
+                         v.name.includes('Natural');
+        return langMatches && isFemale;
+      });
+      if (match) return { voice: match, rate, pitch };
+
+      const langMatch = voices.find(v => v.lang.toLowerCase().startsWith(code.toLowerCase()));
+      if (langMatch) return { voice: langMatch, rate, pitch };
+    }
+
+    // Fallback to highest quality natural en voice
+    const fallbackVoice = voices.find(v => 
       v.name.includes('Google US English') ||
       v.name.includes('Natural') ||
       v.name.includes('Samantha') ||
-      v.name.includes('Victoria') ||
-      v.name.includes('Karen') ||
-      v.name.includes('Moira') ||
-      v.name.includes('Zira') ||
       v.name.includes('Jenny') ||
-      v.name.includes('Aria') ||
-      v.name.includes('Microsoft Zira') ||
-      (v.lang.startsWith('en') && v.name.toLowerCase().includes('female'))
-    );
+      v.name.includes('Victoria') ||
+      v.lang.startsWith('en')
+    ) || voices[0];
 
-    if (preferredVoice) return preferredVoice;
-
-    // Fallback to any en-US or en voice
-    return voices.find(v => v.lang.startsWith('en-US') || v.lang.startsWith('en')) || voices[0] || null;
+    return { voice: fallbackVoice, rate, pitch };
   } catch {
-    return null;
+    return { voice: null, rate, pitch };
   }
 }
 
-// Ensure Web Speech Synthesis speaks synchronously & reliably in the user gesture call stack
+/**
+ * Speaks native Web Speech synthesis with avatar companion characteristics
+ */
 export function speakNativeSpeech(
   text: string, 
-  onEnd?: () => void, 
-  onError?: (err: any) => void
+  options?: {
+    accent?: AvatarAccent;
+    avatarId?: AvatarId;
+    pitch?: number;
+    rate?: number;
+    onEnd?: () => void; 
+    onError?: (err: any) => void;
+  }
 ): boolean {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
     return false;
@@ -261,43 +528,53 @@ export function speakNativeSpeech(
     }
 
     const utterance = new SpeechSynthesisUtterance(text);
-    // Pin to global window to prevent Chromium garbage collection bug during speech
     window._luminaUtterance = utterance;
 
-    utterance.lang = 'en-US';
-    utterance.rate = 0.92; // Pleasant, warm pace
-    utterance.pitch = 1.04; // Gentle, uplifting pitch
-    utterance.volume = 1.0;
-
-    const voice = getBestVoice();
-    if (voice) {
-      utterance.voice = voice;
+    const voiceInfo = getCompanionVoice(options?.accent, options?.avatarId);
+    if (voiceInfo.voice) {
+      utterance.voice = voiceInfo.voice;
+      utterance.lang = voiceInfo.voice.lang || 'en-US';
+    } else {
+      utterance.lang = 'en-US';
     }
+
+    utterance.rate = options?.rate ?? voiceInfo.rate;
+    utterance.pitch = options?.pitch ?? voiceInfo.pitch;
+    utterance.volume = 1.0;
 
     utterance.onstart = () => {
       markSessionGreetingPlayed();
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('lumina:avatar-speaking', { detail: { isSpeaking: true, text } }));
+      }
     };
 
     utterance.onend = () => {
       markSessionGreetingPlayed();
       window._luminaUtterance = null;
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('lumina:avatar-speaking', { detail: { isSpeaking: false } }));
+      }
       if (window._luminaSpeechInterval) {
         clearInterval(window._luminaSpeechInterval);
         window._luminaSpeechInterval = null;
       }
-      if (onEnd) {
-        try { onEnd(); } catch {}
+      if (options?.onEnd) {
+        try { options.onEnd(); } catch {}
       }
     };
 
     utterance.onerror = (e) => {
       window._luminaUtterance = null;
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('lumina:avatar-speaking', { detail: { isSpeaking: false } }));
+      }
       if (window._luminaSpeechInterval) {
         clearInterval(window._luminaSpeechInterval);
         window._luminaSpeechInterval = null;
       }
-      if (onError) {
-        try { onError(e); } catch {}
+      if (options?.onError) {
+        try { options.onError(e); } catch {}
       }
     };
 
@@ -325,18 +602,15 @@ export function speakNativeSpeech(
 
     return true;
   } catch (err) {
-    if (onError) {
-      try { onError(err); } catch {}
+    if (options?.onError) {
+      try { options.onError(err); } catch {}
     }
     return false;
   }
 }
 
 /**
- * Trigger personalized voice greeting.
- * If called on app launch, plays automatically without requiring a button press.
- * If the browser's autoplay policy temporarily holds speech, it seamlessly auto-unmutes
- * and speaks on the very first touch/click anywhere on the screen.
+ * Plays the personalized greeting from the selected Avatar Companion
  */
 export async function playWelcomeVoiceGreeting(
   user?: Partial<User> | null,
@@ -357,7 +631,7 @@ export async function playWelcomeVoiceGreeting(
 
     const greeting = options?.customGreeting || getWelcomeGreeting(user);
 
-    // Always dispatch custom event so app UI displays the visual greeting banner / toast immediately (Requirement 5)
+    // Always dispatch custom event so app UI displays the visual greeting banner / toast immediately
     if (typeof window !== 'undefined') {
       try {
         window.dispatchEvent(new CustomEvent('lumina:welcome-greeting', { detail: greeting }));
@@ -387,22 +661,30 @@ export async function playWelcomeVoiceGreeting(
     // Store pending greeting on window for instant auto-unlock if browser delays initial audio
     window._luminaPendingGreeting = greeting;
 
-    // 2. Trigger Web Speech Synthesis
+    const avatar = user?.avatar;
+    const accent = avatar?.accent || 'us';
+    const avatarId = avatar?.id || 'amara';
+
+    // 2. Trigger Web Speech Synthesis with companion characteristics
     speakNativeSpeech(
       greeting.speechText,
-      () => {
-        markSessionGreetingPlayed();
-        window._luminaPendingGreeting = null;
-        if (options?.onEnd) options.onEnd();
-      },
-      (err) => {
-        if (options?.onError) options.onError(err);
+      {
+        accent,
+        avatarId,
+        pitch: avatar?.speechPitch,
+        rate: avatar?.speechRate,
+        onEnd: () => {
+          markSessionGreetingPlayed();
+          window._luminaPendingGreeting = null;
+          if (options?.onEnd) options.onEnd();
+        },
+        onError: (err) => {
+          if (options?.onError) options.onError(err);
+        }
       }
     );
 
     // 3. Register seamless global unlock listener:
-    // If the browser's background autoplay policy queued or suspended the initial speech,
-    // the very first tap or touch anywhere in the app immediately triggers resume/speak.
     if (!unlockListenersAttached && typeof window !== 'undefined') {
       unlockListenersAttached = true;
       const unlockHandler = () => {
@@ -420,17 +702,23 @@ export async function playWelcomeVoiceGreeting(
           } catch {}
         }
 
-        // If the greeting hasn't played yet this session, speak it now with the user's active gesture!
+        // If the greeting hasn't played yet this session, speak it now with user's active gesture!
         if (!isSessionGreetingPlayed() && window._luminaPendingGreeting) {
           const pending = window._luminaPendingGreeting;
           window._luminaPendingGreeting = null;
           speakNativeSpeech(
             pending.speechText,
-            () => {
-              markSessionGreetingPlayed();
-              if (options?.onEnd) options.onEnd();
-            },
-            options?.onError
+            {
+              accent,
+              avatarId,
+              pitch: avatar?.speechPitch,
+              rate: avatar?.speechRate,
+              onEnd: () => {
+                markSessionGreetingPlayed();
+                if (options?.onEnd) options.onEnd();
+              },
+              onError: options?.onError
+            }
           );
         }
       };
@@ -443,10 +731,42 @@ export async function playWelcomeVoiceGreeting(
 
     return greeting;
   } catch (outerErr) {
-    console.warn('Welcome voice execution notice:', outerErr);
+    console.warn('Avatar companion voice execution notice:', outerErr);
     if (options?.onError) {
       try { options.onError(outerErr); } catch {}
     }
     return null;
   }
+}
+
+/**
+ * Triggers avatar introduction speech (animated wave, speech, and intro message)
+ */
+export async function playAvatarIntroduction(
+  avatarId: AvatarId = 'amara',
+  user?: Partial<User> | null,
+  options?: {
+    accent?: AvatarAccent;
+    personality?: AvatarPersonalityStyle;
+    onStart?: () => void;
+    onEnd?: () => void;
+  }
+): Promise<{ displayText: string; speechText: string }> {
+  const name = getUserFirstName(user);
+  const intro = getAvatarIntroduction(avatarId, name, options?.personality);
+
+  stopWelcomeVoice();
+  playSoothingChime();
+
+  if (options?.onStart) {
+    options.onStart();
+  }
+
+  speakNativeSpeech(intro.speechText, {
+    avatarId,
+    accent: options?.accent || 'us',
+    onEnd: options?.onEnd
+  });
+
+  return intro;
 }

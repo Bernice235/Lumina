@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { User, Symptom, Reminder, ReceivedComfort } from '../types';
 import { ExpectedPeriodCheckInCard } from './ExpectedPeriodCheckInCard';
@@ -9,8 +9,16 @@ import {
   getOrCreateUserAvatar, 
   calculateAvatarProgression, 
   getAvatarCompanionSpeech,
+  calculateAvatarMood,
+  AVATAR_PRESETS,
   logAvatarActionReward
 } from '../services/avatarService';
+import { 
+  playWelcomeVoiceGreeting, 
+  playAvatarIntroduction, 
+  getWelcomeGreeting, 
+  stopWelcomeVoice 
+} from '../services/welcomeVoiceService';
 import { getDailyAffirmation } from '../services/gemini';
 import { syncUser, updatePartnerRequestStatus, addNotificationToUser } from '../services/firebaseService';
 import { SONGS, MOODS, BABY_SIZES } from '../constants';
@@ -38,8 +46,12 @@ import {
   Menu,
   Bell,
   X,
-  LogOut
+  LogOut,
+  Volume2,
+  VolumeX,
+  MessageCircle
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface DashboardProps {
   user: User;
@@ -59,6 +71,7 @@ interface DashboardProps {
   onTabChange?: (tab: string) => void;
   setActiveTab: (tab: string) => void;
   onOpenLogModal?: () => void;
+  onOpenCompanionChat?: () => void;
   receivedGifts?: ReceivedComfort[];
   isMusicActive: boolean;
   toggleMusicActive: () => void;
@@ -88,6 +101,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   onTabChange,
   setActiveTab,
   onOpenLogModal,
+  onOpenCompanionChat,
   receivedGifts = [],
   isMusicActive,
   toggleMusicActive,
@@ -98,6 +112,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   handleLogout,
   onOpenNotificationCenter
 }) => {
+  const today = new Date();
   const [affirmation, setAffirmation] = useState("Loading your daily inspiration...");
   const [selectedMood, setSelectedMood] = useState('Happy');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -109,6 +124,196 @@ const Dashboard: React.FC<DashboardProps> = ({
   const currentAvatar = getOrCreateUserAvatar(user);
   const avatarProgression = calculateAvatarProgression(user, currentAvatar);
   const avatarSpeech = getAvatarCompanionSpeech(user, currentAvatar);
+  const avatarMood = calculateAvatarMood(user, currentAvatar);
+  const companionGreeting = getWelcomeGreeting(user);
+  const [isCompanionSpeaking, setIsCompanionSpeaking] = useState(false);
+  const [isCompanionWaving, setIsCompanionWaving] = useState(false);
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 18) return "Good afternoon";
+    return "Good evening";
+  };
+
+  // Dynamic speech bubble prompts: starts with the warm personalized greeting
+  const companionPrompts = [
+    companionGreeting.displayText || `${getGreeting()} ${user.firstName || user.name || "Bernice"} 🌞`,
+    `${getGreeting()} ${user.firstName || user.name || "Bernice"} 🌞`,
+    "How are you feeling today?",
+    "Need help tracking symptoms?",
+    avatarSpeech.cycleStatusText,
+    "Remember to take a mindful sip of water 💧"
+  ].filter(Boolean);
+
+  const [promptIndex, setPromptIndex] = useState(0);
+  const [companionReaction, setCompanionReaction] = useState<{
+    message: string;
+    emoji: string;
+    type: 'wave' | 'symptom' | 'celebrate' | 'welcome';
+  } | null>(null);
+
+  // Wave animation and automatic greeting when app opens / mounts
+  useEffect(() => {
+    setIsCompanionWaving(true);
+    const waveTimer = setTimeout(() => {
+      setIsCompanionWaving(false);
+    }, 3200);
+
+    // Automatically welcome and greet user visually & with voice when app opens
+    if (user) {
+      const greetingWord = getGreeting();
+      const userName = user.firstName || user.name || "Bernice";
+      setCompanionReaction({
+        message: `${greetingWord}, ${userName}! 🌸 Welcome to Lumina.`,
+        emoji: '👋',
+        type: 'welcome'
+      });
+      const reactionTimer = setTimeout(() => {
+        setCompanionReaction(null);
+      }, 7000);
+
+      const voiceTimer = setTimeout(() => {
+        playWelcomeVoiceGreeting(user, {
+          force: true,
+          onStart: () => setIsCompanionSpeaking(true),
+          onEnd: () => setIsCompanionSpeaking(false),
+          onError: () => setIsCompanionSpeaking(false)
+        }).catch(() => setIsCompanionSpeaking(false));
+      }, 500);
+
+      return () => {
+        clearTimeout(waveTimer);
+        clearTimeout(reactionTimer);
+        clearTimeout(voiceTimer);
+      };
+    }
+
+    return () => clearTimeout(waveTimer);
+  }, [user?.id]);
+
+  // Rotate dynamic speech bubble gently every 7 seconds
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setPromptIndex(prev => (prev + 1) % companionPrompts.length);
+    }, 7000);
+    return () => clearInterval(timer);
+  }, [companionPrompts.length]);
+
+  // Track symptom logs & water intake changes for automatic companion reactions (Requirement 7)
+  const prevSymptomsLenRef = useRef(symptoms.length);
+  useEffect(() => {
+    if (symptoms.length > prevSymptomsLenRef.current) {
+      setIsCompanionWaving(true);
+      setCompanionReaction({
+        message: `${currentAvatar.name} noted your symptoms. Rest and take it easy! 🩹`,
+        emoji: '🌸',
+        type: 'symptom'
+      });
+      setTimeout(() => {
+        setIsCompanionWaving(false);
+        setCompanionReaction(null);
+      }, 5000);
+    }
+    prevSymptomsLenRef.current = symptoms.length;
+  }, [symptoms.length, currentAvatar.name]);
+
+  const prevWaterRef = useRef(waterIntake);
+  useEffect(() => {
+    if (waterIntake > prevWaterRef.current) {
+      setIsCompanionWaving(true);
+      setCompanionReaction({
+        message: `${currentAvatar.name} celebrates your hydration! 💧 (+10 XP)`,
+        emoji: '🎉',
+        type: 'celebrate'
+      });
+      setTimeout(() => {
+        setIsCompanionWaving(false);
+        setCompanionReaction(null);
+      }, 5000);
+    }
+    prevWaterRef.current = waterIntake;
+  }, [waterIntake, currentAvatar.name]);
+
+  // Listen for symptom logs or check-in completions (Requirement 7)
+  useEffect(() => {
+    const handleSymptomEvent = (e: any) => {
+      setIsCompanionWaving(true);
+      setCompanionReaction({
+        message: `${currentAvatar.name} noted your symptoms. Rest and take it easy! 🩹`,
+        emoji: '🌸',
+        type: 'symptom'
+      });
+      setTimeout(() => {
+        setIsCompanionWaving(false);
+        setCompanionReaction(null);
+      }, 5000);
+    };
+
+    const handleCheckinEvent = (e: any) => {
+      setIsCompanionWaving(true);
+      setCompanionReaction({
+        message: `${currentAvatar.name} celebrates your check-in! 🎉 (+25 XP)`,
+        emoji: '🎉',
+        type: 'celebrate'
+      });
+      setTimeout(() => {
+        setIsCompanionWaving(false);
+        setCompanionReaction(null);
+      }, 5000);
+    };
+
+    window.addEventListener('lumina:symptom-logged', handleSymptomEvent);
+    window.addEventListener('lumina:checkin-completed', handleCheckinEvent);
+    return () => {
+      window.removeEventListener('lumina:symptom-logged', handleSymptomEvent);
+      window.removeEventListener('lumina:checkin-completed', handleCheckinEvent);
+    };
+  }, [currentAvatar.name]);
+
+  const handleOpenCompanionChat = () => {
+    if (onOpenCompanionChat) {
+      onOpenCompanionChat();
+    } else if (onTabChange) {
+      onTabChange('companion_chat');
+    } else {
+      setActiveTab('companion_chat');
+    }
+  };
+
+  const handleAvatarTap = () => {
+    setIsCompanionWaving(true);
+    setTimeout(() => {
+      setIsCompanionWaving(false);
+    }, 2400);
+    setIsMenuOpen(true);
+  };
+
+  const handlePlayCompanionVoice = () => {
+    if (isCompanionSpeaking) {
+      stopWelcomeVoice();
+      setIsCompanionSpeaking(false);
+      return;
+    }
+    playWelcomeVoiceGreeting(user, {
+      force: true,
+      customGreeting: companionGreeting,
+      onStart: () => setIsCompanionSpeaking(true),
+      onEnd: () => setIsCompanionSpeaking(false),
+      onError: () => setIsCompanionSpeaking(false)
+    }).catch(() => setIsCompanionSpeaking(false));
+  };
+
+  const handleSayHiToCompanion = () => {
+    setIsCompanionWaving(true);
+    setTimeout(() => setIsCompanionWaving(false), 2800);
+    playAvatarIntroduction(currentAvatar.id, user, {
+      accent: currentAvatar.accent,
+      personality: currentAvatar.personalityStyle,
+      onStart: () => setIsCompanionSpeaking(true),
+      onEnd: () => setIsCompanionSpeaking(false)
+    }).catch(() => setIsCompanionSpeaking(false));
+  };
 
   // Pregnancy and Postpartum Custom states
   const [exerciseTrimester, setExerciseTrimester] = useState<1 | 2 | 3>(1);
@@ -382,7 +587,6 @@ const Dashboard: React.FC<DashboardProps> = ({
     }
   };
 
-  const today = new Date();
   const lastStart = user.lastPeriodStart ? new Date(user.lastPeriodStart) : null;
   const cycleLen = user.cycleLength || 28;
   const periodLen = user.periodLength || 5;
@@ -436,13 +640,6 @@ const Dashboard: React.FC<DashboardProps> = ({
       getDailyAffirmation(user.name, currentPhase, selectedMood).then(setAffirmation);
     }
   }, [user.name, currentPhase, selectedMood, user.isPregnancyMode, user.isPostpartumMode]);
-
-  const getGreeting = () => {
-    const hour = today.getHours();
-    if (hour < 12) return "Good morning";
-    if (hour < 18) return "Good afternoon";
-    return "Good evening";
-  };
 
   const handleMoodSelect = (mood: typeof MOODS[0]) => {
     setSelectedMood(mood.label);
@@ -2031,72 +2228,88 @@ const Dashboard: React.FC<DashboardProps> = ({
         </button>
       </header>
 
-      {/* Home Screen Avatar Companion & Personalized Sanctuary Header */}
-      <section className="bg-gradient-to-br from-white/85 via-pink-50/30 to-amber-50/15 backdrop-blur-md p-6 md:p-8 rounded-[2.5rem] border border-white/90 shadow-[inset_0_3px_5px_rgba(255,255,255,0.85),_0_12px_36px_rgba(244,114,182,0.04)] relative overflow-hidden transition-all duration-500">
-        {/* Claymorphic blobs inside greeting for fluid background */}
-        <div className="absolute -top-12 -left-12 w-36 h-36 bg-gradient-to-tr from-pink-300/15 to-rose-300/15 rounded-full blur-2xl pointer-events-none" />
-        <div className="absolute -bottom-16 -right-16 w-40 h-40 bg-gradient-to-tr from-amber-200/15 to-pink-300/15 rounded-full blur-2xl pointer-events-none" />
-        
-        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          {/* Avatar Visual & Identity Tag */}
-          <div className="flex items-center gap-4">
-            <div 
-              onClick={() => setIsAvatarModalOpen(true)}
-              className="relative cursor-pointer group shrink-0"
-              title="Open Lumina Avatar Sanctuary Dashboard"
-            >
+      {/* Living Companion Sanctuary Header (Clean, centered smaller avatar with dynamic speech bubble) */}
+      <section className="bg-gradient-to-br from-white/95 via-pink-50/50 to-rose-50/30 backdrop-blur-md p-6 sm:p-7 rounded-[2.5rem] border border-white/95 shadow-[inset_0_3px_5px_rgba(255,255,255,0.9),_0_12px_36px_rgba(244,114,182,0.06)] relative overflow-visible transition-all duration-500">
+        {/* Soft fluid glowing aura */}
+        <div className="absolute -top-10 -left-10 w-44 h-44 bg-gradient-to-tr from-pink-300/20 via-rose-300/20 to-amber-200/20 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute -bottom-10 -right-10 w-48 h-48 bg-gradient-to-tr from-amber-200/20 to-pink-300/20 rounded-full blur-2xl pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col items-center text-center space-y-3.5 max-w-lg mx-auto">
+          
+          {/* 1. Alive Avatar Companion (Smaller, centered, tap to open menu) */}
+          <div 
+            onClick={handleAvatarTap}
+            className="relative cursor-pointer group shrink-0 transition-transform duration-300 hover:scale-105 active:scale-95"
+            title={`Tap to open Lumina Menu & Studio (${currentAvatar.name || 'Amara'})`}
+          >
+            {/* Soft floor glow under companion */}
+            <div className="absolute -bottom-1.5 inset-x-2 h-3.5 bg-pink-400/20 rounded-full blur-md" />
+
+            <div className="relative overflow-visible">
               <AvatarVisual 
-                avatar={currentAvatar} 
-                size="lg" 
-                showTierBadge 
-                interactive 
-                className="ring-4 ring-white/80 shadow-md group-hover:scale-105 transition-all"
+                avatar={{
+                  ...currentAvatar,
+                  mood: avatarMood.mood
+                }} 
+                size="md" 
+                level={avatarProgression.level}
+                showTierBadge={false}
+                showMoodBadge={false}
+                isSpeaking={isCompanionSpeaking}
+                isWaving={isCompanionWaving}
+                interactive={false}
+                animated={true}
+                className="overflow-visible"
               />
-              <span className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-pink-500 text-white text-[10px] font-black flex items-center justify-center border-2 border-white shadow-xs">
-                ✨
-              </span>
             </div>
+          </div>
+
+          {/* 2. Relationship Progression Level & Mood Pills */}
+          <div className="flex items-center justify-center gap-2 flex-wrap">
+            <div
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-pink-500/10 via-rose-500/10 to-amber-500/10 text-pink-700 text-[10.5px] font-black uppercase tracking-wider border border-pink-200/60 shadow-xs"
+            >
+              <span>🌸</span>
+              <span>{currentAvatar.name || 'Amara'}</span>
+              <span className="text-[9px] font-extrabold text-pink-500">• Lvl {avatarProgression.level} ({avatarProgression.relationshipStage})</span>
+            </div>
+
+            <span 
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/80 text-stone-600 text-[10px] font-bold border border-pink-100 shadow-xs"
+            >
+              <span>{avatarMood.emoji}</span>
+              <span>{avatarMood.label}</span>
+            </span>
+          </div>
+
+          {/* 3. Dynamic Speech Bubble under Avatar */}
+          <div 
+            onClick={handleAvatarTap}
+            className="relative inline-block text-center w-full max-w-md bg-white/90 hover:bg-white backdrop-blur-md px-5 py-3.5 rounded-[1.75rem] border border-pink-200/70 shadow-[0_4px_20px_rgba(244,114,182,0.08)] cursor-pointer group transition-all duration-300 hover:shadow-md animate-speech-bubble"
+            title={`Tap to open Lumina Menu & Studio (${currentAvatar.name || 'Amara'})`}
+          >
+            {/* Speech bubble tail pointing up to avatar */}
+            <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[7px] border-l-transparent border-r-[7px] border-r-transparent border-b-[9px] border-b-white/95" />
 
             <div className="space-y-1">
-              {/* Top Avatar Tag: 🌸 Amara */}
-              <div 
-                onClick={() => setIsAvatarModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-pink-100/70 hover:bg-pink-100 text-pink-700 text-[10px] font-black uppercase tracking-wider border border-pink-200/60 cursor-pointer transition-all shadow-xs"
-              >
-                <span>🌸</span>
-                <span>{currentAvatar.name || 'Amara'}</span>
-                <span className="text-[8.5px] opacity-75 font-normal ml-0.5">• Level {avatarProgression.level}</span>
-              </div>
-
-              {/* Main Greeting: Good Morning (username) */}
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-serif italic text-pink-600 font-black leading-tight">
-                {getGreeting()} {user.firstName || user.name || "Ella"}
-              </h1>
-
-              {/* Cycle Day & Fertile Window Status */}
-              <p className="text-xs sm:text-sm font-semibold text-stone-700 leading-snug">
+              <p className="text-sm sm:text-base font-serif italic text-stone-800 font-bold leading-snug group-hover:text-pink-700 transition-colors">
+                {companionReaction ? (
+                  <span className="flex items-center justify-center gap-1.5 text-pink-600">
+                    <span>{companionReaction.emoji}</span>
+                    <span>"{companionReaction.message}"</span>
+                  </span>
+                ) : (
+                  `"${companionPrompts[promptIndex] || companionPrompts[0]}"`
+                )}
+              </p>
+              
+              {/* Health status context line under speech bubble */}
+              <p className="text-[11px] text-stone-500 font-medium">
                 {avatarSpeech.cycleStatusText}
               </p>
-
-              {/* Companion Speech Bubble */}
-              <div className="pt-1">
-                <p className="text-xs text-stone-500 italic font-serif bg-white/70 backdrop-blur-sm px-3.5 py-2 rounded-2xl border border-pink-100/60 shadow-xs inline-block max-w-xl">
-                  "{avatarSpeech.companionMessage}"
-                </p>
-              </div>
             </div>
           </div>
 
-          {/* Quick Avatar Dashboard Launcher Pill */}
-          <div className="shrink-0 self-stretch md:self-auto flex md:flex-col justify-end gap-2">
-            <button
-              onClick={() => setIsAvatarModalOpen(true)}
-              className="px-4 py-2.5 bg-gradient-to-r from-pink-500 to-rose-400 hover:from-pink-600 hover:to-rose-500 text-white rounded-2xl font-black text-[9px] uppercase tracking-widest shadow-md transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
-            >
-              <span>🌸 Avatar Studio</span>
-              <span className="text-[10px]">→</span>
-            </button>
-          </div>
         </div>
       </section>
 
@@ -2130,22 +2343,49 @@ const Dashboard: React.FC<DashboardProps> = ({
                       Lvl {avatarProgression.level}
                     </span>
                   </div>
-                  <button 
-                    onClick={() => {
-                      setIsAvatarModalOpen(true);
-                      setIsMenuOpen(false);
-                    }}
-                    className="w-full py-2.5 px-4 bg-white hover:bg-pink-50/70 border border-pink-200/60 rounded-2xl text-[10px] font-black uppercase tracking-widest text-pink-600 transition-all active:scale-[0.98] shadow-sm flex items-center justify-between cursor-pointer"
-                  >
-                    <span className="flex items-center gap-2">
-                      <AvatarVisual avatar={currentAvatar} size="sm" />
-                      <span className="truncate">{currentAvatar.name || 'Amara'} Studio</span>
-                    </span>
-                    <span className="text-xs">➔</span>
-                  </button>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => {
+                        handleOpenCompanionChat();
+                        setIsMenuOpen(false);
+                      }}
+                      className="flex-1 py-2.5 px-3 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-wider transition-all active:scale-[0.98] shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <AvatarVisual avatar={{ ...currentAvatar, mood: avatarMood.mood }} size="xs" />
+                      <span className="truncate">Chat with {currentAvatar.name || 'Amara'}</span>
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setIsAvatarModalOpen(true);
+                        setIsMenuOpen(false);
+                      }}
+                      className="py-2.5 px-3 bg-white hover:bg-pink-50/70 border border-pink-200/60 rounded-2xl text-[10px] font-black uppercase tracking-wider text-pink-600 transition-all active:scale-[0.98] shadow-sm flex items-center justify-center cursor-pointer"
+                      title="Studio & Customization"
+                    >
+                      <span>Studio</span>
+                    </button>
+                  </div>
                   <p className="text-[8.5px] text-gray-500 italic text-center">
                     Dashboard, customizations, styles & rewards
                   </p>
+                </div>
+
+                {/* Learn & Education Sanctuary (Put back learn feature) */}
+                <div className="bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-pink-500/10 p-4 rounded-3xl border border-indigo-100 shadow-[0_4px_15px_rgba(99,102,241,0.05)]">
+                  <p className="text-[9px] font-black uppercase tracking-wider text-indigo-600 mb-2">Education & Wisdom</p>
+                  <button 
+                    onClick={() => {
+                      onTabChange?.('edu');
+                      setIsMenuOpen(false);
+                    }}
+                    className="w-full py-2.5 px-4 bg-white hover:bg-indigo-50/50 border border-indigo-200/50 rounded-2xl text-[10px] font-black uppercase tracking-widest text-indigo-600 transition-all active:scale-[0.98] shadow-sm flex items-center justify-between cursor-pointer"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="text-sm">📚</span>
+                      <span>Learn & Guides Hub</span>
+                    </span>
+                    <span className="text-xs">➔</span>
+                  </button>
                 </div>
 
                 {/* Personal Diary Card */}
@@ -2689,6 +2929,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         user={user}
         setUser={setUser}
         onOpenLogModal={onOpenLogModal}
+        onOpenChat={handleOpenCompanionChat}
         onNavigateTab={(tab) => {
           setIsAvatarModalOpen(false);
           if (onTabChange) onTabChange(tab);

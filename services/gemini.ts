@@ -139,3 +139,77 @@ export async function getLoveNoteIdeas(phase: string): Promise<string[]> {
   }
   return ["Just thinking about you and how amazing you are. ✨", "I'm here for whatever you need today, my love.", "You're doing so much, don't forget how much you're appreciated."];
 }
+
+export interface CompanionChatPayload {
+  avatarId: string;
+  avatarName: string;
+  userName: string;
+  userMessage: string;
+  wellnessContext: {
+    cyclePhase?: string;
+    cycleDay?: number;
+    periodStatus?: string;
+    symptoms?: string[];
+    isPregnancyMode?: boolean;
+    pregnancyWeek?: number;
+    isPostpartumMode?: boolean;
+    postpartumDays?: number;
+    recentMood?: string;
+    waterIntake?: number;
+    waterGoal?: number;
+    wellnessGoals?: string[];
+  };
+  history?: { role: 'user' | 'assistant'; content: string }[];
+}
+
+export interface CompanionChatResponse {
+  reply: string;
+  suggestedPrompts?: string[];
+}
+
+export async function sendCompanionChatMessage(payload: CompanionChatPayload): Promise<CompanionChatResponse> {
+  try {
+    const data = await fetchGeminiProxy("companion-chat", payload);
+    if (data?.reply) {
+      return {
+        reply: data.reply,
+        suggestedPrompts: data.suggestedPrompts || [
+          "Log today's symptoms 📝",
+          "How is my cycle today? 🌸",
+          "Give me a self-care tip ✨"
+        ]
+      };
+    }
+  } catch (error) {
+    console.warn("Companion chat proxy failed:", error);
+  }
+
+  // Graceful client fallback
+  const name = payload.userName || 'beautiful';
+  const avatarId = payload.avatarId || 'amara';
+  const day = payload.wellnessContext?.cycleDay || 1;
+  const phase = payload.wellnessContext?.cyclePhase || 'menstrual';
+
+  if (avatarId === 'zainab') {
+    return {
+      reply: `You're on Day ${day} of your cycle today, ${name}! ⚡ Take it one empowered step at a time. Grab your water, rest when needed, and know that you are stronger than any symptom. How can I boost you right now?`,
+      suggestedPrompts: ["Log my symptoms 📝", "Boost of energy tips ✨", "Hydration check 💧"]
+    };
+  } else if (avatarId === 'naomi') {
+    return {
+      reply: `Peace be with you, ${name} 🌿. You are in your ${phase} phase (Day ${day}). Take a deep, gentle breath and soften your shoulders. I am holding space for you today. How is your heart feeling?`,
+      suggestedPrompts: ["Feeling a bit tired 🌙", "Need peaceful reflection 🍃", "Log my symptoms 📝"]
+    };
+  } else if (avatarId === 'amina') {
+    return {
+      reply: `Hello lovely ${name}! ☀️ Day ${day} of your cycle is another chance to shine and treat your body like royalty! Remember to sip water and smile today! What can we conquer together?`,
+      suggestedPrompts: ["Feeling great today! 🌸", "Need some cheer 💖", "Log today's symptoms 📝"]
+    };
+  }
+
+  return {
+    reply: `You’re on Day ${day} of your cycle today, ${name} 🌸. Take it easy, stay cozy, and stay hydrated. How are your body and feelings doing right now? I'm always right here with you.`,
+    suggestedPrompts: ["Log my symptoms 📝", "Tips for today's phase 🌸", "Hydration check 💧"]
+  };
+}
+

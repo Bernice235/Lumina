@@ -397,4 +397,77 @@ img, video, canvas, svg, iframe, table {
   transform-origin: top center;
 }
 
+@keyframes companionFloat {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.animate-companion-float {
+  animation: companionFloat 3.8s ease-in-out infinite;
+}
+
+@keyframes companionWave {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  20% {
+    transform: rotate(15deg);
+  }
+  40% {
+    transform: rotate(-10deg);
+  }
+  60% {
+    transform: rotate(13deg);
+  }
+  80% {
+    transform: rotate(-6deg);
+  }
+}
+
+.animate-companion-wave {
+  animation: companionWave 1.4s ease-in-out infinite;
+  transform-origin: 76px 74px;
+}
+
+@keyframes companionBreathe {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+  }
+  50% {
+    transform: translateY(-3px) scale(1.018);
+  }
+}
+
+.animate-companion-breathe {
+  animation: companionBreathe 4.2s ease-in-out infinite;
+}
+
+@keyframes celestialGlow {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(251, 191, 36, 0.45), 0 0 30px rgba(244, 114, 182, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 28px rgba(251, 191, 36, 0.8), 0 0 45px rgba(244, 114, 182, 0.55);
+  }
+}
+
+.animate-celestial-glow {
+  animation: celestialGlow 3.5s ease-in-out infinite;
+}
+
+@keyframes floatPetal {
+  0% { transform: translateY(0px) rotate(0deg); opacity: 0; }
+  30% { opacity: 0.8; }
+  70% { opacity: 0.8; }
+  100% { transform: translateY(-18px) rotate(35deg); opacity: 0; }
+}
+
+.animate-float-petal {
+  animation: floatPetal 3s ease-in-out infinite;
+}
+
 

@@ -4,6 +4,7 @@ import { THEMES } from '../constants';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AvatarVisual } from './AvatarVisual';
 import { AVATAR_PRESETS, SKIN_TONE_PALETTES } from '../services/avatarService';
+import { getAvatarIntroduction, playAvatarIntroduction, stopWelcomeVoice } from '../services/welcomeVoiceService';
 import { 
   Sparkles, 
   Calendar, 
@@ -24,7 +25,9 @@ import {
   Moon,
   PenTool,
   Wind,
-  Plus
+  Plus,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 
 import { syncUser } from '../services/firebaseService';
@@ -47,6 +50,30 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
   // Avatar selection states
   const [selectedAvatarId, setSelectedAvatarId] = useState<AvatarId>(user.avatar?.id || 'amara');
   const [selectedSkinTone, setSelectedSkinTone] = useState<SkinTone>(user.avatar?.skinTone || 'amber');
+  const [isCompanionWaving, setIsCompanionWaving] = useState<boolean>(false);
+  const [isCompanionSpeaking, setIsCompanionSpeaking] = useState<boolean>(false);
+
+  const handleSelectAvatarWithVoice = (id: AvatarId) => {
+    setSelectedAvatarId(id);
+    const preset = AVATAR_PRESETS[id];
+    if (preset) {
+      setSelectedSkinTone(preset.skinTone);
+    }
+    // Trigger animated wave and speech
+    setIsCompanionWaving(true);
+    setTimeout(() => setIsCompanionWaving(false), 2800);
+
+    playAvatarIntroduction(
+      id, 
+      { firstName: name?.trim() || 'Bernice' },
+      {
+        accent: preset?.defaultAccent,
+        personality: preset?.defaultPersonality,
+        onStart: () => setIsCompanionSpeaking(true),
+        onEnd: () => setIsCompanionSpeaking(false)
+      }
+    ).catch(() => {});
+  };
   
   const [lastPeriodStart, setLastPeriodStart] = useState(() => {
     if (user.lastPeriodStart) {
@@ -436,30 +463,75 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                   </p>
                 </div>
 
-                {/* Preview Box */}
-                <div className="bg-gradient-to-r from-pink-50/80 to-rose-50/60 p-4 rounded-3xl border border-pink-100 flex items-center gap-4 shadow-sm">
-                  <AvatarVisual
-                    avatar={{
-                      id: selectedAvatarId,
-                      name: AVATAR_PRESETS[selectedAvatarId]?.name,
-                      skinTone: selectedSkinTone,
-                      hairstyle: AVATAR_PRESETS[selectedAvatarId]?.hairstyle,
-                      headwrap: AVATAR_PRESETS[selectedAvatarId]?.headwrap,
-                      glasses: AVATAR_PRESETS[selectedAvatarId]?.glasses,
-                      outfit: AVATAR_PRESETS[selectedAvatarId]?.outfit
-                    }}
-                    size="lg"
-                  />
-                  <div className="text-left flex-1 min-w-0">
-                    <h4 className="font-serif font-bold text-sm text-pink-700">
-                      {AVATAR_PRESETS[selectedAvatarId]?.name} • {AVATAR_PRESETS[selectedAvatarId]?.title}
-                    </h4>
-                    <p className="text-[10px] text-gray-500 italic leading-snug">
-                      "{AVATAR_PRESETS[selectedAvatarId]?.quote}"
-                    </p>
-                    <span className="inline-block mt-1 text-[8.5px] font-bold text-pink-600 bg-white px-2 py-0.5 rounded-full border border-pink-100">
-                      {AVATAR_PRESETS[selectedAvatarId]?.personality}
-                    </span>
+                {/* Preview Box with Alive Companion Extending Beyond Circular Frame */}
+                <div className="bg-gradient-to-r from-pink-50/90 via-rose-50/70 to-amber-50/50 p-4 sm:p-5 rounded-3xl border border-pink-100 flex flex-col sm:flex-row items-center gap-4 shadow-sm text-left relative overflow-hidden">
+                  <div className="shrink-0 relative">
+                    <AvatarVisual
+                      avatar={{
+                        id: selectedAvatarId,
+                        name: AVATAR_PRESETS[selectedAvatarId]?.name,
+                        skinTone: selectedSkinTone,
+                        hairstyle: AVATAR_PRESETS[selectedAvatarId]?.hairstyle,
+                        headwrap: AVATAR_PRESETS[selectedAvatarId]?.headwrap,
+                        glasses: AVATAR_PRESETS[selectedAvatarId]?.glasses,
+                        outfit: AVATAR_PRESETS[selectedAvatarId]?.outfit,
+                        mood: 'radiant'
+                      }}
+                      size="xl"
+                      showMoodBadge
+                      isSpeaking={isCompanionSpeaking}
+                      isWaving={isCompanionWaving}
+                      interactive
+                      onClick={() => handleSelectAvatarWithVoice(selectedAvatarId)}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleSelectAvatarWithVoice(selectedAvatarId)}
+                      className="absolute -bottom-2 -right-2 px-2 py-1 rounded-full bg-pink-500 hover:bg-pink-600 text-white text-[9px] font-black uppercase tracking-wider shadow-md flex items-center gap-1 active:scale-95 transition-all cursor-pointer"
+                      title="Tap to make companion speak and wave"
+                    >
+                      {isCompanionSpeaking ? <VolumeX className="w-2.5 h-2.5 animate-spin" /> : <Volume2 className="w-2.5 h-2.5" />}
+                      <span>{isCompanionSpeaking ? 'Speaking' : 'Wave 👋'}</span>
+                    </button>
+                  </div>
+
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <h4 className="font-serif font-black text-base text-pink-700">
+                        {AVATAR_PRESETS[selectedAvatarId]?.name} • {AVATAR_PRESETS[selectedAvatarId]?.title}
+                      </h4>
+                      <span className="text-[9px] font-black uppercase tracking-wider text-pink-600 bg-white px-2.5 py-0.5 rounded-full border border-pink-100 shadow-xs">
+                        {AVATAR_PRESETS[selectedAvatarId]?.emoji} {AVATAR_PRESETS[selectedAvatarId]?.defaultPersonality}
+                      </span>
+                    </div>
+
+                    {/* Interactive Introduction Speech Bubble */}
+                    <div className="bg-white/90 backdrop-blur-xs p-3 rounded-2xl border border-pink-100/80 shadow-xs relative">
+                      <div className="absolute -top-1.5 left-6 w-3 h-3 bg-white border-t border-l border-pink-100 transform rotate-45" />
+                      <p className="text-xs text-stone-800 font-medium leading-relaxed italic">
+                        "{getAvatarIntroduction(selectedAvatarId, name?.trim() || 'Bernice', AVATAR_PRESETS[selectedAvatarId]?.defaultPersonality).displayText}"
+                      </p>
+                      
+                      <div className="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-pink-50 text-[10px]">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (isCompanionSpeaking) {
+                              stopWelcomeVoice();
+                              setIsCompanionSpeaking(false);
+                            } else {
+                              handleSelectAvatarWithVoice(selectedAvatarId);
+                            }
+                          }}
+                          className="flex items-center gap-1.5 font-bold text-pink-600 hover:text-pink-700 cursor-pointer"
+                        >
+                          <span>{isCompanionSpeaking ? '⏹️ Stop Voice' : '🔊 Hear Introduction'}</span>
+                        </button>
+                        <span className="text-[9px] text-stone-400">
+                          {AVATAR_PRESETS[selectedAvatarId]?.bio}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -472,14 +544,11 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                       <button
                         key={id}
                         type="button"
-                        onClick={() => {
-                          setSelectedAvatarId(id);
-                          setSelectedSkinTone(preset.skinTone);
-                        }}
-                        className={`p-2 rounded-2xl border text-center transition-all cursor-pointer ${
+                        onClick={() => handleSelectAvatarWithVoice(id)}
+                        className={`p-2.5 rounded-2xl border text-center transition-all cursor-pointer relative overflow-visible ${
                           isSelected
-                            ? 'bg-pink-50 border-pink-400 ring-2 ring-pink-300 shadow-sm'
-                            : 'bg-white border-stone-200 hover:bg-stone-50'
+                            ? 'bg-pink-50/90 border-pink-400 ring-2 ring-pink-300 shadow-md scale-[1.02]'
+                            : 'bg-white border-stone-200 hover:bg-stone-50 hover:border-pink-200'
                         }`}
                       >
                         <AvatarVisual
@@ -489,7 +558,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                             hairstyle: preset.hairstyle,
                             headwrap: preset.headwrap,
                             glasses: preset.glasses,
-                            outfit: preset.outfit
+                            outfit: preset.outfit,
+                            mood: 'radiant'
                           }}
                           size="sm"
                           className="mx-auto mb-1"
@@ -497,8 +567,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                         <span className="font-serif font-bold text-xs text-stone-800 block truncate">
                           {preset.name}
                         </span>
-                        <span className="text-[8px] text-stone-400 uppercase font-mono block">
-                          {preset.emoji}
+                        <span className="text-[8.5px] text-pink-600 font-semibold block truncate">
+                          {preset.emoji} {preset.title.split('The ')[1] || preset.title}
                         </span>
                       </button>
                     );

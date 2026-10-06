@@ -8,7 +8,11 @@ import {
   Headwrap, 
   Glasses, 
   Outfit, 
-  AvatarActionLog 
+  AvatarActionLog,
+  AvatarMood,
+  AvatarAccent,
+  AvatarPersonalityStyle,
+  CompanionRelationshipStage
 } from '../types';
 import { syncUser } from './firebaseService';
 
@@ -25,11 +29,16 @@ export const AVATAR_PRESETS: Record<AvatarId, {
   outfit: Outfit;
   accentColor: string;
   emoji: string;
+  defaultAccent: AvatarAccent;
+  defaultPersonality: AvatarPersonalityStyle;
+  bio: string;
+  traits: string[];
+  personalityDescription: string;
 }> = {
   amara: {
     name: 'Amara',
-    title: 'The Radiant Bloom',
-    personality: 'Warm, nurturing, botanical, and soothing guide',
+    title: 'Your supportive wellness companion',
+    personality: 'Warm, gentle, encouraging guide',
     quote: 'Your body is a blooming garden. Honor each season with love.',
     skinTone: 'amber',
     hairstyle: 'afro_puffs',
@@ -37,24 +46,70 @@ export const AVATAR_PRESETS: Record<AvatarId, {
     glasses: 'none',
     outfit: 'floral_sundress',
     accentColor: '#f43f5e',
-    emoji: '🌸'
+    emoji: '🌸',
+    defaultAccent: 'us',
+    defaultPersonality: 'supportive',
+    traits: ['Warm', 'Gentle', 'Encouraging'],
+    personalityDescription: 'Your supportive wellness companion.',
+    bio: 'Guides you through your cycle, symptoms, wellness goals, and daily check-ins with tender grace.'
   },
   zainab: {
     name: 'Zainab',
-    title: 'The Serene Oasis',
-    personality: 'Mindful, calm, grounded, and deeply reflective',
-    quote: 'Find tranquility in your stillness. Peace lives within your breath.',
+    title: 'Your motivational wellness coach',
+    personality: 'Friendly, motivational, energetic coach',
+    quote: 'Energy flows where attention goes. You have the power to thrive.',
     skinTone: 'chestnut',
     hairstyle: 'braided_crown',
     headwrap: 'silk_wrap',
     glasses: 'none',
     outfit: 'linen_loungewear',
     accentColor: '#8b5cf6',
-    emoji: '🌿'
+    emoji: '⚡',
+    defaultAccent: 'west_african',
+    defaultPersonality: 'motivational',
+    traits: ['Friendly', 'Motivational', 'Energetic'],
+    personalityDescription: 'Your motivational energy & wellness coach.',
+    bio: 'Ignites your motivation, movement, empowering habits, and positive energy every single day.'
+  },
+  naomi: {
+    name: 'Naomi',
+    title: 'Your calm sanctuary guide',
+    personality: 'Calm, wise, reflective mentor',
+    quote: 'Find peace in your stillness. Let your breath anchor your heart.',
+    skinTone: 'honey',
+    hairstyle: 'sleek_bob',
+    headwrap: 'minimal_band',
+    glasses: 'round',
+    outfit: 'linen_loungewear',
+    accentColor: '#10b981',
+    emoji: '🌿',
+    defaultAccent: 'uk',
+    defaultPersonality: 'calm',
+    traits: ['Calm', 'Wise', 'Reflective'],
+    personalityDescription: 'Your calm, wise, and reflective guide.',
+    bio: 'Provides mindful grounding, peaceful perspective, deep emotional soothing, and restorative clarity.'
+  },
+  amina: {
+    name: 'Amina',
+    title: 'Your cheerful wellness cheerleader',
+    personality: 'Cheerful, positive, supportive companion',
+    quote: 'Every new day is a fresh bloom of joy. Smile and shine bright!',
+    skinTone: 'peach',
+    hairstyle: 'short_waves',
+    headwrap: 'silk_wrap',
+    glasses: 'none',
+    outfit: 'athleisure_wrap',
+    accentColor: '#ec4899',
+    emoji: '☀️',
+    defaultAccent: 'us',
+    defaultPersonality: 'cheerful',
+    traits: ['Cheerful', 'Positive', 'Supportive'],
+    personalityDescription: 'Your cheerful, uplifting wellness cheerleader.',
+    bio: 'Brings sunshine, optimism, celebratory high-fives, and joyful encouragement to your health journey.'
   },
   kemi: {
     name: 'Kemi',
-    title: 'The Bright Spirit',
+    title: 'Your vibrant wellness guide',
     personality: 'Energetic, uplifting, empowering, and vibrant guide',
     quote: 'Step boldly into your power. Your radiance lights up every room.',
     skinTone: 'espresso',
@@ -63,7 +118,12 @@ export const AVATAR_PRESETS: Record<AvatarId, {
     glasses: 'cat_eye',
     outfit: 'athleisure_wrap',
     accentColor: '#f59e0b',
-    emoji: '☀️'
+    emoji: '✨',
+    defaultAccent: 'west_african',
+    defaultPersonality: 'cheerful',
+    traits: ['Vibrant', 'Empowering', 'Passionate'],
+    personalityDescription: 'Your vibrant, spirited wellness guide.',
+    bio: 'Empowers you with movement, daily motivation, positive affirmations, and energizing habits.'
   },
   nia: {
     name: 'Nia',
@@ -76,7 +136,12 @@ export const AVATAR_PRESETS: Record<AvatarId, {
     glasses: 'round',
     outfit: 'cozy_kimono',
     accentColor: '#10b981',
-    emoji: '🍃'
+    emoji: '🍃',
+    defaultAccent: 'uk',
+    defaultPersonality: 'mindful',
+    traits: ['Intuitive', 'Balanced', 'Holistic'],
+    personalityDescription: 'Your holistic rhythm & balance guide.',
+    bio: 'Attunes your hydration, nutrition, bio-rhythm equilibrium, and mindful cycle tracking.'
   },
   maya: {
     name: 'Maya',
@@ -89,7 +154,12 @@ export const AVATAR_PRESETS: Record<AvatarId, {
     glasses: 'none',
     outfit: 'flowing_tunic',
     accentColor: '#ec4899',
-    emoji: '🌺'
+    emoji: '🌺',
+    defaultAccent: 'irish',
+    defaultPersonality: 'supportive',
+    traits: ['Gentle', 'Poetic', 'Restorative'],
+    personalityDescription: 'Your poetic, restorative sanctuary guide.',
+    bio: 'Nurtures your diary reflections, mood tracking, gentle self-compassion, and creative flow.'
   },
   aria: {
     name: 'Aria',
@@ -102,9 +172,102 @@ export const AVATAR_PRESETS: Record<AvatarId, {
     glasses: 'square',
     outfit: 'cozy_kimono',
     accentColor: '#d97706',
-    emoji: '✨'
+    emoji: '🌟',
+    defaultAccent: 'australian',
+    defaultPersonality: 'cheerful',
+    traits: ['Playful', 'Spirited', 'Cheering'],
+    personalityDescription: 'Your bright, playful wellness friend.',
+    bio: 'Cheers for every milestone, hydration goal, symptom log, and streak with infectious warmth.'
   }
 };
+
+/**
+ * Computes companion mood based on current wellness data
+ */
+export function calculateAvatarMood(user: User, avatar: UserAvatar): {
+  mood: AvatarMood;
+  label: string;
+  emoji: string;
+  description: string;
+  auraGradient: string;
+} {
+  // If user explicitly configured avatar mood, prioritize it unless auto-wellness
+  if (avatar.mood) {
+    const moodMap: Record<AvatarMood, { label: string; emoji: string; description: string; auraGradient: string }> = {
+      radiant: { label: 'Radiant', emoji: '🌸', description: 'Glowing with high vitality and inner light', auraGradient: 'from-pink-400 via-rose-300 to-amber-300' },
+      cozy: { label: 'Cozy & Gentle', emoji: '🍵', description: 'Nesting gently, resting, and restoring energy', auraGradient: 'from-amber-400 via-rose-200 to-pink-200' },
+      serene: { label: 'Serene & Mindful', emoji: '🌿', description: 'Centered in peaceful emotional equilibrium', auraGradient: 'from-emerald-400 via-teal-200 to-purple-200' },
+      nurturing: { label: 'Nurturing', emoji: '🤰🏽', description: 'Surrounding you with maternal and healing warmth', auraGradient: 'from-rose-400 via-pink-300 to-purple-300' },
+      energized: { label: 'Energized', emoji: '☀️', description: 'Inspired, active, and vibrating with strength', auraGradient: 'from-amber-500 via-yellow-300 to-pink-400' }
+    };
+    if (moodMap[avatar.mood]) {
+      return { mood: avatar.mood, ...moodMap[avatar.mood] };
+    }
+  }
+
+  // Auto-calculated from health data:
+  if (user.isPregnancyMode || user.isPostpartumMode) {
+    return {
+      mood: 'nurturing',
+      label: 'Nurturing & Gentle',
+      emoji: user.isPregnancyMode ? '🤰🏽' : '👶🏽',
+      description: user.isPregnancyMode ? 'Blooming with maternal radiance and deep care' : 'Gently holding space for healing fourth-trimester rest',
+      auraGradient: 'from-rose-400 via-pink-300 to-purple-300'
+    };
+  }
+
+  // Menstrual phase check
+  const lastStartStr = user.lastPeriodStart || (user.periods && user.periods[0]?.startDate);
+  const cycleLen = user.cycleLength || 28;
+  const periodLen = user.periodLength || 5;
+
+  if (lastStartStr) {
+    const sDate = new Date(lastStartStr);
+    const today = new Date();
+    const diffDays = Math.floor((today.getTime() - sDate.getTime()) / (1000 * 60 * 60 * 24));
+    const cycleDay = ((diffDays % cycleLen) + cycleLen) % cycleLen + 1;
+    const daysToOvulation = (cycleLen - 14) - cycleDay;
+
+    if (cycleDay <= periodLen) {
+      return {
+        mood: 'cozy',
+        label: 'Cozy & Comforting',
+        emoji: '🍵',
+        description: 'Attuned to your period rest: holding gentle space for comfort and warmth',
+        auraGradient: 'from-rose-300 via-pink-200 to-amber-200'
+      };
+    }
+
+    if (daysToOvulation >= -1 && daysToOvulation <= 2) {
+      return {
+        mood: 'radiant',
+        label: 'Peak Radiance',
+        emoji: '✨',
+        description: 'Vibrant, open, and attuned to your fertile window and high vitality',
+        auraGradient: 'from-pink-400 via-rose-300 to-amber-300'
+      };
+    }
+  }
+
+  // Active streak
+  if ((avatar.wellnessStreak || 0) >= 5) {
+    return {
+      mood: 'energized',
+      label: 'Energized & Joyful',
+      emoji: '☀️',
+      description: 'Celebrating your unbroken self-care rhythm and glowing momentum',
+      auraGradient: 'from-amber-400 via-orange-300 to-pink-300'
+    };
+  }
+
+  return {
+    mood: 'serene',
+    label: 'Serene Sanctuary',
+    emoji: '🌿',
+    description: 'Calm, grounded, and peacefully aligned with your wellness flow',
+    auraGradient: 'from-purple-300 via-pink-200 to-teal-200'
+  };
+}
 
 export const SKIN_TONE_PALETTES: Record<SkinTone, { label: string; base: string; shadow: string; highlight: string }> = {
   fair: { label: 'Fair Glow', base: '#fde4df', shadow: '#f3b8ae', highlight: '#ffffff' },
@@ -189,6 +352,9 @@ export function getOrCreateUserAvatar(user: User): UserAvatar {
     xp: 0,
     wellnessStreak: 1,
     selfCareScore: 78,
+    personalityStyle: preset.defaultPersonality || 'supportive',
+    accent: preset.defaultAccent || 'us',
+    mood: 'radiant',
     unlockedOutfits: ['floral_sundress', 'cozy_kimono', 'linen_loungewear', 'athleisure_wrap'],
     unlockedAccessories: ['floral_crown', 'minimal_band', 'round'],
     actionHistory: []
@@ -204,6 +370,9 @@ export function calculateAvatarProgression(user: User, avatar: UserAvatar): {
   tierDescription: string;
   tierBadgeColor: string;
   level: number;
+  relationshipStage: CompanionRelationshipStage;
+  stageDescription: string;
+  unlockedVisuals: string[];
   xpInLevel: number;
   xpForNextLevel: number;
   totalXP: number;
@@ -223,16 +392,38 @@ export function calculateAvatarProgression(user: User, avatar: UserAvatar): {
   const baseXP = (cyclesLogged * 50) + (symptomsLogged * 10) + (moodLogs * 10) + (diaryLogs * 15);
   const totalXP = Math.max(avatar.xp || 0, baseXP + historyXP);
 
-  // Companion Level: Every 100 XP is 1 level
-  const level = Math.max(1, Math.floor(totalXP / 100) + 1);
+  // Companion Level: Progression milestones
+  let level = 1;
+  let relationshipStage: CompanionRelationshipStage = 'New Friend';
+  let stageDescription = 'Getting to know each other gently';
+  let unlockedVisuals: string[] = ['standard_companion'];
+
+  if (totalXP >= 900 || cyclesLogged >= 12) {
+    level = 5;
+    relationshipStage = 'Inner Circle';
+    stageDescription = 'Deep soul sanctuary & bonded sisterhood';
+    unlockedVisuals = ['standard_companion', 'rose_glow_aura', 'botanical_petals', 'golden_halo', 'celestial_crown'];
+  } else if (totalXP >= 500 || cyclesLogged >= 8) {
+    level = 4;
+    relationshipStage = 'Trusted Friend';
+    stageDescription = 'Mutual trust, intuitive check-ins & comfort';
+    unlockedVisuals = ['standard_companion', 'rose_glow_aura', 'botanical_petals', 'golden_halo'];
+  } else if (totalXP >= 250 || cyclesLogged >= 4) {
+    level = 3;
+    relationshipStage = 'Wellness Partner';
+    stageDescription = 'Daily rhythm alignment & shared milestones';
+    unlockedVisuals = ['standard_companion', 'rose_glow_aura', 'botanical_petals'];
+  } else if (totalXP >= 100 || cyclesLogged >= 1) {
+    level = 2;
+    relationshipStage = 'Companion';
+    stageDescription = 'Comfortable daily guidance & friendly warmth';
+    unlockedVisuals = ['standard_companion', 'rose_glow_aura'];
+  }
+
   const xpInLevel = totalXP % 100;
   const xpForNextLevel = 100;
 
   // Progression Tiers
-  // Seedling: 0–5 cycles logged
-  // Blooming: 6+ cycles logged, regular tracking
-  // Radiant: 12+ cycles logged, consistent engagement
-  // Flourishing: 18+ cycles logged, high engagement
   let tier: AvatarTier = 'seedling';
   let tierLabel = 'Seedling';
   let tierDescription = 'New Companion (0–5 cycles logged)';
@@ -267,6 +458,9 @@ export function calculateAvatarProgression(user: User, avatar: UserAvatar): {
     tierDescription,
     tierBadgeColor,
     level,
+    relationshipStage,
+    stageDescription,
+    unlockedVisuals,
     xpInLevel,
     xpForNextLevel,
     totalXP,
@@ -301,14 +495,14 @@ export function getAvatarCompanionSpeech(user: User, avatar: UserAvatar): {
 
   // 1. Pregnancy Mode
   if (user.isPregnancyMode) {
-    const pStart = user.pregnancyStartDate ? new Date(user.pregnancyStartDate) : new Date(Date.now() - 14 * 7 * 86400000);
+    const pStart = user.pregnancyStartDate ? new Date(user.pregnancyStartDate) : new Date(Date.now() - 24 * 7 * 86400000);
     const diffWeeks = Math.max(1, Math.min(42, Math.floor((Date.now() - pStart.getTime()) / (1000 * 60 * 60 * 24 * 7))));
     const trimester = diffWeeks <= 13 ? 1 : diffWeeks <= 27 ? 2 : 3;
 
     return {
       greeting,
-      cycleStatusText: `You are in Week ${diffWeeks} • Trimester ${trimester}`,
-      companionMessage: `You’re doing beautifully. Remember to stay hydrated. Don’t forget your hydration goal.`,
+      cycleStatusText: `Week ${diffWeeks} • Trimester ${trimester}`,
+      companionMessage: `You’re now ${diffWeeks} weeks along. Your baby is growing beautifully.`,
       phaseLabel: `Pregnancy (Week ${diffWeeks})`,
       emoji: '🤰🏽'
     };
@@ -318,8 +512,8 @@ export function getAvatarCompanionSpeech(user: User, avatar: UserAvatar): {
   if (user.isPostpartumMode) {
     return {
       greeting,
-      cycleStatusText: 'Postpartum Nurturing & Restoration Phase',
-      companionMessage: `Recovery takes time. Be kind to yourself and be gentle with yourself today.`,
+      cycleStatusText: 'Postpartum Nurturing & Restoration',
+      companionMessage: 'You’re doing amazing. Recovery takes time, and every small step matters.',
       phaseLabel: 'Postpartum Restoration',
       emoji: '👶🏽'
     };
@@ -330,7 +524,7 @@ export function getAvatarCompanionSpeech(user: User, avatar: UserAvatar): {
   const cycleLen = user.cycleLength || 28;
   const periodLen = user.periodLength || 5;
 
-  let cycleDay = 12; // default
+  let cycleDay = 12;
   let daysToNextPeriod = 16;
   let daysToOvulation = 2;
 
@@ -349,8 +543,8 @@ export function getAvatarCompanionSpeech(user: User, avatar: UserAvatar): {
     const lateDays = Math.abs(daysToNextPeriod);
     return {
       greeting,
-      cycleStatusText: `Your cycle is on Day ${cycleDay} • ${lateDays} days past expected date`,
-      companionMessage: `Hi ${username} 🌸. Your period is a few days past expected. Remember to breathe and listen to your body’s unique pace.`,
+      cycleStatusText: `Cycle Day ${cycleDay} • ${lateDays} days past expected date`,
+      companionMessage: `Your cycle is on Day ${cycleDay}. Listen to your body and honor your unique rhythm.`,
       phaseLabel: 'Cycle Past Expected',
       emoji: '⏳'
     };
@@ -360,21 +554,21 @@ export function getAvatarCompanionSpeech(user: User, avatar: UserAvatar): {
   if (cycleDay <= periodLen) {
     return {
       greeting,
-      cycleStatusText: `Your cycle is on Day ${cycleDay} • Menstrual Phase`,
-      companionMessage: `Take things gently today and prioritize rest.`,
+      cycleStatusText: `Cycle Day ${cycleDay} • Menstrual Phase`,
+      companionMessage: `You’re on Day ${cycleDay} of your cycle today. Take it easy and stay hydrated.`,
       phaseLabel: 'Menstrual Phase',
       emoji: '🩸'
     };
   }
 
-  // Imminent period (Starts in 1-2 days)
-  if (daysToNextPeriod <= 2 && daysToNextPeriod >= 1) {
+  // Fertile Window & Ovulation (Ovulation - 2 to Ovulation + 1)
+  if (daysToOvulation >= -1 && daysToOvulation <= 2) {
     return {
       greeting,
-      cycleStatusText: `Your cycle is on Day ${cycleDay} • Menstrual Phase approaching`,
-      companionMessage: `Hi ${username} 🌸. Your period may begin in ${daysToNextPeriod} ${daysToNextPeriod === 1 ? 'day' : 'days'}. Remember to prepare your comfort kit.`,
-      phaseLabel: 'Pre-Menstrual Window',
-      emoji: '🌸'
+      cycleStatusText: `Cycle Day ${cycleDay} • Fertile Window`,
+      companionMessage: daysToOvulation === 0 ? 'Predicted ovulation is today. You’re currently in your fertile window.' : 'You’re currently in your fertile window.',
+      phaseLabel: 'Ovulation & Fertile Window',
+      emoji: '☀️'
     };
   }
 
@@ -382,35 +576,18 @@ export function getAvatarCompanionSpeech(user: User, avatar: UserAvatar): {
   if (daysToOvulation > 2) {
     return {
       greeting,
-      cycleStatusText: `Your cycle is on Day ${cycleDay} • Follicular Phase`,
-      companionMessage: `Your energy may be increasing today.`,
+      cycleStatusText: `Cycle Day ${cycleDay} • Follicular Phase`,
+      companionMessage: `You’re in your follicular phase. Your vitality and focus are expanding.`,
       phaseLabel: 'Follicular Phase',
       emoji: '🌱'
-    };
-  }
-
-  // Fertile Window & Ovulation (Ovulation - 2 to Ovulation + 1)
-  if (daysToOvulation >= -1 && daysToOvulation <= 2) {
-    const windowText = daysToOvulation === 0 
-      ? 'Predicted ovulation is today 🌟' 
-      : daysToOvulation > 0 
-      ? `Your fertile window starts in ${daysToOvulation} days.`
-      : 'Peak fertility window is closing.';
-
-    return {
-      greeting,
-      cycleStatusText: `Your cycle is on Day ${cycleDay}. ${daysToOvulation > 0 ? `Your fertile window starts in ${daysToOvulation} days.` : 'Your fertile window is active.'}`,
-      companionMessage: `Your fertile window is active today.`,
-      phaseLabel: 'Ovulation & Fertile Window',
-      emoji: '☀️'
     };
   }
 
   // Luteal Phase (Post Ovulation)
   return {
     greeting,
-    cycleStatusText: `Your cycle is on Day ${cycleDay} • Luteal Phase (Period in ${daysToNextPeriod} days)`,
-    companionMessage: `The body is turning inward, ${username} 🍂. Honor your boundaries, nourish yourself with warm slow foods, and protect your peace.`,
+    cycleStatusText: `Cycle Day ${cycleDay} • Luteal Phase (Period in ${daysToNextPeriod} days)`,
+    companionMessage: `You’re in your luteal phase. Slow down gently and listen to what your body needs.`,
     phaseLabel: 'Luteal Phase',
     emoji: '🍂'
   };

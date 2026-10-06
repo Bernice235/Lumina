@@ -214,6 +214,196 @@ app.post("/api/gemini/product-advice", async (req, res) => {
   }
 });
 
+// Dedicated Interactive Avatar Companion Chat Endpoint
+app.post("/api/gemini/companion-chat", async (req, res) => {
+  const { 
+    avatarId = 'amara', 
+    avatarName = 'Amara', 
+    userName = 'Bernice', 
+    userMessage, 
+    wellnessContext = {},
+    history = []
+  } = req.body;
+
+  const {
+    cyclePhase = 'menstrual',
+    cycleDay = 1,
+    periodStatus = '',
+    symptoms = [],
+    isPregnancyMode = false,
+    pregnancyWeek = 0,
+    isPostpartumMode = false,
+    postpartumDays = 0,
+    recentMood = '',
+    waterIntake = 0,
+    waterGoal = 2000,
+    wellnessGoals = []
+  } = wellnessContext;
+
+  // Build persona instructions based on avatar
+  let personaTone = "Warm, gentle, encouraging, and soothing";
+  let greetingStyle = "Warm sisterly affection, gentle botanical reminders, and loving reassurance";
+
+  if (avatarId === 'zainab') {
+    personaTone = "Friendly, motivational, energetic, and empowering";
+    greetingStyle = "Upbeat enthusiasm, empowering encouragement, active celebration of small wins";
+  } else if (avatarId === 'naomi') {
+    personaTone = "Calm, wise, reflective, and serene";
+    greetingStyle = "Deep grounding stillness, mindful breath reminders, reflective wisdom, and quiet peace";
+  } else if (avatarId === 'amina') {
+    personaTone = "Cheerful, positive, supportive, and bright";
+    greetingStyle = "Sunny optimism, joyful encouragement, radiant smiles, and uplifting cheerleader warmth";
+  } else if (avatarId === 'kemi') {
+    personaTone = "Vibrant, bold, inspiring, and energizing";
+    greetingStyle = "Fiery confidence, passionate sisterhood, motivating affirmations";
+  }
+
+  // Fallback response generator if API is unavailable
+  const generateFallbackResponse = (query: string): { reply: string; suggestedPrompts: string[] } => {
+    const q = (query || '').toLowerCase();
+    const name = userName || 'Bernice';
+    const symList = symptoms.length > 0 ? symptoms.join(', ') : 'no major symptoms';
+
+    if (isPregnancyMode) {
+      if (q.includes('baby') || q.includes('week') || q.includes('how')) {
+        return {
+          reply: `Congratulations on reaching Week ${pregnancyWeek || 24} of pregnancy, ${name}! 🌸 Your body is doing something miraculous every single second. Make sure you're resting your feet, drinking warm nourishing fluids, and honoring the gentle kicks of life inside you.`,
+          suggestedPrompts: ["What should I eat today? 🥑", "Prenatal gentle stretch 🧘‍♀️", "Hydration check 💧"]
+        };
+      }
+    }
+
+    if (isPostpartumMode) {
+      return {
+        reply: `You are doing amazing, sweet ${name}. Recovery takes time, and every single small step matters. Please give yourself infinite grace today—rest when baby rests, and remember to hydrate. 🤍`,
+        suggestedPrompts: ["Gentle pelvic floor care 🌸", "Postpartum hydration 💧", "Emotional check-in ✨"]
+      };
+    }
+
+    if (q.includes('cramp') || q.includes('pain') || q.includes('period') || q.includes('day 3') || (cycleDay && cycleDay <= 5)) {
+      if (avatarId === 'zainab') {
+        return {
+          reply: `You’re on Day ${cycleDay || 3} of your cycle today, ${name}! ⚡ Let’s tackle this gently: grab your heating pad, sip peppermint or ginger tea, and remember that resting is a powerful act of strength. How are your cramps feeling right this minute?`,
+          suggestedPrompts: ["Cramps are intense right now 🩹", "Need soothing music 🎶", "Log pain intensity 📝"]
+        };
+      } else if (avatarId === 'naomi') {
+        return {
+          reply: `Peace be with you, ${name}. On Day ${cycleDay || 3} of your cycle, your sacred temple is shedding and renewing. Take one slow, restorative breath right now. Soften your shoulders. How are your cramps feeling today?`,
+          suggestedPrompts: ["Feeling a bit tense 🌿", "Guidance on heat therapy 🫖", "Log my symptoms 📝"]
+        };
+      } else if (avatarId === 'amina') {
+        return {
+          reply: `Sending you the biggest, warmest hug, ${name}! 🌸 Day ${cycleDay || 3} can be tender, but you are so strong and wonderful. Have you got a warm blanket and your water bottle nearby? How are your cramps feeling?`,
+          suggestedPrompts: ["Feeling a little better 😊", "Could use a boost 💖", "Log today's symptoms 📝"]
+        };
+      }
+      return {
+        reply: `You’re on Day ${cycleDay || 3} of your cycle today, ${name} 🌸. Take it easy, keep warm, and stay hydrated. How are your cramps feeling right now? Remember you don't have to push yourself today.`,
+        suggestedPrompts: ["Cramps are manageable 🌿", "Feeling fatigued 😴", "Log my symptoms 📝"]
+      };
+    }
+
+    if (q.includes('fatigue') || q.includes('tired') || q.includes('sleep') || symptoms.some((s: string) => s.toLowerCase().includes('fatigue'))) {
+      return {
+        reply: `I noticed you logged fatigue, ${name} 🌙. Are you feeling a bit better today? When your progesterone or iron shifts, your energy naturally seeks stillness. Allow yourself a 20-minute restorative nap or an early bedtime tonight.`,
+        suggestedPrompts: ["Still feeling quite tired 😴", "A bit more energized today ✨", "Hydration check 💧"]
+      };
+    }
+
+    if (q.includes('water') || q.includes('hydrat')) {
+      const remaining = Math.max(0, waterGoal - waterIntake);
+      return {
+        reply: `Hydration is your natural glow elixir, ${name}! 💧 You've reached ${waterIntake}ml out of your ${waterGoal}ml daily goal (${remaining}ml to go). Take a refreshing, mindful sip right now to hydrate your cells and soothe muscle cramps.`,
+        suggestedPrompts: ["Logged 250ml water 💧", "Why does water help cramps? 🌸", "Cycle check-in ✨"]
+      };
+    }
+
+    if (q.includes('check-in') || q.includes('good morning') || q.includes('hello') || q.includes('hi')) {
+      if (avatarId === 'zainab') {
+        return {
+          reply: `Good morning, ${name}! ⚡ I am so pumped to walk alongside you today. You’re currently in your ${cyclePhase} phase. How are your energy levels and how are you feeling inside?`,
+          suggestedPrompts: ["Feeling energetic 🚀", "A bit sluggish 😴", "Log symptoms 📝"]
+        };
+      } else if (avatarId === 'naomi') {
+        return {
+          reply: `Good morning, ${name} 🌿. Welcome to a fresh dawn. In your ${cyclePhase} phase, honor the rhythm of your body. Did you sleep well last night, and would you like to log any morning symptoms?`,
+          suggestedPrompts: ["Slept very deeply 🌙", "Woke up restless 🍃", "Log my symptoms 📝"]
+        };
+      } else if (avatarId === 'amina') {
+        return {
+          reply: `Good morning, sunshine ${name}! ☀️ So happy to see your radiant face! How are you feeling today? Would you like to log any symptoms or set a joyful intention together?`,
+          suggestedPrompts: ["Ready for a great day! ✨", "Feeling crampy/tired 🩹", "Hydration check 💧"]
+        };
+      }
+      return {
+        reply: `Good morning, ${name} 🌞. I hope you slept well and woke up feeling cherished. You're on Day ${cycleDay || 1} (${cyclePhase} phase). How are you feeling today, and would you like to log any symptoms?`,
+        suggestedPrompts: ["Feeling peaceful 🌸", "Need to log symptoms 📝", "Tips for today's phase ✨"]
+      };
+    }
+
+    // Default empathetic guidance
+    return {
+      reply: `I'm right here with you, ${name} 💖. In your ${cyclePhase} phase, listening to your body's subtle whispers is the greatest kindness you can offer yourself. What wellness focus would feel most supportive right now?`,
+      suggestedPrompts: ["Check my cycle phase 🌸", "Self-care suggestions ✨", "Log how I'm feeling 📝"]
+    };
+  };
+
+  try {
+    if (!apiKey || isGeminiBlocked) {
+      return res.json(generateFallbackResponse(userMessage));
+    }
+
+    const systemInstruction = `You are ${avatarName}, an interactive wellness avatar companion inside Lumina, an empowering feminine health & cycle tracking application.
+You are talking directly to ${userName}.
+Your personality is strictly: ${personaTone}.
+Your greeting & communication style: ${greetingStyle}.
+
+CRITICAL USER WELLNESS CONTEXT:
+- Menstrual Cycle Phase: ${cyclePhase} (Day ${cycleDay} of cycle)
+- Period / Flow status: ${periodStatus || 'Active tracking'}
+- Pregnancy Mode: ${isPregnancyMode ? `Yes (Week ${pregnancyWeek})` : 'No'}
+- Postpartum Mode: ${isPostpartumMode ? `Yes (${postpartumDays} days postpartum)` : 'No'}
+- Recently Logged Symptoms: ${symptoms.length > 0 ? symptoms.join(', ') : 'None logged yet'}
+- Recent Mood: ${recentMood || 'Balanced'}
+- Hydration Status: ${waterIntake}ml of ${waterGoal}ml goal
+- User's Wellness Goals: ${wellnessGoals.length > 0 ? wellnessGoals.join(', ') : 'Mindful cycle health, symptom relief'}
+
+RULES FOR YOUR RESPONSES:
+1. Speak in your distinct personality (${avatarName}: ${personaTone}).
+2. Directly reference user's wellness info when relevant (e.g. "You're on Day ${cycleDay} of your cycle today. How are your cramps feeling?", "I noticed you logged fatigue yesterday...", "Congratulations on reaching Week ${pregnancyWeek}...").
+3. Keep responses warm, supportive, concise (2-4 sentences max), conversational, and delightfully caring.
+4. Provide safe self-care, hydration reminders, gentle encouragement, or symptom reassurance. Never diagnose medical conditions, always maintain a supportive sisterly tone.
+5. Address ${userName} warmly. Include appropriate emojis that fit your personality (${avatarId === 'amara' ? '🌸' : avatarId === 'zainab' ? '⚡' : avatarId === 'naomi' ? '🌿' : '☀️'}).
+6. Include 3 short suggested reply prompts for the user in a JSON block or return just the clean text.`;
+
+    // Construct conversation prompt
+    let conversationPrompt = `Conversation History:\n`;
+    for (const msg of history.slice(-6)) {
+      conversationPrompt += `${msg.role === 'user' ? userName : avatarName}: ${msg.content}\n`;
+    }
+    conversationPrompt += `\n${userName}: ${userMessage}\n${avatarName}:`;
+
+    const text = await generateSafeContent({
+      contents: conversationPrompt,
+      systemInstruction
+    });
+
+    if (text) {
+      // Create relevant suggested prompts
+      const defaultPrompts = [
+        "Log today's symptoms 📝",
+        "How is my cycle today? 🌸",
+        "Give me a self-care tip ✨"
+      ];
+      return res.json({ reply: text.trim(), suggestedPrompts: defaultPrompts });
+    }
+    return res.json(generateFallbackResponse(userMessage));
+  } catch (error) {
+    console.warn("Companion chat proxy failed, falling back safely:", error);
+    return res.json(generateFallbackResponse(userMessage));
+  }
+});
+
 app.post("/api/gemini/welcome-voice", async (req, res) => {
   const { name, text: customText } = req.body;
   try {
