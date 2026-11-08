@@ -21,6 +21,7 @@ import {
   getUserFirstName 
 } from '../services/welcomeVoiceService';
 import { sendCompanionChatMessage } from '../services/gemini';
+import { calculateCycleSyncData } from '../services/cycleSyncService';
 import { 
   ArrowLeft, 
   Send, 
@@ -95,17 +96,10 @@ export const CompanionChat: React.FC<CompanionChatProps> = ({
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const speechRecognitionRef = useRef<any>(null);
 
-  // Calculate current wellness context
-  const cycleDay = user.lastPeriodStart
-    ? Math.max(1, Math.floor((Date.now() - new Date(user.lastPeriodStart).getTime()) / (1000 * 60 * 60 * 24)) + 1)
-    : 3;
-
-  const cyclePhase = (() => {
-    if (cycleDay <= (user.periodLength || 5)) return 'Menstrual';
-    if (cycleDay <= 12) return 'Follicular';
-    if (cycleDay <= 16) return 'Ovulation';
-    return 'Luteal';
-  })();
+  // Calculate synchronized current wellness context
+  const cycleSync = calculateCycleSyncData(user, new Date());
+  const cycleDay = cycleSync.cycleDay;
+  const cyclePhase = cycleSync.phase;
 
   const pregnancyWeek = user.isPregnancyMode && user.pregnancyStartDate
     ? Math.max(1, Math.min(42, Math.floor((Date.now() - new Date(user.pregnancyStartDate).getTime()) / (1000 * 60 * 60 * 24 * 7))))
@@ -115,7 +109,9 @@ export const CompanionChat: React.FC<CompanionChatProps> = ({
     ? `Pregnancy Week ${pregnancyWeek}` 
     : user.isPostpartumMode 
       ? `Postpartum Recovery` 
-      : `Day ${cycleDay} of cycle`;
+      : cycleSync.isLatePeriodMode
+        ? `Day ${cycleSync.daysLate} Late (Late Period Mode)`
+        : `Day ${cycleDay} of cycle (${cycleSync.phaseName}${cycleSync.isWithinFertileWindow && cycleSync.fertilityStatus ? ` • ${cycleSync.fertilityStatus}` : ''})`;
 
   const recentSymptomsList = symptoms.slice(-5).map(s => s.type ? s.type.replace('_', ' ') : 'symptom');
   const recentMoodStr = (user.moodLogs && user.moodLogs.length > 0)

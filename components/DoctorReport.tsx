@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { getPregnancyStats, getBabySize } from '../services/notificationService';
 import { getCycleAnalytics } from '../services/cycleAnalyticsService';
+import { calculateCycleSyncData } from '../services/cycleSyncService';
 
 interface DoctorReportProps {
   isOpen: boolean;
@@ -105,26 +106,11 @@ const DoctorReport: React.FC<DoctorReportProps> = ({ isOpen, onClose, user, symp
   const averagePeriod = cycleAnalytics.averagePeriodLength;
   const averageCycleDisplay = cycleAnalytics.averageCycleDisplay;
   const averagePeriodDisplay = cycleAnalytics.averagePeriodDisplay;
-  const lastPeriodStart = user.lastPeriodStart ? new Date(user.lastPeriodStart) : null;
-  
-  let nextExpectedPeriod = "Unavailable";
-  let nextExpectedPeriodDate: Date | null = null;
-  if (lastPeriodStart) {
-    nextExpectedPeriodDate = new Date(lastPeriodStart.getTime() + Math.round(averageCycle) * 24 * 60 * 60 * 1000);
-    nextExpectedPeriod = nextExpectedPeriodDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  }
-
-  // Fertile & Ovulation Windows
-  let predictedOvulation = "Unavailable";
-  let predictedFertileRange = "Unavailable";
-  if (nextExpectedPeriodDate) {
-    const ovulationDate = new Date(nextExpectedPeriodDate.getTime() - 14 * 24 * 60 * 60 * 1000);
-    const fertileStart = new Date(ovulationDate.getTime() - 4 * 24 * 60 * 60 * 1000);
-    const fertileEnd = new Date(ovulationDate.getTime() + 1 * 24 * 60 * 60 * 1000);
-    
-    predictedOvulation = ovulationDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    predictedFertileRange = `${fertileStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${fertileEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
-  }
+  // Synchronized Cycle Predictions (clearly labelled as estimates)
+  const sync = calculateCycleSyncData(user, new Date());
+  const nextExpectedPeriod = sync.nextExpectedPeriodFormatted;
+  const predictedOvulation = sync.estimatedOvulationDateFormatted;
+  const predictedFertileRange = sync.estimatedFertileRangeFormatted || 'None estimated';
 
   // Symptom parsing
   const formattedSymptoms = symptoms.map(s => {

@@ -15,6 +15,7 @@ import {
   CompanionRelationshipStage
 } from '../types';
 import { syncUser } from './firebaseService';
+import { calculateCycleSyncData } from './cycleSyncService';
 
 // Default presets for the 6 signature Lumina Companions
 export const AVATAR_PRESETS: Record<AvatarId, {
@@ -216,37 +217,39 @@ export function calculateAvatarMood(user: User, avatar: UserAvatar): {
     };
   }
 
-  // Menstrual phase check
-  const lastStartStr = user.lastPeriodStart || (user.periods && user.periods[0]?.startDate);
-  const cycleLen = user.cycleLength || 28;
-  const periodLen = user.periodLength || 5;
+  // Menstrual phase check using centralized cycle sync service
+  const sync = calculateCycleSyncData(user, new Date());
 
-  if (lastStartStr) {
-    const sDate = new Date(lastStartStr);
-    const today = new Date();
-    const diffDays = Math.floor((today.getTime() - sDate.getTime()) / (1000 * 60 * 60 * 24));
-    const cycleDay = ((diffDays % cycleLen) + cycleLen) % cycleLen + 1;
-    const daysToOvulation = (cycleLen - 14) - cycleDay;
+  if (sync.isLatePeriodMode) {
+    return {
+      mood: 'serene',
+      label: 'Gentle Patience',
+      emoji: '⏳',
+      description: 'Holding tranquil, stress-free space while tracking your late period mode',
+      auraGradient: 'from-amber-300 via-rose-200 to-pink-200'
+    };
+  }
 
-    if (cycleDay <= periodLen) {
-      return {
-        mood: 'cozy',
-        label: 'Cozy & Comforting',
-        emoji: '🍵',
-        description: 'Attuned to your period rest: holding gentle space for comfort and warmth',
-        auraGradient: 'from-rose-300 via-pink-200 to-amber-200'
-      };
-    }
+  if (sync.phase === 'Menstrual') {
+    return {
+      mood: 'cozy',
+      label: 'Cozy & Comforting',
+      emoji: '🍵',
+      description: 'Attuned to your period rest: holding gentle space for comfort and warmth',
+      auraGradient: 'from-rose-300 via-pink-200 to-amber-200'
+    };
+  }
 
-    if (daysToOvulation >= -1 && daysToOvulation <= 2) {
-      return {
-        mood: 'radiant',
-        label: 'Peak Radiance',
-        emoji: '✨',
-        description: 'Vibrant, open, and attuned to your fertile window and high vitality',
-        auraGradient: 'from-pink-400 via-rose-300 to-amber-300'
-      };
-    }
+  if (sync.isWithinFertileWindow || sync.phase === 'Ovulatory') {
+    return {
+      mood: 'radiant',
+      label: 'Peak Radiance',
+      emoji: '✨',
+      description: sync.isOvulationDay
+        ? 'Attuned to peak ovulation day: expansive vitality and social brilliance'
+        : 'Vibrant, open, and attuned to your fertile window and high vitality',
+      auraGradient: 'from-pink-400 via-rose-300 to-amber-300'
+    };
   }
 
   // Active streak
@@ -519,61 +522,44 @@ export function getAvatarCompanionSpeech(user: User, avatar: UserAvatar): {
     };
   }
 
-  // 3. Menstrual & Bio-Cycle Tracking
-  const lastStartStr = user.lastPeriodStart || (user.periods && user.periods[0]?.startDate);
-  const cycleLen = user.cycleLength || 28;
-  const periodLen = user.periodLength || 5;
-
-  let cycleDay = 12;
-  let daysToNextPeriod = 16;
-  let daysToOvulation = 2;
-
-  if (lastStartStr) {
-    const sDate = new Date(lastStartStr);
-    const today = new Date();
-    const diffDays = Math.floor((today.getTime() - sDate.getTime()) / (1000 * 60 * 60 * 24));
-    cycleDay = ((diffDays % cycleLen) + cycleLen) % cycleLen + 1;
-    daysToNextPeriod = cycleLen - cycleDay;
-    const ovulationDay = cycleLen - 14;
-    daysToOvulation = ovulationDay - cycleDay;
-  }
+  // 3. Centralised Menstrual & Bio-Cycle Tracking via cycleSyncService
+  const sync = calculateCycleSyncData(user, now);
+  const cycleDay = sync.cycleDay;
+  const daysToNextPeriod = sync.daysUntilNextPeriod ?? (sync.cycleLength - cycleDay);
 
   // Late period
-  if (daysToNextPeriod < 0 || (lastStartStr && (now.getTime() - new Date(lastStartStr).getTime()) / 86400000 > cycleLen + 2)) {
-    const lateDays = Math.abs(daysToNextPeriod);
+  if (sync.isLatePeriodMode) {
     return {
       greeting,
-      cycleStatusText: `Cycle Day ${cycleDay} • ${lateDays} days past expected date`,
+      cycleStatusText: `Cycle Day ${cycleDay} • ${sync.daysLate} ${sync.daysLate === 1 ? 'day' : 'days'} past expected date`,
       companionMessage: `Your cycle is on Day ${cycleDay}. Listen to your body and honor your unique rhythm.`,
-      phaseLabel: 'Cycle Past Expected',
+      phaseLabel: `Late Period Mode • Day ${sync.daysLate} Late`,
       emoji: '⏳'
     };
   }
 
   // Menstrual Phase (Days 1 to periodLen)
-  if (cycleDay <= periodLen) {
+  if (sync.phase === 'Menstrual') {
     return {
       greeting,
       cycleStatusText: `Cycle Day ${cycleDay} • Menstrual Phase`,
-      companionMessage: `You’re on Day ${cycleDay} of your cycle today. Take it easy and stay hydrated.`,
+      companionMessage: `You’re on Day ${cycleDay} of your cycle today in your menstrual phase. Take it easy and stay hydrated.`,
       phaseLabel: 'Menstrual Phase',
       emoji: '🩸'
     };
   }
 
-  // Fertile Window & Ovulation (Ovulation - 2 to Ovulation + 1)
-  if (daysToOvulation >= -1 && daysToOvulation <= 2) {
-    return {
-      greeting,
-      cycleStatusText: `Cycle Day ${cycleDay} • Fertile Window`,
-      companionMessage: daysToOvulation === 0 ? 'Predicted ovulation is today. You’re currently in your fertile window.' : 'You’re currently in your fertile window.',
-      phaseLabel: 'Ovulation & Fertile Window',
-      emoji: '☀️'
-    };
-  }
-
-  // Follicular Phase (Days periodLen+1 to Ovulation - 3)
-  if (daysToOvulation > 2) {
+  // Follicular Phase (checking whether also in fertile window: Requirements 2 & 3)
+  if (sync.phase === 'Follicular') {
+    if (sync.isWithinFertileWindow) {
+      return {
+        greeting,
+        cycleStatusText: `Cycle Day ${cycleDay} • Follicular Phase • Fertile Window (Estimated)`,
+        companionMessage: `You’re on Day ${cycleDay} in your follicular phase, and within your estimated fertile window.`,
+        phaseLabel: 'Follicular Phase • Fertile Window (Estimated)',
+        emoji: '🌱'
+      };
+    }
     return {
       greeting,
       cycleStatusText: `Cycle Day ${cycleDay} • Follicular Phase`,
@@ -583,13 +569,37 @@ export function getAvatarCompanionSpeech(user: User, avatar: UserAvatar): {
     };
   }
 
+  // Ovulatory Phase
+  if (sync.phase === 'Ovulatory') {
+    if (sync.isOvulationDay) {
+      return {
+        greeting,
+        cycleStatusText: `Cycle Day ${cycleDay} • Ovulatory Phase • Peak Ovulation Day (Estimated)`,
+        companionMessage: 'Estimated ovulation is today. You are at your peak fertility window.',
+        phaseLabel: 'Ovulatory Phase • Peak Ovulation Day (Estimated)',
+        emoji: '☀️'
+      };
+    }
+    return {
+      greeting,
+      cycleStatusText: `Cycle Day ${cycleDay} • Ovulatory Phase • Fertile Window (Estimated)`,
+      companionMessage: 'You’re in your ovulatory phase, within your estimated fertile window.',
+      phaseLabel: 'Ovulatory Phase • Fertile Window (Estimated)',
+      emoji: '✨'
+    };
+  }
+
   // Luteal Phase (Post Ovulation)
+  const lutealStatus = daysToNextPeriod <= 2 && daysToNextPeriod >= 1
+    ? `Cycle Day ${cycleDay} • Luteal Phase (Period in ${daysToNextPeriod} ${daysToNextPeriod === 1 ? 'day' : 'days'})`
+    : `Cycle Day ${cycleDay} • Luteal Phase`;
+
   return {
     greeting,
-    cycleStatusText: `Cycle Day ${cycleDay} • Luteal Phase (Period in ${daysToNextPeriod} days)`,
+    cycleStatusText: lutealStatus,
     companionMessage: `You’re in your luteal phase. Slow down gently and listen to what your body needs.`,
     phaseLabel: 'Luteal Phase',
-    emoji: '🍂'
+    emoji: '🌙'
   };
 }
 

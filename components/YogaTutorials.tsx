@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { YOGA_POSES } from '../constants';
 import { User } from '../types';
 import { getLuminaAdvice } from '../services/gemini';
+import { calculateCycleSyncData } from '../services/cycleSyncService';
 import { 
   Play, 
   Pause, 
@@ -82,28 +83,13 @@ const YogaTutorials: React.FC<YogaTutorialsProps> = ({ user, setUser, todaysSymp
     };
   }, [selectedPose]);
 
-  // Cycle phase calculation
+  // Cycle phase calculation using central synchronised logic
   const getCyclePhase = (): string => {
     if (user.isPregnancyMode) return 'Pregnancy Mode';
     if (user.isPostpartumMode) return 'Postpartum Recovery';
     
-    // Fallback to calculation
-    const cycleLen = user.cycleLength || 28;
-    const periodLen = user.periodLength || 5;
-    const lastStartStr = user.lastPeriodStart;
-    if (!lastStartStr) return 'Menstrual';
-
-    const lastStart = new Date(lastStartStr);
-    const today = new Date();
-    const diffTime = today.getTime() - lastStart.getTime();
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    let day = (diffDays % cycleLen) + 1;
-    if (day <= 0) day += cycleLen;
-
-    if (day <= periodLen) return 'Menstrual';
-    if (day <= cycleLen - 14) return 'Follicular';
-    if (day <= cycleLen - 10) return 'Ovulatory';
-    return 'Luteal';
+    const sync = calculateCycleSyncData(user, new Date());
+    return sync.phase;
   };
 
   const currentPhase = getCyclePhase();

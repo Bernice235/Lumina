@@ -26,6 +26,7 @@ import TemperatureTracker from './TemperatureTracker';
 import { ExpectedPeriodCheckInCard } from './ExpectedPeriodCheckInCard';
 import { CycleGraph } from './CycleGraph';
 import { getCycleAnalytics } from '../services/cycleAnalyticsService';
+import { calculateCycleSyncData, getCycleDetailsForSpecificDate, CycleSyncData } from '../services/cycleSyncService';
 import { logAvatarActionReward } from '../services/avatarService';
 import { 
   BarChart, 
@@ -640,165 +641,19 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
       .slice(0, 5);
   }, [symptoms]);
 
-  const cycleDay = useMemo(() => {
-    if (!user.lastPeriodStart) return 1;
-    const lastStart = new Date(user.lastPeriodStart);
-    const now = new Date();
-    const start = new Date(lastStart.getFullYear(), lastStart.getMonth(), lastStart.getDate());
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    
-    const diffDays = Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-    const cycleLen = user.cycleLength || 28;
-    let day = (diffDays % cycleLen) + 1;
-    if (day <= 0) day += cycleLen;
-    return day;
-  }, [user.lastPeriodStart, user.cycleLength]);
+  // Synchronized Central Cycle Calculation Engine
+  const cycleSync: CycleSyncData = useMemo(() => {
+    return calculateCycleSyncData(user, new Date());
+  }, [user]);
 
-  const lateInfo = useMemo(() => {
-    if (!user.lastPeriodStart) return { isLate: false, daysLate: 0 };
-    const lastStart = new Date(user.lastPeriodStart);
-    const start = new Date(lastStart.getFullYear(), lastStart.getMonth(), lastStart.getDate());
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const diffDays = Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-    const cycleLen = user.cycleLength || 28;
-
-    const expectedMidnight = new Date(start.getTime() + cycleLen * 24 * 60 * 60 * 1000).getTime();
-    let hasLoggedNewPeriod = false;
-    if (user.periods && user.periods.length > 0) {
-      hasLoggedNewPeriod = user.periods.some(p => new Date(p.startDate).setHours(0,0,0,0) >= expectedMidnight);
-    }
-
-    if (diffDays > cycleLen && !hasLoggedNewPeriod) {
-      return {
-        isLate: true,
-        daysLate: diffDays - cycleLen
-      };
-    }
-    return { isLate: false, daysLate: 0 };
-  }, [user.lastPeriodStart, user.cycleLength, user.periods]);
+  const cycleDay = cycleSync.cycleDay;
+  const lateInfo = useMemo(() => ({
+    isLate: cycleSync.isLatePeriodMode,
+    daysLate: cycleSync.daysLate
+  }), [cycleSync.isLatePeriodMode, cycleSync.daysLate]);
 
   const getCycleDetailsForDate = (date: Date) => {
-    let refDate: Date | null = null;
-    if (user.lastPeriodStart) {
-      refDate = new Date(user.lastPeriodStart);
-    } else if (user.periods && user.periods.length > 0) {
-      const sorted = [...user.periods].sort((a,b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
-      refDate = new Date(sorted[0].startDate);
-    } else if (user.periodDates && user.periodDates.length > 0) {
-      const sorted = [...user.periodDates].map(d => new Date(d)).sort((a,b) => b.getTime() - a.getTime());
-      refDate = sorted[0];
-    }
-
-    if (!refDate) {
-      return {
-        cycleDay: 1,
-        phaseName: 'Menstrual Phase',
-        phaseKey: 'menstrual',
-        fertilityStatus: 'Low Chance (Non-fertile)',
-        fertilityKey: 'low',
-        hormoneInfo: 'Hormones are at baseline. Your cycle length defaults to 28 days.',
-        insights: 'Log a period start date to unlock personal dynamic cycle phase tracking and forecast features! 🌸',
-        color: '#f472b6',
-        badgeColor: 'bg-pink-100 text-pink-700',
-        emoji: '🩸'
-      };
-    }
-
-    const dStart = new Date(refDate.getFullYear(), refDate.getMonth(), refDate.getDate());
-    const dCurrent = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-    const diffTime = dCurrent.getTime() - dStart.getTime();
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    
-    const cycleLen = user.cycleLength || 28;
-    const periodLen = user.periodLength || 5;
-
-    let dayInCycle = diffDays % cycleLen;
-    if (dayInCycle < 0) dayInCycle += cycleLen;
-    dayInCycle += 1;
-
-    const ovulationDay = cycleLen - 14;
-
-    let phaseName = 'Luteal Phase';
-    let phaseKey = 'luteal';
-    let emoji = '🍂';
-    let color = '#818cf8';
-    let badgeColor = 'bg-indigo-50 text-indigo-700';
-    let hormoneInfo = '';
-    let insights = '';
-    let fertilityStatus = 'Low chance of pregnancy';
-    let fertilityKey = 'low';
-
-    // Check if it is a logged period date or falls in logged periods
-    const isLoggedPeriod = user.periods?.some(p => {
-      const startObj = new Date(new Date(p.startDate).toDateString());
-      const endObj = new Date(new Date(p.endDate).toDateString());
-      const queryObj = new Date(date.toDateString());
-      return queryObj >= startObj && queryObj <= endObj;
-    }) || user.periodDates?.includes(date.toDateString());
-
-    const isPredictedPeriod = (dayInCycle <= periodLen);
-
-    if (isLoggedPeriod || isPredictedPeriod) {
-      phaseName = 'Menstrual Phase';
-      phaseKey = 'menstrual';
-      emoji = '🩸';
-      color = '#f472b6';
-      badgeColor = 'bg-pink-100/80 text-pink-700';
-      fertilityStatus = 'Low (Non-fertile days)';
-      fertilityKey = 'low';
-      hormoneInfo = 'Estrogen and progesterone are at their lowest levels. The uterine lining sheds to refresh and rebuild.';
-      insights = 'Your body is working hard. Focus on quiet comfort, warm herbal tea, and peaceful reflection. Perfect for cozy journaling. 🍵';
-    } else if (dayInCycle <= ovulationDay - 5) {
-      phaseName = 'Follicular Phase';
-      phaseKey = 'follicular';
-      emoji = '🌱';
-      color = '#a855f7';
-      badgeColor = 'bg-purple-100/70 text-purple-700';
-      fertilityStatus = 'Low chance of pregnancy';
-      fertilityKey = 'low_rising';
-      hormoneInfo = 'Follicle-Stimulating Hormone (FSH) rises to maturity and signals egg follicles to grow. Estrogen climbs to rebuild the uterine lining.';
-      insights = 'Energy, optimism, and cognitive focus are rising. A superb time for physical goals, planning, socializing, and initiating fresh projects! 🚀';
-    } else if (dayInCycle <= ovulationDay + 1) {
-      phaseName = 'Ovulatory Phase';
-      phaseKey = 'ovulatory';
-      emoji = '☀️';
-      color = '#eab308';
-      badgeColor = 'bg-amber-100 text-amber-800';
-      hormoneInfo = 'Estrogen reaches its peak, triggering an LH surge which releases the mature egg. Testosterone also surges.';
-      insights = 'Confidence, magnetic energy, and social rhythm are fully radiant! Highly articulate and glowy. Great for social events, dates, or public projects. 🌟';
-
-      if (dayInCycle === ovulationDay) {
-        fertilityStatus = 'Ovulation Day (Peak Fertility) 🌟';
-        fertilityKey = 'ovulation_day';
-      } else {
-        fertilityStatus = 'High Fertility Window ✨';
-        fertilityKey = 'high_fertility';
-      }
-    } else {
-      phaseName = 'Luteal Phase';
-      phaseKey = 'luteal';
-      emoji = '🍂';
-      color = '#6366f1';
-      badgeColor = 'bg-indigo-50 text-indigo-700';
-      fertilityStatus = 'Low chance of pregnancy';
-      fertilityKey = 'low';
-      hormoneInfo = 'Progesterone dominates to secure the uterine lining. If fertilization doesn’t occur, estrogen and progesterone levels slope down.';
-      insights = 'The spirit turns inward and nesting instincts peak. Perfect for detail-oriented work, delicious slow foods, and restorative sleep. Protect your peace. 🌙';
-    }
-
-    return {
-      cycleDay: dayInCycle,
-      phaseName,
-      phaseKey,
-      fertilityStatus,
-      fertilityKey,
-      hormoneInfo,
-      insights,
-      color,
-      badgeColor,
-      emoji
-    };
+    return getCycleDetailsForSpecificDate(user, date);
   };
 
   const getDayStatus = (dateObj: Date) => {
@@ -813,9 +668,9 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
     }) || user.periodDates?.includes(dateStr);
 
     if (isLogged) return 'period';
-    if (details.phaseKey === 'menstrual') return 'predicted_period';
-    if (details.fertilityKey === 'ovulation_day') return 'ovulation';
-    if (details.fertilityKey === 'high_fertility') return 'fertile';
+    if (details.isPredictedPeriod) return 'predicted_period';
+    if (details.isOvulationDay) return 'ovulation';
+    if (details.isWithinFertileWindow) return 'fertile';
     return 'none';
   };
 
@@ -828,19 +683,19 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
   };
 
   const renderCycle = () => {
-    const isLate = lateInfo.isLate;
-    const daysLate = lateInfo.daysLate;
-    const progress = isLate ? 100 : (cycleDay / (user.cycleLength || 28)) * 100;
+    const isLate = cycleSync.isLatePeriodMode;
+    const daysLate = cycleSync.daysLate;
+    const progress = isLate ? 100 : Math.min(100, Math.max(0, (cycleSync.cycleDay / cycleSync.cycleLength) * 100));
 
-    const phaseInfo = isLate ? {
-      name: `Day ${daysLate} Late`,
-      color: '#f59e0b',
-      emoji: '⏳',
-      advice: 'Your period is past expected date. Log your period when it arrives to start a new cycle.'
-    } : cycleDay <= (user.periodLength || 5) ? { name: 'Menstrual Phase', color: '#f472b6', emoji: '🩸', advice: 'A time for rest and inward reflection. Be gentle with yourself, blooming soul.' } : 
-    cycleDay <= (user.cycleLength || 28) - 14 ? { name: 'Follicular Phase', color: '#fb7185', emoji: '🌱', advice: 'Energy is rising. A perfect time for new projects and social connection.' } :
-    cycleDay <= (user.cycleLength || 28) - 10 ? { name: 'Ovulatory Phase', color: '#fbbf24', emoji: '☀️', advice: 'You are at your most magnetic and articulate. Shine bright!' } : 
-    { name: 'Luteal Phase', color: '#818cf8', emoji: '🍂', advice: 'Slow down and nurture yourself. Protect your peace.' };
+    const phaseColor = isLate 
+      ? '#f59e0b' 
+      : cycleSync.phase === 'Menstrual' 
+        ? '#f472b6' 
+        : cycleSync.phase === 'Follicular' 
+          ? '#fb7185' 
+          : cycleSync.phase === 'Ovulatory' 
+            ? '#fbbf24' 
+            : '#818cf8';
 
     return (
       <div className="flex flex-col items-center animate-fadeIn w-full">
@@ -853,7 +708,7 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
           <svg className="w-full h-full -rotate-90 transform">
             <circle cx="144" cy="144" r="120" fill="none" stroke="#fdf2f8" strokeWidth="12" />
             <motion.circle
-              cx="144" cy="144" r="120" fill="none" stroke={phaseInfo.color} strokeWidth="12"
+              cx="144" cy="144" r="120" fill="none" stroke={phaseColor} strokeWidth="12"
               strokeDasharray={2 * Math.PI * 120}
               initial={{ strokeDashoffset: 2 * Math.PI * 120 }}
               animate={{ strokeDashoffset: 2 * Math.PI * 120 * (1 - progress / 100) }}
@@ -862,23 +717,53 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8">
-            <span className="text-5xl mb-2">{phaseInfo.emoji}</span>
+            <span className="text-5xl mb-2">{cycleSync.phaseEmoji}</span>
             <span className={isLate ? "text-2xl md:text-3xl font-black text-amber-600 leading-tight" : "text-4xl font-bold text-pink-600 leading-none"}>
-              {isLate ? `Day ${daysLate} Late` : cycleDay}
+              {isLate ? `Day ${daysLate} Late` : cycleSync.cycleDay}
             </span>
             <span className="text-[10px] font-bold text-pink-400 uppercase tracking-[0.2em] mt-2">
-              {isLate ? "Late Period Mode" : "Day of Cycle"}
+              {isLate ? "Late Period Mode" : `Day of ${cycleSync.cycleLength}-Day Cycle`}
             </span>
           </div>
         </div>
         
-        <div className="mt-12 text-center space-y-4 max-w-sm">
-          <h3 className="text-2xl font-serif text-pink-600 italic">{phaseInfo.name}</h3>
-          <p className="text-sm text-pink-400 italic leading-relaxed">{phaseInfo.advice}</p>
+        <div className="mt-8 text-center space-y-3 max-w-md px-4">
+          <div className="flex flex-col items-center gap-1.5">
+            <h3 className="text-2xl font-serif text-pink-600 italic font-bold">
+              {cycleSync.phaseName}
+            </h3>
+            {/* Separate Fertile Window Status: only displayed when active, never replacing the menstrual phase */}
+            {cycleSync.isWithinFertileWindow && cycleSync.fertilityStatus && (
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${cycleSync.fertilityBadgeColor}`}>
+                <Sparkles className="w-3.5 h-3.5 text-teal-600" />
+                <span>{cycleSync.fertilityStatus}</span>
+              </span>
+            )}
+          </div>
+
+          <p className="text-sm text-pink-400 italic leading-relaxed">
+            {cycleSync.phaseDescription}
+          </p>
+
+          {/* Synchronized Cycle Forecast Estimates */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-3 text-left">
+            <div className="bg-pink-50/70 border border-pink-100 rounded-2xl p-2.5">
+              <span className="text-[9px] font-bold text-pink-400 uppercase tracking-wider block">Estimated Ovulation</span>
+              <span className="text-xs font-bold text-pink-700 block mt-0.5">{cycleSync.estimatedOvulationDateFormatted}</span>
+            </div>
+            <div className="bg-teal-50/70 border border-teal-100 rounded-2xl p-2.5">
+              <span className="text-[9px] font-bold text-teal-600 uppercase tracking-wider block">Fertile Window (Est.)</span>
+              <span className="text-xs font-bold text-teal-800 block mt-0.5">{cycleSync.estimatedFertileRangeFormatted || 'Pending history'}</span>
+            </div>
+            <div className="bg-purple-50/70 border border-purple-100 rounded-2xl p-2.5">
+              <span className="text-[9px] font-bold text-purple-500 uppercase tracking-wider block">Next Period (Est.)</span>
+              <span className="text-xs font-bold text-purple-800 block mt-0.5">{cycleSync.nextExpectedPeriodFormatted}</span>
+            </div>
+          </div>
           
           <button 
             onClick={onOpenLogModal}
-            className="mt-8 px-8 py-4 bg-gradient-to-r from-pink-400 to-rose-400 text-white rounded-full font-bold shadow-lg shadow-pink-100 hover:scale-105 transition-transform cursor-pointer"
+            className="mt-6 px-8 py-3.5 bg-gradient-to-r from-pink-400 to-rose-400 text-white rounded-full font-bold shadow-lg shadow-pink-100 hover:scale-105 transition-transform cursor-pointer"
           >
             {isLate ? "Log Period Start" : "Log Today's Journey"}
           </button>
@@ -1279,12 +1164,16 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
       } else if (det.phaseKey === 'follicular') {
         follicularDays.push(d);
       } else if (det.phaseKey === 'ovulatory') {
-        highFertileDays.push(d);
-        if (det.fertilityKey === 'ovulation_day') {
-          ovulationDayNum = d;
-        }
+        follicularDays.push(d);
       } else if (det.phaseKey === 'luteal') {
         lutealDays.push(d);
+      }
+
+      if (det.isWithinFertileWindow) {
+        highFertileDays.push(d);
+      }
+      if (det.isOvulationDay) {
+        ovulationDayNum = d;
       }
     }
 
@@ -1369,7 +1258,7 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
                 } else if (details.phaseKey === 'follicular') {
                   bgClass = 'bg-purple-100/40 text-purple-700 hover:bg-purple-100/70 font-medium';
                 } else if (details.phaseKey === 'ovulatory') {
-                  if (details.fertilityKey === 'ovulation_day') {
+                  if (details.isOvulationDay) {
                     bgClass = 'bg-amber-400 text-white font-bold shadow-sm shadow-amber-200';
                   } else {
                     bgClass = 'bg-amber-100/50 text-amber-800 hover:bg-amber-100 font-medium';
@@ -1478,7 +1367,7 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
                 <span className="text-xs font-bold text-pink-300 uppercase tracking-widest">Selected Date</span>
                 <h4 className="text-base font-serif italic text-pink-600 mt-1">{selectedDateStr}</h4>
               </div>
-              <span className="text-3xl">{selectedDetails.emoji}</span>
+              <span className="text-3xl">{selectedDetails.phaseEmoji || '🌸'}</span>
             </div>
 
             <div className="space-y-4">
@@ -1489,16 +1378,14 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
                 </span>
               </div>
 
-              <div className="flex justify-between items-center text-xs">
-                <span className="font-bold text-pink-300 uppercase tracking-widest">Fertility Rating</span>
-                <span className={`font-bold italic ${
-                  selectedDetails.fertilityKey.includes('ovulation') ? 'text-teal-600' :
-                  selectedDetails.fertilityKey.includes('high') ? 'text-amber-500' :
-                  'text-pink-400'
-                }`}>
-                  {selectedDetails.fertilityStatus}
-                </span>
-              </div>
+              {selectedDetails.isWithinFertileWindow && selectedDetails.fertilityStatus && (
+                <div className="flex justify-between items-center text-xs">
+                  <span className="font-bold text-teal-600 uppercase tracking-widest">Fertility Status</span>
+                  <span className={`font-bold italic text-teal-700`}>
+                    {selectedDetails.fertilityStatus}
+                  </span>
+                </div>
+              )}
 
               {/* Private Sexual Activity Logging Sub-card */}
               {(() => {
@@ -2049,9 +1936,11 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
                           <span className={`px-2 py-0.5 rounded-lg text-[8px] font-bold uppercase tracking-wider ${details.badgeColor}`}>
                             {details.phaseName}
                           </span>
-                          <span className="text-[10px] text-pink-300 italic">
-                            ({details.fertilityStatus})
-                          </span>
+                          {details.isWithinFertileWindow && details.fertilityStatus && (
+                            <span className="text-[10px] text-teal-600 font-semibold italic">
+                              • {details.fertilityStatus}
+                            </span>
+                          )}
                         </div>
 
                         {/* Intimacy info list */}

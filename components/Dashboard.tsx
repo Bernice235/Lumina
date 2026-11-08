@@ -21,6 +21,7 @@ import {
 } from '../services/welcomeVoiceService';
 import { getDailyAffirmation } from '../services/gemini';
 import { syncUser, updatePartnerRequestStatus, addNotificationToUser } from '../services/firebaseService';
+import { calculateCycleSyncData, getCycleDetailsForSpecificDate } from '../services/cycleSyncService';
 import { SONGS, MOODS, BABY_SIZES } from '../constants';
 import { 
   Activity, 
@@ -587,49 +588,16 @@ const Dashboard: React.FC<DashboardProps> = ({
     }
   };
 
-  const lastStart = user.lastPeriodStart ? new Date(user.lastPeriodStart) : null;
-  const cycleLen = user.cycleLength || 28;
-  const periodLen = user.periodLength || 5;
-
-  const daysSinceLastStart = (() => {
-    if (!lastStart) return 0;
-    const lastStartMidnight = new Date(lastStart.getFullYear(), lastStart.getMonth(), lastStart.getDate()).getTime();
-    const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
-    return Math.floor((todayMidnight - lastStartMidnight) / (1000 * 60 * 60 * 24));
-  })();
-
-  const expectedPeriodDate = lastStart ? new Date(lastStart.getTime() + cycleLen * 24 * 60 * 60 * 1000) : null;
-
-  const hasLoggedPeriodForExpectedCycle = (() => {
-    if (!expectedPeriodDate || !user.lastPeriodStart) return false;
-    const expectedMidnight = new Date(expectedPeriodDate.getFullYear(), expectedPeriodDate.getMonth(), expectedPeriodDate.getDate()).getTime();
-    if (user.periods && user.periods.length > 0) {
-      return user.periods.some(p => new Date(p.startDate).setHours(0, 0, 0, 0) >= expectedMidnight);
-    }
-    return false;
-  })();
-
-  const daysLate = (lastStart && daysSinceLastStart > cycleLen && !hasLoggedPeriodForExpectedCycle)
-    ? (daysSinceLastStart - cycleLen)
-    : 0;
-
-  const isLatePeriodMode = daysLate > 0;
-
-  const cycleDay = (() => {
-    if (!lastStart) return 1;
-    if (isLatePeriodMode) return cycleLen + daysLate;
-    let day = (daysSinceLastStart % cycleLen) + 1;
-    if (day <= 0) day += cycleLen;
-    return day;
-  })();
-
-  const currentPhase = (() => {
-    if (isLatePeriodMode) return 'Late Period';
-    if (cycleDay <= periodLen) return 'Menstrual';
-    if (cycleDay <= cycleLen - 14) return 'Follicular';
-    if (cycleDay <= cycleLen - 10) return 'Ovulatory';
-    return 'Luteal';
-  })();
+  // Centralized synchronised cycle calculation across Lumina (Dashboard, Companion, Calendar & Stats)
+  const cycleSync = calculateCycleSyncData(user, today);
+  const cycleDay = cycleSync.cycleDay;
+  const cycleLen = cycleSync.cycleLength;
+  const periodLen = cycleSync.periodLength;
+  const currentPhase = cycleSync.phase;
+  const isLatePeriodMode = cycleSync.isLatePeriodMode;
+  const daysLate = cycleSync.daysLate;
+  const expectedPeriodDate = cycleSync.nextExpectedPeriodDate;
+  const daysUntilNext = cycleSync.daysUntilNextPeriod;
 
   useEffect(() => {
     if (user.isPregnancyMode) {
@@ -670,8 +638,6 @@ const Dashboard: React.FC<DashboardProps> = ({
   }, [user.isPregnancyMode, weeks]);
 
   // Cycle calculations for Dashboard
-  let daysUntilNext = expectedPeriodDate ? Math.ceil((expectedPeriodDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)) : null;
-
   const cycleStatusText = isLatePeriodMode
     ? `Day ${daysLate} Late`
     : daysUntilNext === 0 
@@ -1262,24 +1228,17 @@ const Dashboard: React.FC<DashboardProps> = ({
   const adjustedFirstDay = (firstDay + 6) % 7;
 
   const getDayStatus = (date: Date) => {
-    const dateStr = date.toDateString();
-    if (user.periodDates?.includes(dateStr)) return 'period';
-    if (expectedPeriodDate) {
-      const nextStart = new Date(expectedPeriodDate);
-      const nextEnd = new Date(nextStart.getTime() + (periodLen - 1) * 24 * 60 * 60 * 1000);
-      if (date >= nextStart && date <= nextEnd) return 'predicted';
-      const ovulation = new Date(expectedPeriodDate.getTime() - 14 * 24 * 60 * 60 * 1000);
-      const fertileStart = new Date(ovulation.getTime() - 3 * 24 * 60 * 60 * 1000);
-      const fertileEnd = new Date(ovulation.getTime() + 1 * 24 * 60 * 60 * 1000);
-      if (date >= fertileStart && date <= fertileEnd) return 'fertile';
-    }
+    const details = getCycleDetailsForSpecificDate(user, date);
+    if (details.isLoggedPeriod) return 'period';
+    if (details.isPredictedPeriod) return 'predicted';
+    if (details.isWithinFertileWindow) return 'fertile';
     return 'none';
   };
 
   const dayStyles = {
     period: 'bg-pink-400 text-white shadow-md shadow-pink-100',
     predicted: 'bg-pink-50 text-pink-400 border border-pink-200 border-dashed',
-    fertile: 'bg-teal-50 text-teal-500 border border-teal-100',
+    fertile: 'bg-teal-50 text-teal-600 border border-teal-200 font-semibold',
     none: 'text-gray-400 hover:bg-pink-50'
   };
 
@@ -1968,16 +1927,48 @@ const Dashboard: React.FC<DashboardProps> = ({
               <span className="text-[10px] font-black uppercase tracking-[0.25em] text-pink-400 block">
                 {isLatePeriodMode ? "Late Period Mode" : "Current Phase"}
               </span>
-              <h2 className="text-3xl md:text-4xl font-serif italic text-pink-600 font-bold leading-none">
-                {isLatePeriodMode ? `Day ${daysLate} Late` : `${currentPhase} Phase`}
-              </h2>
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <h2 className="text-3xl md:text-4xl font-serif italic text-pink-600 font-bold leading-none">
+                  {isLatePeriodMode ? `Day ${daysLate} Late` : `${currentPhase} Phase`}
+                </h2>
+                {/* Requirements 2, 3 & 4: Fertile Window displayed as separate status badge; hidden outside fertile window */}
+                {cycleSync.isWithinFertileWindow && (
+                  <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border shadow-xs inline-flex items-center gap-1 ${
+                    cycleSync.isOvulationDay 
+                      ? 'bg-amber-100 text-amber-800 border-amber-300 animate-pulse'
+                      : 'bg-teal-100 text-teal-800 border-teal-300'
+                  }`}>
+                    <span>{cycleSync.isOvulationDay ? '🌟' : '✨'}</span>
+                    <span>{cycleSync.fertilityStatus}</span>
+                  </span>
+                )}
+              </div>
               <span className="text-xs font-serif italic text-pink-400/80 block pt-1">
                 {isLatePeriodMode && `Your period was expected on ${expectedPeriodDate?.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}. Lumina is tracking your late period mode.`}
                 {!isLatePeriodMode && currentPhase === 'Menstrual' && "A time for quiet sunset reflection and deep physical rest."}
-                {!isLatePeriodMode && currentPhase === 'Follicular' && "A time of rising physical energy, creativity, and new beginnings."}
-                {!isLatePeriodMode && currentPhase === 'Ovulatory' && "Your peak biological glow. Social, radiant, and fertile."}
+                {!isLatePeriodMode && currentPhase === 'Follicular' && (
+                  cycleSync.isWithinFertileWindow 
+                    ? "Late follicular vitality as you approach your estimated fertile window."
+                    : "A time of rising physical energy, creativity, and new beginnings."
+                )}
+                {!isLatePeriodMode && currentPhase === 'Ovulatory' && "Your peak biological glow. Social, radiant, and articulate."}
                 {!isLatePeriodMode && currentPhase === 'Luteal' && "Turning gently inward. High emotional intuition and cozy comfort."}
               </span>
+              {/* Clearly labeled predictions & estimates */}
+              {!isLatePeriodMode && (
+                <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1 text-[10.5px] text-pink-500/90 font-medium">
+                  {cycleSync.estimatedFertileRangeFormatted && (
+                    <span>
+                      <strong className="text-teal-700">Fertile Span:</strong> {cycleSync.estimatedFertileRangeFormatted}
+                    </span>
+                  )}
+                  {cycleSync.estimatedOvulationDate && (
+                    <span>
+                      <strong className="text-amber-700">Ovulation:</strong> {cycleSync.estimatedOvulationDateFormatted}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="pt-2">
@@ -2317,166 +2308,165 @@ const Dashboard: React.FC<DashboardProps> = ({
       {isMenuOpen && (
         <>
           <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-[150] transition-opacity" onClick={() => setIsMenuOpen(false)} />
-          <div className="fixed inset-y-0 left-0 max-w-xs w-full bg-[#fffafb]/95 backdrop-blur-3xl shadow-2xl z-[160] p-6 flex flex-col justify-between border-r border-pink-100/40 animate-slideRight">
-            <div className="space-y-6">
-              {/* Title Header with Close */}
-              <div className="flex items-center justify-between border-b border-pink-100/30 pb-4">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xl">🌸</span>
-                  <span className="font-serif italic font-black text-xl text-pink-600">Lumina Menu</span>
+          <div className="fixed inset-y-0 left-0 top-0 bottom-0 h-full max-h-[100dvh] max-w-xs w-full bg-[#fffafb] shadow-2xl z-[160] overflow-y-auto overflow-x-hidden border-r border-pink-100/40 animate-slideRight lumina-menu-scroll overscroll-contain">
+            {/* Title Header with Close (Sticky top inside drawer) */}
+            <div className="sticky top-0 bg-[#fffafb]/95 backdrop-blur-md px-6 py-4 border-b border-pink-100/30 flex items-center justify-between z-20 shadow-xs">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xl">🌸</span>
+                <span className="font-serif italic font-black text-xl text-pink-600">Lumina Menu</span>
+              </div>
+              <button 
+                onClick={() => setIsMenuOpen(false)}
+                className="p-1.5 rounded-xl bg-pink-50 text-pink-500 hover:bg-pink-100 transition-colors cursor-pointer"
+                title="Close Menu"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Content List */}
+            <div className="px-6 py-4 space-y-4">
+              {/* Lumina Avatar Companion Sanctuary */}
+              <div className="bg-gradient-to-br from-pink-500/15 via-rose-400/15 to-amber-400/15 p-4 rounded-3xl border border-pink-200/60 shadow-[0_4px_15px_rgba(244,114,182,0.06)] space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-[9px] font-black uppercase tracking-wider text-pink-600">Wellness Companion</p>
+                  <span className="text-[8px] font-black px-2 py-0.5 rounded-full bg-pink-100 text-pink-700 uppercase">
+                    Lvl {avatarProgression.level}
+                  </span>
                 </div>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => {
+                      handleOpenCompanionChat();
+                      setIsMenuOpen(false);
+                    }}
+                    className="flex-1 py-2.5 px-3 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-wider transition-all active:scale-[0.98] shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <AvatarVisual avatar={{ ...currentAvatar, mood: avatarMood.mood }} size="xs" />
+                    <span className="truncate">Chat with {currentAvatar.name || 'Amara'}</span>
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setIsAvatarModalOpen(true);
+                      setIsMenuOpen(false);
+                    }}
+                    className="py-2.5 px-3 bg-white hover:bg-pink-50/70 border border-pink-200/60 rounded-2xl text-[10px] font-black uppercase tracking-wider text-pink-600 transition-all active:scale-[0.98] shadow-sm flex items-center justify-center cursor-pointer"
+                    title="Studio & Customization"
+                  >
+                    <span>Studio</span>
+                  </button>
+                </div>
+                <p className="text-[8.5px] text-gray-500 italic text-center">
+                  Dashboard, customizations, styles & rewards
+                </p>
+              </div>
+
+              {/* Learn & Education Sanctuary (Put back learn feature) */}
+              <div className="bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-pink-500/10 p-4 rounded-3xl border border-indigo-100 shadow-[0_4px_15px_rgba(99,102,241,0.05)]">
+                <p className="text-[9px] font-black uppercase tracking-wider text-indigo-600 mb-2">Education & Wisdom</p>
                 <button 
-                  onClick={() => setIsMenuOpen(false)}
-                  className="p-1.5 rounded-xl bg-pink-50 text-pink-500 hover:bg-pink-100 transition-colors"
+                  onClick={() => {
+                    onTabChange?.('edu');
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full py-2.5 px-4 bg-white hover:bg-indigo-50/50 border border-indigo-200/50 rounded-2xl text-[10px] font-black uppercase tracking-widest text-indigo-600 transition-all active:scale-[0.98] shadow-sm flex items-center justify-between cursor-pointer"
                 >
-                  <X className="w-4 h-4" />
+                  <span className="flex items-center gap-2">
+                    <span className="text-sm">📚</span>
+                    <span>Learn & Guides Hub</span>
+                  </span>
+                  <span className="text-xs">➔</span>
                 </button>
               </div>
 
-              {/* Menu List */}
-              <div className="space-y-4">
-                {/* Lumina Avatar Companion Sanctuary */}
-                <div className="bg-gradient-to-br from-pink-500/15 via-rose-400/15 to-amber-400/15 p-4 rounded-3xl border border-pink-200/60 shadow-[0_4px_15px_rgba(244,114,182,0.06)] space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-[9px] font-black uppercase tracking-wider text-pink-600">Wellness Companion</p>
-                    <span className="text-[8px] font-black px-2 py-0.5 rounded-full bg-pink-100 text-pink-700 uppercase">
-                      Lvl {avatarProgression.level}
-                    </span>
-                  </div>
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => {
-                        handleOpenCompanionChat();
-                        setIsMenuOpen(false);
-                      }}
-                      className="flex-1 py-2.5 px-3 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-wider transition-all active:scale-[0.98] shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
-                    >
-                      <AvatarVisual avatar={{ ...currentAvatar, mood: avatarMood.mood }} size="xs" />
-                      <span className="truncate">Chat with {currentAvatar.name || 'Amara'}</span>
-                    </button>
-                    <button 
-                      onClick={() => {
-                        setIsAvatarModalOpen(true);
-                        setIsMenuOpen(false);
-                      }}
-                      className="py-2.5 px-3 bg-white hover:bg-pink-50/70 border border-pink-200/60 rounded-2xl text-[10px] font-black uppercase tracking-wider text-pink-600 transition-all active:scale-[0.98] shadow-sm flex items-center justify-center cursor-pointer"
-                      title="Studio & Customization"
-                    >
-                      <span>Studio</span>
-                    </button>
-                  </div>
-                  <p className="text-[8.5px] text-gray-500 italic text-center">
-                    Dashboard, customizations, styles & rewards
-                  </p>
-                </div>
+              {/* Personal Diary Card */}
+              <div className="bg-gradient-to-br from-amber-500/10 via-rose-500/10 to-pink-500/10 p-4 rounded-3xl border border-pink-100 shadow-[0_4px_15px_rgba(244,114,182,0.04)]">
+                <p className="text-[9px] font-black uppercase tracking-wider text-rose-600 mb-2">Personal Sanctuary</p>
+                <button 
+                  onClick={() => {
+                    onTabChange?.('diary');
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full py-2.5 px-4 bg-white hover:bg-pink-50/50 border border-pink-200/50 rounded-2xl text-[10px] font-black uppercase tracking-widest text-rose-600 transition-all active:scale-[0.98] shadow-sm flex items-center justify-between cursor-pointer"
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="text-sm">📖</span>
+                    <span>Personal Diary</span>
+                  </span>
+                  <span className="text-xs">➔</span>
+                </button>
+              </div>
 
-                {/* Learn & Education Sanctuary (Put back learn feature) */}
-                <div className="bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-pink-500/10 p-4 rounded-3xl border border-indigo-100 shadow-[0_4px_15px_rgba(99,102,241,0.05)]">
-                  <p className="text-[9px] font-black uppercase tracking-wider text-indigo-600 mb-2">Education & Wisdom</p>
+              {/* Music Sanctuary Quick Access */}
+              <div className="bg-gradient-to-br from-pink-500/10 to-rose-400/10 p-4 rounded-3xl border border-pink-100 shadow-[0_4px_15px_rgba(244,114,182,0.04)]">
+                <p className="text-[9px] font-black uppercase tracking-wider text-pink-500 mb-2">Sound & Serenity</p>
+                <button 
+                  onClick={() => {
+                    onTabChange?.('music');
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full py-2.5 px-4 bg-white hover:bg-pink-50/50 border border-pink-200/50 rounded-2xl text-[10px] font-black uppercase tracking-widest text-pink-600 transition-all active:scale-[0.98] shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <span>🎵 Enter Music Sanctuary</span>
+                  <span className="text-xs">➔</span>
+                </button>
+              </div>
+
+              {/* Mode Select Card with Claymorphic style */}
+              <div className="bg-white/80 backdrop-blur-md p-4 rounded-3xl border border-pink-100/50 shadow-[inset_0_2px_4px_rgba(255,255,255,0.8),_0_6px_15px_rgba(244,114,182,0.03)]">
+                <p className="text-[9px] font-black uppercase tracking-wider text-pink-400 mb-2">Sanctuary Mode</p>
+                <div className="flex flex-col gap-2">
                   <button 
                     onClick={() => {
-                      onTabChange?.('edu');
+                      if (togglePregnancy) togglePregnancy();
                       setIsMenuOpen(false);
                     }}
-                    className="w-full py-2.5 px-4 bg-white hover:bg-indigo-50/50 border border-indigo-200/50 rounded-2xl text-[10px] font-black uppercase tracking-widest text-indigo-600 transition-all active:scale-[0.98] shadow-sm flex items-center justify-between cursor-pointer"
+                    className={`w-full py-2.5 px-4 rounded-2xl text-[10px] font-bold uppercase tracking-widest transition-all cursor-pointer ${user.isPregnancyMode ? 'bg-indigo-500 text-white shadow-md' : 'bg-pink-50 text-pink-500 border border-pink-100 hover:bg-pink-100/50'}`}
                   >
-                    <span className="flex items-center gap-2">
-                      <span className="text-sm">📚</span>
-                      <span>Learn & Guides Hub</span>
-                    </span>
-                    <span className="text-xs">➔</span>
+                    🤰 {user.isPregnancyMode ? 'Pregnancy Mode: ON' : 'Switch to Pregnancy'}
                   </button>
-                </div>
-
-                {/* Personal Diary Card */}
-                <div className="bg-gradient-to-br from-amber-500/10 via-rose-500/10 to-pink-500/10 p-4 rounded-3xl border border-pink-100 shadow-[0_4px_15px_rgba(244,114,182,0.04)]">
-                  <p className="text-[9px] font-black uppercase tracking-wider text-rose-600 mb-2">Personal Sanctuary</p>
-                  <button 
-                    onClick={() => {
-                      onTabChange?.('diary');
-                      setIsMenuOpen(false);
-                    }}
-                    className="w-full py-2.5 px-4 bg-white hover:bg-pink-50/50 border border-pink-200/50 rounded-2xl text-[10px] font-black uppercase tracking-widest text-rose-600 transition-all active:scale-[0.98] shadow-sm flex items-center justify-between cursor-pointer"
-                  >
-                    <span className="flex items-center gap-2">
-                      <span className="text-sm">📖</span>
-                      <span>Personal Diary</span>
-                    </span>
-                    <span className="text-xs">➔</span>
-                  </button>
-                </div>
-
-                {/* Music Sanctuary Quick Access */}
-                <div className="bg-gradient-to-br from-pink-500/10 to-rose-400/10 p-4 rounded-3xl border border-pink-100 shadow-[0_4px_15px_rgba(244,114,182,0.04)]">
-                  <p className="text-[9px] font-black uppercase tracking-wider text-pink-500 mb-2">Sound & Serenity</p>
-                  <button 
-                    onClick={() => {
-                      onTabChange?.('music');
-                      setIsMenuOpen(false);
-                    }}
-                    className="w-full py-2.5 px-4 bg-white hover:bg-pink-50/50 border border-pink-200/50 rounded-2xl text-[10px] font-black uppercase tracking-widest text-pink-600 transition-all active:scale-[0.98] shadow-sm flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <span>🎵 Enter Music Sanctuary</span>
-                    <span className="text-xs">➔</span>
-                  </button>
-                </div>
-
-                {/* Mode Select Card with Claymorphic style */}
-                <div className="bg-white/80 backdrop-blur-md p-4 rounded-3xl border border-pink-100/50 shadow-[inset_0_2px_4px_rgba(255,255,255,0.8),_0_6px_15px_rgba(244,114,182,0.03)]">
-                  <p className="text-[9px] font-black uppercase tracking-wider text-pink-400 mb-2">Sanctuary Mode</p>
-                  <div className="flex flex-col gap-2">
-                    <button 
-                      onClick={() => {
-                        if (togglePregnancy) togglePregnancy();
-                        setIsMenuOpen(false);
-                      }}
-                      className={`w-full py-2.5 px-4 rounded-2xl text-[10px] font-bold uppercase tracking-widest transition-all cursor-pointer ${user.isPregnancyMode ? 'bg-indigo-500 text-white shadow-md' : 'bg-pink-50 text-pink-500 border border-pink-100 hover:bg-pink-100/50'}`}
-                    >
-                      🤰 {user.isPregnancyMode ? 'Pregnancy Mode: ON' : 'Switch to Pregnancy'}
-                    </button>
-                    {user.isPostpartumMode && (
-                      <div className="w-full py-2.5 px-4 rounded-2xl bg-[#4f46e5]/10 text-[#4f46e5] text-[10px] font-bold uppercase tracking-widest text-center">
-                        👶 Postpartum Active
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Wallpapers & Themes Card */}
-                <div className="bg-gradient-to-br from-purple-500/10 via-pink-500/10 to-rose-400/10 p-4 rounded-3xl border border-pink-100 shadow-[inset_0_2px_4px_rgba(255,255,255,0.8),_0_6px_15px_rgba(244,114,182,0.04)] space-y-2">
-                  <p className="text-[9px] font-black uppercase tracking-wider text-purple-600">Personalization</p>
-                  <button 
-                    onClick={() => {
-                      setIsWallpapersOpen(true);
-                      setIsMenuOpen(false);
-                    }}
-                    className="w-full py-3 px-4 bg-gradient-to-r from-pink-500 via-rose-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-[0.98] shadow-md flex items-center justify-between cursor-pointer"
-                  >
-                    <span className="flex items-center gap-2">
-                      <span className="text-sm">🎨</span>
-                      <span>Wallpapers & Themes</span>
-                    </span>
-                    <span className="text-xs">➔</span>
-                  </button>
-                  <p className="text-[9px] text-stone-400 italic text-center">
-                    Customize wallpapers, themes & cycle colors
-                  </p>
+                  {user.isPostpartumMode && (
+                    <div className="w-full py-2.5 px-4 rounded-2xl bg-[#4f46e5]/10 text-[#4f46e5] text-[10px] font-bold uppercase tracking-widest text-center">
+                      👶 Postpartum Active
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
 
-            {/* Logout Button */}
-            <div className="border-t border-pink-100/30 pt-4">
-              <button 
-                onClick={() => {
-                  if (handleLogout) handleLogout();
-                  setIsMenuOpen(false);
-                }}
-                className="w-full py-3 rounded-2xl bg-rose-50 text-rose-500 hover:bg-rose-100 transition-colors duration-300 font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <LogOut className="w-4 h-4" />
-                Sign Out of Sanctuary
-              </button>
+              {/* Wallpapers & Themes Card */}
+              <div className="bg-gradient-to-br from-purple-500/10 via-pink-500/10 to-rose-400/10 p-4 rounded-3xl border border-pink-100 shadow-[inset_0_2px_4px_rgba(255,255,255,0.8),_0_6px_15px_rgba(244,114,182,0.04)] space-y-2">
+                <p className="text-[9px] font-black uppercase tracking-wider text-purple-600">Personalization</p>
+                <button 
+                  onClick={() => {
+                    setIsWallpapersOpen(true);
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full py-3 px-4 bg-gradient-to-r from-pink-500 via-rose-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-[0.98] shadow-md flex items-center justify-between cursor-pointer"
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="text-sm">🎨</span>
+                    <span>Wallpapers & Themes</span>
+                  </span>
+                  <span className="text-xs">➔</span>
+                </button>
+                <p className="text-[9px] text-stone-400 italic text-center">
+                  Customize wallpapers, themes & cycle colors
+                </p>
+              </div>
+
+              {/* Logout Button */}
+              <div className="border-t border-pink-100/30 pt-4 mt-6 pb-6">
+                <button 
+                  onClick={() => {
+                    if (handleLogout) handleLogout();
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full py-3 rounded-2xl bg-rose-50 text-rose-500 hover:bg-rose-100 transition-colors duration-300 font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Sign Out of Sanctuary
+                </button>
+              </div>
             </div>
           </div>
         </>

@@ -378,6 +378,22 @@ img, video, canvas, svg, iframe, table {
   animation: slideRight 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+.lumina-menu-scroll {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(244, 114, 182, 0.4) transparent;
+}
+.lumina-menu-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.lumina-menu-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.lumina-menu-scroll::-webkit-scrollbar-thumb {
+  background-color: rgba(244, 114, 182, 0.4);
+  border-radius: 9999px;
+}
+
 .animate-slideLeft {
   animation: slideLeft 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }

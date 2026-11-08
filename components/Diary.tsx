@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { DiaryEntry, User } from '../types';
 import { Lock, Fingerprint, ShieldCheck, AlertCircle, Edit3, PlusCircle, Clock, RotateCcw, CheckCircle2, Calendar, Sparkles, Trash2, Heart } from 'lucide-react';
 import { trackCreateDiaryEntry, trackUpdateDiaryEntry } from '../services/analyticsService';
+import { calculateCycleSyncData } from '../services/cycleSyncService';
 
 interface DiaryProps {
   entries: DiaryEntry[];
@@ -14,31 +15,12 @@ const AESTHETIC_EMOJIS = [
 ];
 
 const getCurrentCyclePhase = (user: User): string => {
-  if (!user.lastPeriodStart) return 'Cycle Phase';
-  const cycleLen = user.cycleLength || 28;
-  const periodLen = user.periodLength || 5;
-
-  const lastStart = new Date(user.lastPeriodStart);
-  const start = new Date(lastStart.getFullYear(), lastStart.getMonth(), lastStart.getDate());
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-  const diffDays = Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-
-  const expectedMidnight = new Date(start.getTime() + cycleLen * 24 * 60 * 60 * 1000).getTime();
-  let hasLoggedNewPeriod = false;
-  if (user.periods && user.periods.length > 0) {
-    hasLoggedNewPeriod = user.periods.some(p => new Date(p.startDate).setHours(0,0,0,0) >= expectedMidnight);
+  const sync = calculateCycleSyncData(user, new Date());
+  if (sync.isLatePeriodMode) {
+    return `Late Period • Day ${sync.daysLate}`;
   }
-
-  const isLate = diffDays > cycleLen && !hasLoggedNewPeriod;
-  if (isLate) return `Late Period • Day ${diffDays - cycleLen}`;
-
-  const cycleDay = ((diffDays % cycleLen) + cycleLen) % cycleLen + 1;
-  if (cycleDay <= periodLen) return `Period Phase • Day ${cycleDay}`;
-  if (cycleDay <= cycleLen - 14) return `Follicular Phase • Day ${cycleDay - periodLen}`;
-  if (cycleDay <= cycleLen - 10) return `Ovulation Phase • Day ${Math.max(1, cycleDay - (cycleLen - 14))}`;
-  return `Luteal Phase • Day ${Math.max(1, cycleDay - (cycleLen - 10))}`;
+  const fertileTag = sync.isWithinFertileWindow && sync.fertilityStatus ? ' • Fertile Window (Est.)' : '';
+  return `${sync.phaseName} • Day ${sync.cycleDay}${fertileTag}`;
 };
 
 const DRAFT_KEY = 'lumina_diary_draft';

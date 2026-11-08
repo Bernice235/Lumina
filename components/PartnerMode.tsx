@@ -24,6 +24,7 @@ import {
   getSanctuaryTitle
 } from '../services/firebaseService';
 import { trackSendPartnerInvite, trackAcceptPartnerInvite, trackDeclinePartnerInvite } from '../services/analyticsService';
+import { calculateCycleSyncData } from '../services/cycleSyncService';
 
 interface PartnerModeProps {
   user: User;
@@ -307,34 +308,20 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
   const currentPhase = (() => {
     if (!targetUser) return 'Luteal';
     if (targetUser.isPregnancyMode) return 'Pregnancy';
-    
-    const today = new Date();
-    const lastStart = targetUser.lastPeriodStart ? new Date(targetUser.lastPeriodStart) : null;
-    const cycleLen = targetUser.cycleLength || 28;
-    const periodLen = targetUser.periodLength || 5;
-
-    if (!lastStart) return 'Luteal';
-    
-    const diffTime = today.getTime() - lastStart.getTime();
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    let day = (diffDays % cycleLen) + 1;
-    if (day <= 0) day += cycleLen;
-
-    if (day <= periodLen) return 'Menstrual';
-    if (day <= cycleLen - 14) return 'Follicular';
-    if (day <= cycleLen - 10) return 'Ovulatory';
-    return 'Luteal';
+    const sync = calculateCycleSyncData(targetUser, new Date());
+    return sync.phase;
   })();
 
   const calculateCycleDetailsForDate = (date: Date, u: User | null) => {
     if (!u) {
       return {
-        phaseName: 'Luteal Phase (Care & Comfort)',
+        phaseName: '🌙 Luteal Phase (Care & Comfort)',
         phaseEmoji: '🌙',
         isPeriod: false,
         isFertile: false,
         isOvulation: false,
         dayInCycle: 1,
+        fertilityStatus: null,
         loggedSymptoms: [] as string[],
         loggedMood: null as string | null
       };
@@ -343,79 +330,27 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
     const dateStr = date.toDateString();
     const dateISO = date.toISOString().split('T')[0];
 
-    // Check explicit logged period dates
-    const isLoggedPeriod = (u.periodDates || []).some(pd => {
-      try {
-        return new Date(pd).toDateString() === dateStr;
-      } catch (e) {
-        return pd === dateStr || pd === dateISO;
-      }
-    }) || (u.periods || []).some(p => {
-      try {
-        const start = new Date(p.startDate);
-        const end = p.endDate ? new Date(p.endDate) : new Date(start.getTime() + (u.periodLength || 5) * 86400000);
-        return date >= start && date <= end;
-      } catch (e) {
-        return false;
-      }
-    });
+    // Use central synchronised calculation
+    const sync = calculateCycleSyncData(u, date);
 
-    const lastStart = u.lastPeriodStart ? new Date(u.lastPeriodStart) : null;
-    const cycleLen = u.cycleLength || 28;
-    const periodLen = u.periodLength || 5;
-
-    if (!lastStart) {
-      const loggedSyms = (u.symptoms || [])
-        .filter((s: any) => s.date === dateStr || s.date === dateISO || (s.timestamp && new Date(s.timestamp).toDateString() === dateStr))
-        .map((s: any) => typeof s === 'string' ? s : s.name || s.type || s.symptom || 'Discomfort');
-
-      const loggedM = (u.moodLogs || [])
-        .find((m: any) => m.date === dateStr || m.date === dateISO || (m.timestamp && new Date(m.timestamp).toDateString() === dateStr))?.mood || null;
-
-      return {
-        phaseName: isLoggedPeriod ? '🩸 Menstrual Phase (Logged Period)' : '🌙 Luteal Phase',
-        phaseEmoji: isLoggedPeriod ? '🩸' : '🌙',
-        isPeriod: isLoggedPeriod,
-        isFertile: false,
-        isOvulation: false,
-        dayInCycle: 1,
-        loggedSymptoms: loggedSyms,
-        loggedMood: loggedM
-      };
-    }
-
-    // Calculate days diff from lastPeriodStart
-    const diffTime = date.getTime() - lastStart.getTime();
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    let dayInCycle = ((diffDays % cycleLen) + cycleLen) % cycleLen + 1;
-
-    const isLatePeriod = diffDays > cycleLen && !isLoggedPeriod;
-    const daysLate = isLatePeriod ? (diffDays - cycleLen) : 0;
-
-    const ovulationDay = Math.max(1, cycleLen - 14);
-    const fertileStart = Math.max(1, ovulationDay - 5);
-    const fertileEnd = Math.min(cycleLen, ovulationDay + 1);
-
-    const isPeriod = isLoggedPeriod || (dayInCycle >= 1 && dayInCycle <= periodLen);
-    const isOvulation = !isLatePeriod && dayInCycle === ovulationDay;
-    const isFertile = !isLatePeriod && dayInCycle >= fertileStart && dayInCycle <= fertileEnd;
+    const isPeriod = sync.phase === 'Menstrual';
+    const isFertile = sync.isWithinFertileWindow;
+    const isOvulation = sync.isOvulationDay;
+    const dayInCycle = sync.cycleDay;
 
     let phaseName = '🌙 Luteal Phase (PMS & Gentle Care Needed)';
     let phaseEmoji = '🌙';
 
-    if (isLatePeriod) {
-      phaseName = `⏳ Day ${daysLate} Late (Expected Period Pending)`;
+    if (sync.isLatePeriodMode) {
+      phaseName = `⏳ Day ${sync.daysLate} Late (Expected Period Pending)`;
       phaseEmoji = '⏳';
     } else if (isPeriod) {
       phaseName = '🩸 Menstrual Phase (Rest & Comfort Needed)';
       phaseEmoji = '🩸';
-    } else if (isOvulation) {
-      phaseName = '✨ Ovulation Phase (Peak Energy & High Fertility)';
-      phaseEmoji = '✨';
-    } else if (isFertile) {
-      phaseName = '💞 Fertile Window (High Energy & Connection)';
-      phaseEmoji = '💞';
-    } else if (dayInCycle > periodLen && dayInCycle < fertileStart) {
+    } else if (sync.phase === 'Ovulatory') {
+      phaseName = '☀️ Ovulatory Phase (Peak Vitality & Radiance)';
+      phaseEmoji = '☀️';
+    } else if (sync.phase === 'Follicular') {
       phaseName = '🌱 Follicular Phase (Rising Energy & Motivation)';
       phaseEmoji = '🌱';
     }
@@ -434,6 +369,8 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
       isFertile,
       isOvulation,
       dayInCycle,
+      fertilityStatus: sync.fertilityStatus,
+      isWithinFertileWindow: sync.isWithinFertileWindow,
       loggedSymptoms,
       loggedMood
     };
@@ -612,28 +549,28 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
       {isMenuOpen && (
         <>
           <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-[150] transition-opacity" onClick={() => setIsMenuOpen(false)} />
-          <div className="fixed inset-y-0 left-0 max-w-xs w-full bg-[#fffafb]/95 backdrop-blur-3xl shadow-2xl z-[160] p-6 flex flex-col justify-between border-r border-indigo-100/40 animate-slideRight text-left">
-            <div className="space-y-6">
-              {/* Title Header with Close */}
-              <div className="flex items-center justify-between border-b border-indigo-100/30 pb-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl">🤝</span>
-                  <div>
-                    <span className="font-serif italic font-black text-xl bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent block">Lumina Partner</span>
-                    <span className="text-[9px] font-bold text-stone-400 uppercase tracking-widest block">Navigation Menu</span>
-                  </div>
+          <div className="fixed inset-y-0 left-0 top-0 bottom-0 h-screen h-[100dvh] max-h-screen max-h-[100dvh] max-w-xs w-full bg-[#fffafb]/95 backdrop-blur-3xl shadow-2xl z-[160] flex flex-col border-r border-indigo-100/40 animate-slideRight text-left overflow-hidden">
+            {/* Title Header with Close */}
+            <div className="flex items-center justify-between border-b border-indigo-100/30 p-6 pb-4 shrink-0 bg-[#fffafb]/95">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🤝</span>
+                <div>
+                  <span className="font-serif italic font-black text-xl bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent block">Lumina Partner</span>
+                  <span className="text-[9px] font-bold text-stone-400 uppercase tracking-widest block">Navigation Menu</span>
                 </div>
-                <button 
-                  type="button"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="p-1.5 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
               </div>
+              <button 
+                type="button"
+                onClick={() => setIsMenuOpen(false)}
+                className="p-1.5 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors cursor-pointer"
+                title="Close Menu"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
 
-              {/* Navigation Items List */}
-              <div className="space-y-2.5">
+            {/* Navigation Items List */}
+            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4 space-y-2.5 overscroll-contain touch-pan-y scroll-smooth">
                 {/* 0. Home Dashboard */}
                 <button 
                   type="button"
@@ -756,10 +693,9 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                   <span className="text-pink-400 text-xs">➔</span>
                 </button>
               </div>
-            </div>
 
-            {/* Bottom Actions: Log Out & Delete Account */}
-            <div className="border-t border-indigo-100/40 pt-4 space-y-2 text-center">
+            {/* Bottom Actions: Log Out & Delete Account (Pinned Footer) */}
+            <div className="border-t border-indigo-100/40 p-6 pt-3 pb-6 shrink-0 bg-[#fffafb]/95 space-y-2 text-center">
               <span className="text-[9px] font-black uppercase tracking-wider text-stone-400 block mb-1">Account Actions</span>
               
               {onLogout && (

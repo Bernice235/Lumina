@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Song, User } from '../types';
 import { SONGS } from '../constants';
+import { calculateCycleSyncData } from '../services/cycleSyncService';
 import { 
   Play, 
   Pause, 
@@ -179,18 +180,13 @@ const MusicRoom: React.FC<MusicRoomProps> = ({
 
   const favorites = user.favoriteSongs || [];
 
-  // Determine current cycle phase
+  // Determine current cycle phase using central synchronised logic
   const cyclePhase = useMemo(() => {
     if (user.isPregnancyMode) return 'pregnancy';
-    if (!user.lastPeriodStart) return 'follicular';
-    const today = new Date();
-    const lastStart = new Date(user.lastPeriodStart);
-    const diffDays = Math.floor((today.getTime() - lastStart.getTime()) / (1000 * 60 * 60 * 24));
-    const cycleDay = (diffDays % (user.cycleLength || 28)) + 1;
-    
-    if (cycleDay <= (user.periodLength || 5)) return 'period';
-    if (cycleDay <= (user.cycleLength || 28) - 14) return 'follicular';
-    if (cycleDay <= (user.cycleLength || 28) - 10) return 'ovulation';
+    const sync = calculateCycleSyncData(user, new Date());
+    if (sync.phase === 'Menstrual') return 'period';
+    if (sync.phase === 'Follicular') return 'follicular';
+    if (sync.phase === 'Ovulatory') return 'ovulation';
     return 'luteal';
   }, [user]);
 
