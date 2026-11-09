@@ -5,6 +5,7 @@ import { User, Symptom, PeriodLog } from '../types';
 import { SYMPTOMS } from '../constants';
 import { Calendar, Activity, History, Plus, X } from 'lucide-react';
 import { trackLogPeriod } from '../services/analyticsService';
+import { formatYMD, parseYMDToLocalDate } from '../services/cycleSyncService';
 
 interface LogModalProps {
   isOpen: boolean;
@@ -31,8 +32,8 @@ const LogModal: React.FC<LogModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'period' | 'symptoms' | 'timeline' | 'other'>('period');
   const [selectedIntensity, setSelectedIntensity] = useState<PeriodLog['intensity']>('medium');
-  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
-  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [startDate, setStartDate] = useState(formatYMD(new Date()));
+  const [endDate, setEndDate] = useState(formatYMD(new Date()));
   const [periodNotes, setPeriodNotes] = useState('');
   const [moodNote, setMoodNote] = useState('');
   const [sexNote, setSexNote] = useState('');
@@ -161,9 +162,12 @@ const LogModal: React.FC<LogModalProps> = ({
 
                     <button
                       onClick={() => {
-                        const startStr = new Date(startDate + 'T12:00:00').toDateString();
-                        const endStr = new Date(endDate + 'T12:00:00').toDateString();
-                        onLogFullPeriod(startStr, endStr, selectedIntensity);
+                        const startLocal = parseYMDToLocalDate(startDate);
+                        let endLocal = parseYMDToLocalDate(endDate);
+                        if (endLocal < startLocal) {
+                          endLocal = startLocal;
+                        }
+                        onLogFullPeriod(startLocal.toDateString(), endLocal.toDateString(), selectedIntensity);
                         trackLogPeriod();
                         onClose();
                       }}

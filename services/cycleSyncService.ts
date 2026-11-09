@@ -23,10 +23,12 @@ export interface CycleSyncData {
   fertileEndDay: number;
   estimatedFertileStartDate: Date | null;
   estimatedFertileEndDate: Date | null;
-  estimatedFertileRangeFormatted: string; // e.g. "Nov 9 – Nov 15 (Estimated)" or "" if not available
-  isWithinFertileWindow: boolean;
-  isOvulationDay: boolean;
-  fertilityStatus: string | null; // e.g. "High Fertility (Estimated)" | "Peak Fertility - Ovulation Day (Estimated)" | null
+  estimatedPrecedingFertileEndDate: Date | null;
+  estimatedFertileRangeFormatted: string; // e.g. "Nov 1 – Nov 5 (Estimated)" (the 5 preceding fertile days)
+  isPrecedingFertileDay: boolean; // True during the 5 days before ovulation
+  isWithinFertileWindow: boolean; // True during the 5 preceding fertile days OR on ovulation day
+  isOvulationDay: boolean; // True ONLY for the single estimated ovulation date
+  fertilityStatus: string | null; // e.g. "High Fertility • Fertile Window (Estimated)" | "Peak Fertility • Ovulation Day (Estimated)" | null
   fertilityBadgeColor: string;
 
   // Next expected period
@@ -50,6 +52,7 @@ export interface DateCycleDetails {
   phaseEmoji: string;
   isLoggedPeriod: boolean;
   isPredictedPeriod: boolean;
+  isPrecedingFertileDay: boolean;
   isWithinFertileWindow: boolean;
   isOvulationDay: boolean;
   fertilityStatus: string | null;
@@ -69,30 +72,156 @@ export function toMidnight(d: Date | string | number): Date {
 }
 
 /**
- * Finds the most authoritative reference period start date for a user:
- * 1. The most recent logged period in user.periods (if valid)
- * 2. user.lastPeriodStart
- * 3. Earliest logged periodDate or today if no history logged
+ * Formats a date into "YYYY-MM-DD" using local calendar components (not UTC).
+ * This prevents the timezone-shift bug where e.g. Nov 8 becomes Nov 7.
  */
-export function getAuthoritativePeriodStart(user?: Partial<User> | null): { date: Date; hasLoggedHistory: boolean } {
+export function formatYMD(dateInput: Date | string | number | null | undefined): string {
+  if (!dateInput) return '';
+  if (typeof dateInput === 'string') {
+    const trimmed = dateInput.trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+  }
+  const d = new Date(dateInput);
+  if (isNaN(d.getTime())) return '';
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Parses a date or "YYYY-MM-DD" string into a Date object at local midnight without UTC drift.
+ */
+export function parseYMDToLocalDate(input: string | Date | number | null | undefined): Date {
+  if (!input) return toMidnight(new Date());
+  if (input instanceof Date) {
+    return toMidnight(input);
+  }
+  if (typeof input === 'string') {
+    const trimmed = input.trim();
+    const match = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+      const [, y, m, d] = match;
+      return new Date(Number(y), Number(m) - 1, Number(d));
+    }
+    const parsed = new Date(trimmed);
+    if (!isNaN(parsed.getTime())) {
+      return toMidnight(parsed);
+    }
+  }
+  return toMidnight(new Date());
+}
+
+/**
+ * Converts a date input to standardized string e.g. "Sun Nov 08 2026"
+ */
+export function toStandardDateString(input: string | Date | number | null | undefined): string {
+  return parseYMDToLocalDate(input).toDateString();
+}
+
+/**
+ * Robust reconstruction of periods, periodDates, and periodLogs.
+ * Ensures consistent sorting, deduplication, and synchronization of lastPeriodStart.
+ */
+export function reconstructCycleData(
+  periods: Period[],
+  existingDates: string[] = [],
+  existingLogs: { date: string; intensity?: any }[] = []
+): {
+  periods: Period[];
+  periodDates: string[];
+  periodLogs: { date: string; intensity: 'spotting' | 'light' | 'medium' | 'heavy' }[];
+  lastPeriodStart: string;
+} {
+  const sortedPeriods = [...periods].sort(
+    (a, b) => parseYMDToLocalDate(b.startDate).getTime() - parseYMDToLocalDate(a.startDate).getTime()
+  );
+
+  const datesSet = new Set<string>();
+  const logsMap = new Map<string, 'spotting' | 'light' | 'medium' | 'heavy'>();
+
+  // Add all dates from periods
+  sortedPeriods.forEach(p => {
+    const s = parseYMDToLocalDate(p.startDate);
+    const e = parseYMDToLocalDate(p.endDate || p.startDate);
+    const cur = new Date(s);
+    while (cur <= e) {
+      const dStr = cur.toDateString();
+      datesSet.add(dStr);
+      logsMap.set(dStr, (p.intensity as any) || 'medium');
+      cur.setDate(cur.getDate() + 1);
+    }
+  });
+
+  // Preserve any individual manually logged dates
+  existingDates.forEach(d => {
+    datesSet.add(d);
+  });
+  existingLogs.forEach(l => {
+    if (!logsMap.has(l.date)) {
+      logsMap.set(l.date, (l.intensity as any) || 'medium');
+    }
+  });
+
+  const periodDates = Array.from(datesSet).sort(
+    (a, b) => new Date(b).getTime() - new Date(a).getTime()
+  );
+
+  const periodLogs = Array.from(logsMap.entries()).map(([date, intensity]) => ({
+    date,
+    intensity
+  })).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  const lastPeriodStart = sortedPeriods[0]?.startDate || (periodDates[0] ? periodDates[0] : new Date().toDateString());
+
+  return {
+    periods: sortedPeriods,
+    periodDates,
+    periodLogs,
+    lastPeriodStart
+  };
+}
+
+/**
+ * Finds the most authoritative reference period start date for a user:
+ * 1. The most recent logged period in user.periods that started on or before targetDate
+ * 2. user.lastPeriodStart
+ * 3. Today if no history logged
+ */
+export function getAuthoritativePeriodStart(
+  user?: Partial<User> | null,
+  targetDate: Date = new Date()
+): { date: Date; hasLoggedHistory: boolean } {
   if (!user) {
     return { date: toMidnight(new Date()), hasLoggedHistory: false };
   }
 
-  // Check user.periods array for latest valid startDate
+  const targetMidnight = toMidnight(targetDate).getTime();
+
+  // Check user.periods array
   if (user.periods && user.periods.length > 0) {
     const validPeriods = user.periods
-      .filter(p => p.startDate && !isNaN(new Date(p.startDate).getTime()))
-      .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
+      .filter(p => p.startDate && !isNaN(parseYMDToLocalDate(p.startDate).getTime()))
+      .map(p => ({
+        ...p,
+        startMidnight: parseYMDToLocalDate(p.startDate).getTime()
+      }))
+      .sort((a, b) => b.startMidnight - a.startMidnight);
+
+    // Look for the latest period starting on or before targetDate
+    const currentOrPastPeriod = validPeriods.find(p => p.startMidnight <= targetMidnight);
+    if (currentOrPastPeriod) {
+      return { date: new Date(currentOrPastPeriod.startMidnight), hasLoggedHistory: true };
+    }
 
     if (validPeriods.length > 0) {
-      return { date: toMidnight(validPeriods[0].startDate), hasLoggedHistory: true };
+      return { date: new Date(validPeriods[validPeriods.length - 1].startMidnight), hasLoggedHistory: true };
     }
   }
 
   // Check user.lastPeriodStart
-  if (user.lastPeriodStart && !isNaN(new Date(user.lastPeriodStart).getTime())) {
-    return { date: toMidnight(user.lastPeriodStart), hasLoggedHistory: true };
+  if (user.lastPeriodStart && !isNaN(parseYMDToLocalDate(user.lastPeriodStart).getTime())) {
+    return { date: parseYMDToLocalDate(user.lastPeriodStart), hasLoggedHistory: true };
   }
 
   // Fallback to today (uninitialized / onboarding placeholder)
@@ -115,7 +244,7 @@ export function calculateCycleSyncData(
   const cycleLen = Math.max(15, Math.min(60, Number(user?.cycleLength) || 28));
   const periodLen = Math.max(1, Math.min(15, Number(user?.periodLength) || 5));
 
-  const { date: refStart, hasLoggedHistory } = getAuthoritativePeriodStart(user);
+  const { date: refStart, hasLoggedHistory } = getAuthoritativePeriodStart(user, targetDate);
   const targetMidnight = toMidnight(targetDate);
   const startMidnight = toMidnight(refStart);
 
@@ -149,10 +278,11 @@ export function calculateCycleSyncData(
   // Standard physiological ovulation timing: luteal phase is typically ~14 days (ovulationDay = cycleLen - 14)
   const ovulationDay = Math.max(periodLen + 1, cycleLen - 14);
 
-  // Fertile window: sperm survives up to 5 days, egg survives up to 24-48 hours.
-  // Standard clinical window: ovulationDay - 5 to ovulationDay + 1 (7 days total)
+  // Fertile window: sperm survives up to 5 days, egg viability is on ovulation day
+  // Preceding 5 fertile days:
   const fertileStartDay = Math.max(1, ovulationDay - 5);
-  const fertileEndDay = Math.min(cycleLen, ovulationDay + 1);
+  const precedingFertileEndDay = Math.max(fertileStartDay, ovulationDay - 1);
+  const fertileEndDay = ovulationDay;
 
   // Biological menstrual phase (distinct from fertility status!)
   let phase: MenstrualPhase = 'Follicular';
@@ -170,38 +300,41 @@ export function calculateCycleSyncData(
     phaseName = 'Menstrual Phase';
     phaseEmoji = '🩸';
     phaseDescription = 'A time for quiet sunset reflection, gentle hydration, and restorative physical rest.';
-  } else if (cycleDay <= ovulationDay - 1) {
+  } else if (cycleDay < ovulationDay) {
     phase = 'Follicular';
     phaseName = 'Follicular Phase';
     phaseEmoji = '🌱';
     phaseDescription = 'Rising vitality, focus, and estrogen. Excellent for creative goals and fresh habits.';
-  } else if (cycleDay <= ovulationDay + 1) {
+  } else if (cycleDay === ovulationDay) {
+    // Requirement 4: Exactly one single estimated ovulation day
     phase = 'Ovulatory';
     phaseName = 'Ovulatory Phase';
     phaseEmoji = '✨';
-    phaseDescription = 'Peak biological glow and social radiance. Confidence and vitality are elevated.';
+    phaseDescription = 'Peak biological glow and social radiance on your single estimated ovulation day.';
   } else {
+    // Requirement 5: Once estimated ovulation has passed, update user's current phase to luteal
     phase = 'Luteal';
     phaseName = 'Luteal Phase';
     phaseEmoji = '🌙';
     phaseDescription = 'Turning gently inward. High emotional intuition, nesting instincts, and cozy comfort.';
   }
 
-  // Separate fertility window evaluation
-  const isWithinFertileWindow = !isLatePeriodMode && cycleDay >= fertileStartDay && cycleDay <= fertileEndDay;
+  // Requirement 1, 2, 3: Separate fertility status evaluation
+  const isPrecedingFertileDay = !isLatePeriodMode && cycleDay >= fertileStartDay && cycleDay < ovulationDay;
   const isOvulationDay = !isLatePeriodMode && cycleDay === ovulationDay;
+  const isWithinFertileWindow = !isLatePeriodMode && (isPrecedingFertileDay || isOvulationDay);
 
   let fertilityStatus: string | null = null;
   let fertilityBadgeColor = '';
 
   if (isOvulationDay) {
     fertilityStatus = 'Peak Fertility • Ovulation Day (Estimated)';
-    fertilityBadgeColor = 'bg-amber-100 text-amber-800 border-amber-200';
-  } else if (isWithinFertileWindow) {
-    fertilityStatus = 'Fertile Window Active (Estimated)';
-    fertilityBadgeColor = 'bg-teal-100 text-teal-800 border-teal-200';
+    fertilityBadgeColor = 'bg-amber-100 text-amber-800 border-amber-300';
+  } else if (isPrecedingFertileDay) {
+    fertilityStatus = 'High Fertility • Fertile Window (Estimated)';
+    fertilityBadgeColor = 'bg-sky-100 text-sky-800 border-sky-300';
   } else {
-    fertilityStatus = null; // Requirement 4: If outside estimated fertile window, do NOT display Fertile Window
+    fertilityStatus = null; // Requirement 4: Outside estimated fertile window, do NOT display Fertile Window
   }
 
   // Date objects for current cycle predictions
@@ -217,9 +350,11 @@ export function calculateCycleSyncData(
     ? new Date(currentCycleStartMidnight.getTime() + (fertileStartDay - 1) * 86400000)
     : null;
 
-  const estimatedFertileEndDate = hasLoggedHistory
-    ? new Date(currentCycleStartMidnight.getTime() + (fertileEndDay - 1) * 86400000)
+  const estimatedPrecedingFertileEndDate = hasLoggedHistory
+    ? new Date(currentCycleStartMidnight.getTime() + (precedingFertileEndDay - 1) * 86400000)
     : null;
+
+  const estimatedFertileEndDate = estimatedOvulationDate;
 
   const nextExpectedPeriodDate = hasLoggedHistory
     ? new Date(currentCycleStartMidnight.getTime() + cycleLen * 86400000)
@@ -237,8 +372,9 @@ export function calculateCycleSyncData(
     ? `${formatShortDate(estimatedOvulationDate)} (Estimated)`
     : 'Estimated based on cycle length';
 
-  const estimatedFertileRangeFormatted = estimatedFertileStartDate && estimatedFertileEndDate
-    ? `${formatShortDate(estimatedFertileStartDate)} – ${formatShortDate(estimatedFertileEndDate)} (Estimated)`
+  // Format the 5 preceding fertile days as the fertile window (e.g. "Nov 1 – Nov 5 (Estimated)")
+  const estimatedFertileRangeFormatted = estimatedFertileStartDate && estimatedPrecedingFertileEndDate
+    ? `${formatShortDate(estimatedFertileStartDate)} – ${formatShortDate(estimatedPrecedingFertileEndDate)} (Estimated)`
     : '';
 
   const nextExpectedPeriodFormatted = nextExpectedPeriodDate
@@ -263,7 +399,9 @@ export function calculateCycleSyncData(
     fertileEndDay,
     estimatedFertileStartDate,
     estimatedFertileEndDate,
+    estimatedPrecedingFertileEndDate,
     estimatedFertileRangeFormatted,
+    isPrecedingFertileDay,
     isWithinFertileWindow,
     isOvulationDay,
     fertilityStatus,
@@ -317,24 +455,30 @@ export function getCycleDetailsForSpecificDate(
     badgeColor = 'bg-pink-100 text-pink-700';
     hormoneInfo = 'Estrogen and progesterone are at baseline levels as the lining renews.';
     insights = 'Prioritize deep nourishment, rest, and warm comfort.';
-  } else if (sync.phase === 'Ovulatory') {
+  } else if (sync.cycleDay === sync.ovulationDay) {
     phaseKey = 'ovulatory';
-    color = '#eab308';
+    color = '#f59e0b';
     badgeColor = 'bg-amber-100 text-amber-800';
     hormoneInfo = 'Estrogen peaks, triggering an LH surge for egg release.';
-    insights = 'Social charisma, confidence, and radiance are at their highest!';
-  } else if (sync.phase === 'Luteal') {
+    insights = 'Peak biological glow! Social charisma, confidence, and radiance are elevated.';
+  } else if (sync.cycleDay > sync.ovulationDay) {
     phaseKey = 'luteal';
     color = '#6366f1';
     badgeColor = 'bg-indigo-100 text-indigo-700';
-    hormoneInfo = 'Progesterone dominates to nurture the lining.';
-    insights = 'Slow down, nurture yourself, and honor your inner space.';
+    hormoneInfo = 'Progesterone dominates to nurture and support the lining.';
+    insights = 'Slow down, nurture yourself, and honor your inner space and cozy comfort.';
+  } else {
+    phaseKey = 'follicular';
+    color = '#a855f7';
+    badgeColor = 'bg-purple-100 text-purple-700';
+    hormoneInfo = 'FSH rises as follicles mature. Estrogen climbs steadily.';
+    insights = 'Energy and cognitive focus are expanding. Ideal for new beginnings!';
   }
 
   let fertilityKey: 'none' | 'fertile_window' | 'peak_ovulation' = 'none';
   if (sync.isOvulationDay) {
     fertilityKey = 'peak_ovulation';
-  } else if (sync.isWithinFertileWindow) {
+  } else if (sync.isPrecedingFertileDay) {
     fertilityKey = 'fertile_window';
   }
 
@@ -348,6 +492,7 @@ export function getCycleDetailsForSpecificDate(
     phaseEmoji: sync.phaseEmoji,
     isLoggedPeriod,
     isPredictedPeriod,
+    isPrecedingFertileDay: sync.isPrecedingFertileDay,
     isWithinFertileWindow: sync.isWithinFertileWindow,
     isOvulationDay: sync.isOvulationDay,
     fertilityStatus: sync.fertilityStatus,

@@ -1231,14 +1231,16 @@ const Dashboard: React.FC<DashboardProps> = ({
     const details = getCycleDetailsForSpecificDate(user, date);
     if (details.isLoggedPeriod) return 'period';
     if (details.isPredictedPeriod) return 'predicted';
-    if (details.isWithinFertileWindow) return 'fertile';
+    if (details.isOvulationDay) return 'ovulation';
+    if (details.isPrecedingFertileDay) return 'fertile';
     return 'none';
   };
 
   const dayStyles = {
     period: 'bg-pink-400 text-white shadow-md shadow-pink-100',
     predicted: 'bg-pink-50 text-pink-400 border border-pink-200 border-dashed',
-    fertile: 'bg-teal-50 text-teal-600 border border-teal-200 font-semibold',
+    ovulation: 'bg-amber-400 text-white font-black shadow-md shadow-amber-200 ring-2 ring-amber-300 ring-offset-1',
+    fertile: 'bg-sky-100 text-sky-800 border border-sky-300 font-bold',
     none: 'text-gray-400 hover:bg-pink-50'
   };
 
@@ -1931,14 +1933,14 @@ const Dashboard: React.FC<DashboardProps> = ({
                 <h2 className="text-3xl md:text-4xl font-serif italic text-pink-600 font-bold leading-none">
                   {isLatePeriodMode ? `Day ${daysLate} Late` : `${currentPhase} Phase`}
                 </h2>
-                {/* Requirements 2, 3 & 4: Fertile Window displayed as separate status badge; hidden outside fertile window */}
+                {/* Requirements 1, 2, 3 & 4: Separate fertile window badge and single ovulation day badge */}
                 {cycleSync.isWithinFertileWindow && (
                   <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border shadow-xs inline-flex items-center gap-1 ${
                     cycleSync.isOvulationDay 
                       ? 'bg-amber-100 text-amber-800 border-amber-300 animate-pulse'
-                      : 'bg-teal-100 text-teal-800 border-teal-300'
+                      : 'bg-sky-100 text-sky-800 border-sky-300'
                   }`}>
-                    <span>{cycleSync.isOvulationDay ? '🌟' : '✨'}</span>
+                    <span>{cycleSync.isOvulationDay ? '🎯' : '✨'}</span>
                     <span>{cycleSync.fertilityStatus}</span>
                   </span>
                 )}
@@ -1947,24 +1949,24 @@ const Dashboard: React.FC<DashboardProps> = ({
                 {isLatePeriodMode && `Your period was expected on ${expectedPeriodDate?.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}. Lumina is tracking your late period mode.`}
                 {!isLatePeriodMode && currentPhase === 'Menstrual' && "A time for quiet sunset reflection and deep physical rest."}
                 {!isLatePeriodMode && currentPhase === 'Follicular' && (
-                  cycleSync.isWithinFertileWindow 
-                    ? "Late follicular vitality as you approach your estimated fertile window."
+                  cycleSync.isPrecedingFertileDay
+                    ? "Late follicular vitality within your 5-day fertile window."
                     : "A time of rising physical energy, creativity, and new beginnings."
                 )}
-                {!isLatePeriodMode && currentPhase === 'Ovulatory' && "Your peak biological glow. Social, radiant, and articulate."}
-                {!isLatePeriodMode && currentPhase === 'Luteal' && "Turning gently inward. High emotional intuition and cozy comfort."}
+                {!isLatePeriodMode && currentPhase === 'Ovulatory' && "Peak biological radiance and social glow on your single estimated ovulation day."}
+                {!isLatePeriodMode && currentPhase === 'Luteal' && "Turning gently inward. High emotional intuition, progesterone balance, and cozy comfort."}
               </span>
               {/* Clearly labeled predictions & estimates */}
               {!isLatePeriodMode && (
                 <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1 text-[10.5px] text-pink-500/90 font-medium">
                   {cycleSync.estimatedFertileRangeFormatted && (
                     <span>
-                      <strong className="text-teal-700">Fertile Span:</strong> {cycleSync.estimatedFertileRangeFormatted}
+                      <strong className="text-sky-700">Fertile Window (5 Days):</strong> {cycleSync.estimatedFertileRangeFormatted}
                     </span>
                   )}
                   {cycleSync.estimatedOvulationDate && (
                     <span>
-                      <strong className="text-amber-700">Ovulation:</strong> {cycleSync.estimatedOvulationDateFormatted}
+                      <strong className="text-amber-700">Ovulation (Estimated):</strong> {cycleSync.estimatedOvulationDateFormatted}
                     </span>
                   )}
                 </div>
@@ -2308,9 +2310,9 @@ const Dashboard: React.FC<DashboardProps> = ({
       {isMenuOpen && (
         <>
           <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-[150] transition-opacity" onClick={() => setIsMenuOpen(false)} />
-          <div className="fixed inset-y-0 left-0 top-0 bottom-0 h-full max-h-[100dvh] max-w-xs w-full bg-[#fffafb] shadow-2xl z-[160] overflow-y-auto overflow-x-hidden border-r border-pink-100/40 animate-slideRight lumina-menu-scroll overscroll-contain">
-            {/* Title Header with Close (Sticky top inside drawer) */}
-            <div className="sticky top-0 bg-[#fffafb]/95 backdrop-blur-md px-6 py-4 border-b border-pink-100/30 flex items-center justify-between z-20 shadow-xs">
+          <div className="fixed inset-y-0 left-0 top-0 bottom-0 h-[100dvh] max-h-[100dvh] max-w-xs w-full bg-[#fffafb] shadow-2xl z-[160] flex flex-col border-r border-pink-100/40 animate-slideRight text-left overflow-hidden">
+            {/* Title Header with Close (Pinned top inside drawer) */}
+            <div className="shrink-0 bg-[#fffafb] px-6 py-4 border-b border-pink-100/30 flex items-center justify-between z-20 shadow-xs">
               <div className="flex items-center gap-1.5">
                 <span className="text-xl">🌸</span>
                 <span className="font-serif italic font-black text-xl text-pink-600">Lumina Menu</span>
@@ -2324,8 +2326,8 @@ const Dashboard: React.FC<DashboardProps> = ({
               </button>
             </div>
 
-            {/* Content List */}
-            <div className="px-6 py-4 space-y-4">
+            {/* Scrollable Content List */}
+            <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-6 py-4 space-y-4 lumina-menu-scroll overscroll-contain touch-pan-y">
               {/* Lumina Avatar Companion Sanctuary */}
               <div className="bg-gradient-to-br from-pink-500/15 via-rose-400/15 to-amber-400/15 p-4 rounded-3xl border border-pink-200/60 shadow-[0_4px_15px_rgba(244,114,182,0.06)] space-y-2">
                 <div className="flex items-center justify-between">
@@ -2453,20 +2455,20 @@ const Dashboard: React.FC<DashboardProps> = ({
                   Customize wallpapers, themes & cycle colors
                 </p>
               </div>
+            </div>
 
-              {/* Logout Button */}
-              <div className="border-t border-pink-100/30 pt-4 mt-6 pb-6">
-                <button 
-                  onClick={() => {
-                    if (handleLogout) handleLogout();
-                    setIsMenuOpen(false);
-                  }}
-                  className="w-full py-3 rounded-2xl bg-rose-50 text-rose-500 hover:bg-rose-100 transition-colors duration-300 font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <LogOut className="w-4 h-4" />
-                  Sign Out of Sanctuary
-                </button>
-              </div>
+            {/* Pinned Bottom Sign Out (Never covered by scrollable content, mobile safe-area aware) */}
+            <div className="shrink-0 px-6 py-3 border-t border-pink-100/30 bg-[#fffafb] pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+              <button 
+                onClick={() => {
+                  if (handleLogout) handleLogout();
+                  setIsMenuOpen(false);
+                }}
+                className="w-full py-3 rounded-2xl bg-rose-50 text-rose-500 hover:bg-rose-100 transition-colors duration-300 font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 cursor-pointer shadow-xs active:scale-[0.98]"
+              >
+                <LogOut className="w-4 h-4" />
+                Sign Out of Sanctuary
+              </button>
             </div>
           </div>
         </>

@@ -2,6 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { Calendar, Clock, CheckCircle2, AlertCircle, Edit3, X, Sparkles, Droplet, RefreshCw, ChevronRight, Heart } from 'lucide-react';
 import { User, Period, PeriodLog } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
+import { syncUser } from '../services/firebaseService';
+import { parseYMDToLocalDate, reconstructCycleData } from '../services/cycleSyncService';
 
 interface ExpectedPeriodCheckInCardProps {
   user: User;
@@ -128,24 +130,29 @@ export const ExpectedPeriodCheckInCard: React.FC<ExpectedPeriodCheckInCardProps>
       intensity: selectedIntensity
     };
 
-    const newDates = Array.from(new Set([...(user.periodDates || []), logDateStr]));
-    const newLogs: PeriodLog[] = [...(user.periodLogs || []), { date: logDateStr, intensity: selectedIntensity }];
-    const allPeriods = [newPeriod, ...(user.periods || [])].sort(
-      (a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
+    const reconstructed = reconstructCycleData(
+      [newPeriod, ...(user.periods || [])],
+      user.periodDates,
+      user.periodLogs
     );
 
     const updatedUser: User = {
       ...user,
       lastPeriodStart: logDateStr,
-      periodDates: newDates,
-      periodLogs: newLogs,
-      periods: allPeriods,
+      periodDates: reconstructed.periodDates,
+      periodLogs: reconstructed.periodLogs,
+      periods: reconstructed.periods,
       latePeriodCheckIn: undefined,
       latePeriodDismissedDate: undefined
     };
 
     setUser(updatedUser);
-    showToast("Period logged! Cycle predictions and calendar updated. 🌸");
+    try {
+      syncUser(updatedUser);
+    } catch (e) {
+      console.warn("Failed to sync period check-in:", e);
+    }
+    showToast("Period logged! Cycle Day 1 reset & calendar synchronized. 🌸");
     if (onPeriodLogged) onPeriodLogged();
   };
 
@@ -160,6 +167,7 @@ export const ExpectedPeriodCheckInCard: React.FC<ExpectedPeriodCheckInCardProps>
       }
     };
     setUser(updatedUser);
+    syncUser(updatedUser);
     setMode('not_yet_acknowledged');
     showToast("Logged as late. Lumina will continue tracking for you safely. 💕");
   };
@@ -171,6 +179,7 @@ export const ExpectedPeriodCheckInCard: React.FC<ExpectedPeriodCheckInCardProps>
       latePeriodDismissedDate: todayStr
     };
     setUser(updatedUser);
+    syncUser(updatedUser);
   };
 
   // Update suggested cycle length
@@ -182,6 +191,7 @@ export const ExpectedPeriodCheckInCard: React.FC<ExpectedPeriodCheckInCardProps>
       latePeriodCheckIn: undefined
     };
     setUser(updatedUser);
+    syncUser(updatedUser);
     setMode('initial');
     showToast(`Cycle length updated to ${newLen} days! Future predictions adjusted. ✨`);
   };
@@ -197,12 +207,13 @@ export const ExpectedPeriodCheckInCard: React.FC<ExpectedPeriodCheckInCardProps>
 
     if (newPredictedDateInput) {
       // Adjust lastPeriodStart so expectedPeriodDate aligns with newPredictedDateInput
-      const newPredDate = new Date(newPredictedDateInput + 'T12:00:00');
+      const newPredDate = parseYMDToLocalDate(newPredictedDateInput);
       const adjustedLastStart = new Date(newPredDate.getTime() - editCycleLenInput * 24 * 60 * 60 * 1000);
       updatedUser.lastPeriodStart = adjustedLastStart.toDateString();
     }
 
     setUser(updatedUser);
+    syncUser(updatedUser);
     setMode('initial');
     showToast("Predictions and cycle preferences updated! 🌸");
   };

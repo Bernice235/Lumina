@@ -26,7 +26,15 @@ import TemperatureTracker from './TemperatureTracker';
 import { ExpectedPeriodCheckInCard } from './ExpectedPeriodCheckInCard';
 import { CycleGraph } from './CycleGraph';
 import { getCycleAnalytics } from '../services/cycleAnalyticsService';
-import { calculateCycleSyncData, getCycleDetailsForSpecificDate, CycleSyncData } from '../services/cycleSyncService';
+import { 
+  calculateCycleSyncData, 
+  getCycleDetailsForSpecificDate, 
+  CycleSyncData, 
+  formatYMD, 
+  parseYMDToLocalDate, 
+  reconstructCycleData 
+} from '../services/cycleSyncService';
+import { syncUser } from '../services/firebaseService';
 import { logAvatarActionReward } from '../services/avatarService';
 import { 
   BarChart, 
@@ -82,7 +90,6 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
   setUser
 }) => {
   const [activeView, setActiveView] = useState<TrackerView>('cycle');
-  const [editingPeriod, setEditingPeriod] = useState<Period | null>(null);
   const [viewingPeriodId, setViewingPeriodId] = useState<string | null>(null);
   const [editingPeriodData, setEditingPeriodData] = useState<{
     id: string;
@@ -93,8 +100,8 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
   const [isAddingPeriod, setIsAddingPeriod] = useState<boolean>(false);
   const [isViewingTrends, setIsViewingTrends] = useState<boolean>(false);
   const [newPeriodData, setNewPeriodData] = useState({
-    startDate: new Date().toISOString().split('T')[0],
-    endDate: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    startDate: formatYMD(new Date()),
+    endDate: formatYMD(new Date(Date.now() + 4 * 24 * 60 * 60 * 1000)),
     intensity: 'medium' as 'spotting' | 'light' | 'medium' | 'heavy'
   });
   const [deletingSymptomId, setDeletingSymptomId] = useState<string | null>(null);
@@ -316,112 +323,110 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
     }
   };
 
-  const handleEditPeriodSave = (updatedPeriod: Period | null) => {
-    if (!editingPeriod || !setUser) return;
-    
-    // Remaining periods
-    const remainingPeriods = (user.periods || []).filter(p => p.id !== editingPeriod.id);
-    
-    let allPeriods: Period[];
-    if (updatedPeriod === null) {
-      allPeriods = remainingPeriods;
-    } else {
-      allPeriods = [...remainingPeriods, updatedPeriod].sort(
-        (a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
-      );
+  const handleAddNewPeriod = async () => {
+    if (!setUser || !user) return;
+    if (!newPeriodData.startDate) return;
+
+    const startLocal = parseYMDToLocalDate(newPeriodData.startDate);
+    let endLocal = newPeriodData.endDate ? parseYMDToLocalDate(newPeriodData.endDate) : new Date(startLocal.getTime() + 4 * 86400000);
+    if (endLocal < startLocal) {
+      endLocal = new Date(startLocal.getTime() + 4 * 86400000);
     }
-    
-    // Now re-calculate periodDates and periodLogs based on ALL periods!
-    const newDates: string[] = [];
-    const newLogs: any[] = [];
-    
-    allPeriods.forEach(p => {
-      const startObj = new Date(p.startDate);
-      const endObj = new Date(p.endDate);
-      const current = new Date(startObj);
-      while (current <= endObj) {
-        const dStr = current.toDateString();
-        if (!newDates.includes(dStr)) {
-          newDates.push(dStr);
-          newLogs.push({ date: dStr, intensity: p.intensity });
-        }
-        current.setDate(current.getDate() + 1);
-      }
-    });
-    
-    // Plus any manual single-day clicks if they exist and are not already covered
-    const manualDates = (user.periodDates || []).filter(dateStr => {
-      const isOldPeriodDate = (user.periods || []).some(p => {
-        const sObj = new Date(p.startDate);
-        const eObj = new Date(p.endDate);
-        const qObj = new Date(dateStr);
-        return qObj >= sObj && qObj <= eObj;
-      });
-      return !isOldPeriodDate;
-    });
-    
-    manualDates.forEach(d => {
-      if (!newDates.includes(d)) {
-        newDates.push(d);
-        const existingLog = (user.periodLogs || []).find(l => l.date === d);
-        newLogs.push({ date: d, intensity: existingLog?.intensity || 'medium' });
-      }
-    });
 
-    setUser(prev => prev ? {
-      ...prev,
-      periods: allPeriods,
-      periodDates: newDates,
-      periodLogs: newLogs,
-      lastPeriodStart: allPeriods[0]?.startDate || prev.lastPeriodStart
-    } : null);
-    
-    setEditingPeriod(null);
-  };
-
-  const handleAddNewPeriod = () => {
-    if (!setUser) return;
     const nextPeriod: Period = {
       id: Math.random().toString(36).substr(2, 9),
-      startDate: new Date(newPeriodData.startDate).toDateString(),
-      endDate: new Date(newPeriodData.endDate).toDateString(),
+      startDate: startLocal.toDateString(),
+      endDate: endLocal.toDateString(),
       intensity: newPeriodData.intensity
     };
-    
-    const allPeriods = [...(user.periods || []), nextPeriod].sort(
-      (a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
-    );
-    
-    // Recalculate
-    const newDates: string[] = [];
-    const newLogs: any[] = [];
-    allPeriods.forEach(p => {
-      const startObj = new Date(p.startDate);
-      const endObj = new Date(p.endDate);
-      const current = new Date(startObj);
-      while (current <= endObj) {
-        const dStr = current.toDateString();
-        if (!newDates.includes(dStr)) {
-          newDates.push(dStr);
-          newLogs.push({ date: dStr, intensity: p.intensity });
-        }
-        current.setDate(current.getDate() + 1);
+
+    const combinedPeriods = [...(user.periods || []), nextPeriod];
+    const reconstructed = reconstructCycleData(combinedPeriods, user.periodDates || [], user.periodLogs || []);
+
+    const updatedUser: User = {
+      ...user,
+      periods: reconstructed.periods,
+      periodDates: reconstructed.periodDates,
+      periodLogs: reconstructed.periodLogs,
+      lastPeriodStart: reconstructed.lastPeriodStart || user.lastPeriodStart
+    };
+
+    setUser(updatedUser);
+    setIsAddingPeriod(false);
+    try {
+      await syncUser(updatedUser);
+    } catch (e) {
+      console.error('Failed to sync new period to database:', e);
+    }
+
+    logAvatarActionReward(updatedUser, 'log_cycle', 'Logged Completed Cycle', setUser);
+  };
+
+  const handleSaveEditPeriod = async (
+    periodId: string, 
+    startYMD: string, 
+    endYMD: string, 
+    intensity: 'spotting' | 'light' | 'medium' | 'heavy'
+  ) => {
+    if (!setUser || !user) return;
+    const startLocal = parseYMDToLocalDate(startYMD);
+    let endLocal = endYMD ? parseYMDToLocalDate(endYMD) : new Date(startLocal.getTime() + 4 * 86400000);
+    if (endLocal < startLocal) {
+      endLocal = new Date(startLocal.getTime() + 4 * 86400000);
+    }
+
+    const updatedPeriods = (user.periods || []).map(p => {
+      if (p.id === periodId) {
+        return {
+          ...p,
+          startDate: startLocal.toDateString(),
+          endDate: endLocal.toDateString(),
+          intensity
+        };
       }
+      return p;
     });
 
-    setUser(prev => prev ? {
-      ...prev,
-      periods: allPeriods,
-      periodDates: newDates,
-      periodLogs: newLogs,
-      lastPeriodStart: allPeriods[0]?.startDate || prev.lastPeriodStart
-    } : null);
-    
-    if (user) {
-      logAvatarActionReward(user, 'log_cycle', 'Logged Completed Cycle', setUser);
+    const reconstructed = reconstructCycleData(updatedPeriods, user.periodDates || [], user.periodLogs || []);
+
+    const updatedUser: User = {
+      ...user,
+      periods: reconstructed.periods,
+      periodDates: reconstructed.periodDates,
+      periodLogs: reconstructed.periodLogs,
+      lastPeriodStart: reconstructed.lastPeriodStart || user.lastPeriodStart
+    };
+
+    setUser(updatedUser);
+    setEditingPeriodData(null);
+    try {
+      await syncUser(updatedUser);
+    } catch (e) {
+      console.error('Failed to sync edited period to database:', e);
     }
-    
-    setIsAddingPeriod(false);
+  };
+
+  const handleDeletePeriod = async (periodId: string) => {
+    if (!setUser || !user) return;
+    const updatedPeriods = (user.periods || []).filter(p => p.id !== periodId);
+    const reconstructed = reconstructCycleData(updatedPeriods, user.periodDates || [], user.periodLogs || []);
+
+    const updatedUser: User = {
+      ...user,
+      periods: reconstructed.periods,
+      periodDates: reconstructed.periodDates,
+      periodLogs: reconstructed.periodLogs,
+      lastPeriodStart: reconstructed.lastPeriodStart || (updatedPeriods.length > 0 ? updatedPeriods[0].startDate : user.lastPeriodStart)
+    };
+
+    setUser(updatedUser);
+    setEditingPeriodData(null);
+    setDeletePeriodConfirmId(null);
+    try {
+      await syncUser(updatedUser);
+    } catch (e) {
+      console.error('Failed to sync deleted period to database:', e);
+    }
   };
 
   const handleDeleteIntimacyLog = (logId: string) => {
@@ -550,7 +555,7 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
     const isProtected = activeLog.protection === 'protected';
     const method = activeLog.contraceptiveMethod || 'none';
     const hasEjaculation = activeLog.ejaculation === 'occurred';
-    const isFertileZone = fertilityRatingKey === 'ovulation_day' || fertilityRatingKey === 'high_fertility';
+    const isFertileZone = fertilityRatingKey === 'peak_ovulation' || fertilityRatingKey === 'fertile_window' || fertilityRatingKey === 'ovulation_day' || fertilityRatingKey === 'high_fertility';
     const ecTaken = activeLog.emergencyContraceptiveTaken || false;
     const ecTime = activeLog.emergencyContraceptiveTime || '';
 
@@ -670,15 +675,15 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
     if (isLogged) return 'period';
     if (details.isPredictedPeriod) return 'predicted_period';
     if (details.isOvulationDay) return 'ovulation';
-    if (details.isWithinFertileWindow) return 'fertile';
+    if (details.isPrecedingFertileDay) return 'fertile';
     return 'none';
   };
 
   const dayStyles = {
     period: 'bg-pink-500 text-white font-bold shadow-md shadow-pink-200 ring-2 ring-pink-300 ring-offset-2',
     predicted_period: 'bg-pink-200 text-pink-700 font-medium border border-pink-300 border-dashed',
-    ovulation: 'bg-teal-400 text-white font-bold shadow-md shadow-teal-100 ring-2 ring-teal-200',
-    fertile: 'bg-teal-50 text-teal-600 font-medium border border-teal-100',
+    ovulation: 'bg-amber-400 text-white font-black shadow-md shadow-amber-200 ring-2 ring-amber-300 ring-offset-1',
+    fertile: 'bg-sky-100 text-sky-800 font-bold border border-sky-300',
     none: 'hover:bg-pink-50 text-gray-400 hover:text-pink-400'
   };
 
@@ -735,7 +740,7 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
             {/* Separate Fertile Window Status: only displayed when active, never replacing the menstrual phase */}
             {cycleSync.isWithinFertileWindow && cycleSync.fertilityStatus && (
               <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${cycleSync.fertilityBadgeColor}`}>
-                <Sparkles className="w-3.5 h-3.5 text-teal-600" />
+                <Sparkles className="w-3.5 h-3.5 text-sky-600" />
                 <span>{cycleSync.fertilityStatus}</span>
               </span>
             )}
@@ -747,13 +752,13 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
 
           {/* Synchronized Cycle Forecast Estimates */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-3 text-left">
-            <div className="bg-pink-50/70 border border-pink-100 rounded-2xl p-2.5">
-              <span className="text-[9px] font-bold text-pink-400 uppercase tracking-wider block">Estimated Ovulation</span>
-              <span className="text-xs font-bold text-pink-700 block mt-0.5">{cycleSync.estimatedOvulationDateFormatted}</span>
+            <div className="bg-amber-50/70 border border-amber-200/60 rounded-2xl p-2.5">
+              <span className="text-[9px] font-bold text-amber-600 uppercase tracking-wider block">Estimated Ovulation</span>
+              <span className="text-xs font-bold text-amber-800 block mt-0.5">{cycleSync.estimatedOvulationDateFormatted}</span>
             </div>
-            <div className="bg-teal-50/70 border border-teal-100 rounded-2xl p-2.5">
-              <span className="text-[9px] font-bold text-teal-600 uppercase tracking-wider block">Fertile Window (Est.)</span>
-              <span className="text-xs font-bold text-teal-800 block mt-0.5">{cycleSync.estimatedFertileRangeFormatted || 'Pending history'}</span>
+            <div className="bg-sky-50/70 border border-sky-200/60 rounded-2xl p-2.5">
+              <span className="text-[9px] font-bold text-sky-600 uppercase tracking-wider block">Fertile Window (5 Days)</span>
+              <span className="text-xs font-bold text-sky-800 block mt-0.5">{cycleSync.estimatedFertileRangeFormatted || 'Pending history'}</span>
             </div>
             <div className="bg-purple-50/70 border border-purple-100 rounded-2xl p-2.5">
               <span className="text-[9px] font-bold text-purple-500 uppercase tracking-wider block">Next Period (Est.)</span>
@@ -941,8 +946,8 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
                           } else {
                             setEditingPeriodData({
                               id: period.id,
-                              startDate: new Date(period.startDate).toISOString().split('T')[0],
-                              endDate: new Date(period.endDate).toISOString().split('T')[0],
+                              startDate: formatYMD(period.startDate),
+                              endDate: formatYMD(period.endDate),
                               intensity: period.intensity
                             });
                           }
@@ -1028,12 +1033,7 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
                           <div className="flex justify-center gap-2 pt-1">
                             <button
                               onClick={() => {
-                                setEditingPeriod(period);
-                                setTimeout(() => {
-                                  handleEditPeriodSave(null);
-                                  setEditingPeriodData(null);
-                                  setDeletePeriodConfirmId(null);
-                                }, 50);
+                                handleDeletePeriod(period.id);
                               }}
                               className="px-4 py-1.5 bg-rose-600 text-white rounded-full text-[9px] font-bold uppercase tracking-widest hover:bg-rose-700 cursor-pointer transition-colors"
                             >
@@ -1087,17 +1087,12 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
                             <div className="flex gap-2">
                               <button
                                 onClick={() => {
-                                  const updated: Period = {
-                                    id: period.id,
-                                    startDate: new Date(editingPeriodData.startDate).toDateString(),
-                                    endDate: new Date(editingPeriodData.endDate).toDateString(),
-                                    intensity: editingPeriodData.intensity
-                                  };
-                                  setEditingPeriod(period);
-                                  setTimeout(() => {
-                                    handleEditPeriodSave(updated);
-                                    setEditingPeriodData(null);
-                                  }, 50);
+                                  handleSaveEditPeriod(
+                                    period.id,
+                                    editingPeriodData.startDate,
+                                    editingPeriodData.endDate,
+                                    editingPeriodData.intensity
+                                  );
                                 }}
                                 className="px-5 py-2 bg-gradient-to-r from-pink-400 to-rose-400 hover:from-pink-500 hover:to-rose-500 text-white rounded-full text-[9px] font-extrabold uppercase tracking-widest hover:shadow-md cursor-pointer transition-all"
                               >
@@ -1152,7 +1147,7 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
     // Compute range segments within the current viewed month
     const menstrualDays: number[] = [];
     const follicularDays: number[] = [];
-    const highFertileDays: number[] = [];
+    const fertilePrecedingDays: number[] = [];
     const lutealDays: number[] = [];
     let ovulationDayNum: number | null = null;
 
@@ -1163,14 +1158,12 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
         menstrualDays.push(d);
       } else if (det.phaseKey === 'follicular') {
         follicularDays.push(d);
-      } else if (det.phaseKey === 'ovulatory') {
-        follicularDays.push(d);
       } else if (det.phaseKey === 'luteal') {
         lutealDays.push(d);
       }
 
-      if (det.isWithinFertileWindow) {
-        highFertileDays.push(d);
+      if (det.isPrecedingFertileDay) {
+        fertilePrecedingDays.push(d);
       }
       if (det.isOvulationDay) {
         ovulationDayNum = d;
@@ -1255,16 +1248,18 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
                     bgClass = 'bg-pink-100/70 text-pink-700 font-semibold';
                     borderClass = 'border-2 border-dashed border-pink-300';
                   }
+                } else if (details.isOvulationDay) {
+                  // Requirement 2 & 4: Distinct color & marker for single estimated ovulation day
+                  bgClass = 'bg-amber-400 text-white font-black shadow-md shadow-amber-200 ring-2 ring-amber-300 ring-offset-1';
+                  borderClass = 'border-amber-400';
+                } else if (details.isPrecedingFertileDay) {
+                  // Requirement 3: Highlight the five preceding fertile days separately in sky blue
+                  bgClass = 'bg-sky-50 text-sky-800 font-bold border border-sky-300/80 hover:bg-sky-100/80 shadow-xs';
+                  borderClass = 'border border-sky-300/80';
                 } else if (details.phaseKey === 'follicular') {
                   bgClass = 'bg-purple-100/40 text-purple-700 hover:bg-purple-100/70 font-medium';
-                } else if (details.phaseKey === 'ovulatory') {
-                  if (details.isOvulationDay) {
-                    bgClass = 'bg-amber-400 text-white font-bold shadow-sm shadow-amber-200';
-                  } else {
-                    bgClass = 'bg-amber-100/50 text-amber-800 hover:bg-amber-100 font-medium';
-                    borderClass = 'border border-amber-200';
-                  }
                 } else if (details.phaseKey === 'luteal') {
+                  // Requirement 5: Once estimated ovulation has passed, update phase to luteal
                   bgClass = 'bg-indigo-50/50 text-indigo-700 hover:bg-indigo-50/90 font-medium';
                 }
 
@@ -1289,12 +1284,19 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
                   >
                     {/* Visual icons/markers for easy tracking */}
                     <div className="absolute top-1 left-1 right-1 flex justify-between gap-0.5 select-none pointer-events-none">
-                      {intimacyEm && (
+                      {details.isOvulationDay ? (
+                        <span className="text-[10px]" title="Single Estimated Ovulation Day">🎯</span>
+                      ) : details.isPrecedingFertileDay ? (
+                        <span className="text-[8.5px] text-sky-600 font-bold" title="Fertile Window (5 Days Preceding Ovulation)">✨</span>
+                      ) : intimacyEm ? (
                         <span className="text-[9px]" title={daySexLog?.protection === 'protected' ? 'Protected intimacy' : 'Unprotected intimacy'}>
                           {intimacyEm}
                         </span>
-                      )}
+                      ) : null}
                       <div className="flex gap-0.5">
+                        {intimacyEm && (details.isOvulationDay || details.isPrecedingFertileDay) && (
+                          <span className="text-[8px]">{intimacyEm}</span>
+                        )}
                         {pillEm && (
                           <span className="text-[8px]" title="Contraceptive logged">
                             {pillEm}
@@ -1323,7 +1325,7 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
           {/* Upgraded Legend */}
           <div className="mt-8 border-t border-pink-50 pt-6">
             <h4 className="text-[10px] font-bold text-pink-300 uppercase tracking-widest text-center mb-4">Cycle Phase & Reproductive Health Legend</h4>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center mb-4 animate-fadeIn">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center mb-4 animate-fadeIn">
               <div className="flex flex-col items-center p-2 rounded-xl bg-pink-50/40">
                 <div className="w-5 h-5 rounded-md bg-pink-500 mb-1 flex items-center justify-center text-[10px] text-white font-bold">🩸</div>
                 <span className="text-[9px] font-bold text-pink-700 uppercase">Menstrual</span>
@@ -1332,12 +1334,16 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
                 <div className="w-5 h-5 rounded-md bg-purple-100/70 mb-1 flex items-center justify-center text-purple-700 text-xs text-[10px]">🌱</div>
                 <span className="text-[9px] font-bold text-purple-700 uppercase">Follicular</span>
               </div>
-              <div className="flex flex-col items-center p-2 rounded-xl bg-amber-50/40">
-                <div className="w-5 h-5 rounded-md bg-amber-400 mb-1 flex items-center justify-center text-white text-[10px] font-bold">☀️</div>
-                <span className="text-[9px] font-bold text-amber-800 uppercase">Ovulatory</span>
+              <div className="flex flex-col items-center p-2 rounded-xl bg-sky-50/60 border border-sky-200/50">
+                <div className="w-5 h-5 rounded-md bg-sky-100 mb-1 flex items-center justify-center text-sky-700 text-[10px] font-bold">✨</div>
+                <span className="text-[9px] font-bold text-sky-800 uppercase">Fertile (5 Days)</span>
+              </div>
+              <div className="flex flex-col items-center p-2 rounded-xl bg-amber-50/60 border border-amber-200/50">
+                <div className="w-5 h-5 rounded-md bg-amber-400 mb-1 flex items-center justify-center text-white text-[10px] font-bold">🎯</div>
+                <span className="text-[9px] font-bold text-amber-800 uppercase">Ovulation (1 Day)</span>
               </div>
               <div className="flex flex-col items-center p-2 rounded-xl bg-indigo-50/40">
-                <div className="w-5 h-5 rounded-md bg-indigo-50/80 mb-1 flex items-center justify-center text-indigo-700 text-xs text-[10px]">&nbsp;🍂</div>
+                <div className="w-5 h-5 rounded-md bg-indigo-50/80 mb-1 flex items-center justify-center text-indigo-700 text-xs text-[10px]">🍂</div>
                 <span className="text-[9px] font-bold text-indigo-700 uppercase">Luteal</span>
               </div>
             </div>
@@ -1380,8 +1386,8 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
 
               {selectedDetails.isWithinFertileWindow && selectedDetails.fertilityStatus && (
                 <div className="flex justify-between items-center text-xs">
-                  <span className="font-bold text-teal-600 uppercase tracking-widest">Fertility Status</span>
-                  <span className={`font-bold italic text-teal-700`}>
+                  <span className="font-bold text-sky-600 uppercase tracking-widest">Fertility Status</span>
+                  <span className={`font-bold italic text-sky-700`}>
                     {selectedDetails.fertilityStatus}
                   </span>
                 </div>
@@ -1868,11 +1874,11 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
                 <span className="font-semibold text-right pl-4">{formatRanges(follicularDays)}</span>
               </div>
               <div className="flex justify-between items-start border-b border-white/10 pb-3">
-                <span className="opacity-85 font-medium">🌟 Fertile Window:</span>
-                <span className="font-bold text-teal-100 text-right pl-4">{formatRanges(highFertileDays)}</span>
+                <span className="opacity-85 font-medium">✨ Fertile Window (5 Days):</span>
+                <span className="font-bold text-sky-100 text-right pl-4">{formatRanges(fertilePrecedingDays)}</span>
               </div>
               <div className="flex justify-between items-start border-b border-white/10 pb-3">
-                <span className="opacity-85 font-medium">🎯 Predicted Ovulation:</span>
+                <span className="opacity-85 font-medium">🎯 Predicted Ovulation Day:</span>
                 <span className="font-bold text-amber-200 text-right pl-4">{ovulationDateLabel}</span>
               </div>
               <div className="flex justify-between items-start pb-1">

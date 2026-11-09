@@ -60,6 +60,7 @@ import {
 import { THEMES, SONGS, THEME_PALETTES } from './constants';
 import { WALLPAPER_LIST } from './components/WallpapersAndThemesModal';
 import { syncUser, subscribeToGifts, subscribeToUser, acceptInvite, subscribeToPartnerRequests, getCleanName } from './services/firebaseService';
+import { parseYMDToLocalDate, reconstructCycleData } from './services/cycleSyncService';
 import { getDefaultNotificationSettings, calculateScheduledNotifications, sanitizeUserNotifications, scheduleNativeLocalNotification } from './services/notificationService';
 import { logAvatarActionReward } from './services/avatarService';
 import { auth } from './services/firebase';
@@ -1315,56 +1316,91 @@ const App: React.FC = () => {
     }
   };
 
-  const handleLogPeriod = (intensity: PeriodLog['intensity']) => {
+  const handleLogPeriod = async (intensity: PeriodLog['intensity']) => {
     if (!user) return;
-    const today = new Date().toDateString();
-    const newDates = Array.from(new Set([...(user.periodDates || []), today]));
-    const newLogs = [...(user.periodLogs || []), { date: today, intensity }];
-    
-    setUser({ 
-      ...user, 
-      periodDates: newDates, 
-      periodLogs: newLogs,
-      lastPeriodStart: today 
-    });
+    const today = new Date();
+    const periodLen = user.periodLength || 5;
+    const end = new Date(today.getTime() + (periodLen - 1) * 86400000);
+    const startStr = today.toDateString();
+    const endStr = end.toDateString();
+
+    const newPeriod: Period = {
+      id: Math.random().toString(36).substring(2, 9),
+      startDate: startStr,
+      endDate: endStr,
+      intensity
+    };
+
+    const reconstructed = reconstructCycleData(
+      [newPeriod, ...(user.periods || [])],
+      user.periodDates,
+      user.periodLogs
+    );
+
+    const updatedUser: User = {
+      ...user,
+      periods: reconstructed.periods,
+      periodDates: reconstructed.periodDates,
+      periodLogs: reconstructed.periodLogs,
+      lastPeriodStart: startStr,
+      latePeriodCheckIn: undefined,
+      latePeriodDismissedDate: undefined
+    };
+
+    setUser(updatedUser);
+    try {
+      await syncUser(updatedUser);
+    } catch (e) {
+      console.warn("Failed to sync logged period:", e);
+    }
+
+    logAvatarActionReward(updatedUser, 'log_cycle', 'Logged Today Period Flow', setUser);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('lumina:checkin-completed', { detail: { type: 'period' } }));
+    }
     setIsLogModalOpen(false);
   };
 
-  const handleLogFullPeriod = (startDate: string, endDate: string, intensity: PeriodLog['intensity']) => {
+  const handleLogFullPeriod = async (startDateInput: string, endDateInput: string, intensity: PeriodLog['intensity']) => {
     if (!user) return;
-    
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const newDates: string[] = [...(user.periodDates || [])];
-    const newLogs: PeriodLog[] = [...(user.periodLogs || [])];
-    
-    const current = new Date(start);
-    while (current <= end) {
-      const dateStr = current.toDateString();
-      if (!newDates.includes(dateStr)) {
-        newDates.push(dateStr);
-        newLogs.push({ date: dateStr, intensity });
-      }
-      current.setDate(current.getDate() + 1);
-    }
-    
+    const start = parseYMDToLocalDate(startDateInput);
+    let end = parseYMDToLocalDate(endDateInput);
+    if (end < start) end = new Date(start);
+
+    const startStr = start.toDateString();
+    const endStr = end.toDateString();
+
     const newPeriod: Period = {
-      id: Math.random().toString(36).substr(2, 9),
-      startDate,
-      endDate,
+      id: Math.random().toString(36).substring(2, 9),
+      startDate: startStr,
+      endDate: endStr,
       intensity
     };
-    
-    const allPeriods = [...(user.periods || []), newPeriod].sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
-    
-    setUser({ 
-      ...user, 
-      periodDates: newDates, 
-      periodLogs: newLogs,
-      periods: allPeriods,
-      lastPeriodStart: allPeriods[0]?.startDate || user.lastPeriodStart
-    });
-    logAvatarActionReward(user, 'log_cycle', 'Logged Completed Cycle', setUser);
+
+    const reconstructed = reconstructCycleData(
+      [newPeriod, ...(user.periods || [])],
+      user.periodDates,
+      user.periodLogs
+    );
+
+    const updatedUser: User = {
+      ...user,
+      periods: reconstructed.periods,
+      periodDates: reconstructed.periodDates,
+      periodLogs: reconstructed.periodLogs,
+      lastPeriodStart: reconstructed.lastPeriodStart,
+      latePeriodCheckIn: undefined,
+      latePeriodDismissedDate: undefined
+    };
+
+    setUser(updatedUser);
+    try {
+      await syncUser(updatedUser);
+    } catch (e) {
+      console.warn("Failed to sync full period log:", e);
+    }
+
+    logAvatarActionReward(updatedUser, 'log_cycle', 'Logged Completed Cycle', setUser);
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('lumina:checkin-completed', { detail: { type: 'period' } }));
     }
@@ -1434,9 +1470,15 @@ const App: React.FC = () => {
     setUser({ ...user, customSongs: newCustoms });
   };
 
-  const updatePeriodDates = (dates: string[]) => {
+  const updatePeriodDates = async (dates: string[]) => {
     if (user) {
-      setUser({ ...user, periodDates: dates });
+      const updatedUser = { ...user, periodDates: dates };
+      setUser(updatedUser);
+      try {
+        await syncUser(updatedUser);
+      } catch (e) {
+        console.warn("Failed to sync periodDates:", e);
+      }
     }
   };
 
