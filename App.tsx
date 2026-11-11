@@ -754,11 +754,13 @@ const App: React.FC = () => {
                   const fullUser: User = {
                     ...emailBackup,
                     ...userData,
-                    cycleLength: userData.cycleLength || emailBackup.cycleLength || 28,
-                    periodLength: userData.periodLength || emailBackup.periodLength || 5,
+                    cycleLength: userData.cycleLength ?? emailBackup.cycleLength ?? 28,
+                    periodLength: userData.periodLength ?? emailBackup.periodLength ?? 5,
+                    automaticCyclePrediction: userData.automaticCyclePrediction ?? emailBackup.automaticCyclePrediction ?? false,
                     lastPeriodStart: userData.lastPeriodStart || emailBackup.lastPeriodStart || new Date().toISOString(),
-                    periods: (userData.periods && userData.periods.length > 0) ? userData.periods : (emailBackup.periods || []),
-                    periodLogs: (userData.periodLogs && userData.periodLogs.length > 0) ? userData.periodLogs : (emailBackup.periodLogs || []),
+                    periods: (userData.periods !== undefined) ? userData.periods : (emailBackup.periods || []),
+                    periodDates: (userData.periodDates !== undefined) ? userData.periodDates : (emailBackup.periodDates || []),
+                    periodLogs: (userData.periodLogs !== undefined) ? userData.periodLogs : (emailBackup.periodLogs || []),
                     symptoms: (userData.symptoms && userData.symptoms.length > 0) ? userData.symptoms : (emailBackup.symptoms || []),
                     moodLogs: (userData.moodLogs && userData.moodLogs.length > 0) ? userData.moodLogs : (emailBackup.moodLogs || []),
                     theme: userData.theme || emailBackup.theme || 'rose',
@@ -838,11 +840,13 @@ const App: React.FC = () => {
             const fullUser: User = {
               ...emailBackup,
               ...userData,
-              cycleLength: userData.cycleLength || emailBackup.cycleLength || 28,
-              periodLength: userData.periodLength || emailBackup.periodLength || 5,
+              cycleLength: userData.cycleLength ?? emailBackup.cycleLength ?? 28,
+              periodLength: userData.periodLength ?? emailBackup.periodLength ?? 5,
+              automaticCyclePrediction: userData.automaticCyclePrediction ?? emailBackup.automaticCyclePrediction ?? false,
               lastPeriodStart: userData.lastPeriodStart || emailBackup.lastPeriodStart || new Date().toISOString(),
-              periods: (userData.periods && userData.periods.length > 0) ? userData.periods : (emailBackup.periods || []),
-              periodLogs: (userData.periodLogs && userData.periodLogs.length > 0) ? userData.periodLogs : (emailBackup.periodLogs || []),
+              periods: (userData.periods !== undefined) ? userData.periods : (emailBackup.periods || []),
+              periodDates: (userData.periodDates !== undefined) ? userData.periodDates : (emailBackup.periodDates || []),
+              periodLogs: (userData.periodLogs !== undefined) ? userData.periodLogs : (emailBackup.periodLogs || []),
               symptoms: (userData.symptoms && userData.symptoms.length > 0) ? userData.symptoms : (emailBackup.symptoms || []),
               moodLogs: (userData.moodLogs && userData.moodLogs.length > 0) ? userData.moodLogs : (emailBackup.moodLogs || []),
               theme: userData.theme || emailBackup.theme || 'rose',
@@ -1379,8 +1383,8 @@ const App: React.FC = () => {
 
     const reconstructed = reconstructCycleData(
       [newPeriod, ...(user.periods || [])],
-      user.periodDates,
-      user.periodLogs
+      [],
+      []
     );
 
     const updatedUser: User = {

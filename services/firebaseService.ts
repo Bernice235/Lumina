@@ -94,8 +94,13 @@ export const syncUser = async (user: User) => {
 
   // Always update local cache for offline/sandbox/session persistence
   try {
-    localStorage.setItem(`lumina_user_${user.id}`, JSON.stringify(user));
-    localStorage.setItem('lumina_user', JSON.stringify(user));
+    const serialized = JSON.stringify(user);
+    localStorage.setItem(`lumina_user_${user.id}`, serialized);
+    localStorage.setItem('lumina_user', serialized);
+    localStorage.setItem('lumina_biometric_user', serialized);
+    if (user.email) {
+      localStorage.setItem(`lumina_user_email_${user.email.toLowerCase().trim()}`, serialized);
+    }
   } catch (e) {
     console.warn('[syncUser] Local storage save notice:', e);
   }

@@ -57,6 +57,11 @@ import {
 } from '../services/welcomeVoiceService';
 import { syncUser, blockPartner, unblockPartner, deleteUserAccount } from '../services/firebaseService';
 import { 
+  applyPeriodDurationChange, 
+  applyCycleLengthChange, 
+  analyzeCycleHistory 
+} from '../services/cycleSyncService';
+import { 
   REVENUECAT_PLANS, 
   purchasePremiumPlan, 
   restorePremiumPurchases, 
@@ -997,6 +1002,7 @@ const Settings: React.FC<SettingsProps> = ({
           </div>
 
           {/* Cycle Metrics Sliders */}
+          {/* Cycle Metrics Sliders & Automatic Prediction */}
           <section className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-pink-50 space-y-6">
             <h3 className="text-lg font-serif font-bold text-stone-800 flex items-center gap-2">
               <Calendar size={18} className="text-pink-500" />
@@ -1006,68 +1012,169 @@ const Settings: React.FC<SettingsProps> = ({
               Keep your cycle metrics updated to ensure accurate predictions and gentle reminders.
             </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Cycle Length */}
-              <div className="bg-rose-50/40 p-5 rounded-3xl border border-rose-100/40 flex flex-col gap-2">
-                <div className="flex justify-between items-center">
-                  <label className="text-xs font-bold text-pink-600 flex items-center gap-1.5">
-                    <Layers size={14} />
-                    Cycle Length
-                  </label>
-                  <span className="text-xs font-bold text-pink-700 bg-white px-3 py-1 rounded-xl shadow-sm border border-pink-100">
-                    {user.cycleLength ?? 28} Days
-                  </span>
-                </div>
-                <input 
-                  type="range" 
-                  min="21" 
-                  max="42" 
-                  value={user.cycleLength ?? 28} 
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value) || 28;
-                    const prevVal = user.cycleLength ?? 28;
-                    const updatedUser = { 
-                      ...user, 
-                      previousCycleLength: user.previousCycleLength || (prevVal !== val ? prevVal : undefined),
-                      cycleLength: val 
-                    };
-                    setUser(updatedUser);
-                    localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
-                    syncUser(updatedUser);
-                  }}
-                  className="w-full accent-pink-500 h-1.5 bg-pink-100 rounded-lg cursor-pointer mt-2"
-                />
-                <span className="text-[11px] text-stone-400">Number of days from the start of one period to the next (average is 28 days)</span>
-              </div>
+            {/* AUTOMATIC CYCLE PREDICTION TOGGLE */}
+            {(() => {
+              const cycleAnalysis = analyzeCycleHistory(user.periods || [], user.cycleLength || 28);
+              const handleToggleAutoPrediction = () => {
+                const newAuto = !user.automaticCyclePrediction;
+                let updatedUser: User = {
+                  ...user,
+                  automaticCyclePrediction: newAuto
+                };
+                if (newAuto && cycleAnalysis.cycleCount >= 1) {
+                  updatedUser = {
+                    ...updatedUser,
+                    manualCycleLength: user.cycleLength || 28,
+                    cycleLength: cycleAnalysis.averageCycleLength
+                  };
+                } else if (!newAuto && user.manualCycleLength) {
+                  updatedUser = {
+                    ...updatedUser,
+                    cycleLength: user.manualCycleLength
+                  };
+                }
+                setUser(updatedUser);
+                syncUser(updatedUser);
+              };
 
-              {/* Period Duration */}
-              <div className="bg-rose-50/40 p-5 rounded-3xl border border-rose-100/40 flex flex-col gap-2">
-                <div className="flex justify-between items-center">
-                  <label className="text-xs font-bold text-pink-600 flex items-center gap-1.5">
-                    <Calendar size={14} />
-                    Period Duration
-                  </label>
-                  <span className="text-xs font-bold text-pink-700 bg-white px-3 py-1 rounded-xl shadow-sm border border-pink-100">
-                    {user.periodLength ?? 5} Days
-                  </span>
+              return (
+                <div className="bg-gradient-to-r from-pink-50/90 via-purple-50/50 to-rose-50/80 p-5 rounded-3xl border border-pink-100 flex flex-col gap-3 shadow-xs">
+                  <div className="flex justify-between items-center gap-3">
+                    <div className="flex flex-col">
+                      <span className="text-xs font-bold text-pink-700 tracking-wider flex items-center gap-1.5 uppercase">
+                        <Sparkles size={14} className="text-pink-500" />
+                        AUTOMATIC CYCLE PREDICTION
+                      </span>
+                      <p className="text-[11px] text-stone-600 mt-0.5 leading-snug">
+                        “Let Lumina learn your cycle patterns and automatically update your predictions.”
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleToggleAutoPrediction}
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${user.automaticCyclePrediction ? 'bg-pink-500' : 'bg-stone-300'}`}
+                      aria-pressed={Boolean(user.automaticCyclePrediction)}
+                      title="Toggle automatic cycle prediction"
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${user.automaticCyclePrediction ? 'translate-x-5' : 'translate-x-0'}`}
+                      />
+                    </button>
+                  </div>
+
+                  {user.automaticCyclePrediction ? (
+                    <div className="bg-white/95 p-4 rounded-2xl border border-pink-100 text-xs space-y-2.5 mt-1">
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold text-stone-700">Estimated Cycle Length:</span>
+                        <span className="font-bold text-pink-600 bg-pink-50 px-3 py-1 rounded-full border border-pink-200 text-xs shadow-xs">
+                          {cycleAnalysis.cycleCount >= 1 ? `${cycleAnalysis.averageCycleLength} Days (Learned)` : `${user.cycleLength ?? 28} Days (Baseline)`}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-stone-500 leading-relaxed">
+                        {cycleAnalysis.explanation}
+                      </p>
+                      {cycleAnalysis.cycleCount < 1 && (
+                        <div className="text-[10.5px] text-amber-800 bg-amber-50/90 p-2.5 rounded-xl border border-amber-200/60 leading-relaxed">
+                          ℹ️ <strong>Learning your rhythm:</strong> Need at least 2 recorded period start dates to calculate your personalized average cycle length. Currently using your baseline of {user.cycleLength ?? 28} days.
+                        </div>
+                      )}
+                      {cycleAnalysis.isIrregular && (
+                        <div className="text-[10.5px] text-indigo-800 bg-indigo-50/90 p-2.5 rounded-xl border border-indigo-200/60 leading-relaxed">
+                          🌙 <strong>Irregular variation detected:</strong> Your cycles have varied by {cycleAnalysis.variationDays} days. Lumina accounts for your real cycle intervals instead of assuming a standard 28-day cycle.
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-[11px] text-stone-400 italic">
+                      Manual mode active: You have manual control over your cycle length and period duration below.
+                    </div>
+                  )}
                 </div>
-                <input 
-                  type="range" 
-                  min="3" 
-                  max="10" 
-                  value={user.periodLength ?? 5} 
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value) || 5;
-                    const updatedUser = { ...user, periodLength: val };
-                    setUser(updatedUser);
-                    localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
-                    syncUser(updatedUser);
-                  }}
-                  className="w-full accent-pink-500 h-1.5 bg-pink-100 rounded-lg cursor-pointer mt-2"
-                />
-                <span className="text-[11px] text-stone-400">Number of days bleeding typically lasts (average is 5 days)</span>
+              );
+            })()}
+
+            {/* Manual Sliders: Turned off when Automatic Cycle Prediction is on */}
+            {user.automaticCyclePrediction ? (
+              <div className="bg-gradient-to-r from-purple-50/70 via-pink-50/50 to-rose-50/70 p-6 rounded-3xl border border-purple-150/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
+                <div className="flex items-start gap-3.5">
+                  <div className="w-10 h-10 rounded-2xl bg-white shadow-xs border border-purple-100 flex items-center justify-center text-purple-600 shrink-0 mt-0.5">
+                    <Lock size={18} />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-purple-900 tracking-wide uppercase">
+                        Manual Controls Inactive
+                      </span>
+                      <span className="text-[9px] font-bold bg-purple-100 text-purple-700 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                        Auto-Managed
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-stone-600 leading-relaxed max-w-lg">
+                      Manual cycle length and period duration sliders are turned off while <strong>Automatic Cycle Prediction</strong> is active. Lumina automatically manages and updates your cycle metrics from your logged history.
+                    </p>
+                    <p className="text-[10px] text-pink-600 font-semibold pt-0.5">
+                      💡 Manual controls can only be accessed when Automatic Cycle Prediction is turned off above.
+                    </p>
+                  </div>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fadeIn">
+                {/* Cycle Length */}
+                <div className="bg-rose-50/40 p-5 rounded-3xl border border-rose-100/40 flex flex-col gap-2">
+                  <div className="flex justify-between items-center">
+                    <label className="text-xs font-bold text-pink-600 flex items-center gap-1.5">
+                      <Layers size={14} />
+                      Manual Cycle Length
+                    </label>
+                    <span className="text-xs font-bold text-pink-700 bg-white px-3 py-1 rounded-xl shadow-sm border border-pink-100">
+                      {user.cycleLength ?? 28} Days
+                    </span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min="21" 
+                    max="42" 
+                    value={user.cycleLength ?? 28} 
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value) || 28;
+                      const updatedUser = applyCycleLengthChange(user, val);
+                      setUser(updatedUser);
+                      syncUser(updatedUser);
+                    }}
+                    className="w-full accent-pink-500 h-1.5 bg-pink-100 rounded-lg cursor-pointer mt-2"
+                  />
+                  <span className="text-[11px] text-stone-400">Number of days from the start of one period to the next (average is 28 days)</span>
+                </div>
+
+                {/* Period Duration */}
+                <div className="bg-rose-50/40 p-5 rounded-3xl border border-rose-100/40 flex flex-col gap-2">
+                  <div className="flex justify-between items-center">
+                    <label className="text-xs font-bold text-pink-600 flex items-center gap-1.5">
+                      <Calendar size={14} />
+                      Manual Period Duration
+                    </label>
+                    <span className="text-xs font-bold text-pink-700 bg-white px-3 py-1 rounded-xl shadow-sm border border-pink-100">
+                      {user.periodLength ?? 5} Days
+                    </span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min="3" 
+                    max="10" 
+                    value={user.periodLength ?? 5} 
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value) || 5;
+                      const updatedUser = applyPeriodDurationChange(user, val);
+                      setUser(updatedUser);
+                      syncUser(updatedUser);
+                    }}
+                    className="w-full accent-pink-500 h-1.5 bg-pink-100 rounded-lg cursor-pointer mt-2"
+                  />
+                  <span className="text-[11px] text-stone-400">Number of days bleeding typically lasts (average is 5 days)</span>
+                </div>
+              </div>
+            )}
 
             {/* Last Period Start Date */}
             <div className="bg-rose-50/20 p-5 rounded-3xl border border-rose-100/40 flex flex-col gap-2">
@@ -1082,7 +1189,6 @@ const Settings: React.FC<SettingsProps> = ({
                   const selectedDate = e.target.value ? new Date(e.target.value).toISOString() : new Date().toISOString();
                   const updatedUser = { ...user, lastPeriodStart: selectedDate };
                   setUser(updatedUser);
-                  localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
                   syncUser(updatedUser);
                 }}
                 className="bg-white px-4 py-3 rounded-2xl outline-none font-semibold text-xs text-pink-700 border border-pink-100 shadow-sm w-full focus:border-pink-300 transition-colors cursor-pointer"

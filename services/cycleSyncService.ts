@@ -2,6 +2,17 @@ import { User, Period } from '../types';
 
 export type MenstrualPhase = 'Menstrual' | 'Follicular' | 'Ovulatory' | 'Luteal' | 'Late Period';
 
+export interface CycleAnalysisResult {
+  averageCycleLength: number;
+  averagePeriodDuration: number;
+  cycleCount: number;
+  variationDays: number;
+  confidence: 'insufficient_data' | 'learning' | 'established';
+  explanation: string;
+  isIrregular: boolean;
+  historyIntervals: number[];
+}
+
 export interface CycleSyncData {
   cycleDay: number;
   cycleLength: number;
@@ -40,6 +51,13 @@ export interface CycleSyncData {
   referencePeriodStart: Date | null;
   hasLoggedHistory: boolean;
   isEstimated: boolean; // true if based on algorithmic projection
+
+  // Automatic cycle prediction properties
+  isAutomaticPrediction: boolean;
+  predictionExplanation: string;
+  predictionConfidence: 'insufficient_data' | 'learning' | 'established' | 'manual';
+  insufficientHistory: boolean;
+  cycleAnalysis: CycleAnalysisResult;
 }
 
 export interface DateCycleDetails {
@@ -123,6 +141,13 @@ export function toStandardDateString(input: string | Date | number | null | unde
  * Robust reconstruction of periods, periodDates, and periodLogs.
  * Ensures consistent sorting, deduplication, and synchronization of lastPeriodStart.
  */
+/**
+ * Robust reconstruction of periods, periodDates, and periodLogs.
+ * Ensures consistent sorting, deduplication, and synchronization of lastPeriodStart.
+ * Authoritative: When periods exist, dates are strictly reconstructed from the periods,
+ * preventing old extraneous dates (e.g. from a previously changed duration or deleted period)
+ * from lingering in periodDates.
+ */
 export function reconstructCycleData(
   periods: Period[],
   existingDates: string[] = [],
@@ -153,15 +178,17 @@ export function reconstructCycleData(
     }
   });
 
-  // Preserve any individual manually logged dates
-  existingDates.forEach(d => {
-    datesSet.add(d);
-  });
-  existingLogs.forEach(l => {
-    if (!logsMap.has(l.date)) {
-      logsMap.set(l.date, (l.intensity as any) || 'medium');
-    }
-  });
+  // Only preserve loose existingDates if NO period objects exist (legacy / initial manual dates)
+  if (sortedPeriods.length === 0 && existingDates.length > 0) {
+    existingDates.forEach(d => {
+      datesSet.add(d);
+    });
+    existingLogs.forEach(l => {
+      if (!logsMap.has(l.date)) {
+        logsMap.set(l.date, (l.intensity as any) || 'medium');
+      }
+    });
+  }
 
   const periodDates = Array.from(datesSet).sort(
     (a, b) => new Date(b).getTime() - new Date(a).getTime()
@@ -179,6 +206,161 @@ export function reconstructCycleData(
     periodDates,
     periodLogs,
     lastPeriodStart
+  };
+}
+
+/**
+ * Analyzes previous recorded cycle history to compute average cycle length,
+ * irregularity, and confidence status for automatic cycle prediction.
+ */
+export function analyzeCycleHistory(
+  periods: Period[] = [],
+  fallbackCycleLength: number = 28,
+  fallbackPeriodLength: number = 5
+): CycleAnalysisResult {
+  const fallback = Math.max(15, Math.min(60, Number(fallbackCycleLength) || 28));
+  const fallbackPeriod = Math.max(1, Math.min(15, Number(fallbackPeriodLength) || 5));
+
+  // Compute average period bleeding duration from logged periods
+  const validDurations: number[] = [];
+  (periods || []).forEach(p => {
+    if (p.startDate) {
+      const s = parseYMDToLocalDate(p.startDate);
+      const e = parseYMDToLocalDate(p.endDate || p.startDate);
+      const dur = Math.round((e.getTime() - s.getTime()) / 86400000) + 1;
+      if (dur >= 2 && dur <= 14) {
+        validDurations.push(dur);
+      }
+    }
+  });
+
+  const averagePeriodDuration = validDurations.length > 0
+    ? Math.max(2, Math.min(10, Math.round(validDurations.reduce((a, b) => a + b, 0) / validDurations.length)))
+    : fallbackPeriod;
+
+  // Extract all valid start dates
+  const validStarts = (periods || [])
+    .filter(p => p.startDate && !isNaN(parseYMDToLocalDate(p.startDate).getTime()))
+    .map(p => parseYMDToLocalDate(p.startDate).getTime())
+    .sort((a, b) => a - b);
+
+  // Deduplicate start dates
+  const uniqueStarts: number[] = [];
+  validStarts.forEach(t => {
+    if (uniqueStarts.length === 0 || Math.abs(t - uniqueStarts[uniqueStarts.length - 1]) >= 86400000) {
+      uniqueStarts.push(t);
+    }
+  });
+
+  const intervals: number[] = [];
+  for (let i = 0; i < uniqueStarts.length - 1; i++) {
+    const diffDays = Math.round((uniqueStarts[i + 1] - uniqueStarts[i]) / 86400000);
+    // Physiological sanity check: only count realistic menstrual cycles (15 to 90 days)
+    if (diffDays >= 15 && diffDays <= 90) {
+      intervals.push(diffDays);
+    }
+  }
+
+  if (intervals.length === 0) {
+    return {
+      averageCycleLength: fallback,
+      averagePeriodDuration,
+      cycleCount: 0,
+      variationDays: 0,
+      confidence: 'insufficient_data',
+      explanation: `Need at least 2 recorded period start dates to calculate your personalized average cycle length. Currently using your baseline of ${fallback} days and ${fallbackPeriod}-day period duration.`,
+      isIrregular: false,
+      historyIntervals: []
+    };
+  }
+
+  const sum = intervals.reduce((acc, v) => acc + v, 0);
+  const avg = Math.round(sum / intervals.length);
+  const clampedAvg = Math.max(20, Math.min(50, avg));
+  const maxInt = Math.max(...intervals);
+  const minInt = Math.min(...intervals);
+  const variation = maxInt - minInt;
+  const isIrregular = variation >= 7;
+
+  const confidence: 'learning' | 'established' = intervals.length >= 3 ? 'established' : 'learning';
+  const explanation = intervals.length >= 3
+    ? `Lumina calculated your average cycle length as ${clampedAvg} days (${averagePeriodDuration}-day period duration) from ${intervals.length} recorded cycles.${isIrregular ? ' (Irregular variation detected: cycles vary between ' + minInt + ' and ' + maxInt + ' days).' : ''} Predictions adapt automatically as you log new periods.`
+    : `Lumina is learning your cycle rhythm (${intervals.length} recorded cycle interval, average ${clampedAvg} days, ${averagePeriodDuration}-day duration). Add more periods to refine prediction accuracy.`;
+
+  return {
+    averageCycleLength: clampedAvg,
+    averagePeriodDuration,
+    cycleCount: intervals.length,
+    variationDays: variation,
+    confidence,
+    explanation,
+    isIrregular,
+    historyIntervals: intervals
+  };
+}
+
+/**
+ * Cleanly applies a period duration change (e.g. from 5 to 4 or 4 to 5 days).
+ * Immediately adjusts affected period end dates, cleans up periodDates, and recalculates cycle state.
+ */
+export function applyPeriodDurationChange(user: User, newPeriodLength: number): User {
+  const periodLen = Math.max(1, Math.min(15, newPeriodLength));
+  const oldPeriodLen = user.periodLength || 5;
+
+  let updatedPeriods = [...(user.periods || [])];
+
+  if (updatedPeriods.length > 0) {
+    updatedPeriods = updatedPeriods.map((p, index) => {
+      const s = parseYMDToLocalDate(p.startDate);
+      const e = parseYMDToLocalDate(p.endDate || p.startDate);
+      const currentDur = Math.round((e.getTime() - s.getTime()) / 86400000) + 1;
+
+      // If the duration matched the previous global period length, or was 4 or 5, or is the most recent period:
+      // adjust endDate to match the new duration
+      if (currentDur === oldPeriodLen || currentDur === 5 || currentDur === 4 || index === 0) {
+        const newEnd = new Date(s.getTime() + (periodLen - 1) * 86400000);
+        return {
+          ...p,
+          endDate: newEnd.toDateString()
+        };
+      }
+      return p;
+    });
+  } else if (user.lastPeriodStart) {
+    const s = parseYMDToLocalDate(user.lastPeriodStart);
+    const newEnd = new Date(s.getTime() + (periodLen - 1) * 86400000);
+    updatedPeriods = [{
+      id: Math.random().toString(36).substr(2, 9),
+      startDate: s.toDateString(),
+      endDate: newEnd.toDateString(),
+      intensity: 'medium'
+    }];
+  }
+
+  // Reconstruct periodDates strictly from updated periods (clears any orphaned 5th day!)
+  const reconstructed = reconstructCycleData(updatedPeriods, [], []);
+
+  return {
+    ...user,
+    periodLength: periodLen,
+    periods: reconstructed.periods,
+    periodDates: reconstructed.periodDates,
+    periodLogs: reconstructed.periodLogs,
+    lastPeriodStart: reconstructed.lastPeriodStart || user.lastPeriodStart
+  };
+}
+
+/**
+ * Updates manual cycle length and keeps previousCycleLength for trend tracking.
+ */
+export function applyCycleLengthChange(user: User, newCycleLength: number): User {
+  const cycleLen = Math.max(15, Math.min(60, newCycleLength));
+  const prevVal = user.cycleLength || 28;
+  return {
+    ...user,
+    previousCycleLength: user.previousCycleLength || (prevVal !== cycleLen ? prevVal : undefined),
+    cycleLength: cycleLen,
+    manualCycleLength: cycleLen
   };
 }
 
@@ -241,8 +423,17 @@ export function calculateCycleSyncData(
   user?: Partial<User> | null,
   targetDate: Date = new Date()
 ): CycleSyncData {
-  const cycleLen = Math.max(15, Math.min(60, Number(user?.cycleLength) || 28));
-  const periodLen = Math.max(1, Math.min(15, Number(user?.periodLength) || 5));
+  const isAuto = Boolean(user?.automaticCyclePrediction);
+  const cycleAnalysis = analyzeCycleHistory(user?.periods || [], user?.cycleLength || 28, user?.periodLength || 5);
+
+  // If automatic prediction is enabled and user has at least 1 recorded cycle interval, use learned average:
+  const cycleLen = (isAuto && cycleAnalysis.cycleCount >= 1)
+    ? cycleAnalysis.averageCycleLength
+    : Math.max(15, Math.min(60, Number(user?.cycleLength) || 28));
+
+  const periodLen = (isAuto && cycleAnalysis.cycleCount >= 1 && cycleAnalysis.averagePeriodDuration)
+    ? cycleAnalysis.averagePeriodDuration
+    : Math.max(1, Math.min(15, Number(user?.periodLength) || 5));
 
   const { date: refStart, hasLoggedHistory } = getAuthoritativePeriodStart(user, targetDate);
   const targetMidnight = toMidnight(targetDate);
@@ -306,13 +497,13 @@ export function calculateCycleSyncData(
     phaseEmoji = '🌱';
     phaseDescription = 'Rising vitality, focus, and estrogen. Excellent for creative goals and fresh habits.';
   } else if (cycleDay === ovulationDay) {
-    // Requirement 4: Exactly one single estimated ovulation day
+    // Exactly one single estimated ovulation day
     phase = 'Ovulatory';
     phaseName = 'Ovulatory Phase';
     phaseEmoji = '✨';
     phaseDescription = 'Peak biological glow and social radiance on your single estimated ovulation day.';
   } else {
-    // Requirement 5: Once estimated ovulation has passed, update user's current phase to luteal
+    // Once estimated ovulation has passed, update user's current phase to luteal
     phase = 'Luteal';
     phaseName = 'Luteal Phase';
     phaseEmoji = '🌙';
@@ -334,11 +525,10 @@ export function calculateCycleSyncData(
     fertilityStatus = 'High Fertility • Fertile Window (Estimated)';
     fertilityBadgeColor = 'bg-sky-100 text-sky-800 border-sky-300';
   } else {
-    fertilityStatus = null; // Requirement 4: Outside estimated fertile window, do NOT display Fertile Window
+    fertilityStatus = null; // Outside estimated fertile window, do NOT display Fertile Window
   }
 
   // Date objects for current cycle predictions
-  // How many complete cycles between startMidnight and targetMidnight?
   const completedCycleCount = diffDays >= 0 ? Math.floor(diffDays / cycleLen) : -1;
   const currentCycleStartMidnight = new Date(startMidnight.getTime() + completedCycleCount * cycleLen * 86400000);
 
@@ -372,7 +562,6 @@ export function calculateCycleSyncData(
     ? `${formatShortDate(estimatedOvulationDate)} (Estimated)`
     : 'Estimated based on cycle length';
 
-  // Format the 5 preceding fertile days as the fertile window (e.g. "Nov 1 – Nov 5 (Estimated)")
   const estimatedFertileRangeFormatted = estimatedFertileStartDate && estimatedPrecedingFertileEndDate
     ? `${formatShortDate(estimatedFertileStartDate)} – ${formatShortDate(estimatedPrecedingFertileEndDate)} (Estimated)`
     : '';
@@ -411,7 +600,16 @@ export function calculateCycleSyncData(
     daysUntilNextPeriod,
     referencePeriodStart: refStart,
     hasLoggedHistory,
-    isEstimated: true
+    isEstimated: true,
+
+    // Automatic cycle prediction status
+    isAutomaticPrediction: isAuto,
+    predictionExplanation: isAuto
+      ? cycleAnalysis.explanation
+      : `Manual mode active (${cycleLen}-day cycle, ${periodLen}-day bleeding duration).`,
+    predictionConfidence: isAuto ? cycleAnalysis.confidence : 'manual',
+    insufficientHistory: isAuto && cycleAnalysis.confidence === 'insufficient_data',
+    cycleAnalysis
   };
 }
 
@@ -438,8 +636,8 @@ export function getCycleDetailsForSpecificDate(
   const isPredictedPeriod = !isLoggedPeriod && !sync.isLatePeriodMode && sync.cycleDay <= sync.periodLength;
 
   let phaseKey: 'menstrual' | 'follicular' | 'ovulatory' | 'luteal' | 'late' = 'follicular';
-  let color = '#a855f7';
-  let badgeColor = 'bg-purple-100 text-purple-700';
+  let color = '#10b981'; // Soft green for follicular
+  let badgeColor = 'bg-emerald-100 text-emerald-800';
   let hormoneInfo = 'FSH rises as follicles mature. Estrogen climbs steadily.';
   let insights = 'Energy and cognitive focus are expanding. Ideal for new beginnings!';
 
@@ -451,7 +649,7 @@ export function getCycleDetailsForSpecificDate(
     insights = 'Take time to rest and honor your natural rhythm.';
   } else if (isLoggedPeriod || isPredictedPeriod) {
     phaseKey = 'menstrual';
-    color = '#f472b6';
+    color = '#f43f5e';
     badgeColor = 'bg-pink-100 text-pink-700';
     hormoneInfo = 'Estrogen and progesterone are at baseline levels as the lining renews.';
     insights = 'Prioritize deep nourishment, rest, and warm comfort.';
@@ -463,14 +661,14 @@ export function getCycleDetailsForSpecificDate(
     insights = 'Peak biological glow! Social charisma, confidence, and radiance are elevated.';
   } else if (sync.cycleDay > sync.ovulationDay) {
     phaseKey = 'luteal';
-    color = '#6366f1';
-    badgeColor = 'bg-indigo-100 text-indigo-700';
+    color = '#a855f7'; // Lavender / purple
+    badgeColor = 'bg-purple-100 text-purple-800';
     hormoneInfo = 'Progesterone dominates to nurture and support the lining.';
     insights = 'Slow down, nurture yourself, and honor your inner space and cozy comfort.';
   } else {
     phaseKey = 'follicular';
-    color = '#a855f7';
-    badgeColor = 'bg-purple-100 text-purple-700';
+    color = '#10b981'; // Soft green
+    badgeColor = 'bg-emerald-100 text-emerald-800';
     hormoneInfo = 'FSH rises as follicles mature. Estrogen climbs steadily.';
     insights = 'Energy and cognitive focus are expanding. Ideal for new beginnings!';
   }

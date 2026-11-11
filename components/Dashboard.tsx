@@ -1233,14 +1233,18 @@ const Dashboard: React.FC<DashboardProps> = ({
     if (details.isPredictedPeriod) return 'predicted';
     if (details.isOvulationDay) return 'ovulation';
     if (details.isPrecedingFertileDay) return 'fertile';
+    if (details.phaseKey === 'follicular') return 'follicular';
+    if (details.phaseKey === 'luteal') return 'luteal';
     return 'none';
   };
 
   const dayStyles = {
-    period: 'bg-pink-400 text-white shadow-md shadow-pink-100',
-    predicted: 'bg-pink-50 text-pink-400 border border-pink-200 border-dashed',
+    period: 'bg-pink-500 text-white shadow-md shadow-pink-100 font-bold',
+    predicted: 'bg-pink-50/80 text-pink-700 border-2 border-dashed border-pink-300 font-medium',
     ovulation: 'bg-amber-400 text-white font-black shadow-md shadow-amber-200 ring-2 ring-amber-300 ring-offset-1',
     fertile: 'bg-sky-100 text-sky-800 border border-sky-300 font-bold',
+    follicular: 'bg-emerald-50 text-emerald-800 border border-emerald-200/70 font-medium',
+    luteal: 'bg-purple-100/75 text-purple-900 border border-purple-200/70 font-medium',
     none: 'text-gray-400 hover:bg-pink-50'
   };
 
@@ -1968,6 +1972,12 @@ const Dashboard: React.FC<DashboardProps> = ({
                     <span>
                       <strong className="text-amber-700">Ovulation (Estimated):</strong> {cycleSync.estimatedOvulationDateFormatted}
                     </span>
+                  )}
+                  {cycleSync.isAutomaticPrediction && (
+                    <div className="w-full text-[10px] text-pink-600 bg-pink-50/80 px-2.5 py-1 rounded-xl border border-pink-200/60 flex items-center gap-1.5 mt-1">
+                      <span>✨</span>
+                      <span><strong>Auto Prediction Active:</strong> {cycleSync.predictionExplanation}</span>
+                    </div>
                   )}
                 </div>
               )}

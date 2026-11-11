@@ -328,9 +328,12 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
     if (!newPeriodData.startDate) return;
 
     const startLocal = parseYMDToLocalDate(newPeriodData.startDate);
-    let endLocal = newPeriodData.endDate ? parseYMDToLocalDate(newPeriodData.endDate) : new Date(startLocal.getTime() + 4 * 86400000);
+    const periodDur = Math.max(1, user.periodLength || 5);
+    let endLocal = newPeriodData.endDate 
+      ? parseYMDToLocalDate(newPeriodData.endDate) 
+      : new Date(startLocal.getTime() + (periodDur - 1) * 86400000);
     if (endLocal < startLocal) {
-      endLocal = new Date(startLocal.getTime() + 4 * 86400000);
+      endLocal = new Date(startLocal.getTime() + (periodDur - 1) * 86400000);
     }
 
     const nextPeriod: Period = {
@@ -341,7 +344,8 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
     };
 
     const combinedPeriods = [...(user.periods || []), nextPeriod];
-    const reconstructed = reconstructCycleData(combinedPeriods, user.periodDates || [], user.periodLogs || []);
+    // Reconstruct dates strictly from active periods
+    const reconstructed = reconstructCycleData(combinedPeriods, [], []);
 
     const updatedUser: User = {
       ...user,
@@ -370,9 +374,10 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
   ) => {
     if (!setUser || !user) return;
     const startLocal = parseYMDToLocalDate(startYMD);
-    let endLocal = endYMD ? parseYMDToLocalDate(endYMD) : new Date(startLocal.getTime() + 4 * 86400000);
+    const periodDur = Math.max(1, user.periodLength || 5);
+    let endLocal = endYMD ? parseYMDToLocalDate(endYMD) : new Date(startLocal.getTime() + (periodDur - 1) * 86400000);
     if (endLocal < startLocal) {
-      endLocal = new Date(startLocal.getTime() + 4 * 86400000);
+      endLocal = new Date(startLocal.getTime() + (periodDur - 1) * 86400000);
     }
 
     const updatedPeriods = (user.periods || []).map(p => {
@@ -387,7 +392,8 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
       return p;
     });
 
-    const reconstructed = reconstructCycleData(updatedPeriods, user.periodDates || [], user.periodLogs || []);
+    // Reconstruct dates strictly from active periods
+    const reconstructed = reconstructCycleData(updatedPeriods, [], []);
 
     const updatedUser: User = {
       ...user,
@@ -409,7 +415,8 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
   const handleDeletePeriod = async (periodId: string) => {
     if (!setUser || !user) return;
     const updatedPeriods = (user.periods || []).filter(p => p.id !== periodId);
-    const reconstructed = reconstructCycleData(updatedPeriods, user.periodDates || [], user.periodLogs || []);
+    // Reconstruct dates strictly from active periods
+    const reconstructed = reconstructCycleData(updatedPeriods, [], []);
 
     const updatedUser: User = {
       ...user,
@@ -766,6 +773,21 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
             </div>
           </div>
           
+          {cycleSync.isAutomaticPrediction ? (
+            <div className="bg-gradient-to-r from-pink-50/90 to-purple-50/80 p-3 rounded-2xl border border-pink-100 text-left space-y-1 mt-2">
+              <span className="text-[9.5px] font-bold text-pink-700 uppercase tracking-wider flex items-center gap-1.5">
+                <span>✨</span> Automatic Cycle Prediction
+              </span>
+              <p className="text-[10.5px] text-stone-600 leading-relaxed">
+                {cycleSync.predictionExplanation}
+              </p>
+            </div>
+          ) : (
+            <div className="text-[10px] text-stone-400 italic text-center pt-1">
+              Manual Tracking Mode ({cycleSync.cycleLength}-Day Cycle, {cycleSync.periodLength}-Day Bleeding)
+            </div>
+          )}
+
           <button 
             onClick={onOpenLogModal}
             className="mt-6 px-8 py-3.5 bg-gradient-to-r from-pink-400 to-rose-400 text-white rounded-full font-bold shadow-lg shadow-pink-100 hover:scale-105 transition-transform cursor-pointer"
@@ -1243,24 +1265,30 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
 
                 if (details.phaseKey === 'menstrual') {
                   if (isLogged) {
+                    // Confirmed period: Solid pink
                     bgClass = 'bg-pink-500 text-white font-bold shadow-sm shadow-pink-100';
+                    borderClass = 'border border-pink-500';
                   } else {
-                    bgClass = 'bg-pink-100/70 text-pink-700 font-semibold';
+                    // Predicted period: Dashed pink outline
+                    bgClass = 'bg-pink-50/80 text-pink-700 font-semibold';
                     borderClass = 'border-2 border-dashed border-pink-300';
                   }
                 } else if (details.isOvulationDay) {
-                  // Requirement 2 & 4: Distinct color & marker for single estimated ovulation day
+                  // Requirement 2 & 4: Distinct color & marker for single estimated ovulation day (Golden yellow)
                   bgClass = 'bg-amber-400 text-white font-black shadow-md shadow-amber-200 ring-2 ring-amber-300 ring-offset-1';
                   borderClass = 'border-amber-400';
                 } else if (details.isPrecedingFertileDay) {
-                  // Requirement 3: Highlight the five preceding fertile days separately in sky blue
-                  bgClass = 'bg-sky-50 text-sky-800 font-bold border border-sky-300/80 hover:bg-sky-100/80 shadow-xs';
-                  borderClass = 'border border-sky-300/80';
+                  // Requirement 3: Highlight the five preceding fertile days separately in light blue
+                  bgClass = 'bg-sky-50 text-sky-800 font-bold border border-sky-300 hover:bg-sky-100/80 shadow-xs';
+                  borderClass = 'border border-sky-300';
                 } else if (details.phaseKey === 'follicular') {
-                  bgClass = 'bg-purple-100/40 text-purple-700 hover:bg-purple-100/70 font-medium';
+                  // Follicular phase: Soft green
+                  bgClass = 'bg-emerald-50 text-emerald-800 border border-emerald-200/70 font-medium hover:bg-emerald-100/60';
+                  borderClass = 'border border-emerald-200/70';
                 } else if (details.phaseKey === 'luteal') {
-                  // Requirement 5: Once estimated ovulation has passed, update phase to luteal
-                  bgClass = 'bg-indigo-50/50 text-indigo-700 hover:bg-indigo-50/90 font-medium';
+                  // Requirement 2: Luteal phase dynamically marked in lavender/purple until next period
+                  bgClass = 'bg-purple-100/75 text-purple-900 border border-purple-200/80 font-medium hover:bg-purple-100';
+                  borderClass = 'border border-purple-200/80';
                 }
 
                 const daySexLog = (user.sexualActivityLogs || []).find(l => l.date === date.toDateString());
@@ -1279,8 +1307,8 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
                       setSelectedCalendarDate(date);
                     }}
                     className={`aspect-square relative flex flex-col items-center justify-center text-sm transition-all focus:outline-none ${bgClass} ${borderClass} ${roundedClass} ${
-                      isSelected ? 'ring-2 ring-pink-500 ring-offset-2 scale-110 z-10' : ''
-                    } ${isToday ? 'outline-2 outline-pink-400 outline-offset-1 font-black' : ''}`}
+                      isSelected ? 'ring-2 ring-stone-900 ring-offset-2 scale-105 z-20 shadow-md' : ''
+                    }`}
                   >
                     {/* Visual icons/markers for easy tracking */}
                     <div className="absolute top-1 left-1 right-1 flex justify-between gap-0.5 select-none pointer-events-none">
@@ -1312,9 +1340,9 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
 
                     <span className="mt-2 text-xs sm:text-sm font-semibold">{day}</span>
 
-                    {/* Tiny Indicator Dot for Today */}
+                    {/* Dedicated Indicator Dot for Today */}
                     {isToday && (
-                      <span className="absolute bottom-1 w-1.5 h-1.5 bg-pink-500 rounded-full"></span>
+                      <span className="absolute bottom-1 w-1.5 h-1.5 bg-rose-500 rounded-full ring-1 ring-white" title="Today"></span>
                     )}
                   </button>
                 );
@@ -1325,30 +1353,42 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
           {/* Upgraded Legend */}
           <div className="mt-8 border-t border-pink-50 pt-6">
             <h4 className="text-[10px] font-bold text-pink-300 uppercase tracking-widest text-center mb-4">Cycle Phase & Reproductive Health Legend</h4>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center mb-4 animate-fadeIn">
-              <div className="flex flex-col items-center p-2 rounded-xl bg-pink-50/40">
+            <div className="grid grid-cols-2 sm:grid-cols-6 gap-2.5 text-center mb-4 animate-fadeIn">
+              <div className="flex flex-col items-center p-2 rounded-xl bg-pink-50/50 border border-pink-200/50">
                 <div className="w-5 h-5 rounded-md bg-pink-500 mb-1 flex items-center justify-center text-[10px] text-white font-bold">🩸</div>
-                <span className="text-[9px] font-bold text-pink-700 uppercase">Menstrual</span>
+                <span className="text-[9px] font-bold text-pink-700 uppercase">Confirmed (Solid)</span>
               </div>
-              <div className="flex flex-col items-center p-2 rounded-xl bg-purple-50/40">
-                <div className="w-5 h-5 rounded-md bg-purple-100/70 mb-1 flex items-center justify-center text-purple-700 text-xs text-[10px]">🌱</div>
-                <span className="text-[9px] font-bold text-purple-700 uppercase">Follicular</span>
+              <div className="flex flex-col items-center p-2 rounded-xl bg-pink-50/50 border-2 border-dashed border-pink-300">
+                <div className="w-5 h-5 rounded-md bg-pink-100 mb-1 flex items-center justify-center text-pink-700 text-xs border border-dashed border-pink-300">🩸</div>
+                <span className="text-[9px] font-bold text-pink-700 uppercase">Predicted (Dashed)</span>
               </div>
-              <div className="flex flex-col items-center p-2 rounded-xl bg-sky-50/60 border border-sky-200/50">
+              <div className="flex flex-col items-center p-2 rounded-xl bg-emerald-50/70 border border-emerald-200/60">
+                <div className="w-5 h-5 rounded-md bg-emerald-100 mb-1 flex items-center justify-center text-emerald-700 text-xs text-[10px]">🌱</div>
+                <span className="text-[9px] font-bold text-emerald-800 uppercase">Follicular (Green)</span>
+              </div>
+              <div className="flex flex-col items-center p-2 rounded-xl bg-sky-50/70 border border-sky-300">
                 <div className="w-5 h-5 rounded-md bg-sky-100 mb-1 flex items-center justify-center text-sky-700 text-[10px] font-bold">✨</div>
-                <span className="text-[9px] font-bold text-sky-800 uppercase">Fertile (5 Days)</span>
+                <span className="text-[9px] font-bold text-sky-800 uppercase">Fertile (Light Blue)</span>
               </div>
-              <div className="flex flex-col items-center p-2 rounded-xl bg-amber-50/60 border border-amber-200/50">
+              <div className="flex flex-col items-center p-2 rounded-xl bg-amber-50/70 border border-amber-300">
                 <div className="w-5 h-5 rounded-md bg-amber-400 mb-1 flex items-center justify-center text-white text-[10px] font-bold">🎯</div>
-                <span className="text-[9px] font-bold text-amber-800 uppercase">Ovulation (1 Day)</span>
+                <span className="text-[9px] font-bold text-amber-800 uppercase">Ovulation (Gold)</span>
               </div>
-              <div className="flex flex-col items-center p-2 rounded-xl bg-indigo-50/40">
-                <div className="w-5 h-5 rounded-md bg-indigo-50/80 mb-1 flex items-center justify-center text-indigo-700 text-xs text-[10px]">🍂</div>
-                <span className="text-[9px] font-bold text-indigo-700 uppercase">Luteal</span>
+              <div className="flex flex-col items-center p-2 rounded-xl bg-purple-100/70 border border-purple-200">
+                <div className="w-5 h-5 rounded-md bg-purple-200/80 mb-1 flex items-center justify-center text-purple-800 text-xs text-[10px]">🍂</div>
+                <span className="text-[9px] font-bold text-purple-900 uppercase">Luteal (Lavender)</span>
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 text-center bg-pink-50/10 p-3 rounded-2xl border border-pink-100/30">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center bg-pink-50/10 p-3 rounded-2xl border border-pink-100/30">
+              <div className="flex items-center gap-1.5 justify-center">
+                <span className="w-3 h-3 rounded-full border-2 border-stone-800 inline-block"></span>
+                <span className="text-[8px] font-bold text-stone-600 uppercase tracking-tight">Selected Date</span>
+              </div>
+              <div className="flex items-center gap-1.5 justify-center">
+                <span className="w-2 h-2 rounded-full bg-rose-500 inline-block"></span>
+                <span className="text-[8px] font-bold text-pink-600 uppercase tracking-tight">Today</span>
+              </div>
               <div className="flex items-center gap-1 justify-center">
                 <span className="text-[10px]">💖</span>
                 <span className="text-[8px] font-bold text-pink-500 uppercase tracking-tight">Protected</span>
@@ -2260,7 +2300,7 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
                   {analytics.averageCycleDisplay}
                 </p>
                 <p className="text-[9px] text-gray-400 italic">
-                  {analytics.hasRealCompletedCycles ? 'Completed cycles' : 'Onboarding baseline'}
+                  {user.automaticCyclePrediction ? '✨ Auto-learned average' : (analytics.hasRealCompletedCycles ? 'Completed cycles' : 'Manual baseline')}
                 </p>
               </div>
 

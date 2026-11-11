@@ -114,6 +114,9 @@ export interface User {
   cycleLength: number;
   previousCycleLength?: number;
   periodLength: number;
+  automaticCyclePrediction?: boolean;
+  manualCycleLength?: number;
+  manualPeriodLength?: number;
   lastPeriodStart: string;
   isPartner: boolean;
   isPregnancyMode: boolean;

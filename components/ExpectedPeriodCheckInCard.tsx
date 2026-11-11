@@ -488,24 +488,33 @@ export const ExpectedPeriodCheckInCard: React.FC<ExpectedPeriodCheckInCardProps>
             </div>
 
             <div className="space-y-4 text-xs font-sans">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-wider text-rose-400 block">
-                  Average Cycle Length (Days)
-                </label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="number"
-                    min={21}
-                    max={45}
-                    value={editCycleLenInput}
-                    onChange={(e) => setEditCycleLenInput(parseInt(e.target.value) || 28)}
-                    className="w-24 p-3 bg-white border border-pink-200 rounded-2xl text-sm font-bold text-rose-900 text-center focus:outline-none focus:border-rose-400"
-                  />
-                  <p className="text-stone-500 text-[11px] leading-snug">
-                    Standard cycles range between 21 and 35 days.
-                  </p>
+              {user.automaticCyclePrediction ? (
+                <div className="bg-purple-50/70 p-3.5 rounded-2xl border border-purple-100 flex items-center gap-2.5">
+                  <Sparkles size={16} className="text-purple-600 shrink-0" />
+                  <div className="text-[11px] text-purple-950 leading-snug">
+                    <strong>Automatic Cycle Prediction is Active:</strong> Lumina is managing your cycle length automatically ({user.cycleLength || 28} days). Manual cycle adjustment can only be accessed when Automatic Cycle Prediction is turned off in Settings.
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-wider text-rose-400 block">
+                    Average Cycle Length (Days)
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="number"
+                      min={21}
+                      max={45}
+                      value={editCycleLenInput}
+                      onChange={(e) => setEditCycleLenInput(parseInt(e.target.value) || 28)}
+                      className="w-24 p-3 bg-white border border-pink-200 rounded-2xl text-sm font-bold text-rose-900 text-center focus:outline-none focus:border-rose-400"
+                    />
+                    <p className="text-stone-500 text-[11px] leading-snug">
+                      Standard cycles range between 21 and 35 days.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black uppercase tracking-wider text-rose-400 block">
