@@ -58,6 +58,7 @@ export interface CycleAnalyticsSummary {
   hasSignificantTrendAlert: boolean;
   significantTrendMessage: string;
   hasRealCompletedCycles: boolean;
+  completedCycles: CompletedCycle[];
 }
 
 /**
@@ -328,7 +329,8 @@ export function getCycleAnalytics(user: User, customSymptoms?: Symptom[]): Cycle
     chartData,
     hasSignificantTrendAlert,
     significantTrendMessage,
-    hasRealCompletedCycles
+    hasRealCompletedCycles,
+    completedCycles
   };
 }
 

@@ -18,7 +18,9 @@ import {
   HeartPulse, 
   Eye, 
   Plus, 
-  Printer 
+  Printer,
+  ChevronRight,
+  ChevronDown
 } from 'lucide-react';
 import { User, Symptom, BirthControlLog, BirthControlConfig, TemperatureLog, Period, PeriodLog } from '../types';
 import { SYMPTOMS } from '../constants';
@@ -141,6 +143,13 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
   const [bcTime, setBcTime] = useState(user.birthControlConfig?.reminderTime || '09:00');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date>(new Date());
+  const [timelineCategoryFilter, setTimelineCategoryFilter] = useState<'all' | 'periods' | 'symptoms' | 'mood' | 'intimacy'>('all');
+  const [expandedTimelineId, setExpandedTimelineId] = useState<string | null>(null);
+
+  // Central Cycle Analytics for insights & reports
+  const analytics = useMemo(() => {
+    return getCycleAnalytics(user, symptoms);
+  }, [user, symptoms]);
 
   // Deep Bio-Aware Cycle Graph Datasets
   const cycleChartData = useMemo(() => {
@@ -699,101 +708,111 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
     const daysLate = cycleSync.daysLate;
     const progress = isLate ? 100 : Math.min(100, Math.max(0, (cycleSync.cycleDay / cycleSync.cycleLength) * 100));
 
+    // Phase colors according to specification:
+    // Menstrual: Pink, Follicular: Soft green, Fertile window: Light blue, Ovulation: Golden yellow, Luteal: Lavender
     const phaseColor = isLate 
       ? '#f59e0b' 
       : cycleSync.phase === 'Menstrual' 
-        ? '#f472b6' 
+        ? '#f43f5e' 
         : cycleSync.phase === 'Follicular' 
-          ? '#fb7185' 
+          ? '#10b981' 
           : cycleSync.phase === 'Ovulatory' 
-            ? '#fbbf24' 
-            : '#818cf8';
+            ? '#f59e0b' 
+            : '#a855f7';
 
     return (
-      <div className="flex flex-col items-center animate-fadeIn w-full">
+      <div className="flex flex-col items-center animate-fadeIn w-full max-w-xl mx-auto space-y-5">
         {setUser && (
-          <div className="w-full max-w-2xl mb-6">
+          <div className="w-full">
             <ExpectedPeriodCheckInCard user={user} setUser={setUser} onOpenLogModal={onOpenLogModal} />
           </div>
         )}
-        <div className="relative w-72 h-72 flex items-center justify-center">
-          <svg className="w-full h-full -rotate-90 transform">
-            <circle cx="144" cy="144" r="120" fill="none" stroke="#fdf2f8" strokeWidth="12" />
-            <motion.circle
-              cx="144" cy="144" r="120" fill="none" stroke={phaseColor} strokeWidth="12"
-              strokeDasharray={2 * Math.PI * 120}
-              initial={{ strokeDashoffset: 2 * Math.PI * 120 }}
-              animate={{ strokeDashoffset: 2 * Math.PI * 120 * (1 - progress / 100) }}
-              transition={{ duration: 1.5, ease: "easeOut" }}
-              strokeLinecap="round"
-            />
-          </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8">
-            <span className="text-5xl mb-2">{cycleSync.phaseEmoji}</span>
-            <span className={isLate ? "text-2xl md:text-3xl font-black text-amber-600 leading-tight" : "text-4xl font-bold text-pink-600 leading-none"}>
-              {isLate ? `Day ${daysLate} Late` : cycleSync.cycleDay}
-            </span>
-            <span className="text-[10px] font-bold text-pink-400 uppercase tracking-[0.2em] mt-2">
-              {isLate ? "Late Period Mode" : `Day of ${cycleSync.cycleLength}-Day Cycle`}
-            </span>
-          </div>
-        </div>
-        
-        <div className="mt-8 text-center space-y-3 max-w-md px-4">
-          <div className="flex flex-col items-center gap-1.5">
-            <h3 className="text-2xl font-serif text-pink-600 italic font-bold">
-              {cycleSync.phaseName}
-            </h3>
-            {/* Separate Fertile Window Status: only displayed when active, never replacing the menstrual phase */}
-            {cycleSync.isWithinFertileWindow && cycleSync.fertilityStatus && (
-              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${cycleSync.fertilityBadgeColor}`}>
-                <Sparkles className="w-3.5 h-3.5 text-sky-600" />
-                <span>{cycleSync.fertilityStatus}</span>
-              </span>
-            )}
-          </div>
 
-          <p className="text-sm text-pink-400 italic leading-relaxed">
-            {cycleSync.phaseDescription}
-          </p>
-
-          {/* Synchronized Cycle Forecast Estimates */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-3 text-left">
-            <div className="bg-amber-50/70 border border-amber-200/60 rounded-2xl p-2.5">
-              <span className="text-[9px] font-bold text-amber-600 uppercase tracking-wider block">Estimated Ovulation</span>
-              <span className="text-xs font-bold text-amber-800 block mt-0.5">{cycleSync.estimatedOvulationDateFormatted}</span>
-            </div>
-            <div className="bg-sky-50/70 border border-sky-200/60 rounded-2xl p-2.5">
-              <span className="text-[9px] font-bold text-sky-600 uppercase tracking-wider block">Fertile Window (5 Days)</span>
-              <span className="text-xs font-bold text-sky-800 block mt-0.5">{cycleSync.estimatedFertileRangeFormatted || 'Pending history'}</span>
-            </div>
-            <div className="bg-purple-50/70 border border-purple-100 rounded-2xl p-2.5">
-              <span className="text-[9px] font-bold text-purple-500 uppercase tracking-wider block">Next Period (Est.)</span>
-              <span className="text-xs font-bold text-purple-800 block mt-0.5">{cycleSync.nextExpectedPeriodFormatted}</span>
-            </div>
-          </div>
+        {/* Compact, elegant Cycle Overview Card */}
+        <div className="w-full bg-white rounded-[2.5rem] p-6 sm:p-7 border border-pink-100/80 shadow-xs flex flex-col items-center text-center space-y-5">
           
-          {cycleSync.isAutomaticPrediction ? (
-            <div className="bg-gradient-to-r from-pink-50/90 to-purple-50/80 p-3 rounded-2xl border border-pink-100 text-left space-y-1 mt-2">
-              <span className="text-[9.5px] font-bold text-pink-700 uppercase tracking-wider flex items-center gap-1.5">
-                <span>✨</span> Automatic Cycle Prediction
+          {/* Circular cycle progress indicator */}
+          <div className="relative w-52 h-52 flex items-center justify-center">
+            <svg className="w-full h-full -rotate-90 transform">
+              <circle cx="104" cy="104" r="88" fill="none" stroke="#fdf2f8" strokeWidth="10" />
+              <motion.circle
+                cx="104" cy="104" r="88" fill="none" stroke={phaseColor} strokeWidth="10"
+                strokeDasharray={2 * Math.PI * 88}
+                initial={{ strokeDashoffset: 2 * Math.PI * 88 }}
+                animate={{ strokeDashoffset: 2 * Math.PI * 88 * (1 - progress / 100) }}
+                transition={{ duration: 1.2, ease: "easeOut" }}
+                strokeLinecap="round"
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+              <span className="text-3xl mb-1">{cycleSync.phaseEmoji}</span>
+              <span className={isLate ? "text-xl font-black text-amber-600 leading-tight" : "text-3xl font-serif font-black text-stone-800 leading-none"}>
+                {isLate ? `Day ${daysLate} Late` : `Day ${cycleSync.cycleDay}`}
               </span>
-              <p className="text-[10.5px] text-stone-600 leading-relaxed">
-                {cycleSync.predictionExplanation}
-              </p>
+              <span className="text-[9.5px] font-bold text-stone-400 uppercase tracking-widest mt-1">
+                {isLate ? "Late Period Mode" : `of ${cycleSync.cycleLength}-Day Cycle`}
+              </span>
             </div>
-          ) : (
-            <div className="text-[10px] text-stone-400 italic text-center pt-1">
-              Manual Tracking Mode ({cycleSync.cycleLength}-Day Cycle, {cycleSync.periodLength}-Day Bleeding)
-            </div>
-          )}
+          </div>
 
-          <button 
-            onClick={onOpenLogModal}
-            className="mt-6 px-8 py-3.5 bg-gradient-to-r from-pink-400 to-rose-400 text-white rounded-full font-bold shadow-lg shadow-pink-100 hover:scale-105 transition-transform cursor-pointer"
-          >
-            {isLate ? "Log Period Start" : "Log Today's Journey"}
-          </button>
+          {/* Phase Badge & Fertile Status */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-center gap-2 flex-wrap">
+              <span className={`px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                cycleSync.phase === 'Menstrual' 
+                  ? 'bg-pink-100 text-pink-700 border-pink-200' 
+                  : cycleSync.phase === 'Follicular' 
+                    ? 'bg-emerald-100 text-emerald-800 border-emerald-200' 
+                    : cycleSync.phase === 'Ovulatory' 
+                      ? 'bg-amber-100 text-amber-800 border-amber-200' 
+                      : 'bg-purple-100 text-purple-800 border-purple-200'
+              }`}>
+                {cycleSync.phaseName}
+              </span>
+              {cycleSync.isWithinFertileWindow && cycleSync.fertilityStatus && (
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${cycleSync.fertilityBadgeColor}`}>
+                  <Sparkles className="w-3.5 h-3.5 text-sky-600" />
+                  <span>{cycleSync.fertilityStatus}</span>
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-stone-500 font-serif italic max-w-sm">
+              {cycleSync.phaseDescription}
+            </p>
+          </div>
+
+          {/* Forecast Grid: Next Period, Estimated Ovulation, Fertile Window */}
+          <div className="w-full grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 text-left">
+            <div className="bg-purple-50/70 border border-purple-100 rounded-2xl p-3">
+              <span className="text-[9px] font-bold text-purple-600 uppercase tracking-wider block">Next Period</span>
+              <span className="text-xs font-bold text-purple-900 block mt-0.5">{cycleSync.nextExpectedPeriodFormatted}</span>
+            </div>
+            <div className="bg-amber-50/70 border border-amber-200/60 rounded-2xl p-3">
+              <span className="text-[9px] font-bold text-amber-700 uppercase tracking-wider block">Estimated Ovulation</span>
+              <span className="text-xs font-bold text-amber-900 block mt-0.5">{cycleSync.estimatedOvulationDateFormatted}</span>
+            </div>
+            <div className="bg-sky-50/70 border border-sky-200/60 rounded-2xl p-3">
+              <span className="text-[9px] font-bold text-sky-700 uppercase tracking-wider block">Fertile Window</span>
+              <span className="text-xs font-bold text-sky-900 block mt-0.5">{cycleSync.estimatedFertileRangeFormatted || 'Pending history'}</span>
+            </div>
+          </div>
+
+          {/* Action Links */}
+          <div className="flex items-center gap-3 pt-2 w-full">
+            <button
+              onClick={() => setActiveView('calendar')}
+              className="flex-1 py-3 px-4 bg-pink-50 hover:bg-pink-100 text-pink-600 font-bold text-xs uppercase tracking-wider rounded-2xl transition-all cursor-pointer shadow-2xs"
+            >
+              View Full Calendar
+            </button>
+            <button
+              onClick={onOpenLogModal}
+              className="flex-1 py-3 px-4 bg-gradient-to-r from-pink-500 to-rose-400 hover:from-pink-600 hover:to-rose-500 text-white font-bold text-xs uppercase tracking-wider rounded-2xl transition-all cursor-pointer shadow-xs"
+            >
+              {isLate ? "Log Period" : "Log Symptoms"}
+            </button>
+          </div>
+
         </div>
       </div>
     );
@@ -851,6 +870,16 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
             <p className="text-[11px] text-gray-400 italic">Review, expand dynamic forecasts, and manage your documented cycle history.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            {onOpenDoctorReport && (
+              <button
+                onClick={onOpenDoctorReport}
+                className="px-4 py-2 bg-gradient-to-r from-pink-500 to-rose-450 hover:from-pink-600 hover:to-rose-500 text-white font-extrabold uppercase text-[9px] tracking-widest rounded-full shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+                title="Generate Doctor Clinical Report"
+              >
+                <FileText size={12} />
+                <span>Doctor Report</span>
+              </button>
+            )}
             <button 
               onClick={() => setIsViewingTrends(true)}
               className="px-4 py-2 bg-pink-50 hover:bg-pink-100 text-pink-600 border border-pink-100 font-extrabold uppercase text-[9px] tracking-widest rounded-full shadow-sm transition-all cursor-pointer flex items-center gap-1.5"
@@ -859,7 +888,7 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
             </button>
             <button 
               onClick={() => setIsAddingPeriod(!isAddingPeriod)}
-              className="px-4 py-2 bg-gradient-to-r from-pink-400 to-rose-400 hover:from-pink-500 hover:to-rose-500 text-white font-extrabold uppercase text-[9px] tracking-widest rounded-full shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+              className="px-4 py-2 bg-white hover:bg-pink-50 text-pink-600 border border-pink-200 font-extrabold uppercase text-[9px] tracking-widest rounded-full shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
             >
               {isAddingPeriod ? '✕ Close Form' : '➕ Add Past Cycle'}
             </button>
@@ -1935,181 +1964,332 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
           </div>
         </div>
 
-        {/* Full-width Month-wide Connected Intimacy & Reproductive Health Timeline */}
-        <div className="lg:col-span-12 mt-6 bg-gradient-to-br from-white to-pink-50/10 p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-pink-100/60 space-y-6">
-          <div className="flex flex-col sm:flex-row justify-between sm:items-center border-b border-pink-100 pb-4 gap-2">
+        {/* SECTION 7: CYCLE INSIGHTS AT BOTTOM OF CALENDAR */}
+        <div className="lg:col-span-12 mt-6 bg-gradient-to-br from-white via-pink-50/20 to-purple-50/20 p-6 sm:p-8 rounded-[2.5rem] border border-pink-100/80 shadow-xs space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-pink-100/60 pb-4">
             <div>
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">💞</span>
-                <h4 className="font-serif text-xl text-pink-600 italic">Intimacy & Reproductive Health Timeline</h4>
-              </div>
-              <p className="text-[11px] text-pink-400 mt-1">
-                Connected timeline of tracked sexual activity, protection methods, and contraceptive timings for {monthName} {year}.
+              <span className="text-[9.5px] font-black uppercase tracking-[0.2em] text-pink-500 block">
+                Cycle Intelligence
+              </span>
+              <h4 className="text-xl font-serif font-bold text-stone-800 italic mt-0.5">
+                Cycle Insights Summary
+              </h4>
+              <p className="text-xs text-stone-500 font-serif italic">
+                A synchronized summary of your reproductive health patterns.
               </p>
             </div>
-            <span className="text-[8px] font-bold bg-pink-100 text-pink-600 px-3 py-1 rounded-full uppercase tracking-widest self-start sm:self-center">
-              🔒 Private Timeline
-            </span>
+            <button
+              onClick={() => setActiveView('stats')}
+              className="px-5 py-2.5 bg-gradient-to-r from-pink-500 to-rose-450 hover:from-pink-600 hover:to-rose-500 text-white rounded-full font-bold text-xs uppercase tracking-wider shadow-sm transition-all flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
+            >
+              <span>View Full Statistics</span>
+              <ChevronRight size={13} />
+            </button>
           </div>
 
-          {monthLogs.length === 0 ? (
-            <div className="text-center py-10 space-y-2">
-              <span className="text-3xl block">🌸</span>
-              <p className="text-xs text-pink-300 italic">No intimacy or contraceptive logs recorded for this month.</p>
-              <p className="text-[10px] text-pink-400/80">Tap any day on the calendar above to log intimacy, protection, and contraceptive pills.</p>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <div className="bg-white p-4 rounded-2xl border border-pink-100/60 shadow-2xs space-y-1">
+              <span className="text-[9px] font-bold text-stone-400 uppercase tracking-wider block">Avg Cycle</span>
+              <p className="text-xl font-serif font-black text-pink-600">{analytics.averageCycleDisplay}</p>
+              <p className="text-[9px] text-stone-400 italic">Historical average</p>
             </div>
-          ) : (
-            <div className="relative border-l-2 border-pink-100 ml-4 pl-6 space-y-6">
-              {monthLogs.map((log) => {
-                const logDate = new Date(log.date);
-                const details = getCycleDetailsForDate(logDate);
-                const pregInfo = getPregnancyPossibility(logDate, user.sexualActivityLogs || [], details.fertilityKey);
-                
-                return (
-                  <div key={log.id} className="relative group animate-fadeIn">
-                    {/* Timeline Node Point */}
-                    <div className="absolute -left-[31px] top-1.5 w-4 h-4 rounded-full border-2 border-white bg-pink-500 shadow-sm flex items-center justify-center">
-                      <div className="w-1.5 h-1.5 rounded-full bg-white"></div>
-                    </div>
-
-                    <div className="bg-white p-5 rounded-2xl border border-pink-50 shadow-sm hover:shadow-md hover:border-pink-200 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4">
-                      {/* Left: Date and Action */}
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-serif text-sm font-bold text-pink-600 italic">
-                            {logDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                          </span>
-                          <span className={`px-2 py-0.5 rounded-lg text-[8px] font-bold uppercase tracking-wider ${details.badgeColor}`}>
-                            {details.phaseName}
-                          </span>
-                          {details.isWithinFertileWindow && details.fertilityStatus && (
-                            <span className="text-[10px] text-teal-600 font-semibold italic">
-                              • {details.fertilityStatus}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Intimacy info list */}
-                        <div className="space-y-1.5">
-                          {log.hadSex && (
-                            <div className="flex items-center gap-1.5 text-xs text-gray-700">
-                              <span className="text-[10px]">💞</span>
-                              <span className="font-medium">Sexual activity logged</span>
-                              <span className="text-gray-300">•</span>
-                              <span className={`font-semibold text-[10px] uppercase ${log.protection === 'protected' ? 'text-teal-600' : 'text-rose-500'}`}>
-                                {log.protection === 'protected' ? 'Protected Sex' : 'Unprotected Sex'}
-                              </span>
-                            </div>
-                          )}
-
-                          {log.hadSex && (
-                            <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                              <span className="text-[10px]">💦</span>
-                              <span>Ejaculation status:</span>
-                              <span className="font-medium text-gray-700">
-                                {log.ejaculation === 'occurred' ? 'Ejaculation occurred' : 'No ejaculation'}
-                              </span>
-                            </div>
-                          )}
-
-                          {log.contraceptiveMethod && log.contraceptiveMethod !== 'none' && (
-                            <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                              <span className="text-[10px]">🛡️</span>
-                              <span>Contraceptive:</span>
-                              <span className="font-medium text-pink-600 bg-pink-50 px-1.5 py-0.5 rounded text-[10px]">
-                                {log.contraceptiveMethod === 'condom' ? 'Condom' :
-                                 log.contraceptiveMethod === 'pill' ? 'Birth control pill' :
-                                 log.contraceptiveMethod === 'iud' ? 'IUD (Intrauterine Device)' :
-                                 log.contraceptiveMethod === 'implant' ? 'Hormonal Implant' : 'Other Method'}
-                              </span>
-                            </div>
-                          )}
-
-                          {log.emergencyContraceptiveTaken && (
-                            <div className="flex items-center gap-1.5 text-xs text-rose-600 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-100 w-fit mt-1">
-                              <span className="text-[10px]">💊</span>
-                              <span className="font-bold">Emergency contraception taken</span>
-                              {log.emergencyContraceptiveTime && (
-                                <>
-                                  <span className="opacity-40 font-normal">at</span>
-                                  <span className="font-semibold italic">{log.emergencyContraceptiveTime}</span>
-                                </>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Right: Educational insight panel */}
-                      <div className="md:max-w-xs bg-pink-50/40 p-3.5 rounded-xl border border-pink-100/50 text-left space-y-1.5 self-start md:self-center">
-                        <div className="flex justify-between items-center gap-2 text-[8px] font-bold uppercase tracking-wider">
-                          <span className="text-pink-400">Pregnancy Liability Insight</span>
-                          <span className={pregInfo.colorClass}>{pregInfo.label}</span>
-                        </div>
-                        <p className="text-[10px] text-pink-600 leading-relaxed font-serif italic">
-                          {pregInfo.desc}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="bg-white p-4 rounded-2xl border border-pink-100/60 shadow-2xs space-y-1">
+              <span className="text-[9px] font-bold text-stone-400 uppercase tracking-wider block">Avg Period</span>
+              <p className="text-xl font-serif font-black text-rose-600">{analytics.averagePeriodDisplay}</p>
+              <p className="text-[9px] text-stone-400 italic">Bleeding duration</p>
             </div>
-          )}
+            <div className="bg-white p-4 rounded-2xl border border-pink-100/60 shadow-2xs space-y-1">
+              <span className="text-[9px] font-bold text-stone-400 uppercase tracking-wider block">Shortest Cycle</span>
+              <p className="text-xl font-serif font-black text-pink-700">{analytics.shortestCycle} <span className="text-xs font-sans text-stone-400">days</span></p>
+              <p className="text-[9px] text-stone-400 italic">Minimum interval</p>
+            </div>
+            <div className="bg-white p-4 rounded-2xl border border-pink-100/60 shadow-2xs space-y-1">
+              <span className="text-[9px] font-bold text-stone-400 uppercase tracking-wider block">Longest Cycle</span>
+              <p className="text-xl font-serif font-black text-purple-700">{analytics.longestCycle} <span className="text-xs font-sans text-stone-400">days</span></p>
+              <p className="text-[9px] text-stone-400 italic">Maximum interval</p>
+            </div>
+            <div className="bg-white p-4 rounded-2xl border border-pink-100/60 shadow-2xs space-y-1 col-span-2 sm:col-span-1">
+              <span className="text-[9px] font-bold text-stone-400 uppercase tracking-wider block">Regularity</span>
+              <p className="text-base font-serif font-bold text-teal-700">{analytics.cycleRegularity}</p>
+              <p className="text-[9px] text-teal-600 font-medium">±{analytics.averageVariationDisplay}</p>
+            </div>
+          </div>
         </div>
       </div>
     );
   };
-
   const renderTimeline = () => {
-    const timelineEvents = [
-      ...(user.periods || []).map(p => ({ 
-        date: p.startDate, 
-        type: 'period', 
-        label: `Period (${p.intensity})`, 
-        endDate: p.endDate 
+    // 1. Gather all timeline records
+    const allEvents: {
+      id: string;
+      date: string;
+      endDate?: string;
+      category: 'periods' | 'symptoms' | 'mood' | 'intimacy' | 'temp';
+      typeLabel: string;
+      title: string;
+      emoji: string;
+      badgeColor: string;
+      details?: string;
+      rawItem?: any;
+    }[] = [
+      ...(user.periods || []).map(p => ({
+        id: `period-${p.id}`,
+        date: p.startDate,
+        endDate: p.endDate,
+        category: 'periods' as const,
+        typeLabel: 'Menstrual Period',
+        title: `Period (${p.intensity || 'Medium'} Flow)`,
+        emoji: '🩸',
+        badgeColor: 'bg-rose-50 text-rose-700 border-rose-200',
+        details: `Bleeding logged from ${new Date(p.startDate).toLocaleDateString()} to ${new Date(p.endDate).toLocaleDateString()}. Flow: ${p.intensity || 'Medium'}.`,
+        rawItem: p
       })),
       ...(user.periodDates || []).filter(d => !user.periods?.some(p => {
         const start = new Date(new Date(p.startDate).toDateString());
         const end = new Date(new Date(p.endDate).toDateString());
         const current = new Date(new Date(d).toDateString());
         return current >= start && current <= end;
-      })).map(date => ({ date, type: 'period', label: 'Period Day' })),
-      ...symptoms.map(s => ({ date: s.date, type: 'symptom', label: SYMPTOMS.find(symp => symp.id === s.type)?.label || 'Symptom' })),
-      ...tempLogs.map(t => ({ date: t.date, type: 'temp', label: `Temp: ${t.value}°${t.unit}` }))
-    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      })).map(date => ({
+        id: `pdate-${date}`,
+        date,
+        category: 'periods' as const,
+        typeLabel: 'Period Day',
+        title: 'Single Period Day Logged',
+        emoji: '🩸',
+        badgeColor: 'bg-pink-50 text-pink-700 border-pink-200',
+        details: 'Bleeding recorded for this date.'
+      })),
+      ...symptoms.map(s => {
+        const symDef = SYMPTOMS.find(symp => symp.id === s.type);
+        return {
+          id: `sym-${s.id}`,
+          date: s.date,
+          category: 'symptoms' as const,
+          typeLabel: 'Symptom Tracked',
+          title: symDef?.label || s.type.replace(/_/g, ' '),
+          emoji: symDef?.emoji || '✨',
+          badgeColor: 'bg-purple-50 text-purple-700 border-purple-200',
+          details: `Intensity: Level ${s.intensity || 1} of 3 tracked.`,
+          rawItem: s
+        };
+      }),
+      ...(user.moodLogs || []).map(m => ({
+        id: `mood-${m.id}`,
+        date: m.date,
+        category: 'mood' as const,
+        typeLabel: 'Mood Reflection',
+        title: `Felt ${m.mood.charAt(0).toUpperCase() + m.mood.slice(1)}`,
+        emoji: m.mood === 'happy' ? '😊' : m.mood === 'calm' ? '🧘' : m.mood === 'anxious' ? '😰' : m.mood === 'tired' ? '😴' : '🌸',
+        badgeColor: 'bg-amber-50 text-amber-800 border-amber-200',
+        details: m.note ? `Note: "${m.note}"` : `Recorded mood: ${m.mood}`,
+        rawItem: m
+      })),
+      ...(user.sexualActivityLogs || []).map(l => ({
+        id: `sex-${l.id}`,
+        date: l.date,
+        category: 'intimacy' as const,
+        typeLabel: 'Intimacy Log',
+        title: l.hadSex ? (l.protection === 'protected' ? 'Protected Intimacy 🛡️' : 'Unprotected Intimacy ⚠️') : 'No Intimacy',
+        emoji: '💞',
+        badgeColor: l.protection === 'protected' ? 'bg-teal-50 text-teal-800 border-teal-200' : 'bg-rose-50 text-rose-800 border-rose-200',
+        details: `Protection: ${l.protection || 'Not specified'} • Ejaculation: ${l.ejaculation || 'None'}${l.contraceptiveMethod && l.contraceptiveMethod !== 'none' ? ` • Method: ${l.contraceptiveMethod}` : ''}${l.emergencyContraceptiveTaken ? ' • Emergency contraception taken' : ''}`,
+        rawItem: l
+      })),
+      ...tempLogs.map(t => ({
+        id: `temp-${t.date}-${t.value}`,
+        date: t.date,
+        category: 'symptoms' as const,
+        typeLabel: 'Basal Temperature',
+        title: `BBT: ${t.value}°${t.unit}`,
+        emoji: '🌡️',
+        badgeColor: 'bg-sky-50 text-sky-800 border-sky-200',
+        details: `Basal body temperature recorded at ${t.value}°${t.unit}.`
+      }))
+    ];
+
+    // Filter by category
+    const filteredEvents = allEvents.filter(ev => {
+      if (timelineCategoryFilter === 'all') return true;
+      return ev.category === timelineCategoryFilter;
+    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    // Group events by Month and Year (e.g. "November 2026")
+    const groupedByMonth: Record<string, typeof filteredEvents> = {};
+    filteredEvents.forEach(ev => {
+      const d = new Date(ev.date);
+      const key = isNaN(d.getTime()) 
+        ? 'Recent Logs'
+        : d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      if (!groupedByMonth[key]) {
+        groupedByMonth[key] = [];
+      }
+      groupedByMonth[key].push(ev);
+    });
+
+    const monthKeys = Object.keys(groupedByMonth);
 
     return (
-      <div className="space-y-4 animate-fadeIn">
-        {timelineEvents.length === 0 ? (
-          <div className="bg-white p-12 rounded-[2.5rem] text-center border border-pink-50">
-            <span className="text-4xl block mb-4">📜</span>
-            <p className="text-pink-300 italic">No events logged yet. Start your journey today!</p>
+      <div className="space-y-6 animate-fadeIn font-sans text-left">
+        
+        {/* Header & Category Filters */}
+        <div className="bg-white p-6 rounded-[2.5rem] border border-pink-100/80 shadow-xs space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-pink-50 pb-3">
+            <div>
+              <span className="text-[9.5px] font-black uppercase tracking-[0.2em] text-pink-500 block">
+                Reproductive History
+              </span>
+              <h3 className="text-xl font-serif font-bold text-stone-800 italic mt-0.5">
+                Chronological Health Timeline
+              </h3>
+            </div>
+            <span className="text-[10px] font-bold text-stone-500 bg-stone-50 px-3 py-1 rounded-full border border-stone-200/60 self-start sm:self-auto">
+              {filteredEvents.length} {filteredEvents.length === 1 ? 'Record' : 'Records'}
+            </span>
+          </div>
+
+          {/* Category Filter Pills */}
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide pb-1">
+            {[
+              { id: 'all', label: 'All Records', emoji: '📜' },
+              { id: 'periods', label: 'Periods', emoji: '🩸' },
+              { id: 'symptoms', label: 'Symptoms', emoji: '✨' },
+              { id: 'mood', label: 'Moods', emoji: '🌸' },
+              { id: 'intimacy', label: 'Intimacy', emoji: '💞' }
+            ].map(filter => (
+              <button
+                key={filter.id}
+                onClick={() => setTimelineCategoryFilter(filter.id as any)}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer ${
+                  timelineCategoryFilter === filter.id
+                    ? 'bg-gradient-to-r from-pink-500 to-rose-400 text-white shadow-2xs'
+                    : 'bg-stone-50 hover:bg-pink-50 text-stone-600 hover:text-pink-600 border border-stone-200/50'
+                }`}
+              >
+                <span>{filter.emoji}</span>
+                <span>{filter.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Timeline Events List grouped by Month and Year */}
+        {monthKeys.length === 0 ? (
+          <div className="bg-white p-12 rounded-[2.5rem] text-center border border-pink-100 shadow-xs space-y-2">
+            <span className="text-4xl block mb-2">📜</span>
+            <h4 className="text-base font-serif font-bold text-stone-800 italic">No events found in this category</h4>
+            <p className="text-xs text-stone-400 italic">
+              Tap any date on the calendar or log today's journey to build your timeline.
+            </p>
           </div>
         ) : (
-          timelineEvents.map((event: any, idx) => (
-            <div key={idx} className="bg-white p-6 rounded-3xl shadow-sm border border-pink-50 flex items-center gap-4 hover:scale-[1.02] transition-transform">
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl ${
-                event.type === 'period' ? 'bg-pink-100 text-pink-500' : 
-                event.type === 'symptom' ? 'bg-purple-100 text-purple-500' : 'bg-blue-100 text-blue-500'
-              }`}>
-                {event.type === 'period' ? '🩸' : event.type === 'symptom' ? '✨' : '🌡️'}
+          monthKeys.map(month => (
+            <div key={month} className="space-y-3">
+              {/* Month Group Header */}
+              <div className="sticky top-2 z-10 flex items-center gap-2 px-2 py-1 bg-[#fffafb]/90 backdrop-blur-md rounded-xl w-fit">
+                <span className="w-2 h-2 rounded-full bg-pink-500 inline-block" />
+                <h4 className="font-serif font-black text-stone-800 text-sm tracking-tight italic">
+                  {month}
+                </h4>
               </div>
-              <div className="flex-1">
-                <p className="font-serif text-lg text-pink-600 italic">{event.label}</p>
-                <div className="flex flex-wrap gap-x-2 items-center">
-                  <p className="text-[10px] font-bold text-pink-300 uppercase tracking-widest">
-                    {new Date(event.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-                  </p>
-                  {event.endDate && (
-                    <>
-                      <span className="text-pink-200">→</span>
-                      <p className="text-[10px] font-bold text-pink-300 uppercase tracking-widest">
-                        {new Date(event.endDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-                      </p>
-                    </>
-                  )}
-                </div>
+
+              {/* Items in Month */}
+              <div className="relative border-l-2 border-pink-100/80 ml-3 pl-5 space-y-3">
+                {groupedByMonth[month].map(event => {
+                  const isExpanded = expandedTimelineId === event.id;
+                  const dateFormatted = new Date(event.date).toLocaleDateString('en-US', {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric'
+                  });
+
+                  return (
+                    <div key={event.id} className="relative group animate-fadeIn">
+                      {/* Node point */}
+                      <div className="absolute -left-[27px] top-3.5 w-3.5 h-3.5 rounded-full border-2 border-white bg-pink-400 shadow-2xs" />
+
+                      {/* Event Card */}
+                      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-pink-100/70 shadow-2xs hover:shadow-xs hover:border-pink-200 transition-all space-y-2">
+                        <div 
+                          onClick={() => setExpandedTimelineId(isExpanded ? null : event.id)}
+                          className="flex items-start justify-between gap-3 cursor-pointer"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-pink-50/70 flex items-center justify-center text-lg shrink-0 border border-pink-100/50 mt-0.5">
+                              {event.emoji}
+                            </div>
+                            <div className="space-y-0.5">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className={`text-[8.5px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${event.badgeColor}`}>
+                                  {event.typeLabel}
+                                </span>
+                                <span className="text-[10px] font-bold text-stone-400">
+                                  {dateFormatted}
+                                  {event.endDate && ` → ${new Date(event.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+                                </span>
+                              </div>
+                              <h5 className="font-serif font-bold text-stone-800 text-sm italic">
+                                {event.title}
+                              </h5>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 text-stone-400 shrink-0">
+                            <span className="text-[9.5px] font-serif italic text-pink-500">
+                              {isExpanded ? 'Less' : 'Details'}
+                            </span>
+                            <ChevronDown size={14} className={`transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+                          </div>
+                        </div>
+
+                        {/* Expandable details and actions */}
+                        {isExpanded && (
+                          <div className="pt-3 border-t border-pink-50 space-y-3 animate-fadeIn">
+                            {event.details && (
+                              <p className="text-xs text-stone-600 font-serif italic leading-relaxed">
+                                {event.details}
+                              </p>
+                            )}
+
+                            {/* Actions toolbar */}
+                            <div className="flex items-center justify-end gap-2 pt-1">
+                              {event.category === 'periods' && event.rawItem?.id && (
+                                <button
+                                  onClick={() => setEditingPeriodData({
+                                    id: event.rawItem.id,
+                                    startDate: event.rawItem.startDate,
+                                    endDate: event.rawItem.endDate,
+                                    intensity: event.rawItem.intensity || 'medium'
+                                  })}
+                                  className="px-3 py-1 bg-pink-50 hover:bg-pink-100 text-pink-600 font-bold text-[9.5px] uppercase tracking-wider rounded-lg transition-colors cursor-pointer"
+                                >
+                                  Edit Period
+                                </button>
+                              )}
+
+                              {/* Delete Action */}
+                              <button
+                                onClick={() => {
+                                  if (confirm(`Are you sure you want to delete this ${event.typeLabel.toLowerCase()}?`)) {
+                                    if (event.category === 'periods' && event.rawItem?.id) {
+                                      handleDeletePeriod(event.rawItem.id);
+                                    } else if (event.category === 'symptoms' && event.rawItem?.id) {
+                                      handleDeleteSymptom(event.rawItem.id);
+                                    } else if (event.category === 'intimacy' && event.rawItem?.id) {
+                                      handleDeleteIntimacyLog(event.rawItem.id);
+                                    }
+                                  }
+                                }}
+                                className="px-3 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-[9.5px] uppercase tracking-wider rounded-lg transition-colors cursor-pointer"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ))
@@ -2394,22 +2574,16 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
   return (
     <div className="space-y-10 pb-20">
       {renderCycleTrendsModal()}
-      {/* Redesigned Glassmorphic Screen Header */}
-      <header className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 text-center md:text-left bg-white/40 backdrop-blur-xl p-6 md:p-8 rounded-[2.5rem] border border-white/60 shadow-[inset_0_2px_4px_rgba(255,255,255,0.6),_0_12px_36px_rgba(244,114,182,0.03)]">
+      {/* SECTION 1: COMPACT HEADER */}
+      <header className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 text-center sm:text-left bg-white/40 backdrop-blur-xl px-6 py-4 rounded-3xl border border-white/60 shadow-[inset_0_2px_4px_rgba(255,255,255,0.6),_0_8px_24px_rgba(244,114,182,0.03)]">
         <div>
-          <h2 className="text-3xl font-serif text-pink-600 font-bold tracking-tight">Calendar</h2>
-          <p className="text-xs text-stone-500 font-serif italic mt-1">Track your cycle and important dates</p>
+          <h2 className="text-2xl font-serif text-pink-600 font-bold tracking-tight">Calendar</h2>
+          <p className="text-xs text-stone-500 font-serif italic mt-0.5">Your cycle, beautifully understood.</p>
         </div>
-        <button
-          onClick={onOpenDoctorReport}
-          className="px-6 py-3 bg-gradient-to-r from-pink-500 to-rose-450 text-white rounded-2xl font-bold text-[9px] uppercase tracking-widest shadow-md flex items-center justify-center gap-2 transition-all self-center md:self-auto hover:scale-[1.02] active:scale-95 cursor-pointer"
-        >
-          <FileText size={13} />
-          <span>Generate Doctor Report</span>
-        </button>
       </header>
 
-      <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-4">
+      {/* SECTION 2: CYCLE NAVIGATION (5 Pill-shaped Tabs) */}
+      <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2">
         {[
           { id: 'cycle', label: 'Cycle', icon: '🌙' },
           { id: 'calendar', label: 'Calendar', icon: '📅' },
@@ -2420,86 +2594,24 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
           <button
             key={tab.id}
             onClick={() => setActiveView(tab.id as any)}
-            className={`flex items-center gap-2 px-6 py-3 rounded-full transition-all whitespace-nowrap ${activeView === tab.id ? 'bg-pink-400 text-white shadow-lg shadow-pink-100' : 'bg-white text-pink-300 hover:bg-pink-50'}`}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-full transition-all whitespace-nowrap cursor-pointer ${
+              activeView === tab.id 
+                ? 'bg-gradient-to-r from-pink-500 to-rose-400 text-white shadow-md shadow-pink-200/50' 
+                : 'bg-white text-stone-600 hover:bg-pink-50/50 hover:text-pink-600 border border-pink-100/60 shadow-2xs'
+            }`}
           >
             <span className="text-sm">{tab.icon}</span>
-            <span className="text-[10px] font-bold uppercase tracking-widest">{tab.label}</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider">{tab.label}</span>
           </button>
         ))}
       </div>
 
-      <div className="mt-8">
+      <div className="mt-6">
         {activeView === 'cycle' && renderCycle()}
         {activeView === 'calendar' && renderCalendar()}
         {activeView === 'history' && renderHistory()}
         {activeView === 'timeline' && renderTimeline()}
         {activeView === 'stats' && renderStats()}
-      </div>
-
-      {/* Birth Control Tracker */}
-      <section className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-pink-50 relative overflow-hidden">
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="text-xl font-serif text-pink-500 flex items-center gap-2 italic">
-            <span className="text-2xl">💊</span> Birth Control
-          </h3>
-          <button onClick={() => setIsSettingBC(!isSettingBC)} className="text-[10px] font-bold text-pink-300 uppercase hover:text-pink-500 transition-colors">
-            {isSettingBC ? 'Close' : 'Configure'}
-          </button>
-        </div>
-
-        {isSettingBC ? (
-          <div className="space-y-6 animate-fadeIn">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-pink-300 uppercase ml-2">Method</label>
-                <select value={bcMethod} onChange={(e) => setBcMethod(e.target.value)} className="w-full bg-pink-50/50 p-3 rounded-2xl outline-none text-pink-600 font-bold text-sm border border-transparent focus:border-pink-200">
-                  {['Pill', 'Patch', 'Ring', 'Injection', 'IUD', 'Implant'].map(m => <option key={m} value={m}>{m}</option>)}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-pink-300 uppercase ml-2">Frequency</label>
-                <select value={bcFrequency} onChange={(e) => setBcFrequency(e.target.value as any)} className="w-full bg-pink-50/50 p-3 rounded-2xl outline-none text-pink-600 font-bold text-sm border border-transparent focus:border-pink-200">
-                  <option value="daily">Daily</option>
-                  <option value="weekly">Weekly</option>
-                  <option value="monthly">Monthly</option>
-                </select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold text-pink-300 uppercase ml-2">Reminder Time</label>
-              <input type="time" value={bcTime} onChange={(e) => setBcTime(e.target.value)} className="w-full bg-pink-50/50 p-3 rounded-2xl outline-none text-pink-600 font-bold text-sm border border-transparent focus:border-pink-200" />
-            </div>
-            <button onClick={() => {
-              onUpdateBCConfig({ method: bcMethod, frequency: bcFrequency, reminderTime: bcTime, enabled: true });
-              setIsSettingBC(false);
-            }} className="w-full py-4 bg-pink-400 text-white rounded-2xl font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-pink-100">
-              Save Settings
-            </button>
-          </div>
-        ) : (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl transition-all shadow-inner ${isTakenToday ? 'bg-pink-400 text-white' : 'bg-pink-50 text-pink-200'}`}>
-                {isTakenToday ? '✨' : '💊'}
-              </div>
-              <div>
-                <p className="font-serif italic text-lg text-pink-600">{user.birthControlConfig?.enabled ? user.birthControlConfig.method : 'Track your method'}</p>
-                <p className="text-[10px] font-bold text-pink-300 uppercase tracking-widest">{user.birthControlConfig?.enabled ? `${user.birthControlConfig.frequency} • ${user.birthControlConfig.reminderTime}` : 'Tap configure to start'}</p>
-              </div>
-            </div>
-            <button onClick={() => isTakenToday ? setBcLogs(bcLogs.filter(log => log.date !== today)) : setBcLogs([...bcLogs, { date: today, taken: true }])} className={`px-6 py-3 rounded-full font-bold text-[10px] uppercase tracking-widest transition-all ${isTakenToday ? 'bg-pink-50 text-pink-400' : 'bg-pink-400 text-white shadow-lg shadow-pink-100 hover:scale-105 active:scale-95'}`}>
-              {isTakenToday ? 'Taken Today' : 'Log Intake'}
-            </button>
-          </div>
-        )}
-      </section>
-
-      <div className="p-8 bg-gradient-to-br from-pink-500 to-rose-400 rounded-[2.5rem] text-white shadow-xl shadow-pink-200 relative overflow-hidden">
-        <div className="relative z-10">
-          <p className="text-xs font-bold uppercase tracking-widest opacity-80 mb-2">Cycle Wisdom</p>
-          <p className="text-xl font-serif italic leading-relaxed">"Your body is a blooming garden. Honor each season with love and patience."</p>
-        </div>
-        <span className="absolute -bottom-10 -right-10 text-[12rem] opacity-10">✨</span>
       </div>
     </div>
   );

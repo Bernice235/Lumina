@@ -287,7 +287,7 @@ const Dashboard: React.FC<DashboardProps> = ({
     setTimeout(() => {
       setIsCompanionWaving(false);
     }, 2400);
-    setIsMenuOpen(true);
+    handleOpenCompanionChat();
   };
 
   const handlePlayCompanionVoice = () => {
@@ -1884,36 +1884,79 @@ const Dashboard: React.FC<DashboardProps> = ({
   const renderStandardDashboard = () => {
     // Determine dynamic values for Today's Summary
     const loggedToday = symptoms.some(s => s.date === today.toDateString());
-    const flowToday = loggedToday ? "Light" : "None";
-    const moodToday = loggedToday ? "Calm" : "Good";
-    const energyToday = loggedToday ? "Good" : "Normal";
+    const flowToday = loggedToday ? "Light" : (user.periodDates?.includes(today.toDateString()) ? "Active" : "None");
+    const moodToday = user.todaySymptomLog?.mood || (loggedToday ? "Calm" : selectedMood || "Good");
+    const energyToday = loggedToday ? "Restful" : (currentPhase === 'Follicular' || currentPhase === 'Ovulatory' ? "High" : "Gentle");
     const sleepToday = "7h 30m";
 
+    // Personalized Wellness Recommendation tailored to cycle phase and health mode
+    const getWellnessRecommendation = () => {
+      if (user.isPregnancyMode) {
+        return "Nurture your body gently today, mama. Prioritize restful hydration, wholesome nourishment, and gentle stretching for pelvic comfort.";
+      }
+      if (user.isPostpartumMode) {
+        return "Honor your restorative postpartum sanctuary. Deep cellular rest, warm broths, and boundary protection support your healing.";
+      }
+      if (isLatePeriodMode) {
+        return `Your cycle is on day ${cycleDay} (${daysLate} days past expected date). Travel, hormonal shifts, and stress can naturally vary cycle timing. Keep resting and nourishing your body.`;
+      }
+      switch (currentPhase) {
+        case 'Menstrual':
+          return "Your uterine lining is renewing. Honor this natural sunset phase with warm herbal tea, iron-rich nourishment, a cozy heating pad, and restorative sleep.";
+        case 'Follicular':
+          if (cycleSync.isPrecedingFertileDay) {
+            return "Estrogen is climbing and your fertile window is open. High cognitive stamina and creativity are peaking—an excellent time for collaborative projects.";
+          }
+          return "Estrogen is gently rising. Fresh vitality and physical stamina are expanding—ideal for creative goals, workouts, and initiating new routines.";
+        case 'Ovulatory':
+          return "Peak biological radiance! Your social glow and energy are elevated on your estimated ovulation day. Remember to maintain deep cellular hydration.";
+        case 'Luteal':
+        default:
+          return daysUntilNext && daysUntilNext <= 3
+            ? "Your luteal phase is approaching its end. Progesterone is winding down—prioritise magnesium-rich nourishment, warm baths, and extra sleep."
+            : "Progesterone is steady. Your intuition and nesting instincts are heightened. Protect your peaceful routines and opt for cozy, grounding activities.";
+      }
+    };
+
+    // Circular progress math
+    const cycleProgress = isLatePeriodMode 
+      ? 100 
+      : Math.min(100, Math.max(0, (cycleDay / cycleLen) * 100));
+
+    // Phase color definitions matching the design requirements
+    const phaseStrokeColor = isLatePeriodMode
+      ? '#f59e0b'
+      : currentPhase === 'Menstrual'
+        ? '#f43f5e' // Pink
+        : currentPhase === 'Follicular'
+          ? '#10b981' // Soft green
+          : currentPhase === 'Ovulatory'
+            ? '#f59e0b' // Golden yellow
+            : '#a855f7'; // Lavender
+
     return (
-      <div className="space-y-8 animate-fadeIn pb-12 text-gray-800">
+      <div className="space-y-6 animate-fadeIn pb-8 text-stone-800">
         {/* Dynamic Gift / Comfort Alerts from Partner */}
         {receivedGifts.length > 0 && (
-          <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide py-1">
+          <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide">
             {receivedGifts.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).map((gift) => (
               <div 
                 key={gift.id}
-                className="flex-shrink-0 bg-white/75 backdrop-blur-xl p-[2px] rounded-3xl shadow-sm border border-pink-100/50 animate-fadeIn"
+                className="shrink-0 bg-white/90 backdrop-blur-md px-4 py-2.5 rounded-2xl shadow-xs border border-pink-100 flex items-center gap-3"
               >
-                <div className="px-5 py-3 rounded-3xl flex items-center gap-3">
-                   <div className="w-10 h-10 bg-pink-50 rounded-2xl flex items-center justify-center text-2xl shadow-inner animate-bounce shrink-0">
-                     {gift.type === 'hug' ? '🌸' : gift.type === 'tea' ? '🍵' : gift.type === 'flower' ? '💐' : gift.type === 'chocolate' ? '🍫' : '✨'}
-                   </div>
-                   <div className="min-w-[120px]">
-                      <p className="text-[9px] font-bold text-pink-300 uppercase tracking-wider">Surprise from {gift.senderName}</p>
-                      <p className="text-xs font-serif italic text-pink-600">Sent you a {gift.type}!</p>
-                   </div>
+                <div className="w-8 h-8 bg-pink-50 rounded-xl flex items-center justify-center text-lg shrink-0">
+                  {gift.type === 'hug' ? '🌸' : gift.type === 'tea' ? '🍵' : gift.type === 'flower' ? '💐' : gift.type === 'chocolate' ? '🍫' : '✨'}
+                </div>
+                <div>
+                  <p className="text-[9px] font-bold text-pink-400 uppercase tracking-wider">{gift.senderName} sent a {gift.type}</p>
+                  <p className="text-xs font-serif italic text-pink-700">Digital Comfort Gift</p>
                 </div>
               </div>
             ))}
           </div>
         )}
 
-        {/* Expected Period Check-In Card */}
+        {/* Expected Period Check-In Card (when late) */}
         {setUser && (
           <ExpectedPeriodCheckInCard 
             user={user} 
@@ -1922,161 +1965,190 @@ const Dashboard: React.FC<DashboardProps> = ({
           />
         )}
 
-        {/* Large Beautiful Cycle Phase Card */}
-        <section className="relative overflow-hidden bg-gradient-to-tr from-pink-100/40 via-rose-50/60 to-amber-50/40 rounded-[2.5rem] border border-white/80 p-8 shadow-[0_15px_30px_rgba(244,114,182,0.05)] backdrop-blur-xl flex flex-col md:flex-row justify-between items-center gap-8 group">
-          {/* Decorative floating blurred gradient balls */}
-          <div className="absolute top-[-20%] right-[-10%] w-48 h-48 bg-gradient-to-tr from-pink-300/20 to-rose-400/20 rounded-full blur-3xl group-hover:scale-110 transition-transform duration-[4s]"></div>
-          <div className="absolute bottom-[-10%] left-[-10%] w-36 h-36 bg-gradient-to-tr from-amber-200/10 to-pink-300/15 rounded-full blur-2xl"></div>
-
-          <div className="space-y-4 z-10 w-full md:max-w-[60%] text-center md:text-left">
-            <div className="space-y-1">
-              <span className="text-[10px] font-black uppercase tracking-[0.25em] text-pink-400 block">
-                {isLatePeriodMode ? "Late Period Mode" : "Current Phase"}
+        {/* ======================================================== */}
+        {/* SECTION 3: CURRENT CYCLE OVERVIEW (PRIMARY FEATURE)       */}
+        {/* ======================================================== */}
+        <section className="bg-white p-6 md:p-8 rounded-[2.5rem] border border-pink-100/80 shadow-[0_4px_24px_rgba(244,114,182,0.06)] relative overflow-hidden space-y-6">
+          <div className="flex items-center justify-between pb-3 border-b border-pink-50">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-pink-500 block">
+                Primary Tracker
               </span>
-              <div className="flex flex-wrap items-center gap-2 pt-1">
-                <h2 className="text-3xl md:text-4xl font-serif italic text-pink-600 font-bold leading-none">
-                  {isLatePeriodMode ? `Day ${daysLate} Late` : `${currentPhase} Phase`}
-                </h2>
-                {/* Requirements 1, 2, 3 & 4: Separate fertile window badge and single ovulation day badge */}
-                {cycleSync.isWithinFertileWindow && (
-                  <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border shadow-xs inline-flex items-center gap-1 ${
-                    cycleSync.isOvulationDay 
-                      ? 'bg-amber-100 text-amber-800 border-amber-300 animate-pulse'
-                      : 'bg-sky-100 text-sky-800 border-sky-300'
-                  }`}>
-                    <span>{cycleSync.isOvulationDay ? '🎯' : '✨'}</span>
-                    <span>{cycleSync.fertilityStatus}</span>
-                  </span>
-                )}
-              </div>
-              <span className="text-xs font-serif italic text-pink-400/80 block pt-1">
-                {isLatePeriodMode && `Your period was expected on ${expectedPeriodDate?.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}. Lumina is tracking your late period mode.`}
-                {!isLatePeriodMode && currentPhase === 'Menstrual' && "A time for quiet sunset reflection and deep physical rest."}
-                {!isLatePeriodMode && currentPhase === 'Follicular' && (
-                  cycleSync.isPrecedingFertileDay
-                    ? "Late follicular vitality within your 5-day fertile window."
-                    : "A time of rising physical energy, creativity, and new beginnings."
-                )}
-                {!isLatePeriodMode && currentPhase === 'Ovulatory' && "Peak biological radiance and social glow on your single estimated ovulation day."}
-                {!isLatePeriodMode && currentPhase === 'Luteal' && "Turning gently inward. High emotional intuition, progesterone balance, and cozy comfort."}
-              </span>
-              {/* Clearly labeled predictions & estimates */}
-              {!isLatePeriodMode && (
-                <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1 text-[10.5px] text-pink-500/90 font-medium">
-                  {cycleSync.estimatedFertileRangeFormatted && (
-                    <span>
-                      <strong className="text-sky-700">Fertile Window (5 Days):</strong> {cycleSync.estimatedFertileRangeFormatted}
-                    </span>
-                  )}
-                  {cycleSync.estimatedOvulationDate && (
-                    <span>
-                      <strong className="text-amber-700">Ovulation (Estimated):</strong> {cycleSync.estimatedOvulationDateFormatted}
-                    </span>
-                  )}
-                  {cycleSync.isAutomaticPrediction && (
-                    <div className="w-full text-[10px] text-pink-600 bg-pink-50/80 px-2.5 py-1 rounded-xl border border-pink-200/60 flex items-center gap-1.5 mt-1">
-                      <span>✨</span>
-                      <span><strong>Auto Prediction Active:</strong> {cycleSync.predictionExplanation}</span>
-                    </div>
-                  )}
-                </div>
-              )}
+              <h2 className="text-xl sm:text-2xl font-serif italic text-stone-800 font-bold">
+                Cycle Overview
+              </h2>
             </div>
-
-            <div className="pt-2">
-              <div className="flex justify-between items-center text-[10px] font-bold text-pink-500 uppercase tracking-widest mb-1.5">
-                <span>{isLatePeriodMode ? `Day ${daysLate} Late` : `Cycle day ${cycleDay} of ${cycleLen}`}</span>
-                <span className="font-serif italic font-black text-pink-700">{cycleStatusText}</span>
-              </div>
-              
-              {/* Progress Bar Container */}
-              <div className="w-full h-3 bg-pink-100/50 rounded-full overflow-hidden p-[2px] border border-pink-100/30">
-                <div 
-                  className={isLatePeriodMode 
-                    ? "h-full bg-gradient-to-r from-amber-400 via-rose-500 to-red-500 rounded-full transition-all duration-1000 ease-out shadow-[0_1px_3px_rgba(244,114,182,0.2)]"
-                    : "h-full bg-gradient-to-r from-pink-400 via-rose-400 to-amber-300 rounded-full transition-all duration-1000 ease-out shadow-[0_1px_3px_rgba(244,114,182,0.2)]"
-                  }
-                  style={{ width: isLatePeriodMode ? '100%' : `${Math.min(100, (cycleDay / cycleLen) * 100)}%` }}
-                ></div>
-              </div>
-            </div>
-          </div>
-
-          {/* Elegant Illustration Artwork Area */}
-          <div className="relative z-10 w-44 h-44 rounded-full bg-white/60 border border-white/80 shadow-md backdrop-blur-md flex items-center justify-center transition-transform hover:scale-105 duration-500">
-            {/* Ambient pulse circle */}
-            <div className="absolute inset-2 bg-gradient-to-br from-pink-200/50 via-rose-100/40 to-amber-100/30 rounded-full animate-pulse"></div>
-            <div className="absolute inset-6 bg-white/85 rounded-full flex flex-col items-center justify-center text-center p-3 shadow-inner">
-              <span className="text-4xl animate-bounce mb-1">
-                {isLatePeriodMode && "⏳"}
-                {!isLatePeriodMode && currentPhase === 'Menstrual' && "🩸"}
-                {!isLatePeriodMode && currentPhase === 'Follicular' && "🌱"}
-                {!isLatePeriodMode && currentPhase === 'Ovulatory' && "✨"}
-                {!isLatePeriodMode && currentPhase === 'Luteal' && "🌙"}
-              </span>
-              <p className="text-[8px] font-black text-pink-400 uppercase tracking-widest">
-                {isLatePeriodMode ? "Late Period" : currentPhase}
-              </p>
-              <p className="text-xs font-serif font-black text-pink-700">
-                {isLatePeriodMode ? `Day ${daysLate} Late` : `Day ${cycleDay}`}
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* Quick Action Cards */}
-        <section className="grid grid-cols-4 gap-3">
-          {[
-            { id: 'cycle', label: 'Calendar', icon: '📅', action: () => setActiveTab('cycle') },
-            { id: 'symptoms', label: 'Symptoms', icon: '💖', action: onOpenLogModal },
-            { id: 'mood', label: 'Mood', icon: '😊', action: onOpenLogModal },
-            { id: 'insights', label: 'Insights', icon: '📊', action: () => setActiveTab('wellness') }
-          ].map((act) => (
             <button
-              key={act.id}
-              onClick={act.action}
-              className="bg-gradient-to-br from-white/90 to-pink-50/20 backdrop-blur-md p-4 rounded-[2rem] border border-white/90 shadow-[inset_0_2.5px_4px_rgba(255,255,255,0.8),_0_8px_24px_rgba(244,114,182,0.03)] hover:scale-[1.03] active:scale-[0.97] cursor-pointer group transition-all duration-300 flex flex-col items-center justify-center gap-2"
+              onClick={() => setActiveTab('cycle')}
+              className="text-xs font-bold text-pink-600 hover:text-pink-700 bg-pink-50 hover:bg-pink-100/70 px-3.5 py-1.5 rounded-full transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
             >
-              <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-pink-50 to-rose-100/40 flex items-center justify-center text-xl shadow-[inset_0_2px_3px_rgba(255,255,255,0.75),_inset_0_-1px_2px_rgba(0,0,0,0.02),_0_4px_10px_rgba(244,114,182,0.04)] group-hover:scale-110 transition-transform duration-300">
-                {act.icon}
-              </div>
-              <span className="text-[9px] font-black text-gray-500 uppercase tracking-wider group-hover:text-pink-600 transition-colors leading-none">{act.label}</span>
+              <span>View Calendar</span>
+              <ChevronRight size={13} />
             </button>
-          ))}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+            {/* Attractive Circular Cycle Progress Indicator */}
+            <div className="md:col-span-5 flex flex-col items-center justify-center">
+              <div className="relative w-44 h-44 sm:w-48 sm:h-48 flex items-center justify-center">
+                <svg className="w-full h-full -rotate-90 transform">
+                  <circle 
+                    cx="96" 
+                    cy="96" 
+                    r="80" 
+                    fill="none" 
+                    stroke="#fdf2f8" 
+                    strokeWidth="11" 
+                  />
+                  <circle
+                    cx="96" 
+                    cy="96" 
+                    r="80" 
+                    fill="none" 
+                    stroke={phaseStrokeColor} 
+                    strokeWidth="11"
+                    strokeDasharray={2 * Math.PI * 80}
+                    strokeDashoffset={2 * Math.PI * 80 * (1 - cycleProgress / 100)}
+                    strokeLinecap="round"
+                    className="transition-all duration-1000 ease-out"
+                  />
+                </svg>
+
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-3">
+                  <span className="text-3xl mb-0.5 select-none">
+                    {isLatePeriodMode ? '⏳' :
+                     currentPhase === 'Menstrual' ? '🩸' :
+                     currentPhase === 'Follicular' ? '🌱' :
+                     currentPhase === 'Ovulatory' ? '✨' : '🌙'}
+                  </span>
+                  <span className="text-2xl font-serif italic font-bold text-stone-800 leading-tight">
+                    {isLatePeriodMode ? `Day ${daysLate} Late` : `Day ${cycleDay}`}
+                  </span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400 mt-0.5">
+                    of {cycleLen}-Day Cycle
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Structured Predictions & Phase Details */}
+            <div className="md:col-span-7 space-y-3.5">
+              {/* Phase Banner with Exact Requested Colors */}
+              <div className="flex items-center justify-between p-3 rounded-2xl bg-gradient-to-r from-pink-50/40 via-white to-purple-50/40 border border-pink-100/70">
+                <div className="space-y-0.5">
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-stone-400 block">Menstrual Phase</span>
+                  <span className="text-xs font-bold text-stone-800">{currentPhase} Phase</span>
+                </div>
+                <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                  currentPhase === 'Menstrual' ? 'bg-pink-100 text-pink-700 border border-pink-200' :
+                  currentPhase === 'Follicular' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' :
+                  currentPhase === 'Ovulatory' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
+                  'bg-purple-100 text-purple-800 border border-purple-200'
+                }`}>
+                  {currentPhase}
+                </span>
+              </div>
+
+              {/* 4-Item Metric Grid */}
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="p-3 rounded-2xl bg-stone-50/70 border border-stone-150/60 space-y-0.5">
+                  <span className="text-[9.5px] font-bold text-stone-400 uppercase tracking-wider block">Average Cycle</span>
+                  <span className="font-bold text-stone-700">{cycleLen} Days</span>
+                </div>
+                <div className="p-3 rounded-2xl bg-pink-50/40 border border-pink-100/70 space-y-0.5">
+                  <span className="text-[9.5px] font-bold text-pink-500 uppercase tracking-wider block">Next Expected Period</span>
+                  <span className="font-bold text-pink-700">{cycleSync.nextExpectedPeriodFormatted}</span>
+                </div>
+                <div className="p-3 rounded-2xl bg-amber-50/50 border border-amber-200/60 space-y-0.5">
+                  <span className="text-[9.5px] font-bold text-amber-600 uppercase tracking-wider block">Estimated Ovulation</span>
+                  <span className="font-bold text-amber-800">{cycleSync.estimatedOvulationDateFormatted}</span>
+                </div>
+                <div className="p-3 rounded-2xl bg-sky-50/50 border border-sky-200/60 space-y-0.5">
+                  <span className="text-[9.5px] font-bold text-sky-600 uppercase tracking-wider block">Fertile Window (5 Days)</span>
+                  <span className="font-bold text-sky-800 truncate block">{cycleSync.estimatedFertileRangeFormatted || 'Pending history'}</span>
+                </div>
+              </div>
+
+              {/* Link to Full Cycle Calendar */}
+              <button
+                onClick={() => setActiveTab('cycle')}
+                className="w-full py-2.5 px-4 rounded-xl text-center text-xs font-bold text-pink-600 bg-pink-50/60 hover:bg-pink-100/80 transition-colors border border-pink-100 cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <span>View Complete Cycle Calendar</span>
+                <ChevronRight size={13} />
+              </button>
+            </div>
+          </div>
         </section>
 
-        {/* Two-Column Middle Layout: Today's Summary & Water Intake */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Today's Summary Section */}
-          <section className="bg-white/75 backdrop-blur-md p-6 rounded-[2.5rem] border border-pink-50 shadow-sm flex flex-col justify-between space-y-4">
-            <div className="flex justify-between items-center pb-2 border-b border-pink-50/50">
-              <h3 className="font-serif text-lg text-pink-600 italic font-bold">Today's Summary</h3>
+        {/* ======================================================== */}
+        {/* SECTION 4: QUICK ACTIONS (COMPACT 4-ITEM GRID)           */}
+        {/* ======================================================== */}
+        <section className="space-y-2">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400 block px-1">
+            Quick Actions
+          </span>
+          <div className="grid grid-cols-4 gap-2.5 sm:gap-3">
+            {[
+              { id: 'symptoms', label: 'Symptoms', icon: '💖', action: onOpenLogModal },
+              { id: 'mood', label: 'Mood', icon: '😊', action: onOpenLogModal },
+              { id: 'calendar', label: 'Calendar', icon: '📅', action: () => setActiveTab('cycle') },
+              { id: 'insights', label: 'Insights', icon: '📊', action: () => setActiveTab('wellness') }
+            ].map((act) => (
+              <button
+                key={act.id}
+                onClick={act.action}
+                className="bg-white hover:bg-pink-50/30 p-3.5 sm:p-4 rounded-2xl border border-pink-100/70 shadow-xs hover:shadow-sm transition-all duration-200 flex flex-col items-center justify-center gap-1.5 cursor-pointer group active:scale-95"
+              >
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-50 to-rose-50 flex items-center justify-center text-lg group-hover:scale-110 transition-transform">
+                  {act.icon}
+                </div>
+                <span className="text-[10.5px] font-bold text-stone-600 group-hover:text-pink-600 transition-colors">
+                  {act.label}
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* ======================================================== */}
+        {/* TWO-COLUMN LAYOUT: TODAY'S SUMMARY & HYDRATION TRACKER   */}
+        {/* ======================================================== */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
+          {/* ======================================================== */}
+          {/* SECTION 5: TODAY'S HEALTH SUMMARY                        */}
+          {/* ======================================================== */}
+          <section className="bg-white p-6 rounded-3xl border border-pink-100/70 shadow-xs space-y-4">
+            <div className="flex justify-between items-center pb-2.5 border-b border-pink-50">
+              <h3 className="font-serif text-base text-stone-800 italic font-bold">
+                Today's Health Summary
+              </h3>
               <button 
                 onClick={onOpenLogModal}
-                className="text-[9px] font-bold text-pink-400 uppercase tracking-widest hover:text-pink-600"
+                className="text-[10px] font-bold text-pink-500 hover:text-pink-600 uppercase tracking-wider cursor-pointer"
               >
-                View All
+                Update Logs
               </button>
             </div>
 
-            <div className="divide-y divide-pink-50/50">
+            <div className="divide-y divide-pink-50/60">
               {[
-                { label: 'Flow', value: flowToday, icon: '🩸' },
+                { label: 'Menstrual Flow', value: flowToday, icon: '🩸' },
                 { label: 'Mood', value: moodToday, icon: '😊' },
                 { label: 'Energy', value: energyToday, icon: '⚡' },
                 { label: 'Sleep', value: sleepToday, icon: '🌙' },
-                { label: 'Water', value: `${waterIntake}/8 glasses`, icon: '💧' }
+                { label: 'Water Intake', value: `${waterIntake} of ${waterGoal || 8} glasses`, icon: '💧' }
               ].map((item, index) => (
                 <div 
                   key={index} 
                   onClick={onOpenLogModal}
-                  className="py-3 flex items-center justify-between text-xs cursor-pointer hover:bg-pink-50/20 px-2 rounded-xl transition-colors"
+                  className="py-2.5 flex items-center justify-between text-xs cursor-pointer hover:bg-pink-50/30 px-2 rounded-xl transition-colors"
                 >
                   <div className="flex items-center gap-2.5">
                     <span className="text-base">{item.icon}</span>
-                    <span className="font-bold text-gray-500 uppercase tracking-wider text-[10px]">{item.label}</span>
+                    <span className="font-semibold text-stone-600 text-xs">{item.label}</span>
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1.5">
                     <span className="font-serif italic font-bold text-pink-600">{item.value}</span>
                     <ChevronRight size={12} className="text-pink-300" />
                   </div>
@@ -2085,35 +2157,41 @@ const Dashboard: React.FC<DashboardProps> = ({
             </div>
           </section>
 
-          {/* Claymorphic Water Intake Tracker Card */}
-          <section className="bg-white/75 backdrop-blur-md p-6 rounded-[2.5rem] border border-pink-50 shadow-sm flex flex-col justify-between space-y-5">
-            <div className="space-y-1">
-              <h3 className="font-serif text-lg text-pink-600 italic font-bold">Water Intake</h3>
-              <p className="text-[10px] text-gray-400">Track and meet your daily cellular hydration goal</p>
+          {/* ======================================================== */}
+          {/* SECTION 6: COMPACT HYDRATION TRACKER                     */}
+          {/* ======================================================== */}
+          <section className="bg-white p-6 rounded-3xl border border-pink-100/70 shadow-xs space-y-4">
+            <div className="flex justify-between items-center pb-2.5 border-b border-pink-50">
+              <div>
+                <h3 className="font-serif text-base text-stone-800 italic font-bold">
+                  Hydration Tracker
+                </h3>
+                <p className="text-[10px] text-stone-400">Daily goal: {waterGoal || 8} glasses ({((waterGoal || 8) * 250)}ml)</p>
+              </div>
+              <span className="text-xs font-bold text-sky-600 bg-sky-50 px-2.5 py-1 rounded-full border border-sky-100">
+                {Math.round((waterIntake / (waterGoal || 8)) * 100)}% Goal
+              </span>
             </div>
 
-            {/* Individual glass/cup indicators with claymorphic fill effect */}
-            <div className="grid grid-cols-8 gap-1.5 py-2">
+            {/* Small visual glass indicators */}
+            <div className="grid grid-cols-8 gap-1.5 py-1">
               {Array.from({ length: 8 }).map((_, idx) => {
                 const isFilled = idx < waterIntake;
                 return (
                   <button
                     key={idx}
                     onClick={() => setWaterIntake(idx + 1)}
-                    className={`h-14 rounded-2xl border-2 transition-all duration-500 relative flex items-end justify-center overflow-hidden cursor-pointer ${
+                    className={`h-11 rounded-xl border transition-all relative flex items-end justify-center overflow-hidden cursor-pointer ${
                       isFilled
-                        ? 'border-sky-400/80 bg-sky-50/30 shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),_0_2px_8px_rgba(56,189,248,0.15)] scale-[1.03]'
-                        : 'border-pink-100 bg-pink-50/15 hover:border-pink-300 shadow-[inset_0_-1px_3px_rgba(244,114,182,0.05)]'
+                        ? 'border-sky-300 bg-sky-50 text-sky-600 shadow-2xs'
+                        : 'border-pink-100 bg-pink-50/20 hover:border-pink-300 text-stone-400'
                     }`}
+                    title={`Glass ${idx + 1}`}
                   >
-                    {/* Fill animated wave */}
                     {isFilled && (
-                      <div className="absolute inset-x-0 bottom-0 top-[20%] bg-gradient-to-t from-sky-400/80 to-indigo-400/70 animate-pulse transition-all duration-500 rounded-b-[10px]">
-                        {/* Tiny bubble/sparkle effect */}
-                        <div className="absolute top-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-white/40 rounded-full animate-bounce"></div>
-                      </div>
+                      <div className="absolute inset-x-0 bottom-0 top-[20%] bg-gradient-to-t from-sky-400 to-sky-300 rounded-b-[10px]" />
                     )}
-                    <span className="text-[8px] font-bold text-gray-400 pb-1 z-10 select-none">
+                    <span className="text-[9px] font-bold pb-1 z-10 select-none">
                       {idx + 1}
                     </span>
                   </button>
@@ -2121,24 +2199,24 @@ const Dashboard: React.FC<DashboardProps> = ({
               })}
             </div>
 
-            {/* Controls with Claymorphic buttons */}
-            <div className="flex items-center justify-between gap-4 pt-1">
+            {/* Controls & summary */}
+            <div className="flex items-center justify-between pt-1">
               <div className="text-left">
-                <p className="text-[10px] font-bold text-pink-400 uppercase tracking-widest">Hydration Progress</p>
-                <p className="text-base font-serif italic text-pink-700 font-bold leading-none">{waterIntake} of 8 glasses</p>
+                <p className="text-[9.5px] font-bold text-stone-400 uppercase tracking-wider">Consumed</p>
+                <p className="text-sm font-serif italic text-stone-800 font-bold">{waterIntake} of {waterGoal || 8} glasses</p>
               </div>
 
               <div className="flex gap-2">
                 <button
                   onClick={() => setWaterIntake(Math.max(0, waterIntake - 1))}
-                  className="w-10 h-10 rounded-full bg-white border border-pink-100 hover:bg-pink-50 text-pink-500 flex items-center justify-center shadow-sm active:scale-90 transition-transform cursor-pointer"
+                  className="w-8 h-8 rounded-full bg-white border border-pink-100 hover:bg-pink-50 text-pink-500 flex items-center justify-center font-bold text-sm shadow-2xs active:scale-90 transition-transform cursor-pointer"
                   title="Remove 1 glass"
                 >
                   -
                 </button>
                 <button
-                  onClick={() => setWaterIntake(Math.min(8, waterIntake + 1))}
-                  className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-400 to-rose-400 text-white flex items-center justify-center shadow-[inset_0_2px_4px_rgba(255,255,255,0.3),_0_4px_10px_rgba(244,114,182,0.2)] hover:scale-105 active:scale-90 transition-transform font-bold text-lg cursor-pointer"
+                  onClick={() => setWaterIntake(Math.min(waterGoal || 8, waterIntake + 1))}
+                  className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-400 to-rose-400 text-white flex items-center justify-center font-bold text-sm shadow-2xs hover:scale-105 active:scale-90 transition-transform cursor-pointer"
                   title="Add 1 glass"
                 >
                   +
@@ -2148,45 +2226,20 @@ const Dashboard: React.FC<DashboardProps> = ({
           </section>
         </div>
 
-        {/* Serenading Ambient Player Card */}
-        <section className="bg-white/75 backdrop-blur-md p-6 rounded-[2.5rem] border border-pink-50 shadow-sm overflow-hidden relative group">
-          <div className="flex flex-col md:flex-row items-center gap-6">
-            <div className="relative w-28 h-28 flex-shrink-0">
-              <div className={`absolute inset-0 bg-gradient-to-br from-pink-100 to-rose-200 rounded-full shadow-md transition-all duration-[8s] ${isMusicPlaying ? 'rotate-[360deg] animate-[spin_10s_linear_infinite]' : ''}`}>
-                 <div className="absolute inset-2 bg-white/45 backdrop-blur-sm rounded-full border border-white/60 flex items-center justify-center text-4xl">
-                   {currentSong.coverEmoji}
-                 </div>
-              </div>
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-inner z-10"></div>
-            </div>
-            
-            <div className="flex-1 text-center md:text-left space-y-1">
-              <div className="flex justify-between items-start">
-                <p className="text-[9px] font-bold text-pink-300 uppercase tracking-widest flex items-center justify-center md:justify-start gap-1.5">
-                  <span className="w-3 h-[1px] bg-pink-100"></span> Now Serenading <span className="w-3 h-[1px] bg-pink-100"></span>
-                </p>
-                <button 
-                  onClick={() => onTabChange?.('music')}
-                  className="text-[9px] font-black text-pink-500 hover:text-pink-600 bg-pink-50 hover:bg-pink-100/80 px-2.5 py-1 rounded-full uppercase tracking-wider transition-all duration-300 active:scale-95 cursor-pointer flex items-center gap-1 shrink-0"
-                >
-                  <span>🎵 Open Music Hub</span>
-                  <span className="text-[7px] opacity-70">↗</span>
-                </button>
-              </div>
-              <h3 className="text-xl font-serif text-pink-600 italic leading-tight font-bold">{currentSong.title}</h3>
-              <p className="text-[9px] text-pink-400 font-bold uppercase tracking-widest pb-3">{currentSong.artist}</p>
-              
-              <div className="flex items-center justify-center md:justify-start gap-5 pt-1">
-                <button onClick={prevSong} className="text-2xl text-pink-200 hover:text-pink-400 transition-colors">⏮</button>
-                <button 
-                  onClick={toggleMusic}
-                  className="w-10 h-10 bg-gradient-to-br from-pink-400 to-rose-400 text-white rounded-full flex items-center justify-center shadow-lg shadow-pink-100 hover:scale-110 active:scale-95 transition-all text-sm font-bold cursor-pointer"
-                >
-                  {isMusicPlaying ? '⏸' : '▶'}
-                </button>
-                <button onClick={nextSong} className="text-2xl text-pink-200 hover:text-pink-400 transition-colors">⏭</button>
-              </div>
-            </div>
+        {/* ======================================================== */}
+        {/* SECTION 7: ONE PERSONALISED WELLNESS RECOMMENDATION      */}
+        {/* ======================================================== */}
+        <section className="bg-gradient-to-br from-pink-50/60 via-purple-50/30 to-white p-5 sm:p-6 rounded-3xl border border-pink-100/80 shadow-xs flex items-start gap-3.5">
+          <div className="w-10 h-10 rounded-2xl bg-white shadow-xs border border-pink-100 flex items-center justify-center text-xl shrink-0 mt-0.5">
+            🌸
+          </div>
+          <div className="space-y-1">
+            <span className="text-[9.5px] font-bold text-pink-500 uppercase tracking-widest block">
+              Personalised Wellness Guidance
+            </span>
+            <p className="text-xs sm:text-sm font-serif italic text-stone-700 leading-relaxed">
+              "{getWellnessRecommendation()}"
+            </p>
           </div>
         </section>
       </div>
@@ -2231,43 +2284,47 @@ const Dashboard: React.FC<DashboardProps> = ({
         </button>
       </header>
 
-      {/* Living Companion Sanctuary Header (Clean, centered smaller avatar with dynamic speech bubble) */}
-      <section className="bg-gradient-to-br from-white/95 via-pink-50/50 to-rose-50/30 backdrop-blur-md p-6 sm:p-7 rounded-[2.5rem] border border-white/95 shadow-[inset_0_3px_5px_rgba(255,255,255,0.9),_0_12px_36px_rgba(244,114,182,0.06)] relative overflow-visible transition-all duration-500">
+      {/* SECTION 2: AI COMPANION (Living Companion Sanctuary) */}
+      <section className="bg-gradient-to-br from-white/95 via-pink-50/50 to-rose-50/30 backdrop-blur-md p-5 sm:p-6 rounded-[2.5rem] border border-white/95 shadow-[inset_0_3px_5px_rgba(255,255,255,0.9),_0_12px_36px_rgba(244,114,182,0.06)] relative overflow-visible transition-all duration-500">
         {/* Soft fluid glowing aura */}
-        <div className="absolute -top-10 -left-10 w-44 h-44 bg-gradient-to-tr from-pink-300/20 via-rose-300/20 to-amber-200/20 rounded-full blur-2xl pointer-events-none" />
-        <div className="absolute -bottom-10 -right-10 w-48 h-48 bg-gradient-to-tr from-amber-200/20 to-pink-300/20 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute -top-8 -left-8 w-40 h-40 bg-gradient-to-tr from-pink-300/20 via-rose-300/20 to-amber-200/20 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute -bottom-8 -right-8 w-44 h-44 bg-gradient-to-tr from-amber-200/20 to-pink-300/20 rounded-full blur-2xl pointer-events-none" />
 
-        <div className="relative z-10 flex flex-col items-center text-center space-y-3.5 max-w-lg mx-auto">
+        <div className="relative z-10 flex flex-col items-center text-center space-y-3 max-w-md mx-auto">
           
-          {/* 1. Alive Avatar Companion (Smaller, centered, tap to open menu) */}
+          {/* Prominent Avatar extending slightly outside its circular pedestal */}
           <div 
             onClick={handleAvatarTap}
-            className="relative cursor-pointer group shrink-0 transition-transform duration-300 hover:scale-105 active:scale-95"
-            title={`Tap to open Lumina Menu & Studio (${currentAvatar.name || 'Amara'})`}
+            className="relative cursor-pointer group shrink-0 transition-transform duration-300 hover:scale-105 active:scale-95 pt-2"
+            title={`Tap to talk with ${currentAvatar.name || 'Amara'} in AI Companion Chat`}
           >
-            {/* Soft floor glow under companion */}
-            <div className="absolute -bottom-1.5 inset-x-2 h-3.5 bg-pink-400/20 rounded-full blur-md" />
+            {/* Circular frame / pedestal */}
+            <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-gradient-to-tr from-pink-200/50 via-rose-100/60 to-purple-100/40 border-2 border-white/95 shadow-md flex items-end justify-center relative overflow-visible">
+              {/* Soft floor glow under companion */}
+              <div className="absolute bottom-1 inset-x-3 h-3 bg-pink-400/25 rounded-full blur-sm" />
 
-            <div className="relative overflow-visible">
-              <AvatarVisual 
-                avatar={{
-                  ...currentAvatar,
-                  mood: avatarMood.mood
-                }} 
-                size="md" 
-                level={avatarProgression.level}
-                showTierBadge={false}
-                showMoodBadge={false}
-                isSpeaking={isCompanionSpeaking}
-                isWaving={isCompanionWaving}
-                interactive={false}
-                animated={true}
-                className="overflow-visible"
-              />
+              {/* Avatar visually extending slightly outside circular frame with breathing & floating animations */}
+              <div className="relative -top-3 z-10 animate-companion-breathe animate-companion-float overflow-visible">
+                <AvatarVisual 
+                  avatar={{
+                    ...currentAvatar,
+                    mood: avatarMood.mood
+                  }} 
+                  size="md" 
+                  level={avatarProgression.level}
+                  showTierBadge={false}
+                  showMoodBadge={false}
+                  isSpeaking={isCompanionSpeaking}
+                  isWaving={isCompanionWaving}
+                  interactive={false}
+                  animated={true}
+                  className="overflow-visible filter drop-shadow-sm"
+                />
+              </div>
             </div>
           </div>
 
-          {/* 2. Relationship Progression Level & Mood Pills */}
+          {/* Companion Name and Relationship Level */}
           <div className="flex items-center justify-center gap-2 flex-wrap">
             <div
               className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-pink-500/10 via-rose-500/10 to-amber-500/10 text-pink-700 text-[10.5px] font-black uppercase tracking-wider border border-pink-200/60 shadow-xs"
@@ -2285,17 +2342,17 @@ const Dashboard: React.FC<DashboardProps> = ({
             </span>
           </div>
 
-          {/* 3. Dynamic Speech Bubble under Avatar */}
+          {/* Compact Speech Bubble with Personalised Greeting (Clickable to open AI Companion Chat) */}
           <div 
             onClick={handleAvatarTap}
-            className="relative inline-block text-center w-full max-w-md bg-white/90 hover:bg-white backdrop-blur-md px-5 py-3.5 rounded-[1.75rem] border border-pink-200/70 shadow-[0_4px_20px_rgba(244,114,182,0.08)] cursor-pointer group transition-all duration-300 hover:shadow-md animate-speech-bubble"
-            title={`Tap to open Lumina Menu & Studio (${currentAvatar.name || 'Amara'})`}
+            className="relative inline-block text-center w-full bg-white/90 hover:bg-white backdrop-blur-md px-4 py-3 rounded-2xl border border-pink-200/70 shadow-[0_4px_16px_rgba(244,114,182,0.06)] cursor-pointer group transition-all duration-300 hover:shadow-md animate-speech-bubble"
+            title={`Tap to chat with ${currentAvatar.name || 'Amara'}`}
           >
             {/* Speech bubble tail pointing up to avatar */}
-            <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[7px] border-l-transparent border-r-[7px] border-r-transparent border-b-[9px] border-b-white/95" />
+            <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[8px] border-b-white/95" />
 
-            <div className="space-y-1">
-              <p className="text-sm sm:text-base font-serif italic text-stone-800 font-bold leading-snug group-hover:text-pink-700 transition-colors">
+            <div className="space-y-0.5">
+              <p className="text-xs sm:text-sm font-serif italic text-stone-800 font-bold leading-snug group-hover:text-pink-700 transition-colors">
                 {companionReaction ? (
                   <span className="flex items-center justify-center gap-1.5 text-pink-600">
                     <span>{companionReaction.emoji}</span>
@@ -2306,8 +2363,8 @@ const Dashboard: React.FC<DashboardProps> = ({
                 )}
               </p>
               
-              {/* Health status context line under speech bubble */}
-              <p className="text-[11px] text-stone-500 font-medium">
+              {/* Context line */}
+              <p className="text-[10px] text-stone-500 font-medium">
                 {avatarSpeech.cycleStatusText}
               </p>
             </div>
