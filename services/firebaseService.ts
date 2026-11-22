@@ -597,6 +597,7 @@ export const submitPartnerRequest = async (userId: string, partnerId: string, pa
     id: notifId,
     recipientId: userId,
     targetUserId: userId,
+    senderId: partnerId,
     type: "partner_request" as const,
     category: "partner_request" as const,
     title: "New Partner Request",
@@ -824,11 +825,9 @@ export interface GlobalBankConfig {
 
 export const saveGlobalBankDetails = async (config: GlobalBankConfig) => {
   try {
-    await setDoc(doc(db, "global_config", "payment"), config, { merge: true });
     localStorage.setItem("lumina_global_bank_config", JSON.stringify(config));
   } catch (err) {
-    console.warn("Failed to save global bank config to Firestore:", err);
-    localStorage.setItem("lumina_global_bank_config", JSON.stringify(config));
+    console.warn("Failed to cache global bank config locally:", err);
   }
 };
 

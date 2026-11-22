@@ -10,6 +10,7 @@ import {
   Heart
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { QrCodeCanvas } from './QrCodeCanvas';
 
 interface CommunityInviteProps {
   user: User;
@@ -132,22 +133,21 @@ export const CommunityInvite: React.FC<CommunityInviteProps> = ({ user }) => {
                 <p className="text-[10px] font-bold text-pink-600 uppercase tracking-widest">
                   Friend Invitation QR
                 </p>
-                <p className="text-[9px] text-gray-400 font-serif leading-none italic">
+                <p className="text-[10px] text-gray-600 font-serif leading-none italic">
                   Let them scan with their phone camera to connect instantly
                 </p>
               </div>
 
               <div className="qr-code-container bg-white p-4 rounded-[2rem] border border-pink-100 shadow-lg w-full max-w-[240px] aspect-square flex items-center justify-center overflow-hidden mx-auto">
-                <img 
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&color=db2777&data=${encodeURIComponent(referralLink)}`} 
+                <QrCodeCanvas
+                  value={referralLink}
+                  size={220}
                   alt="Lumina Referral QR Code"
-                  className="w-full h-full object-contain block"
-                  referrerPolicy="no-referrer"
                 />
               </div>
 
               <div className="bg-white/80 p-3.5 rounded-2xl border border-pink-50 max-w-sm">
-                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Invitation Code:</span>
+                <span className="text-[10px] font-bold text-gray-600 uppercase tracking-wider block mb-1">Invitation Code:</span>
                 <span className="text-xs font-mono font-bold text-pink-700 bg-pink-50/50 px-3.5 py-1.5 rounded-lg border border-pink-100 select-all tracking-widest">
                   {user.partnerCode || user.id}
                 </span>

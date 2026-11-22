@@ -1,23 +1,23 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    // Global Safety Net
+
+    // Global Safety Net (Default Deny)
     match /{document=**} {
       allow read, write: if false;
     }
 
-    // --- Helpers ---
+    // --- Core Primitives ---
     function isSignedIn() {
       return request.auth != null;
     }
-    
+
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
     function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
 
     function incoming() {
@@ -33,89 +33,217 @@ service cloud.firestore {
     }
 
     function isPartnerOf(userId) {
-      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData(request.auth.uid).partnerId == userId;
+      return isSignedIn() &&
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             getUserData(request.auth.uid).partnerId == userId;
     }
 
-    // --- Validation Helpers ---
+    function isBoundedString(val, minLen, maxLen) {
+      return val is string && val.size() >= minLen && val.size() <= maxLen;
+    }
 
+    // --- Validation Blueprints ---
     function isValidUser(data) {
       return data.keys().hasAll(['id', 'name', 'email']) &&
-             data.id == request.auth.uid &&
-             data.name is string && data.name.size() <= 100 &&
-             data.email is string && data.email.size() <= 100 &&
-             (!('partnerId' in data) || data.partnerId is string || data.partnerId == null) &&
-             (!('cycleLength' in data) || data.cycleLength is number) &&
-             (!('periodLength' in data) || data.periodLength is number);
+             isValidId(data.id) &&
+             isBoundedString(data.name, 1, 120) &&
+             isBoundedString(data.email, 3, 160) &&
+             (!('partnerId' in data) || data.partnerId == null || isValidId(data.partnerId)) &&
+             (!('partnerName' in data) || data.partnerName == null || isBoundedString(data.partnerName, 0, 120)) &&
+             (!('cycleLength' in data) || (data.cycleLength is number && data.cycleLength >= 15 && data.cycleLength <= 90)) &&
+             (!('periodLength' in data) || (data.periodLength is number && data.periodLength >= 1 && data.periodLength <= 21)) &&
+             (!('notifications' in data) || (data.notifications is list && data.notifications.size() <= 150)) &&
+             (!('periods' in data) || (data.periods is list && data.periods.size() <= 200)) &&
+             (!('periodDates' in data) || (data.periodDates is list && data.periodDates.size() <= 1000)) &&
+             (!('symptoms' in data) || (data.symptoms is list && data.symptoms.size() <= 1000)) &&
+             (!('moodLogs' in data) || (data.moodLogs is list && data.moodLogs.size() <= 1000)) &&
+             (!('diaryEntries' in data) || (data.diaryEntries is list && data.diaryEntries.size() <= 500)) &&
+             (!('isAdmin' in data));
     }
 
     function isValidInvite(data) {
       return data.keys().hasAll(['code', 'senderId', 'senderName', 'createdAt']) &&
-             data.keys().size() == 4 &&
+             data.keys().hasOnly(['code', 'senderId', 'senderName', 'senderEmail', 'createdAt']) &&
              data.senderId == request.auth.uid &&
-             data.code is string && data.code.size() == 6 &&
-             data.senderName is string && data.senderName.size() <= 100;
+             isBoundedString(data.code, 6, 12) &&
+             data.code.matches('^[A-Z0-9]+$') &&
+             isBoundedString(data.senderName, 1, 120) &&
+             (!('senderEmail' in data) || isBoundedString(data.senderEmail, 0, 160)) &&
+             isBoundedString(data.createdAt, 10, 64);
     }
 
     function isValidGift(data) {
       return data.keys().hasAll(['id', 'type', 'senderId', 'senderName', 'timestamp']) &&
-             data.keys().size() == 5 &&
+             data.keys().hasOnly(['id', 'type', 'senderId', 'senderName', 'timestamp']) &&
+             isValidId(data.id) &&
              data.senderId == request.auth.uid &&
-             data.type in ['hug', 'tea', 'flower', 'chocolate', 'sparkle'] &&
-             data.senderName is string && data.senderName.size() <= 100;
+             data.type in ['hug', 'tea', 'flower', 'chocolate', 'sparkle', 'love_note'] &&
+             isBoundedString(data.senderName, 1, 120) &&
+             isBoundedString(data.timestamp, 10, 64);
     }
 
     function isValidPartnerRequest(data) {
       return data.keys().hasAll(['id', 'user_id', 'partner_id', 'partnerName', 'requested_permissions', 'status', 'created_at']) &&
+             data.keys().hasOnly(['id', 'request_id', 'user_id', 'userId', 'partner_id', 'partnerId', 'partnerName', 'partnerEmail', 'requested_permissions', 'status', 'created_at', 'createdAt']) &&
+             isValidId(data.id) &&
+             isValidId(data.user_id) &&
+             isValidId(data.partner_id) &&
              data.status in ['pending', 'approved', 'declined'] &&
-             data.user_id is string && data.user_id.size() <= 128 &&
-             data.partner_id is string && data.partner_id.size() <= 128 &&
-             data.partnerName is string && data.partnerName.size() <= 100 &&
-             data.requested_permissions is list && data.requested_permissions.size() <= 20;
+             isBoundedString(data.partnerName, 1, 120) &&
+             (!('partnerEmail' in data) || isBoundedString(data.partnerEmail, 0, 160)) &&
+             isBoundedString(data.created_at, 10, 64) &&
+             data.requested_permissions is list &&
+             data.requested_permissions.size() <= 20;
     }
 
-    // --- Match Blocks ---
+    function isValidNotification(data) {
+      return data.keys().hasAll(['id', 'recipientId', 'senderId', 'title', 'body', 'timestamp']) &&
+             data.keys().hasOnly(['id', 'recipientId', 'targetUserId', 'senderId', 'type', 'category', 'title', 'body', 'emoji', 'read', 'isRead', 'isPartnerRequest', 'timestamp']) &&
+             isValidId(data.id) &&
+             isValidId(data.recipientId) &&
+             isValidId(data.senderId) &&
+             isBoundedString(data.title, 1, 160) &&
+             isBoundedString(data.body, 1, 600) &&
+             isBoundedString(data.timestamp, 10, 64) &&
+             (!('emoji' in data) || isBoundedString(data.emoji, 0, 16));
+    }
+
+    function isValidTelemetry(data) {
+      return data.keys().hasAll(['userId', 'timestamp']) &&
+             data.userId == request.auth.uid &&
+             isBoundedString(data.timestamp, 10, 64) &&
+             (!('eventName' in data) || isBoundedString(data.eventName, 1, 100)) &&
+             (!('category' in data) || isBoundedString(data.category, 1, 64)) &&
+             (!('errorMessage' in data) || isBoundedString(data.errorMessage, 0, 350)) &&
+             (!('errorStack' in data) || isBoundedString(data.errorStack, 0, 1200));
+    }
+
+    // --- Collection Rules ---
 
     match /users/{userId} {
-      allow get: if isOwner(userId) || isPartnerOf(userId);
+      allow get: if isValidId(userId) && (isOwner(userId) || isPartnerOf(userId));
       allow list: if false;
-      allow create: if isOwner(userId) && isValidUser(incoming());
-      allow update: if (isOwner(userId) && isValidUser(incoming())) || 
-                     (isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['partnerId', 'partnerName', 'isPartnerLinked', 'sharingSettings', 'partnerRequest', 'notifications', 'referralCount'])) ||
-                     (isSignedIn() && isPartnerOf(userId));
-      
+      allow create: if isValidId(userId) && isOwner(userId) && isValidUser(incoming()) && incoming().id == request.auth.uid;
+      allow update: if isValidId(userId) && isSignedIn() && isValidUser(incoming()) && (
+        // Tier 1: Owner updates own profile while keeping id immutable and verified email intact
+        (
+          isOwner(userId) &&
+          incoming().id == existing().id &&
+          (incoming().email == existing().email || incoming().email == request.auth.token.email)
+        ) ||
+        // Tier 2A: Requesting partner initiates a pending link on an unlinked target account
+        (
+          existing().get('isPartnerLinked', false) == false &&
+          (existing().get('partnerId', null) == null || existing().get('partnerId', '') == '' || existing().get('partnerId', '') == request.auth.uid) &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['partnerId', 'partnerName', 'isPartnerLinked', 'partnerRequest', 'notifications']) &&
+          incoming().partnerId == request.auth.uid &&
+          incoming().get('isPartnerLinked', false) == false &&
+          (!('partnerRequest' in incoming()) || (incoming().partnerRequest is map && incoming().partnerRequest.partnerId == request.auth.uid && incoming().partnerRequest.status == 'pending'))
+        ) ||
+        // Tier 2B: Linked partner disconnects mutual link cleanly
+        (
+          isPartnerOf(userId) &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['partnerId', 'partnerName', 'isPartnerLinked']) &&
+          incoming().partnerId == null &&
+          incoming().get('isPartnerLinked', false) == false
+        ) ||
+        // Tier 2C: Linked partner sends an update notification
+        (
+          isPartnerOf(userId) &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['notifications'])
+        )
+      );
+      allow delete: if isValidId(userId) && isOwner(userId);
+
       match /gifts/{giftId} {
-        allow read: if isOwner(userId);
-        allow create: if isSignedIn() && (isPartnerOf(userId) || isOwner(userId)) && isValidGift(incoming());
-        allow delete: if isOwner(userId);
+        allow get, list: if isValidId(userId) && isOwner(userId);
+        allow create: if isValidId(userId) && isValidId(giftId) && isSignedIn() &&
+                         isValidGift(incoming()) &&
+                         exists(/databases/$(database)/documents/users/$(userId)) &&
+                         (isPartnerOf(userId) || isOwner(userId));
+        allow update: if false;
+        allow delete: if isValidId(userId) && isValidId(giftId) && isOwner(userId);
       }
     }
 
     match /invites/{code} {
-      allow get: if isSignedIn();
-      allow create: if isSignedIn() && isValidInvite(incoming());
-      allow delete: if isSignedIn(); 
+      allow get: if isValidId(code) && isSignedIn();
+      allow list: if false;
+      allow create: if isValidId(code) && isSignedIn() && isValidInvite(incoming()) && incoming().code == code;
+      allow update: if false;
+      allow delete: if isValidId(code) && isSignedIn() && (
+        existing().senderId == request.auth.uid ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         getUserData(request.auth.uid).partnerId == existing().senderId)
+      );
     }
 
     match /partner_requests/{requestId} {
-      allow get, list: if isSignedIn() && (request.auth.uid == resource.data.user_id || request.auth.uid == resource.data.partner_id || ('userId' in resource.data && request.auth.uid == resource.data.userId) || ('partnerId' in resource.data && request.auth.uid == resource.data.partnerId));
-      allow create: if isSignedIn() && (request.auth.uid == incoming().partner_id || request.auth.uid == incoming().user_id || ('partnerId' in incoming() && request.auth.uid == incoming().partnerId)) && isValidPartnerRequest(incoming());
-      allow update: if isSignedIn() && (
-        // The recipient can approve or decline status
-        ((request.auth.uid == resource.data.user_id || ('userId' in resource.data && request.auth.uid == resource.data.userId)) && incoming().diff(existing()).affectedKeys().hasOnly(['status']) && incoming().status in ['approved', 'declined']) ||
-        // The requester can update
-        ((request.auth.uid == resource.data.partner_id || ('partnerId' in resource.data && request.auth.uid == resource.data.partnerId)) && isValidPartnerRequest(incoming()))
+      allow get: if isValidId(requestId) && isSignedIn() &&
+                    (request.auth.uid == existing().user_id || request.auth.uid == existing().partner_id);
+      allow list: if isSignedIn() &&
+                     (request.auth.uid == existing().user_id || request.auth.uid == existing().partner_id);
+      allow create: if isValidId(requestId) && isSignedIn() &&
+                       isValidPartnerRequest(incoming()) &&
+                       request.auth.uid == incoming().partner_id &&
+                       exists(/databases/$(database)/documents/users/$(incoming().user_id));
+      allow update: if isValidId(requestId) && isSignedIn() && isValidPartnerRequest(incoming()) &&
+                       incoming().user_id == existing().user_id &&
+                       incoming().partner_id == existing().partner_id &&
+                       incoming().created_at == existing().created_at && (
+        // Recipient updates approval status
+        (
+          request.auth.uid == existing().user_id &&
+          existing().status == 'pending' &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['status']) &&
+          incoming().status in ['approved', 'declined']
+        ) ||
+        // Requester updates non-immutable request metadata while pending
+        (
+          request.auth.uid == existing().partner_id &&
+          existing().status == 'pending' &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['partnerName', 'partnerEmail', 'requested_permissions'])
+        )
       );
-      allow delete: if isSignedIn() && (request.auth.uid == resource.data.user_id || request.auth.uid == resource.data.partner_id || ('userId' in resource.data && request.auth.uid == resource.data.userId) || ('partnerId' in resource.data && request.auth.uid == resource.data.partnerId));
-    }
-
-    match /global_config/{configId} {
-      allow read: if true;
-      allow write: if isSignedIn();
+      allow delete: if isValidId(requestId) && isSignedIn() &&
+                       (request.auth.uid == existing().user_id || request.auth.uid == existing().partner_id);
     }
 
     match /notifications/{notificationId} {
-      allow get, list: if isSignedIn();
-      allow create, update, delete: if isSignedIn();
+      allow get: if isValidId(notificationId) && isSignedIn() &&
+                    (request.auth.uid == existing().recipientId || request.auth.uid == existing().senderId);
+      allow list: if isSignedIn() &&
+                     (request.auth.uid == existing().recipientId || request.auth.uid == existing().senderId);
+      allow create: if isValidId(notificationId) && isSignedIn() &&
+                       isValidNotification(incoming()) &&
+                       incoming().senderId == request.auth.uid &&
+                       exists(/databases/$(database)/documents/users/$(incoming().recipientId));
+      allow update: if isValidId(notificationId) && isSignedIn() &&
+                       isValidNotification(incoming()) &&
+                       request.auth.uid == existing().recipientId &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['read', 'isRead']);
+      allow delete: if isValidId(notificationId) && isSignedIn() &&
+                       (request.auth.uid == existing().recipientId || request.auth.uid == existing().senderId);
+    }
+
+    match /global_config/{configId} {
+      allow get: if isValidId(configId) && isSignedIn();
+      allow list: if false;
+      allow create, update, delete: if false;
+    }
+
+    match /analytics_events/{eventId} {
+      allow get: if isValidId(eventId) && isSignedIn() && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && existing().userId == request.auth.uid;
+      allow create: if isValidId(eventId) && isSignedIn() && isValidTelemetry(incoming());
+      allow update, delete: if false;
+    }
+
+    match /crash_reports/{reportId} {
+      allow get: if isValidId(reportId) && isSignedIn() && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && existing().userId == request.auth.uid;
+      allow create: if isValidId(reportId) && isSignedIn() && isValidTelemetry(incoming());
+      allow update, delete: if false;
     }
   }
 }

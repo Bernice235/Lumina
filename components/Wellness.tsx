@@ -424,8 +424,8 @@ const Wellness: React.FC<WellnessProps> = ({ symptoms, user, setUser, waterIntak
                 </div>
                 <p className="text-xs text-gray-500 italic leading-relaxed mb-4">{supp.description}</p>
                 <div className="pt-4 border-t border-pink-50">
-                  <span className="text-[9px] font-bold text-pink-300 uppercase tracking-widest block mb-1">Divine Dosage</span>
-                  <p className="text-xs text-pink-600 font-serif italic">{supp.dosage}</p>
+                  <span className="text-[10px] font-bold text-pink-700 uppercase tracking-widest block mb-1">Divine Dosage</span>
+                  <p className="text-xs text-pink-700 font-serif italic">{supp.dosage}</p>
                 </div>
               </div>
             ))}

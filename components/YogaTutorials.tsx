@@ -1141,8 +1141,9 @@ const YogaTutorials: React.FC<YogaTutorialsProps> = ({ user, setUser, todaysSymp
                 <div className="w-full md:w-64 h-48 sm:h-52 bg-gradient-to-br from-pink-900 via-stone-900 to-rose-950 rounded-[2rem] border border-pink-100/20 overflow-hidden relative shrink-0 flex items-center justify-center shadow-md group-hover:scale-[1.01] transition-transform">
                   {/* Subtle poster background image or fallback gradient */}
                   <img 
-                    src={pose.image || "https://picsum.photos/seed/yoga1/400/300"} 
-                    alt={pose.name} 
+                    src={pose.image || "/assets/yoga/childs-pose.svg"} 
+                    alt={`${pose.name} yoga posture guide`}
+                    loading="lazy"
                     className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-75 transition-opacity"
                   />
                   

@@ -6,8 +6,8 @@ import {
 import { 
   X, Activity, Users, ShieldAlert, TrendingUp, Bell, Heart, Zap, Award, CheckCircle2, AlertTriangle, RefreshCw, BarChart2, Eye, Server, Smartphone
 } from 'lucide-react';
-import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
-import { db } from '../services/firebase';
+import { collection, getDocs, query, orderBy, limit, where } from 'firebase/firestore';
+import { db, auth } from '../services/firebase';
 
 interface AnalyticsDashboardModalProps {
   isOpen: boolean;
@@ -45,11 +45,16 @@ export const AnalyticsDashboardModal: React.FC<AnalyticsDashboardModalProps> = (
       let firestoreCrashes: any[] = [];
 
       try {
-        if (db) {
-          const eventsSnap = await getDocs(query(collection(db, 'analytics_events'), orderBy('timestamp', 'desc'), limit(150)));
+        if (db && auth.currentUser?.uid) {
+          const uid = auth.currentUser.uid;
+          const eventsSnap = await getDocs(
+            query(collection(db, 'analytics_events'), where('userId', '==', uid), orderBy('timestamp', 'desc'), limit(150))
+          );
           firestoreEvents = eventsSnap.docs.map(doc => doc.data());
 
-          const crashesSnap = await getDocs(query(collection(db, 'crash_reports'), orderBy('timestamp', 'desc'), limit(50)));
+          const crashesSnap = await getDocs(
+            query(collection(db, 'crash_reports'), where('userId', '==', uid), orderBy('timestamp', 'desc'), limit(50))
+          );
           firestoreCrashes = crashesSnap.docs.map(doc => doc.data());
         }
       } catch (e) {

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img" aria-label="Supportive Child's Pose Illustration">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fce7f3"/>
+      <stop offset="100%" stop-color="#e0f2fe"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" fill="url(#g)"/>
+  <circle cx="330" cy="60" r="70" fill="#ffffff" opacity="0.22"/>
+  <circle cx="70" cy="250" r="85" fill="#ec4899" opacity="0.1"/>
+  <rect x="155" y="182" width="110" height="24" rx="12" fill="#f9a8d4" opacity="0.45"/><path d="M125 205 Q185 140 260 175 L245 205 Z" fill="#fff" opacity="0.88"/><circle cx="270" cy="170" r="17" fill="#fff" opacity="0.92"/>
+</svg>

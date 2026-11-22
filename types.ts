@@ -87,10 +87,62 @@ export interface AppNotification {
   timestamp: string;
   isRead: boolean;
   phaseInfo?: string;
-  category?: 'cycle' | 'wellness' | 'medication' | 'partner' | 'partner_request' | 'pregnancy' | 'mood' | 'symptom';
+  category?: 'cycle' | 'wellness' | 'medication' | 'partner' | 'partner_request' | 'pregnancy' | 'mood' | 'symptom' | 'security';
   detailedTip?: string;
   isPartner?: boolean;
   isPartnerRequest?: boolean;
+}
+
+export interface ActiveSessionInfo {
+  sessionId: string;
+  deviceLabel: string;
+  platform: string;
+  timezone: string;
+  lastActiveAt: string;
+  createdAt: string;
+  authMethod: string;
+}
+
+export interface LoginActivityEntry {
+  id: string;
+  timestamp: string;
+  method: string;
+  status: 'success' | 'failed' | 'locked' | '2fa_challenged' | 'security_change';
+  deviceLabel: string;
+  timezone: string;
+  suspicious?: boolean;
+  note?: string;
+}
+
+export interface SecuritySettings {
+  twoFactorEnabled: boolean;
+  twoFactorSecretEnc?: string;
+  twoFactorRecoveryHashes?: string[];
+  emailVerified?: boolean;
+  sessionEpoch: number;
+  activeSessions: ActiveSessionInfo[];
+  loginHistory: LoginActivityEntry[];
+  biometricQuickUnlock?: boolean;
+  lastPasswordChangeAt?: string;
+  lastSecurityUpdateAt?: string;
+}
+
+export interface PrivacyPreferences {
+  shareAnonymousDiagnostics: boolean;
+  allowPartnerActivityAlerts: boolean;
+  allowAiPersonalization: boolean;
+  autoLockOnBlur: boolean;
+  hideNotificationPreviews: boolean;
+  dataRetentionDays: number;
+  consentUpdatedAt?: string;
+}
+
+export interface BackupMetadata {
+  autoBackupEnabled: boolean;
+  lastAutoBackupAt?: string;
+  lastManualExportAt?: string;
+  lastChecksum?: string;
+  snapshotCount?: number;
 }
 
 export interface User {
@@ -184,6 +236,9 @@ export interface User {
   endoPainLogs?: EndoPainLog[];
   endoMentalLogs?: EndoMentalLog[];
   endoSpecialistQuestions?: EndoSpecialistQuestion[];
+  securitySettings?: SecuritySettings;
+  privacyPreferences?: PrivacyPreferences;
+  backupMetadata?: BackupMetadata;
 }
 
 export interface EndoPainLog {

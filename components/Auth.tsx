@@ -12,6 +12,23 @@ import {
 } from 'firebase/auth';
 import { syncUser, subscribeToUser, getInvite, getUserDisplayName, getCleanName, getSanctuaryTitle } from '../services/firebaseService';
 import { trackSignUp, trackLogin, setUserProperties, logCrashReport } from '../services/analyticsService';
+import { decryptWithPassphrase, scrubLegacySensitiveKeys, secureStorage } from '../services/secureStorage';
+import {
+  applyLoginSecurityAudit,
+  checkClientRateLimit,
+  clearLoginLockout,
+  evaluatePasswordStrength,
+  getAccountLockoutState,
+  getLocalSessionEpoch,
+  isHoneypotTriggered,
+  isValidEmailAddress,
+  recordFailedLoginAttempt,
+  sanitizeTextInput,
+  storeLocalCredentialVerifier,
+  verifyAndConsumeRecoveryCode,
+  verifyLocalCredential,
+  verifyTotpCode
+} from '../services/securityService';
 import { 
   Fingerprint, 
   Scan, 
@@ -25,7 +42,8 @@ import {
   Sparkles,
   Heart,
   Smartphone,
-  ChevronRight
+  ChevronRight,
+  KeyRound
 } from 'lucide-react';
 
 interface AuthProps {
@@ -109,9 +127,10 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
   const [typedPin, setTypedPin] = useState<string>('');
   const [passcodeError, setPasscodeError] = useState<string>('');
 
-  // Form Fields
+  // Form Fields (never read plaintext password from localStorage)
   const [email, setEmail] = useState(() => localStorage.getItem('lumina_saved_email') || '');
-  const [password, setPassword] = useState(() => localStorage.getItem('lumina_saved_password') || '');
+  const [password, setPassword] = useState('');
+  const [honeypot, setHoneypot] = useState('');
   const [name, setName] = useState(() => localStorage.getItem('lumina_saved_name') || '');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -129,10 +148,30 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
   const [registerRole, setRegisterRole] = useState<'tracker' | 'partner'>('tracker');
   const [rememberMe, setRememberMe] = useState(true);
 
+  // Two-Factor Verification Challenge state
+  const [pending2faChallenge, setPending2faChallenge] = useState<{
+    user: User;
+    method: string;
+    remember: boolean;
+  } | null>(null);
+  const [twoFactorInput, setTwoFactorInput] = useState('');
+  const [useRecoveryCode, setUseRecoveryCode] = useState(false);
+
   const [inviteSenderName, setInviteSenderName] = useState<string>('');
 
-  // Determine on mount whether there is a saved profile or returner
+  // Scrub legacy plaintext password keys & check if active device session was globally revoked
   useEffect(() => {
+    scrubLegacySensitiveKeys();
+    const target = getTargetUser();
+    const remoteEpoch = target?.securitySettings?.sessionEpoch || 1;
+    const localEpoch = target?.id ? getLocalSessionEpoch(target.id) : 1;
+    if (remoteEpoch > localEpoch) {
+      localStorage.removeItem('lumina_biometric_user');
+      sessionStorage.setItem('lumina_logged_out', 'true');
+      setScreen('email_login');
+      setError('All devices were signed out from Security Settings. Please sign in again.');
+    }
+
     if (initialInviteCode) {
       setScreen('partner_invite');
       setRegisterRole('partner');
@@ -155,7 +194,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
           const cleaned = getCleanName(resolvedName || invite.senderName, invite.senderEmail || '');
           setInviteSenderName(cleaned || 'Bernice');
         } else {
-          setInviteSenderName('Bernice'); // fallback standard name as requested
+          setInviteSenderName('Bernice');
         }
       }).catch(() => {
         setInviteSenderName('Bernice');
@@ -198,23 +237,125 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
     return target.name || 'Bernice';
   };
 
-  const handleSaveCredentials = (emailStr: string, passwordStr: string, nameStr?: string) => {
+  const handleSaveCredentials = (emailStr: string, _unused: string, nameStr?: string) => {
+    scrubLegacySensitiveKeys();
     if (rememberMe) {
       localStorage.setItem('lumina_saved_email', emailStr);
-      localStorage.setItem('lumina_saved_password', passwordStr);
       if (nameStr) {
         localStorage.setItem('lumina_saved_name', nameStr);
       }
     } else {
       localStorage.removeItem('lumina_saved_email');
-      localStorage.removeItem('lumina_saved_password');
       localStorage.removeItem('lumina_saved_name');
     }
   };
 
-  // Simulated biometric trigger
+  const finalizeAuthenticatedSession = (userToLogin: User, method: string, remember: boolean) => {
+    const auditedUser = applyLoginSecurityAudit(userToLogin, method, 'success');
+    if (remember) {
+      localStorage.setItem('lumina_user', JSON.stringify(auditedUser));
+      localStorage.setItem('lumina_biometric_user', JSON.stringify(auditedUser));
+    } else {
+      localStorage.removeItem('lumina_user');
+      localStorage.removeItem('lumina_biometric_user');
+      sessionStorage.setItem('lumina_user', JSON.stringify(auditedUser));
+    }
+    syncUser(auditedUser);
+    setUserProperties({
+      userId: auditedUser.id,
+      isPartner: auditedUser.isPartner,
+      isPremium: auditedUser.isPremium
+    });
+    trackLogin(method, auditedUser.isPartner);
+    onLogin(auditedUser, remember);
+  };
+
+  const completeOrChallenge2FA = (candidateUser: User, method: string, remember: boolean = rememberMe) => {
+    if (candidateUser.securitySettings?.twoFactorEnabled) {
+      setPending2faChallenge({ user: candidateUser, method, remember });
+      setTwoFactorInput('');
+      setUseRecoveryCode(false);
+      setLoading(false);
+      return;
+    }
+    finalizeAuthenticatedSession(candidateUser, method, remember);
+  };
+
+  const handleVerify2faSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pending2faChallenge) return;
+    setError('');
+    setLoading(true);
+    try {
+      const targetUser = pending2faChallenge.user;
+      if (useRecoveryCode) {
+        const result = await verifyAndConsumeRecoveryCode(targetUser, twoFactorInput);
+        if (!result.valid) {
+          setError('Invalid or already-used recovery code. Please check and try again.');
+          setLoading(false);
+          return;
+        }
+        const updatedWithConsumed: User = {
+          ...targetUser,
+          securitySettings: {
+            ...(targetUser.securitySettings || {
+              twoFactorEnabled: true,
+              sessionEpoch: 1,
+              activeSessions: [],
+              loginHistory: [],
+            }),
+            twoFactorRecoveryHashes: result.updatedHashes,
+          },
+        };
+        setPending2faChallenge(null);
+        finalizeAuthenticatedSession(updatedWithConsumed, `${pending2faChallenge.method}+recovery`, pending2faChallenge.remember);
+        return;
+      }
+
+      let secret: string | null = await secureStorage.getItem(`totp_secret_${targetUser.id}`);
+      if (!secret && targetUser.securitySettings?.twoFactorSecretEnc) {
+        try {
+          const parsed = JSON.parse(targetUser.securitySettings.twoFactorSecretEnc);
+          secret = await decryptWithPassphrase(
+            parsed,
+            `${targetUser.id}::${(targetUser.email || '').toLowerCase().trim()}`
+          );
+        } catch {
+          secret = null;
+        }
+      }
+      if (!secret) {
+        setError('Two-factor key could not be verified on this device. Use a recovery code instead.');
+        setLoading(false);
+        return;
+      }
+
+      const valid = await verifyTotpCode(secret, twoFactorInput);
+      if (!valid) {
+        setError('Incorrect 6-digit authenticator code. Try the current code or switch to a recovery code.');
+        setLoading(false);
+        return;
+      }
+      setPending2faChallenge(null);
+      finalizeAuthenticatedSession(targetUser, `${pending2faChallenge.method}+2fa`, pending2faChallenge.remember);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Biometric trigger (respects session revocation and 2FA)
   const handleBiometricAuth = async (type: 'face' | 'touch' | 'passcode') => {
     setError('');
+    const targetUser = getTargetUser();
+    const remoteEpoch = targetUser?.securitySettings?.sessionEpoch || 1;
+    const localEpoch = targetUser?.id ? getLocalSessionEpoch(targetUser.id) : 1;
+    if (remoteEpoch > localEpoch) {
+      localStorage.removeItem('lumina_biometric_user');
+      setScreen('email_login');
+      setError('Session expired after logging out of all devices. Please sign in with email & password.');
+      return;
+    }
+
     setBiometricScanning(type);
     setBiometricStatus('scanning');
     setTypedPin('');
@@ -227,26 +368,27 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
             setTimeout(checkAndProceed, 200);
             return;
           }
-          const targetUser = getTargetUser();
+          const refreshedTarget = getTargetUser();
           setBiometricStatus('success');
           setTimeout(() => {
             setBiometricScanning('none');
-            // Update persistent logins on successful unlock
-            localStorage.setItem('lumina_user', JSON.stringify(targetUser));
-            localStorage.setItem('lumina_biometric_user', JSON.stringify(targetUser));
-            onLogin(targetUser);
-          }, 800);
+            completeOrChallenge2FA(refreshedTarget, type === 'face' ? 'face_id' : 'touch_id', rememberMe);
+          }, 700);
         };
         checkAndProceed();
-      }, 1500);
+      }, 1200);
     } else {
       setBiometricStatus('idle');
     }
   };
 
-  // Proactively auto-trigger biometric unlock on returning screen for a smooth premium flow
+  // Auto-trigger biometric prompt on returning screen only when not logged out and no 2FA pending
   useEffect(() => {
-    if (screen === 'returning' && biometricScanning === 'none') {
+    if (screen === 'returning' && biometricScanning === 'none' && !pending2faChallenge) {
+      const target = getTargetUser();
+      const remoteEpoch = target?.securitySettings?.sessionEpoch || 1;
+      const localEpoch = target?.id ? getLocalSessionEpoch(target.id) : 1;
+      if (remoteEpoch > localEpoch) return;
       const triggerTimer = setTimeout(() => {
         handleBiometricAuth('face');
       }, 700);
@@ -267,10 +409,8 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
         setBiometricStatus('success');
         setTimeout(() => {
           setBiometricScanning('none');
-          localStorage.setItem('lumina_user', JSON.stringify(targetUser));
-          localStorage.setItem('lumina_biometric_user', JSON.stringify(targetUser));
-          onLogin(targetUser);
-        }, 800);
+          completeOrChallenge2FA(targetUser, 'passcode', rememberMe);
+        }, 650);
       } else {
         setBiometricStatus('fail');
         setPasscodeError('Invalid passcode pin. Try again 💕');
@@ -289,9 +429,8 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
     }
   };
 
-  // Helper to distinguish user roles (Cycle Tracker vs Partner) and selectively request restoration
-  const handleExistingUserLogin = (existingUser: User, credentialsSaver: () => void) => {
-    // Preserve onboarding status if user has saved logged tracker history or completed onboarding previously
+  // Helper to distinguish user roles (Cycle Tracker vs Partner) and route through 2FA & security audit
+  const handleExistingUserLogin = (existingUser: User, credentialsSaver: () => void, method: string = 'email') => {
     const hasTrackerData = !!(
       (existingUser.periods && existingUser.periods.length > 0) ||
       (existingUser.periodDates && existingUser.periodDates.length > 0) ||
@@ -310,23 +449,8 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
       onboardingCompleted: isCompleted
     };
 
-    if (rememberMe) {
-      localStorage.setItem('lumina_user', JSON.stringify(fullExistingUser));
-      localStorage.setItem('lumina_biometric_user', JSON.stringify(fullExistingUser));
-    } else {
-      localStorage.removeItem('lumina_user');
-      localStorage.removeItem('lumina_biometric_user');
-      sessionStorage.setItem('lumina_user', JSON.stringify(fullExistingUser));
-    }
     credentialsSaver();
-    setUserProperties({
-      userId: fullExistingUser.id,
-      email: fullExistingUser.email,
-      isPartner: fullExistingUser.isPartner,
-      isPremium: fullExistingUser.isPremium
-    });
-    trackLogin('email', fullExistingUser.isPartner);
-    onLogin(fullExistingUser, rememberMe);
+    completeOrChallenge2FA(fullExistingUser, method, rememberMe);
   };
 
   // Google Login proxy
@@ -463,37 +587,66 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
     }, 1200);
   };
 
-  // Email login / signup combined handler
+  // Email login / signup combined handler with lockout, honeypot, strength checks, and verified offline fallback
   const handleEmailFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
 
-    const emailKey = email.toLowerCase().trim();
+    if (isHoneypotTriggered(honeypot)) {
+      setError('Submission rejected. Please refresh and try again cleanly.');
+      return;
+    }
+
+    const rate = checkClientRateLimit('email_auth_submit', 8, 60_000);
+    if (!rate.allowed) {
+      setError(`Too many sign-in attempts. Please wait ${rate.retryAfterSec}s before trying again.`);
+      return;
+    }
+
+    setLoading(true);
+    const emailKey = sanitizeTextInput(email, 160).toLowerCase();
     const isSignUp = screen === 'email_signup';
 
-    // 1. Strict Email Validation
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    if (!emailKey || !emailRegex.test(emailKey)) {
+    if (!isValidEmailAddress(emailKey)) {
       setError("Please enter a valid email address.");
       setLoading(false);
       return;
     }
 
-    // 2. Strict Password Validation
-    if (!password || password.length < 8) {
-      setError("Password must be at least 8 characters long.");
+    // Account lockout guard (5 consecutive failed attempts)
+    if (!isSignUp) {
+      const lockout = await getAccountLockoutState(emailKey);
+      if (lockout.isLocked) {
+        const mins = Math.max(1, Math.ceil(lockout.remainingMs / 60_000));
+        setError(`Account temporarily locked for security after repeated failed attempts. Try again in ${mins} minute(s).`);
+        setLoading(false);
+        return;
+      }
+    }
+
+    if (isSignUp) {
+      const strength = evaluatePasswordStrength(password);
+      if (!strength.valid) {
+        setError(strength.error || 'Choose a stronger password (8+ chars, upper/lowercase, number, and symbol).');
+        setLoading(false);
+        return;
+      }
+    } else if (!password || password.length < 6) {
+      setError("Please enter your password.");
       setLoading(false);
       return;
     }
 
-    const resolvedName = isSignUp ? (displayName || `${firstName} ${lastName}`).trim() : name;
+    const cleanFirst = sanitizeTextInput(firstName, 60);
+    const cleanLast = sanitizeTextInput(lastName, 60);
+    const cleanDisplay = sanitizeTextInput(displayName, 80);
+    const resolvedName = isSignUp ? (cleanDisplay || `${cleanFirst} ${cleanLast}`).trim() : sanitizeTextInput(name, 80);
 
     if (isSignUp) {
       const isPartnerRole = registerRole === 'partner';
       const hasAllFields = isPartnerRole 
-        ? (firstName.trim() && lastName.trim() && displayName.trim() && emailKey && password)
-        : (firstName.trim() && lastName.trim() && displayName.trim() && age.trim() && dob.trim() && emailKey && password);
+        ? (cleanFirst && cleanLast && cleanDisplay && emailKey && password)
+        : (cleanFirst && cleanLast && cleanDisplay && age.trim() && dob.trim() && emailKey && password);
 
       if (!hasAllFields) {
         setError(isPartnerRole
@@ -505,7 +658,6 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
       }
     }
 
-    // Helper to find saved local user profile by email key
     const getSavedUserByEmail = (): User | null => {
       const savedEmailData = localStorage.getItem('lumina_user_email_' + emailKey);
       if (savedEmailData) {
@@ -514,9 +666,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
           if (parsed && parsed.email && parsed.email.toLowerCase().trim() === emailKey) {
             return parsed;
           }
-        } catch (err) {
-          console.warn("Failed to parse saved email user:", err);
-        }
+        } catch {}
       }
       const localUser = getTargetUser();
       if (localUser && localUser.email && localUser.email.toLowerCase().trim() === emailKey) {
@@ -525,9 +675,15 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
       return null;
     };
 
-    if (connectionMode === 'offline') {
-      // Local Database logic
+    const handleOfflineLoginOrSignup = async () => {
+      const existingLocal = getSavedUserByEmail();
+
       if (isSignUp) {
+        if (existingLocal) {
+          setError('An account with this email already exists. Please use Sign In instead.');
+          setLoading(false);
+          return;
+        }
         const offlineUser = createNewSandboxUser(
           'offline_' + Date.now(),
           resolvedName,
@@ -535,70 +691,74 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
           'offline_companion',
           'Loving Companion',
           registerRole === 'partner',
-          firstName,
-          lastName,
-          displayName,
+          cleanFirst,
+          cleanLast,
+          cleanDisplay,
           parseInt(age) || undefined,
           dob,
-          country || undefined,
+          sanitizeTextInput(country, 60) || undefined,
           timezone
         );
 
-        localStorage.setItem('lumina_user', JSON.stringify(offlineUser));
+        await storeLocalCredentialVerifier(emailKey, password);
         localStorage.setItem('lumina_user_email_' + emailKey, JSON.stringify(offlineUser));
-        localStorage.setItem('lumina_biometric_user', JSON.stringify(offlineUser));
-        handleSaveCredentials(emailKey, password, resolvedName);
-        onLogin(offlineUser);
+        handleSaveCredentials(emailKey, '', resolvedName);
+        finalizeAuthenticatedSession(offlineUser, 'email_signup', rememberMe);
         setLoading(false);
-      } else {
-        // Simple local match with strict email isolation check
-        const localUser = getSavedUserByEmail();
-        if (localUser) {
-          localStorage.setItem('lumina_user', JSON.stringify(localUser));
-          localStorage.setItem('lumina_user_email_' + emailKey, JSON.stringify(localUser));
-          localStorage.setItem('lumina_biometric_user', JSON.stringify(localUser));
-          handleSaveCredentials(emailKey, password, localUser.name);
-          onLogin(localUser);
-          setLoading(false);
-        } else {
-          // Since no local account with matching email exists, create a brand-new isolated sandbox
-          const offlineUser = createNewSandboxUser(
-            'offline_' + emailKey.replace(/[^a-zA-Z0-9]/g, ''),
-            'Bernice',
-            emailKey,
-            'offline_companion_' + emailKey.replace(/[^a-zA-Z0-9]/g, ''),
-            'Loving Companion',
-            registerRole === 'partner',
-            '', '', '', undefined, '', undefined, timezone
-          );
-          localStorage.setItem('lumina_user', JSON.stringify(offlineUser));
-          localStorage.setItem('lumina_user_email_' + emailKey, JSON.stringify(offlineUser));
-          localStorage.setItem('lumina_biometric_user', JSON.stringify(offlineUser));
-          handleSaveCredentials(emailKey, password, offlineUser.name);
-          onLogin(offlineUser);
-          setLoading(false);
-        }
+        return;
       }
+
+      const credCheck = await verifyLocalCredential(emailKey, password);
+
+      if (existingLocal && credCheck === 'valid') {
+        await clearLoginLockout(emailKey);
+        handleExistingUserLogin(existingLocal, () => handleSaveCredentials(emailKey, '', existingLocal.name), 'email');
+        setLoading(false);
+        return;
+      }
+
+      // Strictly reject any invalid or unknown credential during Sign In and enforce lockout
+      const lockStatus = await recordFailedLoginAttempt(emailKey);
+      if (existingLocal) {
+        const failedAudit = applyLoginSecurityAudit(
+          existingLocal,
+          'email',
+          lockStatus.isLocked ? 'locked' : 'failed',
+          credCheck === 'missing' ? 'Missing local verifier / cloud verification required' : 'Incorrect password attempt'
+        );
+        localStorage.setItem('lumina_user_email_' + emailKey, JSON.stringify(failedAudit));
+      }
+      setError(
+        lockStatus.isLocked
+          ? 'Too many unsuccessful sign-in attempts. Your account is temporarily locked for 5 minutes.'
+          : existingLocal && credCheck === 'missing'
+            ? `Unable to verify credentials offline. Please check your password or connect to verify. ${lockStatus.remainingAttempts} attempt(s) remaining.`
+            : `Incorrect email or password. ${lockStatus.remainingAttempts} attempt(s) remaining before temporary lockout.`
+      );
+      setLoading(false);
+    };
+
+    if (connectionMode === 'offline') {
+      await handleOfflineLoginOrSignup();
       return;
     }
 
-    // Cloud Database logic (With elegant, silent fallback to local database on iframe restrictions)
     try {
       if (isSignUp) {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const userCredential = await createUserWithEmailAndPassword(auth, emailKey, password);
         const fbUser = userCredential.user;
         await updateProfile(fbUser, { displayName: resolvedName });
 
         const newUser: User = {
           id: fbUser.uid,
           name: resolvedName,
-          email: fbUser.email || email,
-          firstName,
-          lastName,
-          displayName,
+          email: fbUser.email || emailKey,
+          firstName: cleanFirst,
+          lastName: cleanLast,
+          displayName: cleanDisplay,
           age: parseInt(age) || undefined,
           dob,
-          country: country || undefined,
+          country: sanitizeTextInput(country, 60) || undefined,
           timezone,
           partnerName: 'Loving Partner',
           cycleLength: 28,
@@ -625,28 +785,32 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
           onboardingCompleted: false
         };
 
+        await storeLocalCredentialVerifier(emailKey, password);
         await syncUser(newUser);
-        localStorage.setItem('lumina_user', JSON.stringify(newUser));
         localStorage.setItem('lumina_user_email_' + emailKey, JSON.stringify(newUser));
-        localStorage.setItem('lumina_biometric_user', JSON.stringify(newUser));
-        handleSaveCredentials(newUser.email, password, resolvedName);
-        onLogin(newUser);
+        handleSaveCredentials(newUser.email, '', resolvedName);
+        trackSignUp('email', newUser.isPartner);
+        finalizeAuthenticatedSession(newUser, 'email_signup', rememberMe);
+        setLoading(false);
       } else {
-        // Sign In
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const userCredential = await signInWithEmailAndPassword(auth, emailKey, password);
         const fbUser = userCredential.user;
+        await clearLoginLockout(emailKey);
+        await storeLocalCredentialVerifier(emailKey, password);
 
         const unsubscribe = subscribeToUser(fbUser.uid, (existingUser) => {
           if (existingUser) {
-            // Check if we have richer cycle data cached locally for this email
             const localSaved = getSavedUserByEmail();
             const mergedUser = localSaved && localSaved.lastPeriodStart && localSaved.cycleLength
               ? { ...localSaved, ...existingUser, cycleLength: existingUser.cycleLength || localSaved.cycleLength, periodLength: existingUser.periodLength || localSaved.periodLength, lastPeriodStart: existingUser.lastPeriodStart || localSaved.lastPeriodStart }
               : existingUser;
 
+            if (fbUser.emailVerified && mergedUser.securitySettings) {
+              mergedUser.securitySettings.emailVerified = true;
+            }
             handleExistingUserLogin(mergedUser, () => {
-              handleSaveCredentials(email, password, mergedUser.name);
-            });
+              handleSaveCredentials(emailKey, '', mergedUser.name);
+            }, 'email');
           } else {
             setError('We couldn\'t find a match for this account. Feel free to join today! 💕');
             setLoading(false);
@@ -655,19 +819,28 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
         });
       }
     } catch (fbErr: any) {
-      console.warn("Real cloud auth connection timed out or blocked. Silently routing through local database:", fbErr);
-      
       const code = fbErr?.code || '';
       const msg = fbErr?.message || String(fbErr);
       const isBadCredentials = [
         'auth/wrong-password',
         'auth/invalid-credential',
         'auth/invalid-password',
-        'auth/user-not-found'
+        'auth/user-not-found',
+        'auth/too-many-requests'
       ].some(t => code.includes(t) || msg.includes(t));
 
       if (isBadCredentials) {
-        setError("Hmm, that password sequence didn't seem correct. Take a deep breath and try again.");
+        const lockStatus = await recordFailedLoginAttempt(emailKey);
+        const cached = getSavedUserByEmail();
+        if (cached) {
+          const failedAudit = applyLoginSecurityAudit(cached, 'email', lockStatus.isLocked ? 'locked' : 'failed', 'Failed login attempt');
+          localStorage.setItem('lumina_user_email_' + emailKey, JSON.stringify(failedAudit));
+        }
+        setError(
+          lockStatus.isLocked || code.includes('too-many-requests')
+            ? 'Too many unsuccessful sign-in attempts. Your account is temporarily locked for 5 minutes.'
+            : `Incorrect credentials. ${lockStatus.remainingAttempts} attempt(s) remaining before lockout.`
+        );
         setLoading(false);
         return;
       }
@@ -678,51 +851,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
         return;
       }
 
-      // Offline / Preview Sandbox fallback
-      let fallbackUser: User;
-      if (isSignUp) {
-        fallbackUser = createNewSandboxUser(
-          'offline_' + emailKey.replace(/[^a-zA-Z0-9]/g, ''),
-          resolvedName || 'Bernice',
-          emailKey,
-          'offline_companion_' + emailKey.replace(/[^a-zA-Z0-9]/g, ''),
-          'Loving Companion',
-          registerRole === 'partner',
-          firstName,
-          lastName,
-          displayName,
-          parseInt(age) || undefined,
-          dob,
-          country || undefined,
-          timezone
-        );
-      } else {
-        const cachedUser = getSavedUserByEmail();
-        if (cachedUser) {
-          fallbackUser = cachedUser;
-        } else {
-          // No local account with matching email exists, create a brand-new isolated sandbox
-          fallbackUser = createNewSandboxUser(
-            'offline_' + emailKey.replace(/[^a-zA-Z0-9]/g, ''),
-            'Bernice',
-            emailKey,
-            'offline_companion_' + emailKey.replace(/[^a-zA-Z0-9]/g, ''),
-            'Loving Companion',
-            registerRole === 'partner',
-            '', '', '', undefined, '', undefined, timezone
-          );
-        }
-      }
-
-      localStorage.setItem('lumina_user', JSON.stringify(fallbackUser));
-      localStorage.setItem('lumina_user_email_' + emailKey, JSON.stringify(fallbackUser));
-      localStorage.setItem('lumina_biometric_user', JSON.stringify(fallbackUser));
-      handleSaveCredentials(fallbackUser.email, password, fallbackUser.name);
-      
-      setTimeout(() => {
-        onLogin(fallbackUser);
-        setLoading(false);
-      }, 700);
+      await handleOfflineLoginOrSignup();
     }
   };
 
@@ -788,17 +917,23 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
   };
 
   const handleForgotPassword = async () => {
-    if (!email) {
-      setError("Please put your email in the box first so we can send a reset link, darling. ✉️");
+    const cleanEmail = sanitizeTextInput(email, 160).toLowerCase();
+    if (!isValidEmailAddress(cleanEmail)) {
+      setError("Please enter a valid email address first so we can send a reset link. ✉️");
+      return;
+    }
+    const rate = checkClientRateLimit('password_reset', 3, 60_000);
+    if (!rate.allowed) {
+      setError(`Please wait ${rate.retryAfterSec}s before requesting another password reset link.`);
       return;
     }
     setLoading(true);
     setError('');
     try {
-      await sendPasswordResetEmail(auth, email);
-      setError("Sent! Please check your spam or inbox for instructions. 💕");
-    } catch (err: any) {
-      setError("We encountered a small blip sending that. Please check the address format.");
+      await sendPasswordResetEmail(auth, cleanEmail);
+      setError("If an account matches this email, reset instructions have been sent. Check your inbox or spam folder. 💕");
+    } catch {
+      setError("We couldn't dispatch a cloud reset email right now. Check the address format and try again.");
     } finally {
       setLoading(false);
     }
@@ -1234,36 +1369,51 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
 
 
           {/* 3. EMAIL LOGIN PAGE */}
-          {!pendingRestoreUser && screen === 'email_login' && (
+          {!pendingRestoreUser && !pending2faChallenge && screen === 'email_login' && (
             <div className="space-y-4 animate-fadeIn">
               <button
                 type="button"
                 onClick={() => setScreen('welcome')}
-                className="inline-flex items-center gap-1.5 text-[8px] font-sans font-bold uppercase tracking-widest text-pink-400 hover:text-pink-500 cursor-pointer"
+                className="inline-flex items-center gap-1.5 text-[10px] font-sans font-bold uppercase tracking-widest text-pink-700 hover:text-pink-800 cursor-pointer"
               >
                 <ArrowLeft size={12} /> Back
               </button>
 
               <div className="text-center space-y-1">
-                <h3 className="text-xl font-serif text-pink-900 font-bold italic">Secure Entry</h3>
-                <p className="text-[10px] text-gray-400">Unlock password protected session.</p>
+                <h3 className="text-xl font-serif text-pink-950 font-bold italic">Secure Entry</h3>
+                <p className="text-xs text-stone-600">Unlock your password-protected session.</p>
               </div>
 
               <form onSubmit={handleEmailFormSubmit} className="space-y-3 pt-1">
+                {/* Spam / Bot Honeypot */}
+                <div className="hidden" aria-hidden="true">
+                  <label htmlFor="auth-login-website">Website</label>
+                  <input
+                    id="auth-login-website"
+                    name="website"
+                    type="text"
+                    tabIndex={-1}
+                    autoComplete="off"
+                    value={honeypot}
+                    onChange={(e) => setHoneypot(e.target.value)}
+                  />
+                </div>
                 <input
                   type="email"
+                  aria-label="Email Address"
                   placeholder="EMAIL ADDRESS"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-5 py-4 bg-white/50 border border-pink-100/60 rounded-2xl text-[9px] font-bold tracking-widest outline-none focus:border-pink-300 transition-colors"
+                  className="w-full px-5 py-4 bg-white/80 border border-pink-200 rounded-2xl text-xs font-semibold text-stone-900 placeholder:text-stone-500 outline-none focus:border-pink-400 transition-colors"
                   required
                 />
                 <input
                   type="password"
+                  aria-label="Security Password"
                   placeholder="SECURITY PASSWORD"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-5 py-4 bg-white/50 border border-pink-100/60 rounded-2xl text-[9px] font-bold tracking-widest outline-none focus:border-pink-300 transition-colors"
+                  className="w-full px-5 py-4 bg-white/80 border border-pink-200 rounded-2xl text-xs font-semibold text-stone-900 placeholder:text-stone-500 outline-none focus:border-pink-400 transition-colors"
                   required
                 />
 
@@ -1273,229 +1423,327 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
                       type="checkbox"
                       checked={rememberMe}
                       onChange={(e) => setRememberMe(e.target.checked)}
-                      className="accent-pink-450 w-3.5 h-3.5 rounded border-pink-200"
+                      className="accent-pink-600 w-3.5 h-3.5 rounded border-pink-300"
                     />
-                    <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">Remember Me</span>
+                    <span className="text-[10px] font-bold text-stone-600 uppercase tracking-wider">Remember Me</span>
                   </label>
                   <button
                     type="button"
                     onClick={handleForgotPassword}
-                    className="text-[8px] font-bold text-pink-400 hover:text-pink-600 uppercase tracking-widest transition-colors cursor-pointer"
+                    className="text-[10px] font-bold text-pink-700 hover:text-pink-900 uppercase tracking-wider transition-colors cursor-pointer"
                   >
-                    Forgot passcode?
+                    Forgot password?
                   </button>
                 </div>
 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-4.5 bg-gradient-to-r from-pink-400 to-rose-450 text-white rounded-2xl font-bold text-[9px] tracking-[0.2em] shadow-md shadow-pink-150 hover:scale-[1.01] active:scale-95 transition-all text-center cursor-pointer"
+                  className="w-full py-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl font-bold text-xs tracking-[0.15em] shadow-md shadow-pink-100 hover:opacity-95 active:scale-95 transition-all text-center cursor-pointer"
                 >
                   {loading ? "UNLOCKING SANCTUARY..." : "SECURE ENTRY"}
                 </button>
               </form>
             </div>
           )}
-                        {/* 4. EMAIL SIGNUP PAGE */}
-          {!pendingRestoreUser && screen === 'email_signup' && (
-            <div className="space-y-4 animate-fadeIn w-full">
-              <button
-                type="button"
-                onClick={() => setScreen('welcome')}
-                className="inline-flex items-center gap-1.5 text-[8px] font-sans font-bold uppercase tracking-widest text-pink-400 hover:text-pink-500 cursor-pointer"
-              >
-                <ArrowLeft size={12} /> Back
-              </button>
 
-              <div className="text-center space-y-1">
-                <h3 className="text-xl font-serif text-pink-900 font-bold italic">Create Account</h3>
-                <p className="text-[10px] text-gray-400">Nurture and align with your companion.</p>
+          {/* TWO-FACTOR AUTHENTICATION CHALLENGE */}
+          {pending2faChallenge && (
+            <div className="space-y-4 animate-fadeIn">
+              <div className="text-center space-y-1.5">
+                <div className="w-12 h-12 rounded-2xl bg-pink-50 border border-pink-200 text-pink-700 flex items-center justify-center mx-auto">
+                  <KeyRound size={22} aria-hidden="true" />
+                </div>
+                <h3 className="text-xl font-serif text-pink-950 font-bold">Two-Factor Verification</h3>
+                <p className="text-xs text-stone-600">
+                  {useRecoveryCode
+                    ? 'Enter one of your 8-character backup recovery codes.'
+                    : 'Enter the 6-digit code from your authenticator app.'}
+                </p>
               </div>
 
-              <form onSubmit={handleEmailFormSubmit} className="space-y-4 pt-1">
-                <div className="max-h-[300px] overflow-y-auto pr-1.5 space-y-3.5">
-                  
-                  {/* Account Role */}
-                  <div className="space-y-1 bg-rose-50/30 p-2.5 rounded-2xl border border-pink-100/50">
-                    <p className="text-[7.5px] font-extrabold text-pink-400 uppercase tracking-widest text-center">Select Account Role</p>
-                    <div className="grid grid-cols-2 gap-2 bg-pink-100/30 p-1 rounded-xl border border-pink-200/40">
-                      <button
-                        type="button"
-                        onClick={() => setRegisterRole('tracker')}
-                        className={`py-1.5 text-[8px] font-bold uppercase tracking-widest rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                          registerRole === 'tracker' ? 'bg-gradient-to-r from-pink-400 to-rose-400 text-white shadow-sm' : 'text-pink-300 hover:text-pink-500'
-                        }`}
-                      >
-                        🌸 Tracker Mode
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setRegisterRole('partner')}
-                        className={`py-1.5 text-[8px] font-bold uppercase tracking-widest rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                          registerRole === 'partner' ? 'bg-gradient-to-r from-pink-400 to-rose-400 text-white shadow-sm' : 'text-pink-300 hover:text-pink-500'
-                        }`}
-                      >
-                        🧸 Companion Mode
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Required Fields Group */}
-                  <div className="space-y-3">
-                    <p className="text-[7.5px] font-extrabold text-gray-400 uppercase tracking-widest border-b border-pink-50 pb-1">Required Information</p>
-                    
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-1">
-                        <label className="text-[7px] font-bold text-pink-500 uppercase tracking-widest px-1">First Name</label>
-                        <input
-                          type="text"
-                          placeholder="FIRST NAME"
-                          value={firstName}
-                          onChange={(e) => setFirstName(e.target.value)}
-                          className="w-full px-4 py-3 bg-white/50 border border-pink-100/60 rounded-xl text-[9px] font-bold tracking-widest outline-none focus:border-pink-300 transition-colors"
-                          required
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[7px] font-bold text-pink-500 uppercase tracking-widest px-1">Last Name</label>
-                        <input
-                          type="text"
-                          placeholder="LAST NAME"
-                          value={lastName}
-                          onChange={(e) => setLastName(e.target.value)}
-                          className="w-full px-4 py-3 bg-white/50 border border-pink-100/60 rounded-xl text-[9px] font-bold tracking-widest outline-none focus:border-pink-300 transition-colors"
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[7px] font-bold text-pink-500 uppercase tracking-widest px-1">Display Name</label>
-                      <input
-                        type="text"
-                        placeholder="DISPLAY NAME"
-                        value={displayName}
-                        onChange={(e) => setDisplayName(e.target.value)}
-                        className="w-full px-4 py-3 bg-white/50 border border-pink-100/60 rounded-xl text-[9px] font-bold tracking-widest outline-none focus:border-pink-300 transition-colors"
-                        required
-                      />
-                    </div>
-
-                    {registerRole !== 'partner' && (
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="space-y-1">
-                          <label className="text-[7px] font-bold text-pink-500 uppercase tracking-widest px-1">Age</label>
-                          <input
-                            type="number"
-                            placeholder="AGE"
-                            min="1"
-                            max="120"
-                            value={age}
-                            onChange={(e) => setAge(e.target.value)}
-                            className="w-full px-4 py-3 bg-white/50 border border-pink-100/60 rounded-xl text-[9px] font-bold tracking-widest outline-none focus:border-pink-300 transition-colors"
-                            required
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[7px] font-bold text-pink-500 uppercase tracking-widest px-1">Date of Birth</label>
-                          <input
-                            type="date"
-                            value={dob}
-                            onChange={(e) => setDob(e.target.value)}
-                            className="w-full px-4 py-3 bg-white/50 border border-pink-100/60 rounded-xl text-[9px] font-bold tracking-widest outline-none focus:border-pink-300 transition-colors"
-                            required
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="space-y-1">
-                      <label className="text-[7px] font-bold text-pink-500 uppercase tracking-widest px-1">Email Address</label>
-                      <input
-                        type="email"
-                        placeholder="EMAIL ADDRESS"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="w-full px-4 py-3 bg-white/50 border border-pink-100/60 rounded-xl text-[9px] font-bold tracking-widest outline-none focus:border-pink-300 transition-colors"
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[7px] font-bold text-pink-500 uppercase tracking-widest px-1">Choose Password</label>
-                      <input
-                        type="password"
-                        placeholder="PASSWORD"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="w-full px-4 py-3 bg-white/50 border border-pink-100/60 rounded-xl text-[9px] font-bold tracking-widest outline-none focus:border-pink-300 transition-colors"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  {/* Optional Fields Group */}
-                  <div className="space-y-3">
-                    <p className="text-[7.5px] font-extrabold text-gray-400 uppercase tracking-widest border-b border-pink-50 pb-1">Optional Details</p>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-1">
-                        <label className="text-[7px] font-bold text-gray-400 uppercase tracking-widest px-1">Country</label>
-                        <input
-                          type="text"
-                          placeholder="COUNTRY"
-                          value={country}
-                          onChange={(e) => setCountry(e.target.value)}
-                          className="w-full px-4 py-3 bg-white/50 border border-pink-100/60 rounded-xl text-[9px] font-bold tracking-widest outline-none focus:border-pink-300 transition-colors"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[7px] font-bold text-gray-400 uppercase tracking-widest px-1">Time Zone</label>
-                        <input
-                          type="text"
-                          placeholder="UTC"
-                          value={timezone}
-                          onChange={(e) => setTimezone(e.target.value)}
-                          className="w-full px-4 py-3 bg-white/50 border border-pink-100/60 rounded-xl text-[9px] font-bold tracking-widest outline-none focus:border-pink-300 transition-colors"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="px-1">
-                  <label className="flex items-center gap-2 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={rememberMe}
-                      onChange={(e) => setRememberMe(e.target.checked)}
-                      className="accent-pink-450 w-3.5 h-3.5 rounded border-pink-200"
-                    />
-                    <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest leading-none">Enable Touch/Face ID and Auto-Login</span>
-                  </label>
-                </div>
-
+              <form onSubmit={handleVerify2faSubmit} className="space-y-3">
+                <input
+                  type="text"
+                  inputMode={useRecoveryCode ? 'text' : 'numeric'}
+                  maxLength={useRecoveryCode ? 12 : 6}
+                  aria-label={useRecoveryCode ? 'Recovery code' : '6-digit two-factor code'}
+                  placeholder={useRecoveryCode ? 'ABCD-EFGH' : '123456'}
+                  value={twoFactorInput}
+                  onChange={(e) => setTwoFactorInput(e.target.value)}
+                  className="w-full px-5 py-4 bg-white border border-pink-200 rounded-2xl text-center text-base font-mono font-bold tracking-[0.3em] text-stone-900 outline-none focus:border-pink-400"
+                  required
+                />
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-4.5 bg-gradient-to-r from-pink-400 to-rose-450 text-white rounded-2xl font-bold text-[9px] tracking-[0.2em] shadow-md shadow-pink-150 hover:scale-[1.01] active:scale-95 transition-all text-center cursor-pointer"
+                  className="w-full py-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl font-bold text-xs uppercase tracking-widest shadow-md cursor-pointer"
                 >
-                  {loading ? "INITIALIZING SANCTUARY..." : "CREATE SANCTUARY"}
+                  {loading ? 'VERIFYING...' : 'VERIFY & ENTER SANCTUARY'}
                 </button>
+                <div className="flex items-center justify-between pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUseRecoveryCode(!useRecoveryCode);
+                      setTwoFactorInput('');
+                      setError('');
+                    }}
+                    className="text-xs font-bold text-pink-700 hover:underline cursor-pointer"
+                  >
+                    {useRecoveryCode ? 'Use authenticator app code' : 'Use a recovery code instead'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPending2faChallenge(null);
+                      setTwoFactorInput('');
+                      setError('');
+                    }}
+                    className="text-xs font-bold text-stone-600 hover:underline cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </form>
             </div>
           )}
+          {/* 4. EMAIL SIGNUP PAGE */}
+          {!pendingRestoreUser && !pending2faChallenge && screen === 'email_signup' && (() => {
+            const strength = evaluatePasswordStrength(password);
+            return (
+              <div className="space-y-4 animate-fadeIn w-full">
+                <button
+                  type="button"
+                  onClick={() => setScreen('welcome')}
+                  className="inline-flex items-center gap-1.5 text-[10px] font-sans font-bold uppercase tracking-widest text-pink-700 hover:text-pink-900 cursor-pointer"
+                >
+                  <ArrowLeft size={12} /> Back
+                </button>
+
+                <div className="text-center space-y-1">
+                  <h3 className="text-xl font-serif text-pink-950 font-bold italic">Create Account</h3>
+                  <p className="text-xs text-stone-600">Nurture and align with your companion.</p>
+                </div>
+
+                <form onSubmit={handleEmailFormSubmit} className="space-y-4 pt-1">
+                  <div className="hidden" aria-hidden="true">
+                    <label htmlFor="auth-signup-website">Website</label>
+                    <input
+                      id="auth-signup-website"
+                      name="website"
+                      type="text"
+                      tabIndex={-1}
+                      autoComplete="off"
+                      value={honeypot}
+                      onChange={(e) => setHoneypot(e.target.value)}
+                    />
+                  </div>
+                  <div className="max-h-[300px] overflow-y-auto pr-1.5 space-y-3.5">
+                    
+                    {/* Account Role */}
+                    <div className="space-y-1 bg-rose-50/40 p-2.5 rounded-2xl border border-pink-100">
+                      <p className="text-[10px] font-extrabold text-pink-700 uppercase tracking-widest text-center">Select Account Role</p>
+                      <div className="grid grid-cols-2 gap-2 bg-pink-100/40 p-1 rounded-xl border border-pink-200/50">
+                        <button
+                          type="button"
+                          onClick={() => setRegisterRole('tracker')}
+                          className={`py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                            registerRole === 'tracker' ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-sm' : 'text-pink-800 hover:text-pink-950'
+                          }`}
+                        >
+                          🌸 Tracker Mode
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setRegisterRole('partner')}
+                          className={`py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                            registerRole === 'partner' ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-sm' : 'text-pink-800 hover:text-pink-950'
+                          }`}
+                        >
+                          🧸 Companion Mode
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Required Fields Group */}
+                    <div className="space-y-3">
+                      <p className="text-[10px] font-extrabold text-stone-600 uppercase tracking-widest border-b border-pink-100 pb-1">Required Information</p>
+                      
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <label htmlFor="signup-first-name" className="text-[10px] font-bold text-pink-700 uppercase tracking-wider px-1">First Name</label>
+                          <input
+                            id="signup-first-name"
+                            type="text"
+                            placeholder="FIRST NAME"
+                            value={firstName}
+                            onChange={(e) => setFirstName(e.target.value)}
+                            className="w-full px-4 py-3 bg-white/80 border border-pink-200 rounded-xl text-xs font-semibold text-stone-900 outline-none focus:border-pink-400 transition-colors"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label htmlFor="signup-last-name" className="text-[10px] font-bold text-pink-700 uppercase tracking-wider px-1">Last Name</label>
+                          <input
+                            id="signup-last-name"
+                            type="text"
+                            placeholder="LAST NAME"
+                            value={lastName}
+                            onChange={(e) => setLastName(e.target.value)}
+                            className="w-full px-4 py-3 bg-white/80 border border-pink-200 rounded-xl text-xs font-semibold text-stone-900 outline-none focus:border-pink-400 transition-colors"
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label htmlFor="signup-display-name" className="text-[10px] font-bold text-pink-700 uppercase tracking-wider px-1">Display Name</label>
+                        <input
+                          id="signup-display-name"
+                          type="text"
+                          placeholder="DISPLAY NAME"
+                          value={displayName}
+                          onChange={(e) => setDisplayName(e.target.value)}
+                          className="w-full px-4 py-3 bg-white/80 border border-pink-200 rounded-xl text-xs font-semibold text-stone-900 outline-none focus:border-pink-400 transition-colors"
+                          required
+                        />
+                      </div>
+
+                      {registerRole !== 'partner' && (
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <label htmlFor="signup-age" className="text-[10px] font-bold text-pink-700 uppercase tracking-wider px-1">Age</label>
+                            <input
+                              id="signup-age"
+                              type="number"
+                              placeholder="AGE"
+                              min="13"
+                              max="120"
+                              value={age}
+                              onChange={(e) => setAge(e.target.value)}
+                              className="w-full px-4 py-3 bg-white/80 border border-pink-200 rounded-xl text-xs font-semibold text-stone-900 outline-none focus:border-pink-400 transition-colors"
+                              required
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label htmlFor="signup-dob" className="text-[10px] font-bold text-pink-700 uppercase tracking-wider px-1">Date of Birth</label>
+                            <input
+                              id="signup-dob"
+                              type="date"
+                              value={dob}
+                              onChange={(e) => setDob(e.target.value)}
+                              className="w-full px-4 py-3 bg-white/80 border border-pink-200 rounded-xl text-xs font-semibold text-stone-900 outline-none focus:border-pink-400 transition-colors"
+                              required
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="space-y-1">
+                        <label htmlFor="signup-email" className="text-[10px] font-bold text-pink-700 uppercase tracking-wider px-1">Email Address</label>
+                        <input
+                          id="signup-email"
+                          type="email"
+                          placeholder="EMAIL ADDRESS"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          className="w-full px-4 py-3 bg-white/80 border border-pink-200 rounded-xl text-xs font-semibold text-stone-900 outline-none focus:border-pink-400 transition-colors"
+                          required
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between px-1">
+                          <label htmlFor="signup-password" className="text-[10px] font-bold text-pink-700 uppercase tracking-wider">Choose Strong Password</label>
+                          {password.length > 0 && (
+                            <span className={`text-[10px] font-bold ${
+                              strength.valid ? 'text-emerald-700' : strength.score >= 2 ? 'text-amber-700' : 'text-rose-700'
+                            }`}>
+                              {strength.label}
+                            </span>
+                          )}
+                        </div>
+                        <input
+                          id="signup-password"
+                          type="password"
+                          placeholder="STRONG PASSWORD"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          className="w-full px-4 py-3 bg-white/80 border border-pink-200 rounded-xl text-xs font-semibold text-stone-900 outline-none focus:border-pink-400 transition-colors"
+                          required
+                        />
+                        <p className="text-[10px] text-stone-600 px-1">
+                          Use 8+ chars with upper/lowercase, a number, and a symbol.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Optional Fields Group */}
+                    <div className="space-y-3">
+                      <p className="text-[10px] font-extrabold text-stone-600 uppercase tracking-widest border-b border-pink-100 pb-1">Optional Details</p>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <label htmlFor="signup-country" className="text-[10px] font-bold text-stone-600 uppercase tracking-wider px-1">Country</label>
+                          <input
+                            id="signup-country"
+                            type="text"
+                            placeholder="COUNTRY"
+                            value={country}
+                            onChange={(e) => setCountry(e.target.value)}
+                            className="w-full px-4 py-3 bg-white/80 border border-pink-200 rounded-xl text-xs font-semibold text-stone-900 outline-none focus:border-pink-400 transition-colors"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label htmlFor="signup-timezone" className="text-[10px] font-bold text-stone-600 uppercase tracking-wider px-1">Time Zone</label>
+                          <input
+                            id="signup-timezone"
+                            type="text"
+                            placeholder="UTC"
+                            value={timezone}
+                            onChange={(e) => setTimezone(e.target.value)}
+                            className="w-full px-4 py-3 bg-white/80 border border-pink-200 rounded-xl text-xs font-semibold text-stone-900 outline-none focus:border-pink-400 transition-colors"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="px-1">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={rememberMe}
+                        onChange={(e) => setRememberMe(e.target.checked)}
+                        className="accent-pink-600 w-3.5 h-3.5 rounded border-pink-300"
+                      />
+                      <span className="text-[10px] font-bold text-stone-600 uppercase tracking-wider leading-none">Enable Quick Biometric &amp; Remember Device</span>
+                    </label>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full py-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl font-bold text-xs tracking-[0.15em] shadow-md shadow-pink-100 hover:opacity-95 active:scale-95 transition-all text-center cursor-pointer"
+                  >
+                    {loading ? "INITIALIZING SANCTUARY..." : "CREATE SANCTUARY"}
+                  </button>
+                </form>
+              </div>
+            );
+          })()}
 
         </div>
 
         {/* Small Elegant Footer */}
-        <div className="text-center mt-3 border-t border-pink-50/50 pt-5 w-full">
-          <p className="text-[10px] text-pink-300 font-bold uppercase tracking-wider flex items-center justify-center gap-2">
+        <div className="text-center mt-3 border-t border-pink-100 pt-5 w-full">
+          <p className="text-[11px] text-pink-700 font-bold uppercase tracking-wider flex items-center justify-center gap-2">
             <span>🛡️</span>
-            <span>Private & Encrypted Vault</span>
+            <span>Private &amp; Encrypted Vault</span>
           </p>
-          <p className="text-[9px] text-gray-400 italic max-w-xs mx-auto mt-1 leading-relaxed">
-            Your metrics, journals, and health records remain 100% device-level secured.
+          <p className="text-[11px] text-stone-600 italic max-w-xs mx-auto mt-1 leading-relaxed">
+            Your metrics, journals, and health records remain device-encrypted and private.
           </p>
         </div>
 

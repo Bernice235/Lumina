@@ -1264,14 +1264,14 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
             <div className="flex justify-between items-center mb-6 px-2">
               <h3 className="font-serif text-xl text-pink-600 italic">{monthName} {year}</h3>
               <div className="flex gap-2">
-                <button onClick={() => setCurrentDate(new Date(year, currentDate.getMonth() - 1, 1))} className="p-2 text-pink-300 hover:text-pink-500 hover:scale-110 transition-transform">←</button>
-                <button onClick={() => setCurrentDate(new Date(year, currentDate.getMonth() + 1, 1))} className="p-2 text-pink-300 hover:text-pink-500 hover:scale-110 transition-transform">→</button>
+                <button type="button" aria-label="Previous month" onClick={() => setCurrentDate(new Date(year, currentDate.getMonth() - 1, 1))} className="p-2 text-pink-600 hover:text-pink-700 hover:scale-110 transition-transform cursor-pointer">←</button>
+                <button type="button" aria-label="Next month" onClick={() => setCurrentDate(new Date(year, currentDate.getMonth() + 1, 1))} className="p-2 text-pink-600 hover:text-pink-700 hover:scale-110 transition-transform cursor-pointer">→</button>
               </div>
             </div>
 
             <div className="grid grid-cols-7 gap-2 sm:gap-2.5">
               {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
-                <div key={`${d}-${i}`} className="text-center text-[10px] font-bold text-pink-200 uppercase py-2">{d}</div>
+                <div key={`${d}-${i}`} className="text-center text-[10px] font-bold text-pink-600 uppercase py-2">{d}</div>
               ))}
               {Array.from({ length: adjustedFirstDay }).map((_, i) => <div key={`empty-${i}`} />)}
               {Array.from({ length: daysInMonth }).map((_, i) => {
@@ -1381,7 +1381,7 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
 
           {/* Upgraded Legend */}
           <div className="mt-8 border-t border-pink-50 pt-6">
-            <h4 className="text-[10px] font-bold text-pink-300 uppercase tracking-widest text-center mb-4">Cycle Phase & Reproductive Health Legend</h4>
+            <h4 className="text-[10px] font-bold text-pink-700 uppercase tracking-widest text-center mb-4">Cycle Phase & Reproductive Health Legend</h4>
             <div className="grid grid-cols-2 sm:grid-cols-6 gap-2.5 text-center mb-4 animate-fadeIn">
               <div className="flex flex-col items-center p-2 rounded-xl bg-pink-50/50 border border-pink-200/50">
                 <div className="w-5 h-5 rounded-md bg-pink-500 mb-1 flex items-center justify-center text-[10px] text-white font-bold">🩸</div>
@@ -1439,7 +1439,7 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
           <div className="bg-gradient-to-br from-white to-pink-50/20 p-8 rounded-[2.5rem] shadow-sm border border-pink-50 space-y-6">
             <div className="flex justify-between items-start border-b border-pink-100 pb-4">
               <div>
-                <span className="text-xs font-bold text-pink-300 uppercase tracking-widest">Selected Date</span>
+                <span className="text-xs font-bold text-pink-700 uppercase tracking-widest">Selected Date</span>
                 <h4 className="text-base font-serif italic text-pink-600 mt-1">{selectedDateStr}</h4>
               </div>
               <span className="text-3xl">{selectedDetails.phaseEmoji || '🌸'}</span>
@@ -1447,7 +1447,7 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
 
             <div className="space-y-4">
               <div className="flex justify-between items-center text-xs">
-                <span className="font-bold text-pink-300 uppercase tracking-widest">Cycle Phase</span>
+                <span className="font-bold text-pink-700 uppercase tracking-widest">Cycle Phase</span>
                 <span className={`px-3 py-1.5 rounded-full font-bold text-[9px] uppercase tracking-widest ${selectedDetails.badgeColor}`}>
                   {selectedDetails.phaseName}
                 </span>

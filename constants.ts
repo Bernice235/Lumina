@@ -302,7 +302,7 @@ export const YOGA_POSES = [
     name: "Child's Pose (Balasana)",
     description: "Gently stretches the lower back and promotes deep relaxation. Perfect for cramp relief and pelvic decompression.",
     benefit: "Calms the mind, eases menstrual tension.",
-    image: "https://picsum.photos/seed/yoga1/400/300",
+    image: "/assets/yoga/childs-pose.svg",
     videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-woman-doing-yoga-stretches-on-a-mat-40292-large.mp4",
     duration: "10 mins",
     category: "Cramp Relief & Relaxation"
@@ -311,7 +311,7 @@ export const YOGA_POSES = [
     name: "Cat-Cow Stretch",
     description: "Moves the spine and abdominal muscles to help ease internal pelvic and back tension.",
     benefit: "Flexibility and blood flow boost.",
-    image: "https://picsum.photos/seed/yoga2/400/300",
+    image: "/assets/yoga/cat-cow.svg",
     videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-young-woman-doing-yoga-on-a-sunny-day-41662-large.mp4",
     duration: "12 mins",
     category: "Spinal Mobility & Pelvic Relief"
@@ -320,7 +320,7 @@ export const YOGA_POSES = [
     name: "Bound Angle Pose",
     description: "Opens the hips and stimulates the pelvic region gently without abdominal strain.",
     benefit: "Relieves heaviness and bloating.",
-    image: "https://picsum.photos/seed/yoga3/400/300",
+    image: "/assets/yoga/bound-angle.svg",
     videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-meditating-woman-in-a-beautiful-park-42289-large.mp4",
     duration: "15 mins",
     category: "Hip Opening & Bloating"
@@ -329,7 +329,7 @@ export const YOGA_POSES = [
     name: "Legs-Up-The-Wall (Viparita Karani)",
     description: "Restorative inverted pose that drains excess fluid, calms the nervous system, and relieves lower back pressure.",
     benefit: "Eases swollen legs, anxiety, and pelvic fatigue.",
-    image: "https://picsum.photos/seed/yoga4/400/300",
+    image: "/assets/yoga/legs-up-wall.svg",
     videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-woman-meditating-in-nature-32545-large.mp4",
     duration: "10 mins",
     category: "Restorative & Fluid Circulation"
@@ -338,7 +338,7 @@ export const YOGA_POSES = [
     name: "Deep Diaphragmatic Breath",
     description: "Helps gently realign deep abdominal tissue wall sheets and re-pattern healthy intra-abdominal pressure.",
     benefit: "Soothes the sympathetic nervous system and tones transverse abdominis.",
-    image: "https://picsum.photos/seed/postpartum1/400/300",
+    image: "/assets/yoga/diaphragmatic-breath.svg",
     videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-meditating-woman-in-a-beautiful-park-42289-large.mp4",
     duration: "5 mins",
     category: "Postpartum Recovery"
@@ -347,7 +347,7 @@ export const YOGA_POSES = [
     name: "Early Pelvic Floor Rehab (Kegels)",
     description: "Gentle contraction and full relaxation holds to assist perineal and pelvic floor neuromuscular recovery.",
     benefit: "Promotes circulation and restores pelvic tone safely.",
-    image: "https://picsum.photos/seed/postpartum2/400/300",
+    image: "/assets/yoga/pelvic-floor.svg",
     videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-woman-doing-yoga-stretches-on-a-mat-40292-large.mp4",
     duration: "8 mins",
     category: "Postpartum Recovery"
@@ -356,7 +356,7 @@ export const YOGA_POSES = [
     name: "Shoulder Chest Openers",
     description: "Releases upper thoracic and pectoral tension from nursing cradles and holding baby.",
     benefit: "Opens posture, relieves neck tightness and nursing slouching.",
-    image: "https://picsum.photos/seed/postpartum3/400/300",
+    image: "/assets/yoga/chest-opener.svg",
     videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-woman-doing-yoga-stretches-on-a-mat-40292-large.mp4",
     duration: "10 mins",
     category: "Postpartum Recovery"
@@ -365,7 +365,7 @@ export const YOGA_POSES = [
     name: "Supportive Child's Pose",
     description: "Kneeling position with widened knees and torso bolster support to gently stretch the spinal erectors after carriage.",
     benefit: "Lengthens lower back without compressing abdominal or pelvic tissues.",
-    image: "https://picsum.photos/seed/postpartum4/400/300",
+    image: "/assets/yoga/supportive-child.svg",
     videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-young-woman-doing-yoga-on-a-sunny-day-41662-large.mp4",
     duration: "12 mins",
     category: "Postpartum Recovery"
@@ -374,7 +374,7 @@ export const YOGA_POSES = [
     name: "Pelvic Tilt & Bridge Recovery",
     description: "Gentle supine pelvic rocking and micro-bridges with soft glute engagement.",
     benefit: "Realignts sacroiliac joint and relieves lower lumbar tension.",
-    image: "https://picsum.photos/seed/postpartum5/400/300",
+    image: "/assets/yoga/pelvic-bridge.svg",
     videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-woman-doing-yoga-stretches-on-a-mat-40292-large.mp4",
     duration: "10 mins",
     category: "Postpartum Recovery"
@@ -383,7 +383,7 @@ export const YOGA_POSES = [
     name: "Gentle Seated Side Bend & Re-alignment",
     description: "Seated with crossed legs or on cushion, gently lengthening the intercostal muscles and side body.",
     benefit: "Expands ribcage capacity and releases pelvic side fascia.",
-    image: "https://picsum.photos/seed/postpartum6/400/300",
+    image: "/assets/yoga/seated-side-bend.svg",
     videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-meditating-woman-in-a-beautiful-park-42289-large.mp4",
     duration: "8 mins",
     category: "Postpartum Recovery"

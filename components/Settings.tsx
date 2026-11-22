@@ -38,7 +38,10 @@ import {
   Smartphone,
   Users,
   Baby,
-  HeartHandshake
+  HeartHandshake,
+  Cookie,
+  KeyRound,
+  AlertTriangle
 } from 'lucide-react';
 import { 
   getCyclePredictions, 
@@ -67,6 +70,25 @@ import {
   restorePremiumPurchases, 
   syncActiveSubscriptionStatus 
 } from '../services/revenueCatService';
+import { PrivacyDashboard } from './PrivacyDashboard';
+import {
+  AutoBackupSnapshot,
+  applyBackupToUser,
+  buildPortableBackupExport,
+  listAutomaticSnapshots,
+  saveAutomaticEncryptedSnapshot,
+  verifyAndParseBackupFile,
+} from '../services/backupService';
+import {
+  appendSecurityEventToUser,
+  checkClientRateLimit,
+  evaluatePasswordStrength,
+  getDefaultSecuritySettings,
+  isHoneypotTriggered,
+  isValidEmailAddress,
+  sanitizeTextInput,
+  storeLocalCredentialVerifier,
+} from '../services/securityService';
 import { doc, getDoc } from 'firebase/firestore';
 import { db, auth } from '../services/firebase';
 import { updateEmail, updatePassword } from 'firebase/auth';
@@ -136,67 +158,91 @@ const Settings: React.FC<SettingsProps> = ({
   const [showFeedbackModal, setShowFeedbackModal] = useState<'support' | 'bug' | 'feature' | null>(null);
   const [feedbackText, setFeedbackText] = useState('');
   const [feedbackEmail, setFeedbackEmail] = useState(user.email || '');
+  const [feedbackHoneypot, setFeedbackHoneypot] = useState('');
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [feedbackError, setFeedbackError] = useState<string | null>(null);
+  const [feedbackTicketId, setFeedbackTicketId] = useState<string | null>(null);
 
   // FAQ Accordion
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
 
+  // Backup & Snapshot States
+  const [autoSnapshots, setAutoSnapshots] = useState<AutoBackupSnapshot[]>([]);
+  const [exportPassphrase, setExportPassphrase] = useState('');
+  const [pendingEncryptedImport, setPendingEncryptedImport] = useState<string | null>(null);
+  const [importPassphrase, setImportPassphrase] = useState('');
+  const [musicNotice, setMusicNotice] = useState<string | null>(null);
+  const [partnerActionNotice, setPartnerActionNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
   React.useEffect(() => {
     setActiveSubTab(getMappedTab(initialSubTab));
   }, [initialSubTab]);
+
+  React.useEffect(() => {
+    if (activeSubTab === 'backup_sync' && user?.id) {
+      listAutomaticSnapshots(user.id).then(setAutoSnapshots).catch(() => {});
+    }
+  }, [activeSubTab, user?.id, user?.backupMetadata?.lastAutoBackupAt]);
 
   const [selectedPlanId, setSelectedPlanId] = useState<'monthly' | '6month' | 'yearly'>('monthly');
   const [billingProgress, setBillingProgress] = useState<string | null>(null);
   const [billingError, setBillingError] = useState<string | null>(null);
   const [billingSuccess, setBillingSuccess] = useState<string | null>(null);
 
-  const handleExportData = () => {
-    const backupData = {
-      exportedAt: new Date().toISOString(),
-      appName: "Lumina Wellness",
-      profile: {
-        name: user.name,
-        email: user.email,
-        theme: user.theme,
-        tempUnit: user.tempUnit || 'C',
-        isPregnancyMode: user.isPregnancyMode,
-        onboardingCompleted: user.onboardingCompleted,
-        waterGoal: user.waterGoal || 8,
-      },
-      cyclePredictions: {
-        cycleLength: user.cycleLength ?? 28,
-        periodLength: user.periodLength ?? 5,
-        lastPeriodStart: user.lastPeriodStart,
-        periodDates: user.periodDates || [],
-      },
-      periods: user.periods || [],
-      periodLogs: user.periodLogs || [],
-      moodLogs: user.moodLogs || [],
-      sexualActivityLogs: user.sexualActivityLogs || [],
-      sharingSettings: user.sharingSettings,
-      birthControlConfig: user.birthControlConfig,
-      notificationSettings: user.notificationSettings,
-      symptoms: symptoms,
-      diaryEntries: diaryEntries,
-      bcLogs: bcLogs,
-      tempLogs: tempLogs
-    };
-
-    const dataStr = JSON.stringify(backupData, null, 2);
-    const blob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `lumina_wellness_backup_${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
   const [localFeedback, setLocalFeedback] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [cloudFeedback, setCloudFeedback] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [isImportDragging, setIsImportDragging] = useState(false);
+
+  const handleExportData = async (encrypted: boolean = false) => {
+    setLocalFeedback(null);
+    if (encrypted && exportPassphrase.trim().length < 6) {
+      setLocalFeedback({ type: 'error', text: 'Please enter a passphrase of at least 6 characters to encrypt your backup file.' });
+      return;
+    }
+    try {
+      const result = await buildPortableBackupExport(
+        user,
+        { symptoms, diaryEntries, bcLogs, tempLogs, reminders },
+        encrypted ? exportPassphrase.trim() : undefined
+      );
+      const blob = new Blob([result.content], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = result.filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      const updatedUser = appendSecurityEventToUser(
+        {
+          ...user,
+          backupMetadata: {
+            autoBackupEnabled: user.backupMetadata?.autoBackupEnabled ?? true,
+            lastAutoBackupAt: user.backupMetadata?.lastAutoBackupAt,
+            lastManualExportAt: new Date().toISOString(),
+            lastChecksum: result.checksum,
+            snapshotCount: autoSnapshots.length,
+          },
+        },
+        'Data Backup Exported',
+        `Downloaded ${result.encrypted ? 'AES-256 encrypted' : 'checksum-verified'} backup (${result.filename}).`,
+        '📦'
+      );
+      setUser(updatedUser);
+      localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+      syncUser(updatedUser);
+      if (encrypted) setExportPassphrase('');
+      setLocalFeedback({
+        type: 'success',
+        text: `Saved ${result.filename} (${result.encrypted ? 'AES-256-GCM Encrypted' : 'SHA-256 Verified'}).`,
+      });
+    } catch {
+      setLocalFeedback({ type: 'error', text: 'Unable to prepare your backup export right now.' });
+    }
+  };
 
   // Profile Edit States
   const [profileName, setProfileName] = useState(user.name || '');
@@ -225,7 +271,7 @@ const Settings: React.FC<SettingsProps> = ({
       }
     } catch (err) {
       console.error("Account deletion error:", err);
-      alert("Failed to delete account. Please try again.");
+      setPartnerActionNotice({ type: 'error', text: 'Could not delete account right now. Please sign in recently and try again.' });
     } finally {
       setIsDeletingAccount(false);
     }
@@ -235,22 +281,28 @@ const Settings: React.FC<SettingsProps> = ({
     if (!partnerToBlock) return;
     try {
       await blockPartner(user.id, partnerToBlock.id, { id: partnerToBlock.id, name: partnerToBlock.name });
-      const updatedUser = {
-        ...user,
-        partnerId: undefined,
-        partnerName: '',
-        isPartnerLinked: false,
-        partnerRequest: undefined,
-        blockedPartners: [
-          ...(user.blockedPartners || []).filter(b => b.id !== partnerToBlock.id),
-          { id: partnerToBlock.id, name: partnerToBlock.name, dateBlocked: new Date().toISOString() }
-        ]
-      };
+      const updatedUser = appendSecurityEventToUser(
+        {
+          ...user,
+          partnerId: undefined,
+          partnerName: '',
+          isPartnerLinked: false,
+          partnerRequest: undefined,
+          blockedPartners: [
+            ...(user.blockedPartners || []).filter(b => b.id !== partnerToBlock.id),
+            { id: partnerToBlock.id, name: partnerToBlock.name, dateBlocked: new Date().toISOString() }
+          ]
+        },
+        'Partner Blocked',
+        `${partnerToBlock.name} was disconnected and added to your blocked list.`,
+        '🛡️'
+      );
       setUser(updatedUser);
       localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
-      alert(`${partnerToBlock.name} has been blocked.`);
+      setPartnerActionNotice({ type: 'success', text: `${partnerToBlock.name} has been blocked.` });
     } catch (err) {
       console.error("Error blocking partner:", err);
+      setPartnerActionNotice({ type: 'error', text: 'Unable to block partner right now.' });
     } finally {
       setPartnerToBlock(null);
     }
@@ -260,15 +312,21 @@ const Settings: React.FC<SettingsProps> = ({
     if (!partnerToUnblock) return;
     try {
       await unblockPartner(user.id, partnerToUnblock.id);
-      const updatedUser = {
-        ...user,
-        blockedPartners: (user.blockedPartners || []).filter(b => b.id !== partnerToUnblock.id)
-      };
+      const updatedUser = appendSecurityEventToUser(
+        {
+          ...user,
+          blockedPartners: (user.blockedPartners || []).filter(b => b.id !== partnerToUnblock.id)
+        },
+        'Partner Unblocked',
+        `${partnerToUnblock.name} was removed from your blocked list.`,
+        '🔓'
+      );
       setUser(updatedUser);
       localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
-      alert(`${partnerToUnblock.name} has been unblocked.`);
+      setPartnerActionNotice({ type: 'success', text: `${partnerToUnblock.name} has been unblocked.` });
     } catch (err) {
       console.error("Error unblocking partner:", err);
+      setPartnerActionNotice({ type: 'error', text: 'Unable to unblock partner right now.' });
     } finally {
       setPartnerToUnblock(null);
     }
@@ -285,21 +343,43 @@ const Settings: React.FC<SettingsProps> = ({
     setProfileFeedback(null);
     setProfileLoading(true);
     try {
+      const cleanName = sanitizeTextInput(profileName, 80);
+      const cleanEmail = sanitizeTextInput(profileEmail, 160);
+      const nextPassword = profilePassword.trim();
+
+      if (!cleanName) {
+        throw new Error('Please enter your display name.');
+      }
+      if (!isValidEmailAddress(cleanEmail)) {
+        throw new Error('Please enter a valid email address.');
+      }
+      if (nextPassword) {
+        const strength = evaluatePasswordStrength(nextPassword);
+        if (!strength.valid) {
+          throw new Error(strength.error || 'Please choose a stronger password (8+ characters with upper/lowercase, number, and symbol).');
+        }
+      }
+
       let updatedUser = { ...user };
-      updatedUser.name = profileName.trim();
+      let securityChanged = false;
+      updatedUser.name = cleanName;
       if (profileAge.trim()) {
-        updatedUser.age = parseInt(profileAge) || undefined;
+        const parsedAge = parseInt(profileAge, 10);
+        if (!Number.isNaN(parsedAge) && parsedAge >= 10 && parsedAge <= 120) {
+          updatedUser.age = parsedAge;
+        }
       } else {
         delete updatedUser.age;
       }
 
-      // 1. Firebase Auth Update (Email)
+      // 1. Firebase Auth Update (Email & Password)
       const currentUser = auth.currentUser;
       if (currentUser) {
-        if (profileEmail.trim() && profileEmail.trim() !== currentUser.email) {
+        if (cleanEmail && cleanEmail !== currentUser.email) {
           try {
-            await updateEmail(currentUser, profileEmail.trim());
-            updatedUser.email = profileEmail.trim();
+            await updateEmail(currentUser, cleanEmail);
+            updatedUser.email = cleanEmail;
+            securityChanged = true;
           } catch (err: any) {
             if (err?.code === 'auth/requires-recent-login' || String(err?.message || '').includes('requires-recent-login')) {
               throw new Error("Changing your email requires a recent login. Please log out and log in again, then retry.");
@@ -308,11 +388,11 @@ const Settings: React.FC<SettingsProps> = ({
           }
         }
 
-        // 2. Firebase Auth Update (Password)
-        if (profilePassword.trim()) {
+        if (nextPassword) {
           try {
-            await updatePassword(currentUser, profilePassword.trim());
-            localStorage.setItem('lumina_saved_password', profilePassword.trim());
+            await updatePassword(currentUser, nextPassword);
+            await storeLocalCredentialVerifier(cleanEmail || updatedUser.email, nextPassword);
+            securityChanged = true;
           } catch (err: any) {
             if (err?.code === 'auth/requires-recent-login' || String(err?.message || '').includes('requires-recent-login')) {
               throw new Error("Changing your password requires a recent login. Please log out and log in again, then retry.");
@@ -321,11 +401,32 @@ const Settings: React.FC<SettingsProps> = ({
           }
         }
       } else {
-        if (profileEmail.trim()) {
-          updatedUser.email = profileEmail.trim();
+        if (cleanEmail && cleanEmail !== updatedUser.email) {
+          updatedUser.email = cleanEmail;
+          securityChanged = true;
         }
-        if (profilePassword.trim()) {
-          localStorage.setItem('lumina_saved_password', profilePassword.trim());
+        if (nextPassword) {
+          await storeLocalCredentialVerifier(cleanEmail || updatedUser.email, nextPassword);
+          securityChanged = true;
+        }
+      }
+
+      localStorage.removeItem('lumina_saved_password');
+
+      if (securityChanged) {
+        updatedUser = appendSecurityEventToUser(
+          updatedUser,
+          nextPassword ? 'Password Updated' : 'Account Email Updated',
+          nextPassword
+            ? 'Your account password was changed from My Profile.'
+            : `Your account email was updated to ${cleanEmail}.`,
+          '🔐'
+        );
+        if (nextPassword) {
+          updatedUser.securitySettings = {
+            ...getDefaultSecuritySettings(updatedUser.securitySettings),
+            lastPasswordChangeAt: new Date().toISOString(),
+          };
         }
       }
 
@@ -334,7 +435,7 @@ const Settings: React.FC<SettingsProps> = ({
       localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
       await syncUser(updatedUser);
 
-      setProfileFeedback({ type: 'success', text: 'Profile updated successfully! ✨' });
+      setProfileFeedback({ type: 'success', text: 'Profile updated securely! ✨' });
       setProfilePassword('');
     } catch (err: any) {
       console.error("Error updating profile:", err);
@@ -393,47 +494,62 @@ const Settings: React.FC<SettingsProps> = ({
     syncStatus();
   }, []);
 
-  const parseAndImportJSON = (jsonText: string) => {
+  const parseAndImportJSON = async (jsonText: string, passphrase?: string) => {
+    setLocalFeedback(null);
     try {
-      const parsed = JSON.parse(jsonText);
-      if (!parsed || (!parsed.profile && !parsed.id)) {
-        throw new Error('Incorrect file format. Please upload a valid Lumina backup.');
+      const parsed = await verifyAndParseBackupFile(jsonText, passphrase);
+      const restored = applyBackupToUser(user, parsed.data);
+      const audited = appendSecurityEventToUser(
+        restored,
+        'Backup Data Restored',
+        `Restored ${parsed.recordCount} wellness records from a ${parsed.isEncrypted ? 'AES-256 encrypted' : parsed.checksumVerified ? 'SHA-256 verified' : 'portable'} backup file.`,
+        '📥'
+      );
+
+      setUser(audited);
+      localStorage.setItem('lumina_user', JSON.stringify(audited));
+      if (localStorage.getItem('lumina_biometric_user')) {
+        localStorage.setItem('lumina_biometric_user', JSON.stringify(audited));
       }
+      syncUser(audited);
+      setPendingEncryptedImport(null);
+      setImportPassphrase('');
 
-      const importedUser: User = {
-        ...user,
-        name: parsed.profile?.name ?? parsed.name ?? user.name,
-        email: parsed.profile?.email ?? parsed.email ?? user.email,
-        theme: parsed.profile?.theme ?? parsed.theme ?? user.theme,
-        tempUnit: parsed.profile?.tempUnit ?? parsed.tempUnit ?? user.tempUnit ?? 'C',
-        isPregnancyMode: parsed.profile?.isPregnancyMode ?? parsed.isPregnancyMode ?? user.isPregnancyMode ?? false,
-        onboardingCompleted: parsed.profile?.onboardingCompleted ?? parsed.onboardingCompleted ?? user.onboardingCompleted ?? true,
-        waterGoal: parsed.profile?.waterGoal ?? parsed.waterGoal ?? user.waterGoal ?? 8,
-        cycleLength: parsed.cyclePredictions?.cycleLength ?? parsed.cycleLength ?? user.cycleLength ?? 28,
-        periodLength: parsed.cyclePredictions?.periodLength ?? parsed.periodLength ?? user.periodLength ?? 5,
-        lastPeriodStart: parsed.cyclePredictions?.lastPeriodStart ?? parsed.lastPeriodStart ?? user.lastPeriodStart,
-        periods: parsed.periods ?? user.periods ?? [],
-        periodDates: parsed.cyclePredictions?.periodDates ?? parsed.periodDates ?? user.periodDates ?? [],
-        periodLogs: parsed.periodLogs ?? user.periodLogs ?? [],
-        moodLogs: parsed.moodLogs ?? user.moodLogs ?? [],
-        sexualActivityLogs: parsed.sexualActivityLogs ?? user.sexualActivityLogs ?? [],
-        sharingSettings: parsed.sharingSettings ?? user.sharingSettings,
-        birthControlConfig: parsed.birthControlConfig ?? user.birthControlConfig,
-        notificationSettings: parsed.notificationSettings ?? user.notificationSettings,
-        symptoms: parsed.symptoms ?? user.symptoms ?? [],
-        diaryEntries: parsed.diaryEntries ?? user.diaryEntries ?? [],
-        bcLogs: parsed.bcLogs ?? user.bcLogs ?? [],
-        tempLogs: parsed.tempLogs ?? user.tempLogs ?? []
-      };
-
-      setUser(importedUser);
-      localStorage.setItem('lumina_user', JSON.stringify(importedUser));
-      localStorage.setItem('lumina_biometric_user', JSON.stringify(importedUser));
-      syncUser(importedUser);
-
-      setLocalFeedback({ type: 'success', text: 'Your health records have been restored successfully! ✨' });
+      setLocalFeedback({
+        type: 'success',
+        text: `Restored ${parsed.recordCount} records (${parsed.checksumVerified ? 'SHA-256 integrity verified' : 'legacy format imported'}). ✨`,
+      });
     } catch (e: any) {
+      if (e?.message === 'PASSPHRASE_REQUIRED') {
+        setPendingEncryptedImport(jsonText);
+        setLocalFeedback({
+          type: 'error',
+          text: 'This backup is AES-256 encrypted. Enter your backup passphrase below to decrypt and restore it.',
+        });
+        return;
+      }
       setLocalFeedback({ type: 'error', text: `Failed to restore: ${e.message || 'Invalid backup file structure.'}` });
+    }
+  };
+
+  const handleRestoreSnapshot = async (snapshot: AutoBackupSnapshot) => {
+    try {
+      const restored = applyBackupToUser(user, snapshot.payload);
+      const audited = appendSecurityEventToUser(
+        restored,
+        'Snapshot Restored',
+        `Restored automatic snapshot from ${new Date(snapshot.createdAt).toLocaleString()} (${snapshot.recordCount} records).`,
+        '⏪'
+      );
+      setUser(audited);
+      localStorage.setItem('lumina_user', JSON.stringify(audited));
+      syncUser(audited);
+      setLocalFeedback({
+        type: 'success',
+        text: `Snapshot from ${new Date(snapshot.createdAt).toLocaleString()} restored cleanly! ✨`,
+      });
+    } catch {
+      setLocalFeedback({ type: 'error', text: 'Unable to restore that snapshot.' });
     }
   };
 
@@ -627,15 +743,75 @@ const Settings: React.FC<SettingsProps> = ({
     }
   };
 
-  const handleFeedbackSubmit = (e: React.FormEvent) => {
+  const handleFeedbackSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!feedbackText.trim()) return;
-    setFeedbackSubmitted(true);
-    setTimeout(() => {
-      setFeedbackSubmitted(false);
-      setShowFeedbackModal(null);
-      setFeedbackText('');
-    }, 2000);
+    setFeedbackError(null);
+
+    if (isHoneypotTriggered(feedbackHoneypot)) {
+      setFeedbackError('Unable to verify form submission. Please refresh and try again.');
+      return;
+    }
+
+    const cleanEmail = sanitizeTextInput(feedbackEmail, 160);
+    const cleanMessage = sanitizeTextInput(feedbackText, 2000);
+
+    if (!isValidEmailAddress(cleanEmail)) {
+      setFeedbackError('Please enter a valid contact email address.');
+      return;
+    }
+    if (cleanMessage.length < 10) {
+      setFeedbackError('Please share at least 10 characters so our team can assist you properly.');
+      return;
+    }
+
+    const limit = checkClientRateLimit('support_form', 3, 60_000);
+    if (!limit.allowed) {
+      setFeedbackError(`Please wait ${limit.retryAfterSec}s before sending another support request.`);
+      return;
+    }
+
+    setFeedbackLoading(true);
+    try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'LuminaWebApp',
+      };
+      if (auth.currentUser) {
+        try {
+          const token = await auth.currentUser.getIdToken();
+          if (token) headers.Authorization = `Bearer ${token}`;
+        } catch {}
+      }
+
+      const res = await fetch('/api/support', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          email: cleanEmail,
+          type: showFeedbackModal || 'support',
+          message: cleanMessage,
+          website: feedbackHoneypot,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || 'Could not send your message right now.');
+      }
+
+      setFeedbackTicketId(data.ticketId || null);
+      setFeedbackSubmitted(true);
+      setTimeout(() => {
+        setFeedbackSubmitted(false);
+        setShowFeedbackModal(null);
+        setFeedbackText('');
+        setFeedbackTicketId(null);
+        setFeedbackError(null);
+      }, 3200);
+    } catch (err: any) {
+      setFeedbackError(err?.message || 'Unable to submit right now. Please try again.');
+    } finally {
+      setFeedbackLoading(false);
+    }
   };
 
   return (
@@ -719,17 +895,17 @@ const Settings: React.FC<SettingsProps> = ({
                   </div>
                   <div>
                     <h4 className="text-sm font-semibold text-stone-800 group-hover:text-pink-600 transition-colors">My Cycle</h4>
-                    <p className="text-[11px] text-stone-400">Cycle length, period duration & pregnancy mode</p>
+                    <p className="text-[11px] text-stone-600">Cycle length, period duration & pregnancy mode</p>
                   </div>
                 </div>
-                <ChevronRight className="w-4 h-4 text-pink-300 group-hover:text-pink-500 group-hover:translate-x-0.5 transition-all" />
+                <ChevronRight className="w-4 h-4 text-pink-400 group-hover:text-pink-600 group-hover:translate-x-0.5 transition-all" />
               </button>
             </div>
           </div>
 
           {/* Group 2: Personal & Privacy */}
           <div className="space-y-2">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-pink-500 ml-4">Personal & Privacy</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-pink-600 ml-4">Personal & Privacy</span>
             <div className="bg-white/90 backdrop-blur-md rounded-[2rem] border border-pink-100/50 shadow-sm p-2 space-y-1 overflow-hidden">
               {[
                 {
@@ -741,19 +917,19 @@ const Settings: React.FC<SettingsProps> = ({
                 },
                 {
                   id: 'privacy_security' as const,
-                  label: 'Privacy & Security',
-                  desc: 'Face ID, Security PIN, privacy policy & terms',
-                  color: 'bg-indigo-50 text-indigo-500',
+                  label: 'Privacy & Security Vault',
+                  desc: 'Privacy Dashboard, 2FA, active sessions, Face ID & PIN',
+                  color: 'bg-indigo-50 text-indigo-600',
                   emoji: '🛡️',
                 },
                 {
                   id: 'backup_sync' as const,
                   label: 'Backup & Sync',
-                  desc: 'Sync to cloud, download my data & upload backup',
-                  color: 'bg-sky-50 text-sky-500',
+                  desc: 'Encrypted snapshots, cloud sync & verified recovery',
+                  color: 'bg-sky-50 text-sky-600',
                   emoji: '☁️',
                 },
-              ].map((item, idx) => (
+              ].map((item) => (
                 <button
                   key={item.id}
                   onClick={() => setActiveSubTab(item.id)}
@@ -765,10 +941,10 @@ const Settings: React.FC<SettingsProps> = ({
                     </div>
                     <div>
                       <h4 className="text-sm font-semibold text-stone-800 group-hover:text-pink-600 transition-colors">{item.label}</h4>
-                      <p className="text-[11px] text-stone-400">{item.desc}</p>
+                      <p className="text-[11px] text-stone-600">{item.desc}</p>
                     </div>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-pink-300 group-hover:text-pink-500 group-hover:translate-x-0.5 transition-all" />
+                  <ChevronRight className="w-4 h-4 text-pink-400 group-hover:text-pink-600 group-hover:translate-x-0.5 transition-all" />
                 </button>
               ))}
             </div>
@@ -776,28 +952,28 @@ const Settings: React.FC<SettingsProps> = ({
 
           {/* Group 3: Connected & Wellness */}
           <div className="space-y-2">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-pink-500 ml-4">Connected & Wellness</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-pink-600 ml-4">Connected & Wellness</span>
             <div className="bg-white/90 backdrop-blur-md rounded-[2rem] border border-pink-100/50 shadow-sm p-2 space-y-1 overflow-hidden">
               {[
                 {
                   id: 'notifications' as const,
                   label: 'Reminders & Notifications',
                   desc: 'Cycle reminders, ovulation alerts & friendly tone',
-                  color: 'bg-purple-50 text-purple-500',
+                  color: 'bg-purple-50 text-purple-600',
                   emoji: '🔔',
                 },
                 {
                   id: 'partner' as const,
                   label: 'Partner Mode',
                   desc: 'Share supportive cycle updates with your partner',
-                  color: 'bg-rose-50 text-rose-500',
+                  color: 'bg-rose-50 text-rose-600',
                   emoji: '🧸',
                 },
                 {
                   id: 'music_sanctuary' as const,
                   label: 'Music & Sanctuary',
                   desc: 'Relaxing ambient frequencies & sound volume',
-                  color: 'bg-blue-50 text-blue-500',
+                  color: 'bg-blue-50 text-blue-600',
                   emoji: '🎵',
                 },
                 {
@@ -819,10 +995,10 @@ const Settings: React.FC<SettingsProps> = ({
                     </div>
                     <div>
                       <h4 className="text-sm font-semibold text-stone-800 group-hover:text-pink-600 transition-colors">{item.label}</h4>
-                      <p className="text-[11px] text-stone-400">{item.desc}</p>
+                      <p className="text-[11px] text-stone-600">{item.desc}</p>
                     </div>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-pink-300 group-hover:text-pink-500 group-hover:translate-x-0.5 transition-all" />
+                  <ChevronRight className="w-4 h-4 text-pink-400 group-hover:text-pink-600 group-hover:translate-x-0.5 transition-all" />
                 </button>
               ))}
             </div>
@@ -830,22 +1006,22 @@ const Settings: React.FC<SettingsProps> = ({
 
           {/* Group 4: Support & Account */}
           <div className="space-y-2">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-pink-500 ml-4">Support & Account</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-pink-600 ml-4">Support & Account</span>
             <div className="bg-white/90 backdrop-blur-md rounded-[2rem] border border-pink-100/50 shadow-sm p-2 space-y-1 overflow-hidden">
               <button
                 onClick={() => setActiveSubTab('help_support')}
                 className="w-full flex items-center justify-between p-3.5 hover:bg-pink-50/30 active:scale-[0.99] transition-all rounded-2xl text-left group border-b border-pink-50/30"
               >
                 <div className="flex items-center gap-3.5">
-                  <div className="w-10 h-10 rounded-2xl bg-sky-50 text-sky-500 flex items-center justify-center text-lg shadow-sm shrink-0 group-hover:scale-105 transition-transform">
+                  <div className="w-10 h-10 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center text-lg shadow-sm shrink-0 group-hover:scale-105 transition-transform">
                     ❓
                   </div>
                   <div>
                     <h4 className="text-sm font-semibold text-stone-800 group-hover:text-pink-600 transition-colors">Help & Support</h4>
-                    <p className="text-[11px] text-stone-400">FAQs, contact support, bug reports & suggestions</p>
+                    <p className="text-[11px] text-stone-600">FAQs, contact support, bug reports & suggestions</p>
                   </div>
                 </div>
-                <ChevronRight className="w-4 h-4 text-pink-300 group-hover:text-pink-500 group-hover:translate-x-0.5 transition-all" />
+                <ChevronRight className="w-4 h-4 text-pink-400 group-hover:text-pink-600 group-hover:translate-x-0.5 transition-all" />
               </button>
 
               <button
@@ -858,10 +1034,10 @@ const Settings: React.FC<SettingsProps> = ({
                   </div>
                   <div>
                     <h4 className="text-sm font-semibold text-stone-800 group-hover:text-pink-600 transition-colors">Account</h4>
-                    <p className="text-[11px] text-stone-400">Log out & account deletion</p>
+                    <p className="text-[11px] text-stone-600">Log out & account deletion</p>
                   </div>
                 </div>
-                <ChevronRight className="w-4 h-4 text-pink-300 group-hover:text-pink-500 group-hover:translate-x-0.5 transition-all" />
+                <ChevronRight className="w-4 h-4 text-pink-400 group-hover:text-pink-600 group-hover:translate-x-0.5 transition-all" />
               </button>
             </div>
           </div>
@@ -1301,19 +1477,47 @@ const Settings: React.FC<SettingsProps> = ({
 
               {/* Password */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-stone-700 flex items-center gap-1.5">
+                <label htmlFor="settings-profile-password" className="text-xs font-bold text-stone-700 flex items-center gap-1.5">
                   <Lock size={14} className="text-pink-500" />
                   Change Password
                 </label>
                 <input 
+                  id="settings-profile-password"
                   type="password" 
                   value={profilePassword} 
                   onChange={(e) => setProfilePassword(e.target.value)}
-                  className="bg-pink-50/30 px-4 py-3 rounded-2xl outline-none font-medium text-xs text-stone-800 border border-pink-100 placeholder-stone-400 shadow-inner w-full focus:border-pink-300 transition-colors"
+                  className="bg-pink-50/30 px-4 py-3 rounded-2xl outline-none font-medium text-xs text-stone-800 border border-pink-100 placeholder-stone-500 shadow-inner w-full focus:border-pink-300 transition-colors"
                   placeholder="••••••••"
-                  minLength={6}
                 />
-                <span className="text-[11px] text-stone-400">Leave blank to keep your current password (minimum 6 characters)</span>
+                {profilePassword ? (() => {
+                  const pw = evaluatePasswordStrength(profilePassword);
+                  return (
+                    <div className="space-y-1.5 pt-1">
+                      <div className="flex items-center gap-1.5">
+                        {[0, 1, 2, 3].map((idx) => (
+                          <div
+                            key={idx}
+                            className={`h-1.5 flex-1 rounded-full ${
+                              idx < pw.score
+                                ? pw.score >= 4
+                                  ? 'bg-emerald-500'
+                                  : pw.score === 3
+                                    ? 'bg-amber-400'
+                                    : 'bg-rose-400'
+                                : 'bg-stone-200'
+                            }`}
+                          />
+                        ))}
+                        <span className="text-[11px] font-bold text-stone-700 ml-1">{pw.label}</span>
+                      </div>
+                      <p className="text-[11px] text-stone-600">
+                        {pw.valid ? 'Strong password meets Lumina protection standards.' : pw.error}
+                      </p>
+                    </div>
+                  );
+                })() : (
+                  <span className="text-[11px] text-stone-600 block">Leave blank to keep your current password (8+ chars, upper/lowercase, number & symbol)</span>
+                )}
               </div>
 
               {/* Save Button */}
@@ -1335,16 +1539,66 @@ const Settings: React.FC<SettingsProps> = ({
       /* ========================================================================= */
       ) : activeSubTab === 'privacy_security' ? (
         <div className="space-y-6 animate-fadeIn">
-          {/* Biometrics & PIN Card */}
+          {partnerActionNotice && (
+            <div
+              role="status"
+              className={`p-4 rounded-2xl text-xs font-semibold border flex items-center justify-between gap-2 ${
+                partnerActionNotice.type === 'success'
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                  : 'bg-rose-50 text-rose-700 border-rose-200'
+              }`}
+            >
+              <span>{partnerActionNotice.text}</span>
+              <button
+                type="button"
+                onClick={() => setPartnerActionNotice(null)}
+                aria-label="Dismiss notice"
+                className="p-1 rounded-full hover:bg-black/5 cursor-pointer"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          )}
+
+          {/* Full Privacy Dashboard & Account Protection */}
+          <PrivacyDashboard
+            user={user}
+            onUpdateUser={(next) => {
+              setUser(next);
+              localStorage.setItem('lumina_user', JSON.stringify(next));
+              syncUser(next);
+            }}
+            onLogoutAllDevices={() => {
+              if (onLogout) onLogout();
+            }}
+            onRequestDeleteAccount={() => {
+              setDeleteAccountInput('');
+              setShowDeleteAccountModal(true);
+            }}
+            onNavigateToBackup={() => setActiveSubTab('backup_sync')}
+            embedded={true}
+          />
+
+          {/* Quick Device App Lock (Biometrics & Journal PIN) */}
           <section className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-pink-50 space-y-6">
-            <div className="space-y-1">
-              <h3 className="text-xl font-serif font-bold text-stone-800 flex items-center gap-2">
-                <Lock size={20} className="text-pink-500" />
-                Privacy & Security
-              </h3>
-              <p className="text-xs text-stone-500 leading-relaxed">
-                Control your security preferences, app lock, and privacy protection settings.
-              </p>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="space-y-1">
+                <h3 className="text-xl font-serif font-bold text-stone-800 flex items-center gap-2">
+                  <Lock size={20} className="text-pink-500" />
+                  Device App Lock & Cookie Controls
+                </h3>
+                <p className="text-xs text-stone-600 leading-relaxed">
+                  Configure device-level biometric unlock, diary PIN, and cookie consent choices.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent('lumina:open-cookie-settings'))}
+                className="px-3.5 py-2 rounded-xl bg-pink-50 hover:bg-pink-100 text-pink-700 border border-pink-200 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+              >
+                <Cookie size={14} />
+                <span>Manage Cookie Preferences</span>
+              </button>
             </div>
 
             <div className="space-y-5">
@@ -1356,11 +1610,12 @@ const Settings: React.FC<SettingsProps> = ({
                       <Fingerprint size={15} className="text-pink-500" />
                       Face ID / Fingerprint Login
                     </p>
-                    <p className="text-[11px] text-stone-400">Unlock Lumina quickly and securely using your device biometrics</p>
+                    <p className="text-[11px] text-stone-600">Unlock Lumina quickly and securely using your device biometrics</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input 
                       type="checkbox" 
+                      aria-label="Toggle Face ID or Fingerprint login"
                       className="sr-only peer"
                       checked={!!localStorage.getItem('lumina_biometric_user')}
                       onChange={(e) => {
@@ -1379,12 +1634,12 @@ const Settings: React.FC<SettingsProps> = ({
 
                 <div className="pt-2 border-t border-rose-100/40">
                   {localStorage.getItem('lumina_biometric_user') ? (
-                    <span className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
+                    <span className="text-[11px] text-emerald-700 font-semibold flex items-center gap-1">
                       <CheckCircle2 size={13} />
                       Enabled • Quick biometric unlock active
                     </span>
                   ) : (
-                    <span className="text-[11px] text-stone-400 font-medium">
+                    <span className="text-[11px] text-stone-600 font-medium">
                       Disabled • Unlock with your password or PIN
                     </span>
                   )}
@@ -1393,12 +1648,13 @@ const Settings: React.FC<SettingsProps> = ({
 
               {/* Set custom 4-digit PIN */}
               <div className="bg-rose-50/20 p-5 rounded-3xl border border-rose-100/40 flex flex-col gap-2">
-                <label className="text-xs font-bold text-stone-700 flex items-center gap-1.5">
+                <label htmlFor="settings-diary-pin" className="text-xs font-bold text-stone-700 flex items-center gap-1.5">
                   <Lock size={14} className="text-pink-500" />
                   Security PIN
                 </label>
                 <div className="relative">
                   <input 
+                    id="settings-diary-pin"
                     type="text" 
                     maxLength={4}
                     value={user.diaryPin || '1234'} 
@@ -1416,7 +1672,7 @@ const Settings: React.FC<SettingsProps> = ({
                     placeholder="1234"
                   />
                 </div>
-                <span className="text-[11px] text-stone-400">Use this 4-digit PIN to keep your personal journal notes and wellness entries private</span>
+                <span className="text-[11px] text-stone-600">Use this 4-digit PIN to keep your personal journal notes and wellness entries private</span>
               </div>
             </div>
           </section>
@@ -1427,7 +1683,7 @@ const Settings: React.FC<SettingsProps> = ({
               <ShieldAlert size={18} className="text-pink-500" />
               Blocked Connections
             </h3>
-            <p className="text-xs text-stone-500 leading-relaxed">
+            <p className="text-xs text-stone-600 leading-relaxed">
               Manage partners you have blocked. Blocked partners cannot send you requests or view your cycle updates.
             </p>
 
@@ -1438,13 +1694,13 @@ const Settings: React.FC<SettingsProps> = ({
                     <div>
                       <p className="text-xs font-bold text-gray-800">{bp.name}</p>
                       {bp.dateBlocked && (
-                        <p className="text-[10px] text-gray-400">Blocked on {new Date(bp.dateBlocked).toLocaleDateString()}</p>
+                        <p className="text-[11px] text-gray-600">Blocked on {new Date(bp.dateBlocked).toLocaleDateString()}</p>
                       )}
                     </div>
                     <button
                       type="button"
                       onClick={() => setPartnerToUnblock({ id: bp.id, name: bp.name })}
-                      className="px-4 py-2 bg-white border border-pink-200 text-pink-600 hover:bg-pink-50 text-xs font-bold rounded-xl transition-all cursor-pointer shadow-sm"
+                      className="px-4 py-2 bg-white border border-pink-200 text-pink-700 hover:bg-pink-50 text-xs font-bold rounded-xl transition-all cursor-pointer shadow-sm"
                     >
                       Unblock
                     </button>
@@ -1453,8 +1709,8 @@ const Settings: React.FC<SettingsProps> = ({
               </div>
             ) : (
               <div className="p-5 bg-rose-50/20 rounded-2xl text-center space-y-1 border border-pink-50">
-                <p className="text-xs font-semibold text-stone-600">You haven’t blocked anyone.</p>
-                <p className="text-[11px] text-stone-400">Anyone you block will appear here, and you can unblock them at any time.</p>
+                <p className="text-xs font-semibold text-stone-700">You haven’t blocked anyone.</p>
+                <p className="text-[11px] text-stone-600">Anyone you block will appear here, and you can unblock them at any time.</p>
               </div>
             )}
           </section>
@@ -1465,7 +1721,7 @@ const Settings: React.FC<SettingsProps> = ({
               <ShieldCheck size={18} className="text-pink-500" />
               Your Privacy & Terms
             </h3>
-            <p className="text-xs text-stone-500 leading-relaxed">
+            <p className="text-xs text-stone-600 leading-relaxed">
               We believe your health data is deeply personal. Learn how Lumina protects your rights and privacy.
             </p>
 
@@ -1475,13 +1731,13 @@ const Settings: React.FC<SettingsProps> = ({
                   <Shield size={14} className="text-pink-500" />
                   Privacy Policy
                 </h4>
-                <p className="text-xs text-stone-500 leading-relaxed">
+                <p className="text-xs text-stone-600 leading-relaxed">
                   We never sell or monetize your personal cycle or health records. You own 100% of your data.
                 </p>
                 <button
                   type="button"
                   onClick={() => setShowPrivacyModal(true)}
-                  className="text-xs text-pink-600 font-bold hover:underline cursor-pointer flex items-center gap-1"
+                  className="text-xs text-pink-700 font-bold hover:underline cursor-pointer flex items-center gap-1"
                 >
                   Read Privacy Policy &rarr;
                 </button>
@@ -1492,13 +1748,13 @@ const Settings: React.FC<SettingsProps> = ({
                   <FileText size={14} className="text-pink-500" />
                   Terms of Service
                 </h4>
-                <p className="text-xs text-stone-500 leading-relaxed">
+                <p className="text-xs text-stone-600 leading-relaxed">
                   Lumina provides supportive cycle estimations and wellness insights to help you understand your body.
                 </p>
                 <button
                   type="button"
                   onClick={() => setShowTermsModal(true)}
-                  className="text-xs text-pink-600 font-bold hover:underline cursor-pointer flex items-center gap-1"
+                  className="text-xs text-pink-700 font-bold hover:underline cursor-pointer flex items-center gap-1"
                 >
                   Read Terms of Service &rarr;
                 </button>
@@ -1512,16 +1768,112 @@ const Settings: React.FC<SettingsProps> = ({
       /* ========================================================================= */
       ) : activeSubTab === 'backup_sync' ? (
         <div className="space-y-6 animate-fadeIn">
-          {/* Cloud Sync */}
+          {/* Cloud Sync & Automatic Encrypted Snapshots */}
           <section className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-pink-50 space-y-6">
             <div className="space-y-1">
               <h3 className="text-xl font-serif font-bold text-stone-800 flex items-center gap-2">
                 <UploadCloud size={20} className="text-pink-500" />
-                Backup & Sync
+                Backup, Encryption & Recovery
               </h3>
-              <p className="text-xs text-stone-500 leading-relaxed">
-                Keep your health logs, notes, and cycle history safe and synced across your devices.
+              <p className="text-xs text-stone-600 leading-relaxed">
+                Keep your health logs, notes, and cycle history safe with AES-256 encrypted snapshots, cloud sync, and integrity-verified exports.
               </p>
+            </div>
+
+            {/* Automatic Local Encrypted Backup Snapshots */}
+            <div className="p-6 bg-indigo-50/30 rounded-3xl border border-indigo-100/60 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <h4 className="text-xs font-bold text-stone-800 flex items-center gap-1.5">
+                    <ShieldCheck size={15} className="text-indigo-600" />
+                    Automatic AES-256 Encrypted Snapshots
+                  </h4>
+                  <p className="text-xs text-stone-600">
+                    Automatically saves verified encrypted recovery points on your device whenever your records change.
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    aria-label="Enable automatic encrypted snapshots"
+                    className="sr-only peer"
+                    checked={user.backupMetadata?.autoBackupEnabled !== false}
+                    onChange={(e) => {
+                      const nextUser: User = {
+                        ...user,
+                        backupMetadata: {
+                          autoBackupEnabled: e.target.checked,
+                          lastAutoBackupAt: user.backupMetadata?.lastAutoBackupAt,
+                          lastManualExportAt: user.backupMetadata?.lastManualExportAt,
+                          lastChecksum: user.backupMetadata?.lastChecksum,
+                          snapshotCount: autoSnapshots.length,
+                        },
+                      };
+                      setUser(nextUser);
+                      localStorage.setItem('lumina_user', JSON.stringify(nextUser));
+                      syncUser(nextUser);
+                    }}
+                  />
+                  <div className="w-10 h-6 bg-indigo-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                </label>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                <span className="text-[11px] text-stone-600">
+                  {user.backupMetadata?.lastAutoBackupAt
+                    ? `Last snapshot: ${new Date(user.backupMetadata.lastAutoBackupAt).toLocaleString()}`
+                    : 'No snapshots saved yet in this session'}
+                </span>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const snap = await saveAutomaticEncryptedSnapshot(user, { symptoms, diaryEntries, bcLogs, tempLogs, reminders });
+                    if (snap) {
+                      const nextList = await listAutomaticSnapshots(user.id);
+                      setAutoSnapshots(nextList);
+                      const nextUser: User = {
+                        ...user,
+                        backupMetadata: {
+                          autoBackupEnabled: user.backupMetadata?.autoBackupEnabled ?? true,
+                          lastAutoBackupAt: snap.createdAt,
+                          lastManualExportAt: user.backupMetadata?.lastManualExportAt,
+                          lastChecksum: snap.checksum,
+                          snapshotCount: nextList.length,
+                        },
+                      };
+                      setUser(nextUser);
+                      localStorage.setItem('lumina_user', JSON.stringify(nextUser));
+                      setLocalFeedback({ type: 'success', text: `Encrypted snapshot saved (${snap.recordCount} records, SHA-256 ${snap.checksum.slice(0, 10)}…).` });
+                    }
+                  }}
+                  className="px-3.5 py-2 bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50 rounded-xl text-xs font-bold cursor-pointer transition-colors"
+                >
+                  Save Snapshot Now
+                </button>
+              </div>
+
+              {autoSnapshots.length > 0 && (
+                <div className="space-y-2 pt-2 border-t border-indigo-100/60">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-indigo-700">Recovery History (Last {autoSnapshots.length})</p>
+                  {autoSnapshots.map((snap) => (
+                    <div key={snap.id} className="flex flex-wrap items-center justify-between gap-2 p-3 bg-white rounded-2xl border border-indigo-100">
+                      <div className="space-y-0.5">
+                        <p className="text-xs font-bold text-stone-800">{new Date(snap.createdAt).toLocaleString()}</p>
+                        <p className="text-[11px] text-stone-600">
+                          {snap.recordCount} records • {(snap.sizeBytes / 1024).toFixed(1)} KB • SHA-256 {snap.checksum.slice(0, 8)}…
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRestoreSnapshot(snap)}
+                        className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs rounded-xl cursor-pointer transition-colors"
+                      >
+                        Restore
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Cloud Sync Card */}
@@ -1530,8 +1882,8 @@ const Settings: React.FC<SettingsProps> = ({
                 <h4 className="text-xs font-bold text-stone-800 flex items-center gap-1.5">
                   <span>☁️</span> Cloud Sync
                 </h4>
-                <p className="text-xs text-stone-500 leading-relaxed">
-                  Your data syncs in the background, but you can also back up or restore manually anytime.
+                <p className="text-xs text-stone-600 leading-relaxed">
+                  Your data syncs automatically when signed in, or you can manually push or restore your cloud profile anytime.
                 </p>
               </div>
 
@@ -1556,33 +1908,58 @@ const Settings: React.FC<SettingsProps> = ({
                 <button
                   type="button"
                   onClick={handleCloudRestoreNow}
-                  className="py-3.5 px-4 bg-white border border-pink-200 text-pink-600 font-bold rounded-2xl text-xs flex items-center justify-center gap-2 shadow-sm hover:bg-pink-50/50 transition-all cursor-pointer"
+                  className="py-3.5 px-4 bg-white border border-pink-200 text-pink-700 font-bold rounded-2xl text-xs flex items-center justify-center gap-2 shadow-sm hover:bg-pink-50/50 transition-all cursor-pointer"
                 >
                   <RefreshCw size={14} />
-                  <span>Restore Data</span>
+                  <span>Restore From Cloud</span>
                 </button>
               </div>
             </div>
 
-            {/* Download My Data */}
+            {/* Download My Data (Portable or Passphrase-Encrypted) */}
             <div className="space-y-3 pt-2">
               <div className="space-y-1">
                 <h4 className="text-xs font-bold text-stone-800 flex items-center gap-1.5">
                   <Download size={14} className="text-pink-500" />
-                  Download My Data
+                  Export & Download My Data
                 </h4>
-                <p className="text-xs text-stone-500">
-                  Save a private backup copy of your complete cycle history, symptoms, and journal notes.
+                <p className="text-xs text-stone-600">
+                  Save a SHA-256 verified portable copy or lock it with an AES-256-GCM passphrase before downloading.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={handleExportData}
-                className="w-full py-4 bg-gradient-to-r from-pink-500 to-rose-400 hover:opacity-95 active:scale-95 text-white font-bold rounded-2xl text-xs flex items-center justify-center gap-2 shadow-md cursor-pointer transition-all"
-              >
-                <Download size={15} />
-                <span>Download My Data</span>
-              </button>
+
+              <div className="space-y-2">
+                <label htmlFor="backup-export-passphrase" className="text-xs font-semibold text-stone-700 block">
+                  Optional Encryption Passphrase (6+ characters for AES-256 encrypted file)
+                </label>
+                <input
+                  id="backup-export-passphrase"
+                  type="password"
+                  value={exportPassphrase}
+                  onChange={(e) => setExportPassphrase(e.target.value)}
+                  placeholder="Enter passphrase for encrypted export (optional)"
+                  className="w-full bg-pink-50/20 border border-pink-100 rounded-2xl px-4 py-2.5 text-xs text-stone-800 outline-none focus:border-pink-300"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => handleExportData(false)}
+                  className="py-3.5 px-4 bg-white border border-pink-200 text-pink-700 hover:bg-pink-50 font-bold rounded-2xl text-xs flex items-center justify-center gap-2 shadow-sm cursor-pointer transition-all"
+                >
+                  <Download size={15} />
+                  <span>Download Portable JSON</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleExportData(true)}
+                  className="py-3.5 px-4 bg-gradient-to-r from-pink-500 to-rose-400 hover:opacity-95 text-white font-bold rounded-2xl text-xs flex items-center justify-center gap-2 shadow-md cursor-pointer transition-all"
+                >
+                  <KeyRound size={15} />
+                  <span>Download Encrypted Backup</span>
+                </button>
+              </div>
             </div>
 
             {/* Upload Backup File */}
@@ -1590,10 +1967,10 @@ const Settings: React.FC<SettingsProps> = ({
               <div className="space-y-1">
                 <h4 className="text-xs font-bold text-stone-800 flex items-center gap-1.5">
                   <FileText size={14} className="text-pink-500" />
-                  Upload Backup File
+                  Restore From Backup File
                 </h4>
-                <p className="text-xs text-stone-500">
-                  Restore your cycle history and notes from a previously downloaded backup file.
+                <p className="text-xs text-stone-600">
+                  Restore your cycle history and notes from an encrypted or portable Lumina backup file. Integrity checksums are verified automatically.
                 </p>
               </div>
 
@@ -1603,6 +1980,36 @@ const Settings: React.FC<SettingsProps> = ({
                 }`}>
                   {localFeedback.type === 'success' ? <CheckCircle2 size={16} /> : <ShieldAlert size={16} />}
                   <span>{localFeedback.text}</span>
+                </div>
+              )}
+
+              {pendingEncryptedImport && (
+                <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 space-y-3">
+                  <p className="text-xs font-bold text-amber-900">Enter Passphrase to Decrypt Backup</p>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <input
+                      type="password"
+                      value={importPassphrase}
+                      onChange={(e) => setImportPassphrase(e.target.value)}
+                      placeholder="Backup passphrase"
+                      aria-label="Backup decryption passphrase"
+                      className="flex-1 bg-white border border-amber-200 rounded-xl px-3.5 py-2 text-xs text-stone-800 outline-none focus:border-amber-400"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => parseAndImportJSON(pendingEncryptedImport, importPassphrase)}
+                      className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl cursor-pointer transition-colors"
+                    >
+                      Unlock & Restore
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setPendingEncryptedImport(null); setImportPassphrase(''); }}
+                      className="px-3 py-2 bg-white border border-amber-200 text-stone-700 font-semibold text-xs rounded-xl cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -1636,6 +2043,7 @@ const Settings: React.FC<SettingsProps> = ({
                 <input 
                   type="file" 
                   accept=".json"
+                  aria-label="Choose a Lumina backup JSON file to restore"
                   onChange={handleLocalFileSelect}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   id="import-json-picker-input"
@@ -1644,10 +2052,20 @@ const Settings: React.FC<SettingsProps> = ({
                 <p className="text-xs font-bold text-pink-700">
                   Upload Backup File
                 </p>
-                <p className="text-[11px] text-stone-400 mt-1">
+                <p className="text-[11px] text-stone-600 mt-1">
                   Drag & drop your backup file here, or tap to choose a file
                 </p>
               </div>
+            </div>
+
+            {/* Step-by-step Recovery Guide */}
+            <div className="p-5 bg-stone-50 rounded-3xl border border-stone-200/70 space-y-2">
+              <h4 className="text-xs font-bold text-stone-800">Recovery & Continuity Guide</h4>
+              <ol className="list-decimal pl-5 space-y-1 text-xs text-stone-600">
+                <li><strong>New Phone or Browser:</strong> Sign in with your verified Lumina account and tap <em>Restore From Cloud</em>.</li>
+                <li><strong>Offline / Encrypted Recovery:</strong> Upload your saved <code className="text-[11px] bg-white px-1 rounded">lumina_encrypted_backup_*.json</code> file and enter your passphrase.</li>
+                <li><strong>Accidental Change Rollback:</strong> Pick any recent timestamped entry under <em>Recovery History</em> above to restore instantaneously.</li>
+              </ol>
             </div>
           </section>
         </div>
@@ -2477,20 +2895,25 @@ const Settings: React.FC<SettingsProps> = ({
 
               {/* Meditation Sounds Selection */}
               <div className="bg-rose-50/30 p-5 rounded-3xl border border-rose-100/30 flex flex-col gap-3">
-                <label className="text-xs font-bold text-pink-600 flex items-center gap-1.5">
+                <label className="text-xs font-bold text-pink-700 flex items-center gap-1.5">
                   <span>🧘</span> Calming Frequencies
                 </label>
+                {musicNotice && (
+                  <p role="status" className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-2 rounded-xl">
+                    {musicNotice}
+                  </p>
+                )}
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   {[
-                    { id: 'rain', label: '🌧️ Forest Rain', active: true },
-                    { id: 'bowls', label: '🥣 Zen Tibetan Bowls', active: false },
-                    { id: 'solfeggio', label: '🧬 Solfeggio 528Hz', active: false },
-                    { id: 'ocean', label: '🌊 Soft Ocean Waves', active: false },
+                    { id: 'rain', label: '🌧️ Forest Rain' },
+                    { id: 'bowls', label: '🥣 Zen Tibetan Bowls' },
+                    { id: 'solfeggio', label: '🧬 Solfeggio 528Hz' },
+                    { id: 'ocean', label: '🌊 Soft Ocean Waves' },
                   ].map((sound) => (
                     <button
                       key={sound.id}
                       type="button"
-                      onClick={() => alert(`Activated ${sound.label}!`)}
+                      onClick={() => setMusicNotice(`Activated ${sound.label}!`)}
                       className="p-3 rounded-xl border border-pink-100 bg-white text-left font-bold text-stone-700 hover:bg-pink-50/50 transition-all flex items-center justify-between text-xs cursor-pointer"
                     >
                       <span>{sound.label}</span>
@@ -2650,15 +3073,41 @@ const Settings: React.FC<SettingsProps> = ({
               <div className="py-8 text-center space-y-3">
                 <span className="text-4xl">🌸</span>
                 <h4 className="text-sm font-bold text-stone-800">Thank you for reaching out!</h4>
-                <p className="text-xs text-stone-500 max-w-xs mx-auto">
+                <p className="text-xs text-stone-600 max-w-xs mx-auto">
                   Our care team has received your message and will review it carefully.
                 </p>
+                {feedbackTicketId && (
+                  <p className="inline-block px-3 py-1 rounded-full bg-pink-50 border border-pink-200 text-[11px] font-mono font-bold text-pink-700">
+                    Reference: {feedbackTicketId}
+                  </p>
+                )}
               </div>
             ) : (
               <form onSubmit={handleFeedbackSubmit} className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-stone-700">Your Email</label>
+                {/* Honeypot anti-spam trap */}
+                <div className="sr-only" aria-hidden="true">
+                  <label htmlFor="support-website-hp">Website</label>
                   <input
+                    id="support-website-hp"
+                    type="text"
+                    name="website"
+                    tabIndex={-1}
+                    autoComplete="off"
+                    value={feedbackHoneypot}
+                    onChange={(e) => setFeedbackHoneypot(e.target.value)}
+                  />
+                </div>
+
+                {feedbackError && (
+                  <div role="alert" className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs font-semibold text-rose-700">
+                    {feedbackError}
+                  </div>
+                )}
+
+                <div className="space-y-1.5">
+                  <label htmlFor="support-feedback-email" className="text-xs font-bold text-stone-700">Your Email</label>
+                  <input
+                    id="support-feedback-email"
                     type="email"
                     value={feedbackEmail}
                     onChange={(e) => setFeedbackEmail(e.target.value)}
@@ -2669,18 +3118,21 @@ const Settings: React.FC<SettingsProps> = ({
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-stone-700">
+                  <label htmlFor="support-feedback-message" className="text-xs font-bold text-stone-700">
                     {showFeedbackModal === 'support' ? 'How can we help you?' :
                      showFeedbackModal === 'bug' ? 'Describe what happened:' : 'What feature would you love to see?'}
                   </label>
                   <textarea
+                    id="support-feedback-message"
                     rows={4}
                     value={feedbackText}
                     onChange={(e) => setFeedbackText(e.target.value)}
                     required
+                    minLength={10}
+                    maxLength={2000}
                     className="w-full bg-pink-50/30 border border-pink-100 rounded-2xl p-4 text-xs text-stone-800 outline-none focus:border-pink-300 resize-none"
                     placeholder={
-                      showFeedbackModal === 'support' ? 'Write your question or request here...' :
+                      showFeedbackModal === 'support' ? 'Write your question or request here (min 10 chars)...' :
                       showFeedbackModal === 'bug' ? 'Tell us what went wrong and where...' : 'Share your idea with us...'
                     }
                   />
@@ -2689,16 +3141,17 @@ const Settings: React.FC<SettingsProps> = ({
                 <div className="flex gap-3 pt-1">
                   <button
                     type="button"
-                    onClick={() => setShowFeedbackModal(null)}
+                    onClick={() => { setShowFeedbackModal(null); setFeedbackError(null); }}
                     className="flex-1 py-3 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs rounded-xl transition-all cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-3 bg-gradient-to-r from-pink-500 to-rose-400 text-white font-bold text-xs rounded-xl shadow-md hover:opacity-90 transition-all cursor-pointer"
+                    disabled={feedbackLoading}
+                    className="flex-1 py-3 bg-gradient-to-r from-pink-500 to-rose-400 text-white font-bold text-xs rounded-xl shadow-md hover:opacity-90 disabled:opacity-60 transition-all cursor-pointer"
                   >
-                    Send Message
+                    {feedbackLoading ? 'Sending...' : 'Send Message'}
                   </button>
                 </div>
               </form>

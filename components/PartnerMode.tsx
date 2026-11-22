@@ -25,6 +25,7 @@ import {
 } from '../services/firebaseService';
 import { trackSendPartnerInvite, trackAcceptPartnerInvite, trackDeclinePartnerInvite } from '../services/analyticsService';
 import { calculateCycleSyncData } from '../services/cycleSyncService';
+import { QrCodeCanvas } from './QrCodeCanvas';
 
 interface PartnerModeProps {
   user: User;
@@ -1686,14 +1687,13 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                         <div className="bg-amber-50/10 border border-amber-100/50 p-4 sm:p-6 rounded-3xl text-center space-y-4 animate-slideDownBlock flex flex-col items-center justify-center w-full">
                           <p className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">Lumina Scan Invitation</p>
                           <div className="qr-code-container bg-white p-4 rounded-2xl border border-amber-100 shadow-md w-full max-w-[260px] aspect-square flex items-center justify-center overflow-hidden mx-auto">
-                            <img 
-                              src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&color=db2777&data=${encodeURIComponent(inviteLink)}`} 
+                            <QrCodeCanvas
+                              value={inviteLink}
+                              size={240}
                               alt="Lumina Partner Invitation QR Code"
-                              className="w-full h-full object-contain block"
-                              referrerPolicy="no-referrer"
                             />
                           </div>
-                          <p className="text-[10px] text-gray-400 italic leading-relaxed break-words max-w-full px-2">Have your partner open their camera app to scan and connect instantly.</p>
+                          <p className="text-[11px] text-gray-600 italic leading-relaxed break-words max-w-full px-2">Have your partner open their camera app to scan and connect instantly.</p>
                         </div>
                       )}
                     </div>
@@ -2377,14 +2377,13 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                 <div className="bg-amber-50/10 border border-amber-100/50 p-4 sm:p-6 rounded-3xl text-center space-y-4 animate-slideDownBlock flex flex-col items-center justify-center w-full">
                   <p className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">Lumina Scan Invitation</p>
                   <div className="qr-code-container bg-white p-4 rounded-2xl border border-amber-100 shadow-md w-full max-w-[260px] aspect-square flex items-center justify-center overflow-hidden mx-auto">
-                    <img 
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&color=db2777&data=${encodeURIComponent(inviteLink)}`} 
+                    <QrCodeCanvas
+                      value={inviteLink}
+                      size={240}
                       alt="Lumina Partner Invitation QR Code"
-                      className="w-full h-full object-contain block"
-                      referrerPolicy="no-referrer"
                     />
                   </div>
-                  <p className="text-[10px] text-gray-400 italic leading-relaxed break-words max-w-full px-2">Have your partner open their camera app to scan and connect instantly.</p>
+                  <p className="text-[11px] text-gray-600 italic leading-relaxed break-words max-w-full px-2">Have your partner open their camera app to scan and connect instantly.</p>
                 </div>
               )}
 

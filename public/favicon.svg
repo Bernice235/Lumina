@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Lumina Lotus Emblem">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fdf2f8"/>
+      <stop offset="100%" stop-color="#f5d0fe"/>
+    </linearGradient>
+    <linearGradient id="petal" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f472b6"/>
+      <stop offset="100%" stop-color="#be185d"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="18" fill="url(#bg)"/>
+  <path d="M32 13 C38 22, 40 33, 32 45 C24 33, 26 22, 32 13 Z" fill="url(#petal)" opacity="0.95"/>
+  <path d="M32 45 C20 40, 14 31, 16 21 C23 25, 29 33, 32 45 Z" fill="#ec4899" opacity="0.78"/>
+  <path d="M32 45 C44 40, 50 31, 48 21 C41 25, 35 33, 32 45 Z" fill="#a855f7" opacity="0.68"/>
+  <path d="M32 48 C18 48, 11 41, 11 33 C19 35, 27 40, 32 48 Z" fill="#f9a8d4" opacity="0.85"/>
+  <path d="M32 48 C46 48, 53 41, 53 33 C45 35, 37 40, 32 48 Z" fill="#d8b4fe" opacity="0.85"/>
+  <circle cx="32" cy="31" r="4" fill="#fbbf24"/>
+</svg>

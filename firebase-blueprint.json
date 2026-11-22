@@ -2,33 +2,29 @@
   "entities": {
     "User": {
       "title": "User",
-      "description": "User profile with cycle tracking and partner connection data.",
+      "description": "User profile with cycle tracking, security settings, privacy preferences, and partner connection data.",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" },
-        "email": { "type": "string" },
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "email": { "type": "string", "minLength": 3, "maxLength": 160 },
         "isPartner": { "type": "boolean" },
-        "partnerId": { "type": "string" },
-        "partnerName": { "type": "string" },
-        "partnerCode": { "type": "string" },
+        "partnerId": { "type": "string", "maxLength": 128 },
+        "partnerName": { "type": "string", "maxLength": 120 },
+        "partnerCode": { "type": "string", "maxLength": 32 },
         "isPartnerLinked": { "type": "boolean" },
-        "sharingSettings": {
-          "type": "object",
-          "properties": {
-            "shareCycleInfo": { "type": "boolean" },
-            "shareSymptoms": { "type": "boolean" },
-            "shareMood": { "type": "boolean" },
-            "shareNotes": { "type": "boolean" }
-          }
-        },
+        "sharingSettings": { "type": "object" },
+        "securitySettings": { "type": "object" },
+        "privacyPreferences": { "type": "object" },
+        "backupMetadata": { "type": "object" },
         "cycleLength": { "type": "number" },
         "periodLength": { "type": "number" },
-        "lastPeriodStart": { "type": "string" },
-        "theme": { "type": "string" },
+        "automaticCyclePrediction": { "type": "boolean" },
+        "lastPeriodStart": { "type": "string", "maxLength": 64 },
+        "theme": { "type": "string", "maxLength": 32 },
         "waterGoal": { "type": "number" },
         "referralCount": { "type": "number" },
-        "referredBy": { "type": "string" }
+        "referredBy": { "type": "string", "maxLength": 128 }
       },
       "required": ["id", "name", "email"]
     },
@@ -37,48 +33,100 @@
       "description": "Maps a secure code to a user who generated it.",
       "type": "object",
       "properties": {
-        "code": { "type": "string" },
-        "senderId": { "type": "string" },
-        "senderName": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "code": { "type": "string", "minLength": 6, "maxLength": 12, "pattern": "^[A-Z0-9]+$" },
+        "senderId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "senderName": { "type": "string", "maxLength": 120 },
+        "senderEmail": { "type": "string", "maxLength": 160 },
+        "createdAt": { "type": "string", "format": "date-time", "maxLength": 64 }
       },
-      "required": ["code", "senderId"]
+      "required": ["code", "senderId", "senderName", "createdAt"]
     },
     "Gift": {
       "title": "Gift",
-      "description": "Virtual gift or comfort item sent to a partner.",
+      "description": "Virtual gift or comfort item sent to a linked partner.",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
-        "type": { "type": "string", "enum": ["hug", "tea", "flower", "chocolate", "sparkle"] },
-        "senderId": { "type": "string" },
-        "senderName": { "type": "string" },
-        "receiverId": { "type": "string" },
-        "message": { "type": "string" },
-        "timestamp": { "type": "string", "format": "date-time" }
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "type": { "type": "string", "enum": ["hug", "tea", "flower", "chocolate", "sparkle", "love_note"] },
+        "senderId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "senderName": { "type": "string", "maxLength": 120 },
+        "timestamp": { "type": "string", "format": "date-time", "maxLength": 64 }
       },
-      "required": ["id", "type", "senderId", "receiverId"]
+      "required": ["id", "type", "senderId", "senderName", "timestamp"]
     },
     "PartnerRequest": {
       "title": "PartnerRequest",
       "description": "A sync request sent from a partner to a user.",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
-        "user_id": { "type": "string" },
-        "partner_id": { "type": "string" },
-        "partnerName": { "type": "string" },
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "request_id": { "type": "string", "maxLength": 128 },
+        "user_id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "maxLength": 128 },
+        "partner_id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "partnerId": { "type": "string", "maxLength": 128 },
+        "partnerName": { "type": "string", "maxLength": 120 },
+        "partnerEmail": { "type": "string", "maxLength": 160 },
         "requested_permissions": { "type": "array" },
         "status": { "type": "string", "enum": ["pending", "approved", "declined"] },
-        "created_at": { "type": "string", "format": "date-time" }
+        "created_at": { "type": "string", "format": "date-time", "maxLength": 64 },
+        "createdAt": { "type": "string", "format": "date-time", "maxLength": 64 }
       },
-      "required": ["id", "user_id", "partner_id", "status"]
+      "required": ["id", "user_id", "partner_id", "partnerName", "requested_permissions", "status", "created_at"]
+    },
+    "NotificationRecord": {
+      "title": "NotificationRecord",
+      "description": "Directed notification delivered between partner and primary user.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "recipientId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "targetUserId": { "type": "string", "maxLength": 128 },
+        "senderId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "type": { "type": "string", "maxLength": 64 },
+        "category": { "type": "string", "maxLength": 64 },
+        "title": { "type": "string", "maxLength": 160 },
+        "body": { "type": "string", "maxLength": 600 },
+        "emoji": { "type": "string", "maxLength": 16 },
+        "read": { "type": "boolean" },
+        "isRead": { "type": "boolean" },
+        "isPartnerRequest": { "type": "boolean" },
+        "timestamp": { "type": "string", "format": "date-time", "maxLength": 64 }
+      },
+      "required": ["id", "recipientId", "senderId", "title", "body", "timestamp"]
+    },
+    "GlobalConfig": {
+      "title": "GlobalConfig",
+      "description": "Read-only global application configuration document.",
+      "type": "object",
+      "properties": {
+        "bankName": { "type": "string", "maxLength": 120 },
+        "accountNumber": { "type": "string", "maxLength": 64 },
+        "accountName": { "type": "string", "maxLength": 120 }
+      }
+    },
+    "TelemetryEvent": {
+      "title": "TelemetryEvent",
+      "description": "Consent-gated non-PII analytics or crash diagnostic record owned by a user.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "eventName": { "type": "string", "maxLength": 100 },
+        "category": { "type": "string", "maxLength": 64 },
+        "errorMessage": { "type": "string", "maxLength": 350 },
+        "errorStack": { "type": "string", "maxLength": 1200 },
+        "deviceType": { "type": "string", "maxLength": 32 },
+        "appVersion": { "type": "string", "maxLength": 32 },
+        "timestamp": { "type": "string", "format": "date-time", "maxLength": 64 },
+        "date": { "type": "string", "maxLength": 32 }
+      },
+      "required": ["userId", "timestamp"]
     }
   },
   "firestore": {
     "users/{userId}": {
       "schema": "User",
-      "description": "Individual user profiles."
+      "description": "Individual user profiles with strict owner updates and narrow partner linking scopes."
     },
     "invites/{code}": {
       "schema": "Invite",
@@ -91,6 +139,22 @@
     "partner_requests/{requestId}": {
       "schema": "PartnerRequest",
       "description": "Active sync requests between user and partner."
+    },
+    "notifications/{notificationId}": {
+      "schema": "NotificationRecord",
+      "description": "Recipient-scoped notifications between linked or requesting users."
+    },
+    "global_config/{configId}": {
+      "schema": "GlobalConfig",
+      "description": "Read-only public-to-authenticated app config (client writes denied)."
+    },
+    "analytics_events/{eventId}": {
+      "schema": "TelemetryEvent",
+      "description": "Consent-gated navigation and engagement metrics scoped per authenticated user."
+    },
+    "crash_reports/{reportId}": {
+      "schema": "TelemetryEvent",
+      "description": "Consent-gated anonymized error logs scoped per authenticated user."
     }
   }
 }

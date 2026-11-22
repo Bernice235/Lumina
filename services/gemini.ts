@@ -1,16 +1,33 @@
 import { decodeBase64, decodeAudioData } from "./audio";
 
-// Helper function to send safe POST requests to our server API proxy endpoints with timeout
+import { auth } from "./firebase";
+
+// Helper function to send safe POST requests to our server API proxy endpoints with auth token & timeout
 async function fetchGeminiProxy(endpoint: string, body: object): Promise<any> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 8000);
 
   try {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      "X-Requested-With": "LuminaWebApp",
+    };
+
+    try {
+      const currentUser = auth.currentUser;
+      if (currentUser) {
+        const token = await currentUser.getIdToken();
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
+        }
+      }
+    } catch {
+      // Proceed without token only when running in offline/sandbox auth state
+    }
+
     const response = await fetch(`/api/gemini/${endpoint}`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify(body),
       signal: controller.signal,
     });

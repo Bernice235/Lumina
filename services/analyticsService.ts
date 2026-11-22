@@ -1,77 +1,239 @@
 import * as amplitude from '@amplitude/analytics-browser';
 import { getAnalytics, logEvent, isSupported } from 'firebase/analytics';
 import { initializeApp, getApps } from 'firebase/app';
-import { collection, addDoc, serverTimestamp, getDocs, query, where, orderBy, limit, doc, setDoc } from 'firebase/firestore';
+import { collection, addDoc } from 'firebase/firestore';
 import { db, auth } from './firebase';
 import firebaseConfig from '../firebase-applet-config.json';
 
-const AMPLITUDE_API_KEY = 'cf2b2b0258684768854bf345bcbcae93';
+// Read optional public analytics key from environment — never hardcode secrets/keys in source
+const AMPLITUDE_API_KEY = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_AMPLITUDE_API_KEY) || '';
+const COOKIE_CONSENT_KEY = 'lumina_cookie_consent_v1';
+
+export interface CookieConsentState {
+  essential: true; // Always required for security, session & local storage persistence
+  analytics: boolean;
+  performance: boolean;
+  personalization: boolean;
+  decided: boolean;
+  updatedAt: string;
+}
+
+const DEFAULT_CONSENT: CookieConsentState = {
+  essential: true,
+  analytics: false,
+  performance: false,
+  personalization: false,
+  decided: false,
+  updatedAt: '',
+};
 
 let firebaseAnalyticsInstance: any = null;
 let isAmplitudeInitialized = false;
+let webVitalsAttached = false;
+let globalErrorListenersAttached = false;
 
-// Initialize Amplitude Analytics with safe offline & restricted-environment fallbacks
-try {
-  if (typeof window !== 'undefined') {
-    const silentLogger = {
-      disable: () => {},
-      enable: () => {},
-      error: () => {},
-      warn: () => {},
-      log: () => {},
-      debug: () => {},
+export function getCookieConsent(): CookieConsentState {
+  if (typeof window === 'undefined') return DEFAULT_CONSENT;
+  try {
+    const raw = localStorage.getItem(COOKIE_CONSENT_KEY);
+    if (!raw) return DEFAULT_CONSENT;
+    const parsed = JSON.parse(raw);
+    return {
+      essential: true,
+      analytics: Boolean(parsed.analytics),
+      performance: Boolean(parsed.performance),
+      personalization: Boolean(parsed.personalization),
+      decided: Boolean(parsed.decided),
+      updatedAt: typeof parsed.updatedAt === 'string' ? parsed.updatedAt : '',
     };
+  } catch {
+    return DEFAULT_CONSENT;
+  }
+}
 
-    const initResult = amplitude.init(AMPLITUDE_API_KEY, {
-      fetchRemoteConfig: false,
-      logLevel: amplitude.Types?.LogLevel?.None ?? 0,
-      loggerProvider: silentLogger,
-      defaultTracking: {
-        pageViews: true,
-        sessions: true,
-        formInteractions: false,
-        fileDownloads: false,
-      },
-    });
+export function hasConsent(category: 'essential' | 'analytics' | 'performance' | 'personalization'): boolean {
+  if (category === 'essential') return true;
+  const state = getCookieConsent();
+  return state.decided && Boolean(state[category]);
+}
 
-    if (initResult && (initResult as any).promise) {
-      (initResult as any).promise
-        .then(() => {
-          isAmplitudeInitialized = true;
-          console.log('[Analytics] Amplitude Browser SDK initialized successfully');
-        })
-        .catch((_err: any) => {
-          // Gracefully handle adblockers, sandboxed network restrictions, or offline mode
-          isAmplitudeInitialized = false;
-        });
-    } else {
-      isAmplitudeInitialized = true;
-      console.log('[Analytics] Amplitude Browser SDK initialized successfully');
+export function setCookieConsent(
+  next: Partial<Pick<CookieConsentState, 'analytics' | 'performance' | 'personalization'>> & { decided?: boolean }
+): CookieConsentState {
+  const current = getCookieConsent();
+  const updated: CookieConsentState = {
+    essential: true,
+    analytics: next.analytics ?? current.analytics,
+    performance: next.performance ?? current.performance,
+    personalization: next.personalization ?? current.personalization,
+    decided: next.decided ?? true,
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(COOKIE_CONSENT_KEY, JSON.stringify(updated));
+      window.dispatchEvent(new CustomEvent('lumina:consent-changed', { detail: updated }));
+    } catch {}
+  }
+
+  if (updated.analytics) {
+    initializeConsentedAnalyticsSDKs();
+  } else {
+    try {
+      if (isAmplitudeInitialized) {
+        amplitude.setOptOut(true);
+      }
+    } catch {}
+    isAmplitudeInitialized = false;
+  }
+
+  if (updated.performance) {
+    attachPerformanceMonitoring();
+  }
+
+  return updated;
+}
+
+function initializeConsentedAnalyticsSDKs(): void {
+  if (typeof window === 'undefined' || !hasConsent('analytics')) return;
+
+  if (AMPLITUDE_API_KEY && !isAmplitudeInitialized) {
+    try {
+      const silentLogger = {
+        disable: () => {},
+        enable: () => {},
+        error: () => {},
+        warn: () => {},
+        log: () => {},
+        debug: () => {},
+      };
+
+      const initResult = amplitude.init(AMPLITUDE_API_KEY, {
+        fetchRemoteConfig: false,
+        logLevel: amplitude.Types?.LogLevel?.None ?? 0,
+        loggerProvider: silentLogger,
+        defaultTracking: {
+          pageViews: false,
+          sessions: true,
+          formInteractions: false,
+          fileDownloads: false,
+        },
+      });
+      amplitude.setOptOut(false);
+
+      if (initResult && (initResult as any).promise) {
+        (initResult as any).promise
+          .then(() => {
+            isAmplitudeInitialized = true;
+          })
+          .catch(() => {
+            isAmplitudeInitialized = false;
+          });
+      } else {
+        isAmplitudeInitialized = true;
+      }
+    } catch {
+      isAmplitudeInitialized = false;
     }
   }
-} catch (err) {
-  isAmplitudeInitialized = false;
-  console.warn('[Analytics] Amplitude initialization skipped:', err);
+
+  const measurementId = (firebaseConfig as { measurementId?: string })?.measurementId;
+  if (!firebaseAnalyticsInstance && typeof measurementId === 'string' && measurementId.trim().length > 0) {
+    isSupported()
+      .then((supported) => {
+        if (supported && hasConsent('analytics')) {
+          try {
+            const app = getApps().length > 0 ? getApps()[0] : initializeApp(firebaseConfig);
+            firebaseAnalyticsInstance = getAnalytics(app);
+          } catch {}
+        }
+      })
+      .catch(() => {});
+  }
 }
 
-// Initialize Firebase Analytics if supported
-if (typeof window !== 'undefined') {
-  isSupported().then((supported) => {
-    if (supported) {
-      try {
-        const app = getApps().length > 0 ? getApps()[0] : initializeApp(firebaseConfig);
-        firebaseAnalyticsInstance = getAnalytics(app);
-        console.log('[Analytics] Firebase Analytics initialized successfully');
-      } catch (err) {
-        console.warn('[Analytics] Firebase Analytics initialization warning:', err);
+export interface WebVitalMetric {
+  name: string;
+  value: number;
+  unit: 'ms' | 'score';
+  timestamp: string;
+}
+
+function recordPerformanceMetric(metric: WebVitalMetric): void {
+  if (typeof window === 'undefined' || !hasConsent('performance')) return;
+  try {
+    const key = 'lumina_perf_metrics';
+    const existing: WebVitalMetric[] = JSON.parse(localStorage.getItem(key) || '[]');
+    existing.unshift(metric);
+    localStorage.setItem(key, JSON.stringify(existing.slice(0, 50)));
+  } catch {}
+}
+
+function attachPerformanceMonitoring(): void {
+  if (typeof window === 'undefined' || webVitalsAttached || !hasConsent('performance')) return;
+  webVitalsAttached = true;
+
+  try {
+    // Navigation Timing
+    const navEntries = performance.getEntriesByType?.('navigation') as PerformanceNavigationTiming[] | undefined;
+    if (navEntries && navEntries.length > 0) {
+      const nav = navEntries[0];
+      const loadMs = Math.round((nav.loadEventEnd || nav.domInteractive || performance.now()));
+      if (loadMs > 0) {
+        recordPerformanceMetric({ name: 'App Load Time', value: loadMs, unit: 'ms', timestamp: new Date().toISOString() });
       }
     }
-  }).catch((err) => {
-    console.warn('[Analytics] Firebase Analytics support check error:', err);
-  });
+
+    // Core Web Vitals observers if supported
+    if ('PerformanceObserver' in window) {
+      try {
+        const lcpObserver = new PerformanceObserver((list) => {
+          const entries = list.getEntries();
+          const last = entries[entries.length - 1];
+          if (last) {
+            recordPerformanceMetric({
+              name: 'LCP',
+              value: Math.round(last.startTime),
+              unit: 'ms',
+              timestamp: new Date().toISOString(),
+            });
+          }
+        });
+        lcpObserver.observe({ type: 'largest-contentful-paint', buffered: true });
+      } catch {}
+
+      try {
+        let clsScore = 0;
+        const clsObserver = new PerformanceObserver((list) => {
+          for (const entry of list.getEntries() as any[]) {
+            if (!entry.hadRecentInput) {
+              clsScore += entry.value || 0;
+            }
+          }
+          recordPerformanceMetric({
+            name: 'CLS',
+            value: Number(clsScore.toFixed(4)),
+            unit: 'score',
+            timestamp: new Date().toISOString(),
+          });
+        });
+        clsObserver.observe({ type: 'layout-shift', buffered: true });
+      } catch {}
+    }
+  } catch {}
 }
 
-// Device & Environment metadata helpers
+// Initialize only if user has already consented in a previous session
+if (typeof window !== 'undefined') {
+  if (hasConsent('analytics')) {
+    initializeConsentedAnalyticsSDKs();
+  }
+  if (hasConsent('performance')) {
+    attachPerformanceMonitoring();
+  }
+}
+
 export const getDeviceMetadata = () => {
   if (typeof window === 'undefined') {
     return { country: 'Unknown', deviceType: 'Desktop', appVersion: '1.0.0' };
@@ -92,12 +254,12 @@ export const getDeviceMetadata = () => {
     appVersion: '1.0.0',
     language,
     timeZone,
-    screenResolution: `${window.screen.width}x${window.screen.height}`
+    screenResolution: `${window.screen.width}x${window.screen.height}`,
   };
 };
 
 /**
- * Identify User & set user properties across Amplitude and Firebase
+ * Identify non-PII user mode properties only when Analytics consent is granted.
  */
 export const setUserProperties = (properties: {
   userMode?: 'Primary' | 'Partner';
@@ -107,11 +269,12 @@ export const setUserProperties = (properties: {
   userId?: string;
   email?: string;
 }) => {
+  if (!hasConsent('analytics')) return;
   try {
     const meta = getDeviceMetadata();
     const userProps = {
       'User Mode': properties.userMode || (properties.isPartner ? 'Partner Mode' : 'User Mode'),
-      'Country': meta.country,
+      Country: meta.country,
       'Device Type': meta.deviceType,
       'App Version': meta.appVersion,
       'Subscription Status': properties.subscriptionStatus || (properties.isPremium ? 'Premium' : 'Free'),
@@ -131,73 +294,66 @@ export const setUserProperties = (properties: {
     if (firebaseAnalyticsInstance) {
       logEvent(firebaseAnalyticsInstance, 'user_properties_update', userProps);
     }
-  } catch (err) {
-    console.warn('[Analytics] Error setting user properties:', err);
-  }
+  } catch {}
 };
 
 /**
- * Central event tracking function
- * Complies strictly with privacy regulations: NO sensitive personal health notes logged
+ * Consent-gated central event tracking function.
+ * Never logs personal health notes, diary text, or sensitive PII.
  */
 export const trackEvent = async (eventName: string, properties: Record<string, any> = {}) => {
+  if (!hasConsent('analytics')) return;
   try {
     const meta = getDeviceMetadata();
-    const currentUserId = auth.currentUser?.uid || properties.userId || 'anonymous';
+    const currentUserId = auth.currentUser?.uid || 'anonymous';
     const timestamp = new Date().toISOString();
 
-    const sanitizedProps = {
+    const sanitizedProps: Record<string, any> = {
       ...properties,
       country: meta.country,
       device_type: meta.deviceType,
       app_version: meta.appVersion,
     };
+    delete sanitizedProps.email;
+    delete sanitizedProps.notes;
+    delete sanitizedProps.content;
 
-    // 1. Amplitude Tracking
     if (isAmplitudeInitialized) {
       amplitude.track(eventName, sanitizedProps);
     }
 
-    // 2. Firebase Analytics Tracking
     if (firebaseAnalyticsInstance) {
       const sanitizedFirebaseName = eventName.toLowerCase().replace(/\s+/g, '_').substring(0, 40);
       logEvent(firebaseAnalyticsInstance, sanitizedFirebaseName, sanitizedProps);
     }
 
-    // 3. Firestore & Local Storage Persistent Metric Store for Dashboard
     const eventRecord = {
       eventName,
       userId: currentUserId,
       properties: sanitizedProps,
       timestamp,
-      date: timestamp.split('T')[0]
+      date: timestamp.split('T')[0],
     };
 
-    // Save to local storage cache for instant offline dashboard updates
     try {
       const localEvents = JSON.parse(localStorage.getItem('lumina_analytics_events') || '[]');
       localEvents.unshift(eventRecord);
-      // Keep last 300 events locally
       localStorage.setItem('lumina_analytics_events', JSON.stringify(localEvents.slice(0, 300)));
-    } catch (e) {
-      // Ignore local storage quota limits
-    }
+    } catch {}
 
-    // Persist event record to Firestore asynchronously
-    if (db && currentUserId !== 'anonymous') {
-      addDoc(collection(db, 'analytics_events'), eventRecord).catch((err) => {
-        // Silently fail if offline or permission denied
-      });
+    if (db && auth.currentUser?.uid) {
+      addDoc(collection(db, 'analytics_events'), eventRecord).catch(() => {});
     }
+  } catch {}
+};
 
-    console.log(`[Analytics Event] ${eventName}:`, sanitizedProps);
-  } catch (err) {
-    console.warn(`[Analytics] Error tracking event ${eventName}:`, err);
-  }
+export const trackPageView = (screenName: string) => {
+  trackEvent('Screen View', { screen: screenName });
 };
 
 /**
- * Firebase Crashlytics & Error Monitoring
+ * Privacy-safe error & crash monitoring.
+ * Remote dispatch requires analytics or performance consent; sanitized local diagnostics stay private on-device.
  */
 export const logCrashReport = async (
   error: Error | string,
@@ -207,26 +363,30 @@ export const logCrashReport = async (
   try {
     const meta = getDeviceMetadata();
     const currentUserId = auth.currentUser?.uid || 'anonymous';
-    const errorMessage = typeof error === 'string' ? error : error.message || 'Unknown runtime error';
-    const errorStack = typeof error === 'string' ? '' : error.stack || '';
+    const errorMessage = (typeof error === 'string' ? error : error.message || 'Unknown runtime error').slice(0, 300);
+    const errorStack = (typeof error === 'string' ? '' : error.stack || '').slice(0, 1000);
     const timestamp = new Date().toISOString();
 
     const crashReport = {
-      id: `crash_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      id: `crash_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
       category,
       errorMessage,
       errorStack,
       userId: currentUserId,
       deviceType: meta.deviceType,
       appVersion: meta.appVersion,
-      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
       context: additionalContext,
       timestamp,
     };
 
-    console.warn(`[Analytics Diagnostics - ${category}]`, errorMessage);
+    try {
+      const localCrashes = JSON.parse(localStorage.getItem('lumina_crash_reports') || '[]');
+      localCrashes.unshift(crashReport);
+      localStorage.setItem('lumina_crash_reports', JSON.stringify(localCrashes.slice(0, 100)));
+    } catch {}
 
-    // Track as Firebase event
+    if (!hasConsent('analytics') && !hasConsent('performance')) return;
+
     if (firebaseAnalyticsInstance) {
       logEvent(firebaseAnalyticsInstance, 'app_exception', {
         description: errorMessage.substring(0, 100),
@@ -235,35 +395,20 @@ export const logCrashReport = async (
       });
     }
 
-    // Track on Amplitude
     if (isAmplitudeInitialized) {
-      amplitude.track('App Exception', {
-        category,
-        error_message: errorMessage,
-      });
+      amplitude.track('App Exception', { category, error_message: errorMessage });
     }
 
-    // Save locally
-    try {
-      const localCrashes = JSON.parse(localStorage.getItem('lumina_crash_reports') || '[]');
-      localCrashes.unshift(crashReport);
-      localStorage.setItem('lumina_crash_reports', JSON.stringify(localCrashes.slice(0, 100)));
-    } catch (e) {}
-
-    // Save to Firestore
-    if (db) {
+    if (db && auth.currentUser?.uid) {
       addDoc(collection(db, 'crash_reports'), crashReport).catch(() => {});
     }
-  } catch (e) {
-    console.warn('[Analytics] Failed to record exception report:', e);
-  }
+  } catch {}
 };
 
-// Automatic global error handlers for Crashlytics
-if (typeof window !== 'undefined') {
+if (typeof window !== 'undefined' && !globalErrorListenersAttached) {
+  globalErrorListenersAttached = true;
   window.addEventListener('error', (event) => {
     const rawMsg = event.error?.message || (typeof event.message === 'string' ? event.message : '') || '';
-    // Filter out benign network / third-party analytics / adblocker / resize errors / autoplay / speech / audio
     if (
       !rawMsg ||
       rawMsg.includes('Load failed') ||
@@ -293,7 +438,6 @@ if (typeof window !== 'undefined') {
 
   window.addEventListener('unhandledrejection', (event) => {
     const reasonStr = String(event.reason?.message || event.reason || '');
-    // Filter out benign network / third-party analytics / offline promise rejections / autoplay restrictions
     if (
       !reasonStr ||
       reasonStr.includes('Load failed') ||
@@ -319,79 +463,49 @@ if (typeof window !== 'undefined') {
   });
 }
 
-// --------------------------------------------------
-// Specific Event Trackers Required by Requirements
-// --------------------------------------------------
-
+// Specific Event Trackers
 export const trackSignUp = (method: string, isPartner: boolean = false) => {
   trackEvent('Sign Up', { method, mode: isPartner ? 'Partner' : 'Primary' });
-  trackEvent('user_registration', { method, is_partner: isPartner });
 };
-
 export const trackLogin = (method: string, isPartner: boolean = false) => {
   trackEvent('Login', { method, mode: isPartner ? 'Partner' : 'Primary' });
-  trackEvent('user_login', { method, is_partner: isPartner });
 };
-
 export const trackCompleteOnboarding = (isPartner: boolean = false) => {
   trackEvent('Complete Onboarding', { mode: isPartner ? 'Partner' : 'Primary' });
-  trackEvent('onboarding_completed', { is_partner: isPartner });
 };
-
 export const trackLogPeriod = (periodDurationDays?: number) => {
   trackEvent('Log Period', { duration_days: periodDurationDays || 5 });
-  trackEvent('period_logged', { duration_days: periodDurationDays || 5 });
 };
-
 export const trackEditCycle = (cycleLength: number, periodLength: number) => {
   trackEvent('Edit Cycle', { cycle_length: cycleLength, period_length: periodLength });
-  trackEvent('cycle_edited', { cycle_length: cycleLength, period_length: periodLength });
 };
-
-export const trackSendPartnerInvite = (inviteCodeOrEmail?: string) => {
+export const trackSendPartnerInvite = () => {
   trackEvent('Send Partner Invite', { invite_sent: true });
-  trackEvent('partner_invite_sent', { invite_sent: true });
 };
-
-export const trackAcceptPartnerInvite = (partnerId?: string) => {
+export const trackAcceptPartnerInvite = () => {
   trackEvent('Accept Partner Invite', { success: true });
-  trackEvent('partner_invite_accepted', { success: true });
 };
-
-export const trackDeclinePartnerInvite = (partnerId?: string) => {
+export const trackDeclinePartnerInvite = () => {
   trackEvent('Decline Partner Invite', { declined: true });
-  trackEvent('partner_invite_declined', { declined: true });
 };
-
 export const trackCreateDiaryEntry = (moodTag?: string) => {
   trackEvent('Create Diary Entry', { mood_tag: moodTag || 'General' });
-  trackEvent('diary_created', { mood_tag: moodTag || 'General' });
 };
-
 export const trackUpdateDiaryEntry = (moodTag?: string) => {
   trackEvent('Update Diary Entry', { mood_tag: moodTag || 'General' });
-  trackEvent('diary_updated', { mood_tag: moodTag || 'General' });
 };
-
 export const trackOpenNotification = (type: string, category?: string) => {
   trackEvent('Open Notification', { notification_type: type, category: category || 'general' });
-  trackEvent('notification_opened', { notification_type: type, category: category || 'general' });
 };
-
 export const trackStartSubscription = (planType: string = 'Premium Plan') => {
   trackEvent('Start Subscription', { plan: planType });
-  trackEvent('subscription_started', { plan: planType });
 };
-
 export const trackCancelSubscription = (reason: string = 'User preference') => {
   trackEvent('Cancel Subscription', { reason });
-  trackEvent('subscription_cancelled', { reason });
 };
-
 export const trackOpenWellnessContent = (title: string, category: string = 'Wellness') => {
   trackEvent('Open Wellness Content', { content_title: title, category });
 };
-
 export const trackOpenSexEducationContent = (topic: string) => {
   trackEvent('Open Sex Education Content', { topic });
 };

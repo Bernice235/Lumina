@@ -9,6 +9,7 @@ import {
 import { getPregnancyStats, getBabySize } from '../services/notificationService';
 import { getCycleAnalytics } from '../services/cycleAnalyticsService';
 import { calculateCycleSyncData } from '../services/cycleSyncService';
+import { escapeHtml } from '../services/securityService';
 
 interface DoctorReportProps {
   isOpen: boolean;
@@ -152,203 +153,135 @@ const DoctorReport: React.FC<DoctorReportProps> = ({ isOpen, onClose, user, symp
     }, 1800);
   };
 
-  // 3. Multi-path Exports: Print/Save to PDF, Email prefill, and WhatsApp Copy share
+  // 3. Multi-path Exports: Safe Hidden Iframe Print (no window.open / no unescaped script injection)
   const handlePrint = () => {
-    const printArea = document.getElementById('lumina-doctor-report-document');
-    if (!printArea) {
-      triggerToast("Error: Document element not found.");
-      return;
-    }
-    
-    // Spawns a clean document-only window
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      triggerToast("Popup blocker active! Please allow popups or use Copy Text.");
-      return;
-    }
-
     const modeTitle = user.isPregnancyMode ? "Pregnancy Wellness Summary" : "Menstrual Cycle & Health Summary";
-    const themeColor = user.isPregnancyMode ? "#6366f1" : "#ec4899"; // Indigo vs Pink
-    const fontTheme = "Georgia, 'Times New Roman', serif";
+    const themeColor = user.isPregnancyMode ? "#6366f1" : "#ec4899";
 
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Lumina Clinical Report - ${user.name}</title>
-          <style>
-            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-            body {
-              font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-              color: #1e293b;
-              line-height: 1.6;
-              padding: 45px;
-              background-color: #fff;
-              max-width: 800px;
-              margin: 0 auto;
-            }
-            .header-bar {
-              border-bottom: 2px solid #e2e8f0;
-              padding-bottom: 22px;
-              margin-bottom: 30px;
-              display: flex;
-              justify-content: space-between;
-              align-items: flex-start;
-            }
-            .header-info h1 {
-              font-family: ${fontTheme};
-              italic: true;
-              font-size: 28px;
-              font-style: italic;
-              color: ${themeColor};
-              margin: 0 0 6px 0;
-            }
-            .header-info p {
-              margin: 0;
-              font-size: 11px;
-              font-weight: 700;
-              text-transform: uppercase;
-              letter-spacing: 0.15em;
-              color: #64748b;
-            }
-            .doc-id {
-              text-align: right;
-              font-size: 11px;
-              color: #94a3b8;
-              font-family: monospace;
-            }
-            .doc-id p {
-              margin: 2px 0;
-            }
-            .patient-card {
-              background: #f8fafc;
-              border: 1px solid #f1f5f9;
-              border-radius: 16px;
-              padding: 20px;
-              margin-bottom: 30px;
-              display: grid;
-              grid-template-columns: repeat(2, 1fr);
-              gap: 15px;
-            }
-            .patient-field {
-              font-size: 13px;
-            }
-            .patient-field strong {
-              color: #475569;
-              text-transform: uppercase;
-              font-size: 10px;
-              letter-spacing: 0.05em;
-              display: block;
-              margin-bottom: 3px;
-            }
-            .section {
-              margin-bottom: 30px;
-              page-break-inside: avoid;
-            }
-            .section-title {
-              font-family: ${fontTheme};
-              font-size: 17px;
-              font-style: italic;
-              color: ${themeColor};
-              border-bottom: 1.5px solid #f1f5f9;
-              padding-bottom: 6px;
-              margin-bottom: 18px;
-              display: flex;
-              align-items: center;
-              gap: 8px;
-            }
-            .grid-3 {
-              display: grid;
-              grid-template-columns: repeat(3, 1fr);
-              gap: 15px;
-            }
-            .grid-2 {
-              display: grid;
-              grid-template-columns: repeat(2, 1fr);
-              gap: 15px;
-            }
-            .data-box {
-              background: #fafafa;
-              border: 1px solid #f1f5f9;
-              border-radius: 12px;
-              padding: 14px;
-            }
-            .data-box .value {
-              font-size: 20px;
-              font-weight: 700;
-              color: #0f172a;
-              margin-bottom: 4px;
-            }
-            .data-box .label {
-              font-size: 10px;
-              font-weight: 700;
-              color: #64748b;
-              text-transform: uppercase;
-              letter-spacing: 0.05em;
-            }
-            table {
-              width: 100%;
-              border-collapse: collapse;
-              margin-top: 10px;
-            }
-            th {
-              background-color: #f8fafc;
-              padding: 10px 12px;
-              font-size: 10px;
-              font-weight: 800;
-              text-transform: uppercase;
-              letter-spacing: 0.08em;
-              color: #475569;
-              text-align: left;
-              border-bottom: 2px solid #e2e8f0;
-            }
-            td {
-              padding: 10px 12px;
-              font-size: 12px;
-              color: #334155;
-              border-bottom: 1px solid #f1f5f9;
-            }
-            .notes-block {
-              background: #fdfaf2;
-              border-left: 4px solid #d97706;
-              border-radius: 4px 12px 12px 4px;
-              padding: 15px;
-              font-size: 12.5px;
-              font-style: italic;
-              color: #451a03;
-              line-height: 1.6;
-            }
-            .footer {
-              margin-top: 55px;
-              padding-top: 20px;
-              border-t: 1px solid #e2e8f0;
-              font-size: 10px;
-              text-align: center;
-              color: #94a3b8;
-              text-transform: uppercase;
-              letter-spacing: 0.1em;
-            }
-            @media print {
-              body { padding: 0px; }
-            }
-          </style>
-        </head>
-        <body>
-          ${printArea.innerHTML}
-          <div class="footer">
-            CONFIDENTIAL CLINICAL BRIEF • GENERATED VIA LUMINA CYCLE COMPANION SECURE PROTOCOL
-          </div>
-          <script>
-            window.onload = function() {
-              window.print();
-              setTimeout(function() { window.close(); }, 800);
-            };
-          <\/script>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    triggerToast("System Print spool dispatched! Open PDF destination or paper drawer.");
+    const safeName = escapeHtml(user.name || 'Lumina Member');
+    const safeEmail = escapeHtml(user.email || '');
+    const safeDate = escapeHtml(reportDateStr);
+    const safeRef = escapeHtml(reportId);
+    const safeMeds = escapeHtml(medsInput);
+    const safeNotes = escapeHtml(notesInput);
+    const safeWeight = escapeHtml(weightInput);
+    const safeAppointments = escapeHtml(appointmentsInput);
+
+    const symptomsHtml = selectedOptions.symptoms
+      ? formattedSymptoms.length > 0
+        ? `<table><thead><tr><th>Date</th><th>Symptom</th><th>Intensity</th></tr></thead><tbody>${formattedSymptoms
+            .map(
+              (s) =>
+                `<tr><td>${escapeHtml(s.date)}</td><td>${escapeHtml(s.name)}</td><td>${escapeHtml(s.intensity)}</td></tr>`
+            )
+            .join('')}</tbody></table>`
+        : `<p>No clinical symptoms entered in active timeline.</p>`
+      : '';
+
+    const periodsHtml = selectedOptions.periodDates
+      ? `<p>${samplePeriods.map((pd) => `<span class="badge">${escapeHtml(pd)}</span>`).join(' ')}</p>`
+      : '';
+
+    const htmlDoc = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Lumina Clinical Report - ${safeName}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #1e293b; line-height: 1.6; padding: 36px; max-width: 780px; margin: 0 auto; }
+    .header { border-bottom: 2px solid #e2e8f0; padding-bottom: 16px; margin-bottom: 24px; display: flex; justify-content: space-between; }
+    h1 { font-family: Georgia, serif; font-style: italic; font-size: 24px; color: ${themeColor}; margin: 0 0 4px 0; }
+    .sub { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: #475569; margin: 0; }
+    .meta { text-align: right; font-size: 11px; color: #64748b; font-family: monospace; }
+    .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 20px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .section { margin-bottom: 22px; page-break-inside: avoid; }
+    .section h2 { font-family: Georgia, serif; font-style: italic; font-size: 16px; color: ${themeColor}; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 12px; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .box { background: #fafafa; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; text-align: center; }
+    .box .val { font-size: 18px; font-weight: 700; color: #0f172a; }
+    .box .lbl { font-size: 10px; font-weight: 700; color: #475569; text-transform: uppercase; }
+    .badge { display: inline-block; padding: 4px 10px; border-radius: 8px; background: #fdf2f8; border: 1px solid #fbcfe8; font-size: 11px; font-weight: 600; color: #9d174d; margin: 2px; }
+    .notes { background: #fffbeb; border-left: 4px solid #d97706; padding: 12px 14px; font-style: italic; font-size: 12.5px; color: #451a03; border-radius: 6px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    th, td { text-align: left; padding: 8px 10px; font-size: 12px; border-bottom: 1px solid #e2e8f0; }
+    th { background: #f8fafc; font-size: 10px; text-transform: uppercase; color: #475569; }
+    .footer { margin-top: 36px; padding-top: 14px; border-top: 1px solid #e2e8f0; font-size: 10px; text-align: center; color: #64748b; text-transform: uppercase; letter-spacing: 0.08em; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1>Lumina Clinical Record Summary</h1>
+      <p class="sub">${escapeHtml(modeTitle)}</p>
+    </div>
+    <div class="meta">
+      <div>CONFIDENTIAL</div>
+      <div>Date: ${safeDate}</div>
+      <div>Ref: ${safeRef}</div>
+    </div>
+  </div>
+  <div class="card">
+    <div><strong>Patient Name:</strong><br/>${safeName}</div>
+    <div><strong>Patient Email:</strong><br/>${safeEmail}</div>
+  </div>
+  ${user.isPregnancyMode ? `
+    <div class="section">
+      <h2>Maternity Progression Summary</h2>
+      <div class="grid">
+        ${selectedOptions.pregnancyWeek ? `<div class="box"><div class="val">Week ${pregnancyWeek}</div><div class="lbl">Gestational Age</div></div>` : ''}
+        <div class="box"><div class="val">Trimester ${currentTrimester}</div><div class="lbl">Maternity Stage</div></div>
+        ${selectedOptions.dueDate ? `<div class="box"><div class="val">${escapeHtml(estimatedDueDate)}</div><div class="lbl">Estimated Due</div></div>` : ''}
+      </div>
+      ${selectedOptions.weightTrack && safeWeight ? `<p><strong>Registered Weight:</strong> ${safeWeight}</p>` : ''}
+      ${selectedOptions.appointments && safeAppointments ? `<p><strong>Schedule:</strong> ${safeAppointments}</p>` : ''}
+    </div>
+  ` : `
+    ${selectedOptions.cycleHistory ? `
+      <div class="section">
+        <h2>Menstrual Cycle Analytics</h2>
+        <div class="grid">
+          ${selectedOptions.cycleLength ? `<div class="box"><div class="val">${escapeHtml(averageCycleDisplay)}</div><div class="lbl">Average Cycle</div></div>` : ''}
+          ${selectedOptions.periodLength ? `<div class="box"><div class="val">${escapeHtml(averagePeriodDisplay)}</div><div class="lbl">Mean Period</div></div>` : ''}
+          <div class="box"><div class="val">${escapeHtml(nextExpectedPeriod)}</div><div class="lbl">Next Estimated</div></div>
+        </div>
+      </div>
+    ` : ''}
+    ${periodsHtml ? `<div class="section"><h2>Recent Logged Periods</h2>${periodsHtml}</div>` : ''}
+    ${selectedOptions.fertility ? `<div class="section"><h2>Estimated Fertility Windows</h2><p><strong>Expected Ovulation:</strong> ${escapeHtml(predictedOvulation)}<br/><strong>Fertile Window Range:</strong> ${escapeHtml(predictedFertileRange)}</p></div>` : ''}
+  `}
+  ${selectedOptions.medications && safeMeds ? `<div class="section"><h2>Active Medications &amp; Supplements</h2><p>${safeMeds}</p></div>` : ''}
+  ${selectedOptions.notes && safeNotes ? `<div class="section"><h2>Consultation Notes</h2><div class="notes">${safeNotes}</div></div>` : ''}
+  ${symptomsHtml ? `<div class="section"><h2>Logged Symptoms</h2>${symptomsHtml}</div>` : ''}
+  <div class="footer">CONFIDENTIAL CLINICAL BRIEF • GENERATED VIA LUMINA BLOOM &amp; BALANCE</div>
+</body>
+</html>`;
+
+    try {
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      iframe.setAttribute('title', 'Lumina Print Preview');
+      iframe.onload = () => {
+        try {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+        } catch {
+          triggerToast("Print dialog could not open automatically. Please use Copy Text below.");
+        }
+        setTimeout(() => {
+          iframe.parentNode?.removeChild(iframe);
+        }, 2500);
+      };
+      iframe.srcdoc = htmlDoc;
+      document.body.appendChild(iframe);
+      triggerToast("System Print spool prepared! Save as PDF or select printer.");
+    } catch {
+      triggerToast("Unable to open print frame. Use Copy Summary below.");
+    }
   };
 
   // Compile detailed text representation for Emailing and Clipboard Copying

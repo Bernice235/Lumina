@@ -237,7 +237,7 @@ const Diary: React.FC<DiaryProps> = ({ entries, setEntries, user }) => {
           </div>
         </div>
         <h2 className="text-2xl font-serif text-pink-600 dark:text-pink-400 mb-2 italic">Secret Sanctuary</h2>
-        <p className="text-sm text-pink-300 dark:text-pink-300/70 mb-8 text-center italic">Your thoughts are safe here. Enter your secret PIN or use biometrics.</p>
+        <p className="text-sm text-pink-600 dark:text-pink-300/80 mb-8 text-center italic">Your thoughts are safe here. Enter your secret PIN or use biometrics.</p>
 
         <div className="flex gap-4 mb-8">
           {[...Array(4)].map((_, i) => (
@@ -286,8 +286,8 @@ const Diary: React.FC<DiaryProps> = ({ entries, setEntries, user }) => {
   return (
     <div className="space-y-8 animate-fadeIn max-w-4xl mx-auto">
       <header className="text-center relative">
-        <h2 className="text-3xl font-serif text-pink-500 italic">Whispers of the Soul</h2>
-        <p className="text-sm text-pink-300 italic">Your private, blooming thoughts & diary continuation sanctuary</p>
+        <h2 className="text-3xl font-serif text-pink-600 italic">Whispers of the Soul</h2>
+        <p className="text-sm text-pink-600 italic">Your private, blooming thoughts & diary continuation sanctuary</p>
         <button
           onClick={() => setIsLocked(true)}
           className="absolute top-0 right-0 p-2.5 bg-gray-50 dark:bg-stone-800 text-gray-500 dark:text-stone-300 rounded-full hover:bg-gray-100 transition-colors text-[10px] font-bold uppercase cursor-pointer"

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, Suspense } from 'react';
 import { 
   Smartphone, 
   Download, 
@@ -25,28 +25,16 @@ import {
 import { User, Symptom, DiaryEntry, SelfCareTask, AppTheme, Reminder, BirthControlLog, Song, TemperatureLog, PeriodLog, Period, ReceivedComfort, AppNotification } from './types';
 import Auth from './components/Auth';
 import ErrorBoundary from './components/ErrorBoundary';
-import { AnalyticsDashboardModal } from './components/AnalyticsDashboardModal';
 import { OnboardingWizard } from './components/OnboardingWizard';
 import { PartnerOnboardingWizard } from './components/PartnerOnboardingWizard';
 import Dashboard from './components/Dashboard';
 import PeriodTracker from './components/PeriodTracker';
-import SelfCare from './components/SelfCare';
-import YogaTutorials from './components/YogaTutorials';
-import Diary from './components/Diary';
-import PartnerMode from './components/PartnerMode';
-import WaterTracker from './components/WaterTracker';
-import Education from './components/Education';
-import Cyclepedia from './components/Cyclepedia';
-import Wellness from './components/Wellness';
-import PregnancyTracker from './components/PregnancyTracker';
-import Settings from './components/Settings';
-import MusicRoom from './components/MusicRoom';
 import LogModal from './components/LogModal';
-import DoctorReport from './components/DoctorReport';
 import { NotificationCenterModal } from './components/NotificationCenterModal';
-import { CycleGraph } from './components/CycleGraph';
 import { AvatarVisual } from './components/AvatarVisual';
 import { CompanionChat } from './components/CompanionChat';
+import { CookieConsentBanner } from './components/CookieConsentBanner';
+import { NotFoundPage } from './components/NotFoundPage';
 import { getOrCreateUserAvatar } from './services/avatarService';
 import { playWelcomeVoice } from './services/gemini';
 import { 
@@ -59,13 +47,74 @@ import {
 } from './services/welcomeVoiceService';
 import { THEMES, SONGS, THEME_PALETTES } from './constants';
 import { WALLPAPER_LIST } from './components/WallpapersAndThemesModal';
-import { syncUser, subscribeToGifts, subscribeToUser, acceptInvite, subscribeToPartnerRequests, getCleanName } from './services/firebaseService';
+import { syncUser, subscribeToGifts, subscribeToUser, acceptInvite, subscribeToPartnerRequests, getCleanName, deleteUserAccount } from './services/firebaseService';
 import { parseYMDToLocalDate, reconstructCycleData } from './services/cycleSyncService';
 import { getDefaultNotificationSettings, calculateScheduledNotifications, sanitizeUserNotifications, scheduleNativeLocalNotification } from './services/notificationService';
 import { logAvatarActionReward } from './services/avatarService';
+import { scrubLegacySensitiveKeys } from './services/secureStorage';
+import { getDefaultSecuritySettings, getLocalSessionEpoch, setLocalSessionEpoch } from './services/securityService';
+import { saveAutomaticEncryptedSnapshot } from './services/backupService';
+import { trackPageView } from './services/analyticsService';
 import { auth } from './services/firebase';
 import { onAuthStateChanged, setPersistence, browserSessionPersistence, indexedDBLocalPersistence } from 'firebase/auth';
 import { SplashScreen } from './components/SplashScreen';
+
+// Lazy-load secondary views to optimize initial bundle and mobile load performance
+const SelfCare = React.lazy(() => import('./components/SelfCare'));
+const YogaTutorials = React.lazy(() => import('./components/YogaTutorials'));
+const Diary = React.lazy(() => import('./components/Diary'));
+const PartnerMode = React.lazy(() => import('./components/PartnerMode'));
+const WaterTracker = React.lazy(() => import('./components/WaterTracker'));
+const Education = React.lazy(() => import('./components/Education'));
+const Cyclepedia = React.lazy(() => import('./components/Cyclepedia'));
+const Wellness = React.lazy(() => import('./components/Wellness'));
+const PregnancyTracker = React.lazy(() => import('./components/PregnancyTracker'));
+const Settings = React.lazy(() => import('./components/Settings'));
+const MusicRoom = React.lazy(() => import('./components/MusicRoom'));
+const DoctorReport = React.lazy(() => import('./components/DoctorReport'));
+const AnalyticsDashboardModal = React.lazy(() =>
+  import('./components/AnalyticsDashboardModal').then((m) => ({ default: m.AnalyticsDashboardModal }))
+);
+const CycleGraph = React.lazy(() =>
+  import('./components/CycleGraph').then((m) => ({ default: m.CycleGraph }))
+);
+const PrivacyDashboard = React.lazy(() =>
+  import('./components/PrivacyDashboard').then((m) => ({ default: m.PrivacyDashboard }))
+);
+
+const PATH_TO_TAB: Record<string, string> = {
+  '': 'dashboard',
+  '/': 'dashboard',
+  '/index.html': 'dashboard',
+  '/dashboard': 'dashboard',
+  '/home': 'dashboard',
+  '/cycle': 'cycle',
+  '/calendar': 'cycle',
+  '/wellness': 'wellness',
+  '/edu': 'edu',
+  '/learn': 'edu',
+  '/pedia': 'pedia',
+  '/music': 'music',
+  '/diary': 'diary',
+  '/selfcare': 'selfcare',
+  '/partner': 'partner',
+  '/graphs': 'graphs',
+  '/settings': 'settings',
+  '/privacy': 'privacy',
+  '/water': 'water',
+  '/companion': 'companion_chat',
+};
+
+function resolveInitialRoute(pathname: string): { isNotFound: boolean; tabFromPath: string | null } {
+  const normalized = (pathname || '/').replace(/\/+$/, '') || '/';
+  if (normalized.startsWith('/invite/')) {
+    return { isNotFound: false, tabFromPath: null };
+  }
+  if (Object.prototype.hasOwnProperty.call(PATH_TO_TAB, normalized)) {
+    return { isNotFound: false, tabFromPath: PATH_TO_TAB[normalized] };
+  }
+  return { isNotFound: true, tabFromPath: null };
+}
 
 const isDeepEqual = (obj1: any, obj2: any): boolean => {
   if (obj1 === obj2) return true;
@@ -166,7 +215,13 @@ const App: React.FC = () => {
     window.history.replaceState({}, document.title, newUrl);
   };
 
+  const [isNotFoundRoute, setIsNotFoundRoute] = useState<boolean>(() => resolveInitialRoute(window.location.pathname).isNotFound);
+
   const [activeTab, setActiveTab] = useState(() => {
+    const route = resolveInitialRoute(window.location.pathname);
+    if (route.tabFromPath && route.tabFromPath !== 'dashboard') {
+      return route.tabFromPath;
+    }
     const saved = localStorage.getItem('lumina_user');
     if (saved) {
       try {
@@ -225,6 +280,35 @@ const App: React.FC = () => {
   const [screenshotTagline, setScreenshotTagline] = useState<string>("Your cycle and body in peaceful flow.");
   const [screenshotPlatform, setScreenshotPlatform] = useState<'ios' | 'android'>('ios');
   const [simulatingBiometricOnApp, setSimulatingBiometricOnApp] = useState<boolean>(false);
+
+  // Scrub any legacy plaintext password keys & sync browser history navigation on mount
+  useEffect(() => {
+    scrubLegacySensitiveKeys();
+    const handlePopState = () => {
+      const route = resolveInitialRoute(window.location.pathname);
+      setIsNotFoundRoute(route.isNotFound);
+      if (!route.isNotFound && route.tabFromPath) {
+        setActiveTab(route.tabFromPath);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Track consent-gated screen navigation
+  useEffect(() => {
+    if (user && user.onboardingCompleted && !isNotFoundRoute) {
+      trackPageView(activeTab);
+    }
+  }, [activeTab, user?.id, user?.onboardingCompleted, isNotFoundRoute]);
+
+  const handleNavigateFrom404 = (targetTab: string = 'dashboard') => {
+    setIsNotFoundRoute(false);
+    setActiveTab(targetTab);
+    try {
+      window.history.pushState({}, '', '/');
+    } catch {}
+  };
 
   // Real-time clock updating for the simulated top status bar
   useEffect(() => {
@@ -792,9 +876,19 @@ const App: React.FC = () => {
                     waterGoal: userData.waterGoal || 8,
                     notificationSettings: userData.notificationSettings || getDefaultNotificationSettings()
                   };
+                  const cloudEpoch = fullUser.securitySettings?.sessionEpoch || 1;
+                  const localEpoch = getLocalSessionEpoch(fullUser.id);
+                  if (cloudEpoch > localEpoch) {
+                    handleLogout();
+                    return;
+                  }
+                  setLocalSessionEpoch(fullUser.id, cloudEpoch);
+
                   setUser(fullUser);
                   localStorage.setItem('lumina_user', JSON.stringify(fullUser));
-                  localStorage.setItem('lumina_biometric_user', JSON.stringify(fullUser));
+                  if (localStorage.getItem('lumina_remember_me') !== 'false') {
+                    localStorage.setItem('lumina_biometric_user', JSON.stringify(fullUser));
+                  }
                   setWaterGoal(fullUser.waterGoal || 8);
                 } else {
                   handleLogin(userData);
@@ -896,6 +990,16 @@ const App: React.FC = () => {
               localStorage.removeItem('lumina_biometric_user');
             }
             
+            // Enforce remote "Log out of all devices" via sessionEpoch
+            const cloudEpoch = fullUser.securitySettings?.sessionEpoch || 1;
+            const localEpoch = getLocalSessionEpoch(fullUser.id);
+            if (cloudEpoch > localEpoch && userRef.current?.id === fullUser.id) {
+              handleLogout();
+              setAuthLoading(false);
+              return;
+            }
+            setLocalSessionEpoch(fullUser.id, cloudEpoch);
+
             // Automatically unlock session for any authenticated user on app load or snapshot sync
             sessionStorage.setItem('lumina_session_unlocked', 'true');
             
@@ -995,6 +1099,48 @@ const App: React.FC = () => {
       }
     }
   }, [user]);
+
+  // Debounced AES-256 Encrypted Automatic Local Backup Snapshot
+  useEffect(() => {
+    if (!user?.id || user.backupMetadata?.autoBackupEnabled === false) return;
+    const timer = setTimeout(() => {
+      saveAutomaticEncryptedSnapshot(user, {
+        symptoms,
+        diaryEntries,
+        bcLogs,
+        tempLogs,
+        reminders,
+      })
+        .then((snap) => {
+          if (snap && snap.createdAt !== userRef.current?.backupMetadata?.lastAutoBackupAt) {
+            setUser((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    backupMetadata: {
+                      autoBackupEnabled: prev.backupMetadata?.autoBackupEnabled ?? true,
+                      lastAutoBackupAt: snap.createdAt,
+                      lastManualExportAt: prev.backupMetadata?.lastManualExportAt,
+                      lastChecksum: snap.checksum,
+                      snapshotCount: (prev.backupMetadata?.snapshotCount || 0) + 1,
+                    },
+                  }
+                : prev
+            );
+          }
+        })
+        .catch(() => {});
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [
+    user?.id,
+    user?.periods?.length,
+    user?.periodDates?.length,
+    symptoms.length,
+    diaryEntries.length,
+    bcLogs.length,
+    tempLogs.length,
+  ]);
 
   // ----------------------------------------------------
   // AUTOMATIC NOTIFICATION ENGINE & SCHEDULER
@@ -1855,15 +2001,16 @@ const App: React.FC = () => {
                 <button 
                   onClick={() => {
                     if (currentTrack?.source !== 'internal') {
-                      window.open(currentTrack.url, '_blank');
+                      setActiveTab('music');
                     } else {
                       toggleMusic();
                     }
                   }} 
                   className="text-[9px]"
                   title="Toggle Ambient Audio"
+                  aria-label="Toggle Ambient Audio"
                 >
-                  {currentTrack?.source !== 'internal' ? '↗' : (isMusicPlaying ? '⏸️' : '▶️')}
+                  {currentTrack?.source !== 'internal' ? '🎵' : (isMusicPlaying ? '⏸️' : '▶️')}
                 </button>
               </div>
             </div>
@@ -1873,7 +2020,9 @@ const App: React.FC = () => {
         {/* Content body with custom padding inside the mobile container */}
         <main className="flex-1 overflow-y-auto px-4 py-4 scrollbar-none pb-32">
           <ErrorBoundary onReset={() => setActiveTab('dashboard')}>
-            {renderContent()}
+            <Suspense fallback={<div className="py-12 text-center text-xs text-pink-700 font-semibold">Loading section...</div>}>
+              {renderContent()}
+            </Suspense>
           </ErrorBoundary>
         </main>
 
@@ -2096,6 +2245,26 @@ const App: React.FC = () => {
         );
       case 'graphs':
         return <CycleGraph user={user} setUser={setUser} symptoms={symptoms} />;
+      case 'privacy':
+        return (
+          <PrivacyDashboard
+            user={user}
+            onUpdateUser={(next) => {
+              setUser(next);
+              localStorage.setItem('lumina_user', JSON.stringify(next));
+              syncUser(next);
+            }}
+            onLogoutAllDevices={handleLogout}
+            onRequestDeleteAccount={() => {
+              setSettingsSubTab('privacy');
+              setActiveTab('settings');
+            }}
+            onNavigateToBackup={() => {
+              setSettingsSubTab('backup_sync');
+              setActiveTab('settings');
+            }}
+          />
+        );
       case 'settings':
         return (
           <Settings 
@@ -2148,9 +2317,29 @@ const App: React.FC = () => {
 
   const currentTrack = fullLibrary[currentSongIndex];
 
+  // Render 404 Error Page cleanly for unknown paths (both signed-in and signed-out)
+  if (!showSplash && isNotFoundRoute) {
+    return (
+      <div className={`min-h-screen w-full overflow-x-hidden ${getAppBackgroundClass()} selection:bg-pink-100 transition-colors duration-500`}>
+        <NotFoundPage
+          requestedPath={window.location.pathname}
+          onGoHome={() => handleNavigateFrom404('dashboard')}
+          onGoCycle={user ? () => handleNavigateFrom404('cycle') : undefined}
+          onGoPrivacy={user ? () => handleNavigateFrom404('privacy') : undefined}
+        />
+        <CookieConsentBanner />
+      </div>
+    );
+  }
+
   // If the user is not fully logged in, onboarded, or is locked, render the appropriate active screen directly
   if (showSplash || authLoading || restoreDataPrompt || !user || ((user as any).biometricsEnabled && !isSessionUnlocked) || !user.onboardingCompleted) {
-    return renderActiveScreen();
+    return (
+      <>
+        {renderActiveScreen()}
+        {!showSplash && <CookieConsentBanner />}
+      </>
+    );
   }
 
   return (
@@ -2173,7 +2362,7 @@ const App: React.FC = () => {
               {!user.isPartner && (
                 <button 
                   onClick={togglePregnancy}
-                  className={`text-[8px] md:text-[9px] font-bold px-2.5 py-1.5 md:px-4 md:py-1.5 rounded-full border transition-all ${user.isPregnancyMode ? 'bg-indigo-500 text-white border-indigo-500 shadow-md' : 'bg-white text-gray-400 border-gray-200'}`}
+                  className={`text-[10px] font-bold px-3 py-1.5 rounded-full border transition-all cursor-pointer ${user.isPregnancyMode ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white text-gray-700 border-gray-200 hover:border-pink-200'}`}
                 >
                   {user.isPregnancyMode ? 'PREGNANCY' : 'CYCLE'}
                 </button>
@@ -2183,19 +2372,21 @@ const App: React.FC = () => {
                 <button 
                   onClick={() => {
                     if (currentTrack?.source !== 'internal') {
-                      window.open(currentTrack.url, '_blank');
+                      setActiveTab('music');
                     } else {
                       toggleMusic();
                     }
                   }} 
-                  className="text-[10px] md:text-xs"
+                  aria-label={isMusicPlaying ? 'Pause ambient music' : 'Play ambient music'}
+                  className="text-[10px] md:text-xs cursor-pointer"
                 >
-                  {currentTrack?.source !== 'internal' ? '↗' : (isMusicPlaying ? '⏸️' : '▶️')}
+                  {currentTrack?.source !== 'internal' ? '🎵' : (isMusicPlaying ? '⏸️' : '▶️')}
                 </button>
                 <input 
                   type="range" min="0" max="1" step="0.01" value={volume} 
+                  aria-label="Ambient audio volume"
                   onChange={(e) => setVolume(parseFloat(e.target.value))}
-                  className="w-8 md:w-10 h-1 accent-pink-400"
+                  className="w-8 md:w-10 h-1 accent-pink-500"
                 />
               </div>
 
@@ -2206,11 +2397,26 @@ const App: React.FC = () => {
                     playWelcomeVoiceGreeting(user, { force: true }).catch(() => {});
                   }
                 }}
-                className="p-2 rounded-full bg-pink-50/90 hover:bg-pink-100 text-pink-600 transition-all cursor-pointer active:scale-95 flex items-center justify-center border border-pink-100/80 shadow-sm"
+                className="p-2 rounded-full bg-pink-50/90 hover:bg-pink-100 text-pink-700 transition-all cursor-pointer active:scale-95 flex items-center justify-center border border-pink-100/80 shadow-sm"
                 title="Play Welcome Voice Greeting"
+                aria-label="Play Welcome Voice Greeting"
                 id="global-header-welcome-voice-btn"
               >
-                <span className="text-sm">🌸</span>
+                <span className="text-sm" aria-hidden="true">🌸</span>
+              </button>
+
+              {/* Privacy & Security Vault Shortcut */}
+              <button
+                onClick={() => setActiveTab('privacy')}
+                className={`p-2 rounded-full transition-all cursor-pointer active:scale-95 flex items-center justify-center border shadow-sm ${
+                  activeTab === 'privacy'
+                    ? 'bg-pink-600 text-white border-pink-600'
+                    : 'bg-pink-50/90 hover:bg-pink-100 text-pink-700 border-pink-100/80'
+                }`}
+                title="Privacy & Security Dashboard"
+                aria-label="Open Privacy and Security Dashboard"
+              >
+                <ShieldCheck className="w-4 h-4" />
               </button>
 
               {/* Global Notification Bell Button */}
@@ -2219,7 +2425,7 @@ const App: React.FC = () => {
                   if (n.isRead) return false;
                   if (!user?.isPartner) {
                     const isConnectionRequest = n.category === 'partner_request' || 
-                                                n.isPartnerRequest === true ||
+                                                n.isPartnerRequest === true || 
                                                 (n.title && (n.title.toLowerCase().includes('request') || n.title.toLowerCase().includes('invite') || n.title.toLowerCase().includes('connection') || n.title.toLowerCase().includes('linked')));
                     if (isConnectionRequest) return true;
 
@@ -2235,11 +2441,12 @@ const App: React.FC = () => {
                       setSelectedNotifForModal(null);
                       setIsGlobalNotificationsOpen(true);
                     }}
-                    className="p-2 rounded-full bg-pink-50/90 hover:bg-pink-100 text-pink-600 transition-all relative cursor-pointer active:scale-95 flex items-center justify-center border border-pink-100/80 shadow-sm"
+                    className="p-2 rounded-full bg-pink-50/90 hover:bg-pink-100 text-pink-700 transition-all relative cursor-pointer active:scale-95 flex items-center justify-center border border-pink-100/80 shadow-sm"
                     title="Notification Center"
+                    aria-label="Open Notification Center"
                     id="global-header-notification-bell"
                   >
-                    <Bell className={`w-4 h-4 ${unreadNotifCount > 0 ? 'animate-bounce text-pink-600' : 'text-stone-500'}`} />
+                    <Bell className={`w-4 h-4 ${unreadNotifCount > 0 ? 'animate-bounce text-pink-600' : 'text-stone-600'}`} />
                     {unreadNotifCount > 0 && (
                       <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 bg-gradient-to-r from-rose-500 to-pink-500 text-white text-[9px] font-black rounded-full flex items-center justify-center border border-white animate-pulse">
                         {unreadNotifCount > 9 ? '9+' : unreadNotifCount}
@@ -2249,32 +2456,35 @@ const App: React.FC = () => {
                 );
               })()}
 
-              {!user.isPartner && !['cycle', 'wellness', 'edu', 'pedia', 'settings', 'music'].includes(activeTab) && (
+              {!user.isPartner && !['cycle', 'wellness', 'edu', 'pedia', 'settings', 'music', 'privacy'].includes(activeTab) && (
                 <button 
                   onClick={() => {
                     setActiveTab('partner');
                     sessionStorage.setItem('lumina_partnermode_subtab', 'requests');
                     window.dispatchEvent(new CustomEvent('lumina-set-partner-subtab', { detail: 'requests' }));
                   }} 
-                  className="p-1 md:p-2 text-gray-400 hover:text-pink-400 transition-colors relative"
+                  className="p-1 md:p-2 text-gray-600 hover:text-pink-600 transition-colors relative cursor-pointer"
                   title="Partner Connection Requests"
+                  aria-label="Partner Connection Requests"
                 >
-                  <span>🔔</span>
+                  <span aria-hidden="true">🔔</span>
                   {partnerRequests.filter(r => r.status === 'pending').length > 0 && (
                     <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-white animate-pulse" />
                   )}
                 </button>
               )}
 
-              {!['cycle', 'wellness', 'edu', 'pedia', 'settings', 'music'].includes(activeTab) && (
+              {!['cycle', 'wellness', 'edu', 'pedia', 'settings', 'music', 'privacy'].includes(activeTab) && (
                 <button 
                   onClick={() => {
                     setSettingsSubTab('notifications');
                     setActiveTab('settings');
                   }} 
-                  className="p-1 md:p-2 text-gray-400 hover:text-pink-400 transition-colors"
+                  className="p-1 md:p-2 text-gray-600 hover:text-pink-600 transition-colors cursor-pointer"
+                  title="Settings"
+                  aria-label="Open Settings"
                 >
-                  ⚙️
+                  <span aria-hidden="true">⚙️</span>
                 </button>
               )}
             </div>
@@ -2284,8 +2494,48 @@ const App: React.FC = () => {
 
       <main className={`max-w-4xl mx-auto px-4 ${activeTab === 'dashboard' && !user.isPartner ? 'mt-4' : 'mt-8'} pb-10`}>
         <ErrorBoundary onReset={() => setActiveTab('dashboard')}>
-          {renderContent()}
+          <Suspense
+            fallback={
+              <div className="py-16 flex flex-col items-center justify-center gap-3 text-pink-700">
+                <div className="w-8 h-8 border-2 border-pink-200 border-t-pink-600 rounded-full animate-spin" />
+                <p className="text-xs font-semibold">Loading sanctuary view...</p>
+              </div>
+            }
+          >
+            {renderContent()}
+          </Suspense>
         </ErrorBoundary>
+
+        {/* Accessible Privacy & Cookie Footer */}
+        <footer className="mt-10 pt-5 border-t border-pink-100/70 flex flex-wrap items-center justify-between gap-3 text-xs text-stone-600">
+          <span>Lumina: Bloom &amp; Balance • Your data belongs strictly to you.</span>
+          <div className="flex flex-wrap items-center gap-4 font-semibold">
+            <button
+              type="button"
+              onClick={() => setActiveTab('privacy')}
+              className="text-pink-700 hover:underline cursor-pointer"
+            >
+              Privacy Dashboard
+            </button>
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent('lumina:open-cookie-settings'))}
+              className="text-pink-700 hover:underline cursor-pointer"
+            >
+              Cookie Preferences
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSettingsSubTab('backup_sync');
+                setActiveTab('settings');
+              }}
+              className="text-pink-700 hover:underline cursor-pointer"
+            >
+              Backups &amp; Recovery
+            </button>
+          </div>
+        </footer>
       </main>
 
       <LogModal 
@@ -2300,12 +2550,14 @@ const App: React.FC = () => {
         onLogSexualActivity={handleLogSexualActivity}
       />
 
-      <DoctorReport 
-        isOpen={isDoctorReportOpen}
-        onClose={() => setIsDoctorReportOpen(false)}
-        user={user}
-        symptoms={symptoms}
-      />
+      <Suspense fallback={null}>
+        <DoctorReport 
+          isOpen={isDoctorReportOpen}
+          onClose={() => setIsDoctorReportOpen(false)}
+          user={user}
+          symptoms={symptoms}
+        />
+      </Suspense>
 
       {/* Floating Mini Player (Global) */}
       {isMusicActive && (
@@ -2414,11 +2666,12 @@ const App: React.FC = () => {
             
             <button 
               onClick={() => setIsLogModalOpen(true)}
-              className="flex flex-col items-center justify-center w-12 h-12 bg-gradient-to-br from-pink-400 to-rose-400 text-white rounded-full shadow-[0_4px_12px_rgba(244,114,182,0.3),_inset_0_1.5px_3px_rgba(255,255,255,0.4)] border-2 border-white hover:scale-105 active:scale-95 transition-all cursor-pointer shrink-0 z-50"
+              className="flex flex-col items-center justify-center w-12 h-12 bg-gradient-to-br from-pink-500 to-rose-500 text-white rounded-full shadow-[0_4px_12px_rgba(244,114,182,0.3),_inset_0_1.5px_3px_rgba(255,255,255,0.4)] border-2 border-white hover:scale-105 active:scale-95 transition-all cursor-pointer shrink-0 z-50"
               title="Log Your Day"
+              aria-label="Log Today Period, Mood or Symptoms"
               id="nav-log-plus-btn"
             >
-              <span className="text-xl font-black leading-none">+</span>
+              <span className="text-xl font-black leading-none" aria-hidden="true">+</span>
             </button>
 
             <NavItem icon="📚" label="Learn" active={activeTab === 'edu'} onClick={() => setActiveTab('edu')} theme={user.theme} />
@@ -2466,7 +2719,7 @@ const App: React.FC = () => {
             <div className="flex items-center gap-1 opacity-70 shrink-0">
               <span>now</span>
               <span>•</span>
-              <span>simulated</span>
+              <span>alert</span>
             </div>
           </div>
 
@@ -2480,7 +2733,7 @@ const App: React.FC = () => {
               {simulatedNotify.emoji}
             </div>
             <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-              <h4 className={`text-[11px] font-bold tracking-tight leading-snug break-words ${simulatedNotify.isPartner ? 'text-indigo-200' : 'text-rose-500'}`}>
+              <h4 className={`text-[11px] font-bold tracking-tight leading-snug break-words ${simulatedNotify.isPartner ? 'text-indigo-200' : 'text-rose-600'}`}>
                 {simulatedNotify.title}
               </h4>
               <p className="text-[10px] leading-relaxed font-semibold tracking-tight opacity-90 break-words whitespace-pre-line">
@@ -2490,7 +2743,7 @@ const App: React.FC = () => {
           </div>
 
           {/* Action Footer */}
-          <div className="flex items-center justify-between border-t mt-1.5 pt-2 opacity-65 text-[8px] font-bold uppercase tracking-wider border-current/10">
+          <div className="flex items-center justify-between border-t mt-1.5 pt-2 opacity-75 text-[8px] font-bold uppercase tracking-wider border-current/10">
             <span>Tap to read full details →</span>
             <span>📱 Slide up to close</span>
           </div>
@@ -2512,10 +2765,16 @@ const App: React.FC = () => {
       />
 
       {/* Analytics & Health Monitoring Dashboard Modal */}
-      <AnalyticsDashboardModal
-        isOpen={isAnalyticsOpen}
-        onClose={() => setIsAnalyticsOpen(false)}
-      />
+      {isAnalyticsOpen && (
+        <Suspense fallback={null}>
+          <AnalyticsDashboardModal
+            isOpen={isAnalyticsOpen}
+            onClose={() => setIsAnalyticsOpen(false)}
+          />
+        </Suspense>
+      )}
+
+      <CookieConsentBanner />
     </div>
   );
 };
@@ -2524,14 +2783,16 @@ const NavItem: React.FC<{ icon: string, label: string, active: boolean, onClick:
   return (
     <button 
       onClick={onClick}
+      aria-label={label}
+      aria-current={active ? 'page' : undefined}
       className={`flex flex-col items-center gap-1 py-2 px-3 rounded-[1.25rem] transition-all duration-300 relative cursor-pointer ${
         active 
-          ? 'bg-gradient-to-br from-pink-400/10 to-rose-400/10 text-pink-600 scale-[1.04] font-black shadow-[inset_0_2px_4px_rgba(255,255,255,0.7),_inset_0_-1.5px_2px_rgba(0,0,0,0.03),_0_6px_15px_rgba(244,114,182,0.06)] border border-pink-100/40' 
-          : 'text-gray-400 grayscale opacity-80 hover:grayscale-[50%] hover:scale-[1.02]'
+          ? 'bg-gradient-to-br from-pink-400/10 to-rose-400/10 text-pink-700 scale-[1.04] font-black shadow-[inset_0_2px_4px_rgba(255,255,255,0.7),_inset_0_-1.5px_2px_rgba(0,0,0,0.03),_0_6px_15px_rgba(244,114,182,0.06)] border border-pink-100/40' 
+          : 'text-gray-600 opacity-85 hover:text-pink-700 hover:scale-[1.02]'
       }`}
     >
-      <span className={`text-xl transition-all duration-300 ${active ? 'scale-110 drop-shadow-sm' : ''}`}>{icon}</span>
-      <span className="text-[7.5px] uppercase tracking-tighter font-black">{label}</span>
+      <span className={`text-xl transition-all duration-300 ${active ? 'scale-110 drop-shadow-sm' : ''}`} aria-hidden="true">{icon}</span>
+      <span className="text-[9px] uppercase tracking-tighter font-extrabold">{label}</span>
       {badge !== undefined && badge > 0 && (
         <span className="absolute -top-1 -right-1 bg-gradient-to-r from-pink-500 to-rose-500 text-white text-[8px] font-black w-4.5 h-4.5 rounded-full flex items-center justify-center shadow-[inset_0_1px_2.5px_rgba(255,255,255,0.45),_0_2px_5px_rgba(244,114,182,0.25)] border border-white animate-pulse">
           {badge}
