@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PartnerOnboardingWizard } from './PartnerOnboardingWizard';
 import { Bell, X, GraduationCap, BookOpen, Heart, ShieldCheck, CheckCircle2, AlertCircle, Info, Sparkles, Settings, LogOut, Shield, User as UserIcon, Trash2, Menu } from 'lucide-react';
-import { User, Reminder, ReceivedComfort, PartnerNotificationPreferences } from '../types';
+import { User, Reminder, ReceivedComfort, PartnerNotificationPreferences, PartnerSharedSummary } from '../types';
 import { getGiftIdeas, getCommunicationTips, getLoveNoteIdeas, getSupportMission } from '../services/gemini';
 import { 
   createInvite, 
@@ -11,7 +11,7 @@ import {
   disconnectPartner, 
   deleteUserAccount,
   sendGift, 
-  subscribeToUser, 
+  subscribeToPartnerSharedView,
   subscribeToGifts,
   syncUser,
   subscribeToPartnerRequests,
@@ -23,6 +23,7 @@ import {
   getCleanName,
   getSanctuaryTitle
 } from '../services/firebaseService';
+import { saveEncryptedSessionUser, secureStorage } from '../services/secureStorage';
 import { trackSendPartnerInvite, trackAcceptPartnerInvite, trackDeclinePartnerInvite } from '../services/analyticsService';
 import { calculateCycleSyncData } from '../services/cycleSyncService';
 import { QrCodeCanvas } from './QrCodeCanvas';
@@ -94,13 +95,18 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
   const [copied, setCopied] = useState(false);
   const [linkOnlyCopied, setLinkOnlyCopied] = useState(false);
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
-  const [linkedUser, setLinkedUser] = useState<User | null>(() => partnerUser || null);
+  const [showUnlinkInSettingsConfirm, setShowUnlinkInSettingsConfirm] = useState(false);
+  const [showCancelRequestConfirm, setShowCancelRequestConfirm] = useState(false);
+  const [showDeclineConfirm, setShowDeclineConfirm] = useState(false);
+  const [partnerNotice, setPartnerNotice] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
+  const [linkedSummary, setLinkedSummary] = useState<PartnerSharedSummary | null>(null);
 
-  useEffect(() => {
-    if (partnerUser) {
-      setLinkedUser(partnerUser);
-    }
-  }, [partnerUser]);
+  const showNotice = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setPartnerNotice({ message, type });
+    window.setTimeout(() => {
+      setPartnerNotice((prev) => (prev?.message === message ? null : prev));
+    }, 4500);
+  };
   const [receivedGifts, setReceivedGifts] = useState<ReceivedComfort[]>([]);
   const [generatingLink, setGeneratingLink] = useState(false);
   const [showQRCode, setShowQRCode] = useState(false);
@@ -177,12 +183,44 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
       if (activeRequest.status === 'pending') {
         setPartnerStep(3);
       } else if (activeRequest.status === 'approved') {
-        if (!user.isPartnerLinked || !user.onboardingCompleted) {
+        if (!user.isPartnerLinked || user.partnerRequest?.status !== 'approved') {
+          const syncedPartner: User = {
+            ...user,
+            isPartnerLinked: true,
+            partnerRequest: {
+              ...(user.partnerRequest || {
+                partnerId: user.partnerId || '',
+                partnerName: user.partnerName || '',
+                requestedReceives: activeRequest.requested_permissions || [],
+              }),
+              status: 'approved',
+            },
+          };
+          setUser(syncedPartner);
+          void syncUser(syncedPartner);
+        }
+        if (!user.onboardingCompleted) {
           setPartnerStep(4);
         } else {
           setPartnerStep(6);
         }
       } else if (activeRequest.status === 'declined') {
+        if (user.isPartnerLinked || user.partnerRequest?.status !== 'declined') {
+          const declinedPartner: User = {
+            ...user,
+            isPartnerLinked: false,
+            partnerRequest: {
+              ...(user.partnerRequest || {
+                partnerId: user.partnerId || '',
+                partnerName: user.partnerName || '',
+                requestedReceives: activeRequest.requested_permissions || [],
+              }),
+              status: 'declined',
+            },
+          };
+          setUser(declinedPartner);
+          void syncUser(declinedPartner);
+        }
         setPartnerStep(5);
       }
     } else {
@@ -230,13 +268,15 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
   }, [user.partnerId]);
 
   useEffect(() => {
-    if (user.partnerId) {
-      const unsubUser = subscribeToUser(user.partnerId, (linked) => {
-        if (linked) setLinkedUser(linked);
+    if (user.isPartner && user.partnerId) {
+      const unsubSummary = subscribeToPartnerSharedView(user.partnerId, (summary) => {
+        setLinkedSummary(summary);
       });
-      return () => unsubUser();
+      return () => unsubSummary();
+    } else {
+      setLinkedSummary(null);
     }
-  }, [user.partnerId]);
+  }, [user.isPartner, user.partnerId]);
 
   useEffect(() => {
     const unsubGifts = subscribeToGifts(user.id, (gifts) => {
@@ -245,17 +285,54 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
     return () => unsubGifts();
   }, [user.id]);
 
-  const actualPartnerUser = (linkedUser && linkedUser.id !== user.id) ? linkedUser :
+  const projectedPartnerUser: User | null = linkedSummary
+    ? ({
+        id: linkedSummary.ownerId,
+        name: linkedSummary.ownerName,
+        email: '',
+        partnerName: user.name || '',
+        partnerId: user.id,
+        isPartnerLinked: Boolean(linkedSummary.isPartnerLinked),
+        isSharingPaused: Boolean(linkedSummary.isSharingPaused),
+        isPartner: false,
+        isPregnancyMode: Boolean(linkedSummary.isPregnancyMode),
+        isPostpartumMode: Boolean(linkedSummary.isPostpartumMode),
+        pregnancyStartDate: linkedSummary.pregnancyStartDate,
+        deliveryDate: linkedSummary.deliveryDate,
+        pregnancyAppointments: linkedSummary.pregnancyAppointments,
+        cycleLength: linkedSummary.cycleLength || 28,
+        previousCycleLength: linkedSummary.previousCycleLength,
+        periodLength: linkedSummary.periodLength || 5,
+        lastPeriodStart: linkedSummary.lastPeriodStart || '',
+        periods: linkedSummary.periods,
+        periodLogs: linkedSummary.periodLogs,
+        periodDates: linkedSummary.periodDates,
+        symptoms: linkedSummary.symptoms,
+        todaySymptomLog: linkedSummary.todaySymptomLog,
+        moodLogs: linkedSummary.moodLogs,
+        sexualActivityLogs: linkedSummary.sexualActivityLogs,
+        wishlist: linkedSummary.wishlist,
+        partnerSupportPreferences: linkedSummary.partnerSupportPreferences,
+        receivedComforts: linkedSummary.receivedComforts,
+        theme: linkedSummary.theme || 'rose',
+        sharingSettings: linkedSummary.sharingSettings,
+      } as User)
+    : null;
+
+  const actualPartnerUser = (projectedPartnerUser && projectedPartnerUser.id !== user.id) ? projectedPartnerUser :
                             (partnerUser && partnerUser.id !== user.id) ? partnerUser : null;
+
+  const activeOutgoingRequest = outgoingRequests.find(r => r.user_id === user.partnerId) || outgoingRequests[0];
 
   const isDeclined = user.partnerRequest?.status === 'declined' || 
                      activePendingRequest?.status === 'declined' || 
-                     linkedUser?.partnerRequest?.status === 'declined';
+                     activeOutgoingRequest?.status === 'declined';
 
   const isPendingApproval = !isDeclined && (
     user.partnerRequest?.status === 'pending' || 
     activePendingRequest?.status === 'pending' || 
-    (!user.isPartnerLinked && !linkedUser?.isPartnerLinked && Boolean(user.partnerId || linkedUser?.id))
+    activeOutgoingRequest?.status === 'pending' ||
+    (!user.isPartnerLinked && !linkedSummary?.isPartnerLinked && !partnerUser?.isPartnerLinked && Boolean(user.partnerId))
   );
 
   const isConnected = Boolean(
@@ -263,10 +340,11 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
     !isPendingApproval &&
     (
       user.isPartnerLinked ||
-      (linkedUser && linkedUser.isPartnerLinked) ||
+      linkedSummary?.isPartnerLinked ||
       (partnerUser && partnerUser.isPartnerLinked) ||
       user.partnerRequest?.status === 'approved' ||
-      activePendingRequest?.status === 'approved'
+      activePendingRequest?.status === 'approved' ||
+      activeOutgoingRequest?.status === 'approved'
     )
   );
 
@@ -302,12 +380,11 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
     return 'Partner';
   })();
 
-  const targetUser = user.isPartner 
-    ? (actualPartnerUser || { ...user, name: partnerDisplayName }) 
-    : user;
+  const targetUser: User | null = user.isPartner ? actualPartnerUser : user;
   
   const currentPhase = (() => {
     if (!targetUser) return 'Luteal';
+    if (targetUser.sharingSettings?.shareCycleInfo !== true) return 'Private';
     if (targetUser.isPregnancyMode) return 'Pregnancy';
     const sync = calculateCycleSyncData(targetUser, new Date());
     return sync.phase;
@@ -489,12 +566,14 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
           }
         };
         setUser(updatedUser);
-        localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
-        localStorage.setItem('lumina_biometric_user', JSON.stringify(updatedUser));
+        const rememberMe = localStorage.getItem('lumina_remember_me') !== 'false';
+        void saveEncryptedSessionUser(updatedUser, rememberMe).catch(() => {});
+        localStorage.removeItem('lumina_user');
+        localStorage.removeItem('lumina_biometric_user');
         setOnboardingStep(1);
       }
     } catch (err: any) {
-      alert(err.message || 'Failed to connect. Please check the code.');
+      showNotice(err.message || 'Failed to connect. Please check the code.', 'error');
     } finally {
       setLoading(false);
     }
@@ -502,7 +581,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
 
   const handleDisconnect = async () => {
     if (user.partnerId) {
-      const pName = user.partnerName || 'Michael';
+      const pName = user.partnerName || 'Partner';
       const partnerIdToDisconnect = user.partnerId;
       
       const updatedUser = { 
@@ -515,23 +594,25 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
       };
       
       setUser(updatedUser);
-      localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
-      localStorage.setItem('lumina_biometric_user', JSON.stringify(updatedUser));
+      const rememberMe = localStorage.getItem('lumina_remember_me') !== 'false';
+      void saveEncryptedSessionUser(updatedUser, rememberMe).catch(() => {});
+      localStorage.removeItem('lumina_user');
+      localStorage.removeItem('lumina_biometric_user');
       
       await disconnectPartner(user.id, partnerIdToDisconnect);
       await syncUser(updatedUser);
       
       setShowDisconnectConfirm(false);
-      alert(`You have disconnected from ${pName}.`);
+      showNotice(`You have disconnected from ${pName}.`, 'info');
     }
   };
 
   const sendDigitalComfort = async (type: ReceivedComfort['type']) => {
     if (user.partnerId) {
       await sendGift(user.name, user.id, user.partnerId, type);
-      alert(`Sent a digital ${type} to ${user.partnerName}! It will bloom on her dashboard instantly. ✨`);
+      showNotice(`Sent a digital ${type} to ${partnerDisplayName}! It will bloom on her dashboard instantly. ✨`, 'success');
     } else {
-      alert('Connect with a partner first to send a gift! 💞');
+      showNotice('Connect with a partner first to send a gift! 💞', 'info');
     }
   };
 
@@ -544,8 +625,34 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
     syncUser(updatedUser);
   };
 
+  const renderNoticeBanner = () =>
+    partnerNotice ? (
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[220] max-w-md w-[92%] animate-fadeIn">
+        <div
+          className={`px-4 py-3 rounded-2xl shadow-xl border backdrop-blur-xl flex items-center justify-between gap-3 text-xs font-semibold ${
+            partnerNotice.type === 'error'
+              ? 'bg-rose-50/95 border-rose-200 text-rose-800'
+              : partnerNotice.type === 'info'
+                ? 'bg-indigo-50/95 border-indigo-200 text-indigo-800'
+                : 'bg-emerald-50/95 border-emerald-200 text-emerald-800'
+          }`}
+        >
+          <span>{partnerNotice.message}</span>
+          <button
+            type="button"
+            onClick={() => setPartnerNotice(null)}
+            className="p-1 rounded-lg hover:bg-black/5 cursor-pointer shrink-0"
+            aria-label="Dismiss notification"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+    ) : null;
+
   const renderGlobalModals = () => (
     <>
+      {renderNoticeBanner()}
       {/* GLOBAL HAMBURGER NAVIGATION DRAWER */}
       {isMenuOpen && (
         <>
@@ -778,7 +885,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                   type="button"
                   onClick={async () => {
                     await navigator.clipboard.writeText(user.partnerCode || user.id);
-                    alert('Partner Code copied to clipboard!');
+                    showNotice('Partner Code copied to clipboard!', 'success');
                   }}
                   className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-xl text-[10px] font-bold uppercase tracking-wider cursor-pointer shrink-0"
                 >
@@ -810,11 +917,11 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                 </button>
               </div>
               <div className="space-y-2 pt-1">
-                <SharingToggle label="Share Cycle Information" active={user.sharingSettings?.shareCycleInfo ?? true} onChange={(v) => updateSharing('shareCycleInfo', v)} />
-                <SharingToggle label="Share Symptoms & Comfort" active={user.sharingSettings?.shareSymptoms ?? true} onChange={(v) => updateSharing('shareSymptoms', v)} />
-                <SharingToggle label="Share Mood Updates" active={user.sharingSettings?.shareMood ?? true} onChange={(v) => updateSharing('shareMood', v)} />
-                <SharingToggle label="Share Notes & Reminders" active={user.sharingSettings?.shareNotes ?? true} onChange={(v) => updateSharing('shareNotes', v)} />
-                <SharingToggle label="Share Doctor Reports" active={user.sharingSettings?.shareDoctorReports ?? true} onChange={(v) => updateSharing('shareDoctorReports', v)} />
+                <SharingToggle label="Share Cycle Information" active={user.sharingSettings?.shareCycleInfo === true} onChange={(v) => updateSharing('shareCycleInfo', v)} />
+                <SharingToggle label="Share Symptoms & Comfort" active={user.sharingSettings?.shareSymptoms === true} onChange={(v) => updateSharing('shareSymptoms', v)} />
+                <SharingToggle label="Share Mood Updates" active={user.sharingSettings?.shareMood === true} onChange={(v) => updateSharing('shareMood', v)} />
+                <SharingToggle label="Share Notes & Reminders" active={user.sharingSettings?.shareNotes === true} onChange={(v) => updateSharing('shareNotes', v)} />
+                <SharingToggle label="Share Doctor Reports" active={user.sharingSettings?.shareDoctorReports === true} onChange={(v) => updateSharing('shareDoctorReports', v)} />
               </div>
             </div>
 
@@ -852,20 +959,43 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                 <p className="text-xs text-stone-600 font-serif italic">
                   Connected with: <span className="font-bold text-stone-800 font-sans">{getCleanName(partnerUser?.name || user.partnerName, partnerUser?.email) || 'Partner'}</span>
                 </p>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    if (confirm('Are you sure you want to disconnect from your partner connection?')) {
-                      await disconnectPartner(user.id, user.partnerId || '');
-                      const updated = { ...user, isPartnerLinked: false, partnerId: '', partnerName: '' };
-                      setUser(updated);
-                      setShowSettings(false);
-                    }
-                  }}
-                  className="w-full py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-2xl text-[10px] font-bold uppercase tracking-wider border border-rose-200 cursor-pointer transition-colors"
-                >
-                  Unlink Partner Connection
-                </button>
+                {!showUnlinkInSettingsConfirm ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowUnlinkInSettingsConfirm(true)}
+                    className="w-full py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-2xl text-[10px] font-bold uppercase tracking-wider border border-rose-200 cursor-pointer transition-colors"
+                  >
+                    Unlink Partner Connection
+                  </button>
+                ) : (
+                  <div className="p-3 bg-rose-50 rounded-2xl border border-rose-200 space-y-2">
+                    <p className="text-[11px] font-semibold text-rose-800">Are you sure you want to disconnect and immediately stop sharing?</p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowUnlinkInSettingsConfirm(false)}
+                        className="flex-1 py-2 bg-white text-stone-600 rounded-xl text-[10px] font-bold uppercase border border-stone-200 cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await disconnectPartner(user.id, user.partnerId || '');
+                          const updated = { ...user, isPartnerLinked: false, partnerId: '', partnerName: '' };
+                          setUser(updated);
+                          await syncUser(updated);
+                          setShowUnlinkInSettingsConfirm(false);
+                          setShowSettings(false);
+                          showNotice('Partner connection unlinked and sharing revoked.', 'info');
+                        }}
+                        className="flex-1 py-2 bg-rose-600 text-white rounded-xl text-[10px] font-bold uppercase cursor-pointer"
+                      >
+                        Confirm Unlink
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1001,7 +1131,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                     }
                   } catch (err) {
                     console.error("Account deletion failed:", err);
-                    alert("Could not delete account. Please try again.");
+                    showNotice("Could not delete account. Please try again.", 'error');
                     setIsDeletingAccount(false);
                   }
                 }}
@@ -1277,7 +1407,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    alert('Copied to clipboard, hero! 💌');
+    showNotice('Copied to clipboard, hero! 💌', 'success');
   };
 
   const finishOnboarding = () => {
@@ -1287,25 +1417,33 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
 
   if (user.isPartner && (partnerStep === 4 || ((user.isPartnerLinked || user.partnerRequest?.status === 'approved' || outgoingRequests.some(r => r.status === 'approved')) && (!user.partnerOnboardingCompleted || !user.onboardingCompleted)))) {
     return (
-      <PartnerOnboardingWizard
-        user={user}
-        setUser={setUser}
-        onComplete={(completedUser) => {
-          setUser(completedUser);
-          localStorage.setItem('lumina_user', JSON.stringify(completedUser));
-          if (completedUser.email) {
-            localStorage.setItem('lumina_user_email_' + completedUser.email.toLowerCase().trim(), JSON.stringify(completedUser));
-          }
-          syncUser(completedUser);
-          setPartnerStep(6);
-        }}
-      />
+      <>
+        {renderNoticeBanner()}
+        <PartnerOnboardingWizard
+          user={user}
+          setUser={setUser}
+          onComplete={(completedUser) => {
+            setUser(completedUser);
+            const rememberMe = localStorage.getItem('lumina_remember_me') !== 'false';
+            void saveEncryptedSessionUser(completedUser, rememberMe).catch(() => {});
+            localStorage.removeItem('lumina_user');
+            if (completedUser.email) {
+              const emailKey = completedUser.email.toLowerCase().trim();
+              void secureStorage.setItem('offline_user_' + emailKey, JSON.stringify(completedUser)).catch(() => {});
+              localStorage.removeItem('lumina_user_email_' + emailKey);
+            }
+            syncUser(completedUser);
+            setPartnerStep(6);
+          }}
+        />
+      </>
     );
   }
 
   if (user.isPartner && user.partnerId && partnerStep < 6) {
     return (
       <div className="min-h-[80vh] flex flex-col items-center justify-center p-6 animate-fadeIn font-sans">
+        {renderNoticeBanner()}
         <div className="w-full max-w-md bg-white rounded-[3rem] shadow-2xl border border-pink-50 p-10 space-y-8 relative overflow-hidden">
           {/* Progress Bar */}
           <div className="absolute top-0 left-0 w-full h-1.5 bg-pink-100/50">
@@ -1454,26 +1592,49 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                 <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Waiting for approval from {partnerDisplayName}.</span>
               </div>
 
-              <button
-                onClick={async () => {
-                  if (confirm("Would you like to cancel and disconnect from your partner connection?")) {
-                    await disconnectPartner(user.id, user.partnerId || '');
-                    const updated = {
-                      ...user,
-                      partnerId: undefined,
-                      partnerName: '',
-                      isPartnerLinked: false,
-                      partnerRequest: undefined,
-                      isPartner: false
-                    };
-                    setUser(updated);
-                    setPartnerStep(0);
-                  }
-                }}
-                className="text-[10px] uppercase tracking-widest font-bold text-gray-400 hover:text-rose-500 transition-colors"
-              >
-                Disconnect & Cancel Connection 💔
-              </button>
+              {!showCancelRequestConfirm ? (
+                <button
+                  type="button"
+                  onClick={() => setShowCancelRequestConfirm(true)}
+                  className="text-[10px] uppercase tracking-widest font-bold text-gray-400 hover:text-rose-500 transition-colors cursor-pointer"
+                >
+                  Disconnect & Cancel Connection 💔
+                </button>
+              ) : (
+                <div className="p-4 bg-rose-50 rounded-2xl border border-rose-200 space-y-3 text-center">
+                  <p className="text-xs font-semibold text-rose-800">Cancel and disconnect from your partner connection?</p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowCancelRequestConfirm(false)}
+                      className="flex-1 py-2 bg-white text-stone-600 rounded-xl text-[10px] font-bold uppercase border border-stone-200 cursor-pointer"
+                    >
+                      Keep Waiting
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await disconnectPartner(user.id, user.partnerId || '');
+                        const updated = {
+                          ...user,
+                          partnerId: undefined,
+                          partnerName: '',
+                          isPartnerLinked: false,
+                          partnerRequest: undefined,
+                          isPartner: false
+                        };
+                        setUser(updated);
+                        await syncUser(updated);
+                        setShowCancelRequestConfirm(false);
+                        setPartnerStep(0);
+                      }}
+                      className="flex-1 py-2 bg-rose-600 text-white rounded-xl text-[10px] font-bold uppercase cursor-pointer"
+                    >
+                      Disconnect
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1551,6 +1712,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
   if (!user.isPartner && !user.partnerId && !incomingRequests.some(r => r.status === 'pending') && user.partnerRequest?.status !== 'pending' && !hasPendingNotificationRequest) {
     return (
       <div className="space-y-8 animate-fadeIn pb-24 font-sans select-none">
+        {renderNoticeBanner()}
         <header className="bg-gradient-to-br from-pink-500 to-rose-500 p-10 rounded-[3rem] shadow-xl text-white text-center">
           <h2 className="text-4xl font-serif italic mb-2">Partner Mode</h2>
           <p className="text-sm opacity-90">Connect with YOUR partner privately & securely</p>
@@ -1742,6 +1904,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
             <p className="text-[10px] font-bold uppercase tracking-widest">Only your partner can view your cycle data</p>
           </div>
         </section>
+        {renderGlobalModals()}
       </div>
     );
   }
@@ -1756,13 +1919,13 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
         requested_permissions: user.partnerRequest.requestedReceives || ['Period Updates', 'Fertility Updates', 'Wellness Support', 'Symptom Updates'],
         status: 'pending' as const
       } : null);
-    const isPendingApproval = activePendingRequest ? true : (linkedUser?.partnerRequest?.status === 'pending');
-    const isApproved = activePendingRequest ? false : (linkedUser?.partnerRequest?.status === 'approved');
+    const isPendingApproval = Boolean(activePendingRequest) || (!user.isPartnerLinked && user.partnerRequest?.status === 'pending');
+    const isApproved = !activePendingRequest && (user.isPartnerLinked || incomingRequests.some(r => r.status === 'approved' && (!user.partnerId || r.partner_id === user.partnerId)));
     const requestedPermissionsList = activePendingRequest 
       ? activePendingRequest.requested_permissions 
-      : (linkedUser?.partnerRequest?.requestedReceives || []);
+      : (user.partnerRequest?.requestedReceives || []);
 
-    const requesterName = activePendingRequest ? activePendingRequest.partnerName : (linkedUser?.name || user.partnerName || 'Your partner');
+    const requesterName = activePendingRequest ? activePendingRequest.partnerName : (user.partnerName || 'Your partner');
 
     const mapPermissionsToSharingSettings = (permissions: string[]) => {
       const lowercasePerms = permissions.map(p => p.toLowerCase());
@@ -1797,30 +1960,15 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
       setUser(updatedUser);
       await syncUser(updatedUser);
 
-      // Establish bidirectional connection on both users
+      // Update primary user's own connection + partner_shared/summary projection + notify partner
       await completePartnerConnection(user.id, partnerIdToSet, partnerNameToSet, getUserDisplayName(user));
 
       const reqId = activePendingRequest ? activePendingRequest.id : `${user.id}_${user.partnerId}`;
       await updatePartnerRequestStatus(reqId, 'approved');
+      trackAcceptPartnerInvite?.();
 
-      if (linkedUser) {
-        const updatedPartner = {
-          ...linkedUser,
-          partnerId: user.id,
-          partnerName: getUserDisplayName(user),
-          partnerRequest: {
-            ...linkedUser.partnerRequest!,
-            requestedReceives: requested,
-            status: 'approved' as const
-          },
-          isPartnerLinked: true
-        };
-        setLinkedUser(updatedPartner);
-        await syncUser(updatedPartner);
-      }
-      
       setSubTab('partners');
-      alert(`You successfully approved ${partnerNameToSet}'s connection and sharing preferences! 💖`);
+      showNotice(`You approved ${partnerNameToSet}'s connection and sharing preferences! 💖`, 'success');
     };
 
     const handleApproveSelected = async () => {
@@ -1839,61 +1987,42 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
       setUser(updatedUser);
       await syncUser(updatedUser);
 
-      // Establish bidirectional connection on both users
       await completePartnerConnection(user.id, partnerIdToSet, partnerNameToSet, getUserDisplayName(user));
 
       const reqId = activePendingRequest ? activePendingRequest.id : `${user.id}_${user.partnerId}`;
       await updatePartnerRequestStatus(reqId, 'approved');
+      trackAcceptPartnerInvite?.();
 
-      if (linkedUser) {
-        const updatedPartner = {
-          ...linkedUser,
-          partnerId: user.id,
-          partnerName: getUserDisplayName(user),
-          partnerRequest: {
-            ...linkedUser.partnerRequest!,
-            requestedReceives: reviewedPermissions,
-            status: 'approved' as const
-          },
-          isPartnerLinked: true
-        };
-        setLinkedUser(updatedPartner);
-        await syncUser(updatedPartner);
-      }
-      
       setSubTab('partners');
-      alert(`You successfully approved ${partnerNameToSet}'s connection with selected categories! 💖`);
+      showNotice(`You approved ${partnerNameToSet}'s connection with your selected categories! 💖`, 'success');
     };
 
-    const handleDeclineRequest = async () => {
-      if (confirm(`Are you sure you want to decline ${requesterName}'s request?`)) {
-        const reqId = activePendingRequest ? activePendingRequest.id : `${user.id}_${user.partnerId}`;
-        await updatePartnerRequestStatus(reqId, 'declined');
+    const executeDeclineRequest = async () => {
+      const partnerIdToDecline = activePendingRequest ? activePendingRequest.partner_id : (user.partnerId || '');
+      const reqId = activePendingRequest ? activePendingRequest.id : `${user.id}_${partnerIdToDecline}`;
+      await updatePartnerRequestStatus(reqId, 'declined');
+      trackDeclinePartnerInvite?.();
 
-        if (linkedUser) {
-          const updatedPartner = {
-            ...linkedUser,
-            partnerRequest: {
-              ...linkedUser.partnerRequest!,
-              status: 'declined' as const
-            },
-            isPartnerLinked: false
-          };
-          setLinkedUser(updatedPartner);
-          await syncUser(updatedPartner);
-        }
+      const updatedUser = {
+        ...user,
+        partnerId: undefined,
+        partnerName: '',
+        isPartnerLinked: false
+      };
+      setUser(updatedUser);
+      await syncUser(updatedUser);
 
-        const updatedUser = {
-          ...user,
-          partnerId: undefined,
-          partnerName: '',
-          isPartnerLinked: false
-        };
-        setUser(updatedUser);
-        await syncUser(updatedUser);
-        
-        alert(`Request from ${requesterName} declined.`);
+      if (partnerIdToDecline) {
+        await addNotificationToUser(partnerIdToDecline, {
+          title: 'Partner Request Declined',
+          body: `${getUserDisplayName(user)} declined the partner connection request.`,
+          emoji: '🔒',
+          category: 'partner',
+        });
       }
+
+      setShowDeclineConfirm(false);
+      showNotice(`Request from ${requesterName} declined.`, 'info');
     };
 
     const handleSaveCustomSharing = async () => {
@@ -1909,30 +2038,15 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
       setUser(updatedUser);
       await syncUser(updatedUser);
 
-      // Establish bidirectional connection on both users
       await completePartnerConnection(user.id, partnerIdToSet, partnerNameToSet, getUserDisplayName(user));
 
       const reqId = activePendingRequest ? activePendingRequest.id : `${user.id}_${user.partnerId}`;
       await updatePartnerRequestStatus(reqId, 'approved');
+      trackAcceptPartnerInvite?.();
 
-      if (linkedUser) {
-        const updatedPartner = {
-          ...linkedUser,
-          partnerId: user.id,
-          partnerName: getUserDisplayName(user),
-          partnerRequest: {
-            ...linkedUser.partnerRequest!,
-            status: 'approved' as const
-          },
-          isPartnerLinked: true
-        };
-        setLinkedUser(updatedPartner);
-        await syncUser(updatedPartner);
-      }
-      
       setIsCustomizingSharing(false);
       setSubTab('partners');
-      alert(`Custom privacy preferences saved and connection approved for ${partnerNameToSet}! 💮`);
+      showNotice(`Custom privacy preferences saved and connection approved for ${partnerNameToSet}! 💮`, 'success');
     };
 
     const togglePauseSharing = async () => {
@@ -1942,7 +2056,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
       };
       setUser(updatedUser);
       await syncUser(updatedUser);
-      alert(updatedUser.isSharingPaused ? 'Sharing paused successfully.' : 'Sharing resumed successfully.');
+      showNotice(updatedUser.isSharingPaused ? 'Sharing paused immediately.' : 'Sharing resumed.', 'info');
     };
 
     return (
@@ -2197,13 +2311,35 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                   >
                     Approve All Categories
                   </button>
-                  <button
-                    type="button"
-                    onClick={handleDeclineRequest}
-                    className="px-6 py-4 bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold rounded-2xl text-[10px] uppercase tracking-widest transition-all cursor-pointer"
-                  >
-                    Decline Request ✕
-                  </button>
+                  {!showDeclineConfirm ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowDeclineConfirm(true)}
+                      className="px-6 py-4 bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold rounded-2xl text-[10px] uppercase tracking-widest transition-all cursor-pointer"
+                    >
+                      Decline Request ✕
+                    </button>
+                  ) : (
+                    <div className="w-full p-4 bg-rose-50 border border-rose-200 rounded-2xl flex flex-wrap items-center justify-between gap-3">
+                      <span className="text-xs font-semibold text-rose-800">Decline {requesterName}'s partner request?</span>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowDeclineConfirm(false)}
+                          className="px-4 py-2 bg-white text-stone-600 rounded-xl text-[10px] font-bold uppercase border border-stone-200 cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={executeDeclineRequest}
+                          className="px-4 py-2 bg-rose-600 text-white rounded-xl text-[10px] font-bold uppercase cursor-pointer"
+                        >
+                          Confirm Decline
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (
@@ -2300,7 +2436,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                   type="button"
                   onClick={() => {
                     navigator.clipboard.writeText(inviteLink);
-                    alert("Invite link copied to clipboard! 📋");
+                    showNotice("Invite link copied to clipboard! 📋", 'success');
                   }}
                   className="p-4 bg-pink-50/50 hover:bg-pink-50 border border-pink-100 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all cursor-pointer"
                 >
@@ -2324,7 +2460,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                       }
                     } else {
                       navigator.clipboard.writeText(inviteLink);
-                      alert("Web Share not supported. Link copied to clipboard instead! 📋");
+                      showNotice("Web Share not supported. Link copied to clipboard instead! 📋", 'info');
                     }
                   }}
                   className="p-4 bg-pink-50/50 hover:bg-pink-50 border border-pink-100 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all cursor-pointer"
@@ -2428,15 +2564,15 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
               )}
 
               <div className="space-y-4">
-                <SharingToggle label="Share Cycle Information" active={user.sharingSettings.shareCycleInfo} onChange={(v) => updateSharing('shareCycleInfo', v)} />
-                <SharingToggle label="Share Symptoms" active={user.sharingSettings.shareSymptoms} onChange={(v) => updateSharing('shareSymptoms', v)} />
-                <SharingToggle label="Share Mood" active={user.sharingSettings.shareMood} onChange={(v) => updateSharing('shareMood', v)} />
-                <SharingToggle label="Share Notes" active={user.sharingSettings.shareNotes} onChange={(v) => updateSharing('shareNotes', v)} />
-                <SharingToggle label="Share Fertility Information" active={user.sharingSettings.shareFertilityInfo} onChange={(v) => updateSharing('shareFertilityInfo', v)} />
-                <SharingToggle label="Share Pregnancy Information" active={user.sharingSettings.sharePregnancyInfo} onChange={(v) => updateSharing('sharePregnancyInfo', v)} />
-                <SharingToggle label="Share Doctor Reports" active={user.sharingSettings.shareDoctorReports} onChange={(v) => updateSharing('shareDoctorReports', v)} />
-                <SharingToggle label="Share Appointment Reminders" active={user.sharingSettings.shareAppointmentReminders} onChange={(v) => updateSharing('shareAppointmentReminders', v)} />
-                <SharingToggle label="Share Wellness Updates" active={user.sharingSettings.shareWellnessUpdates} onChange={(v) => updateSharing('shareWellnessUpdates', v)} />
+                <SharingToggle label="Share Cycle Information" active={user.sharingSettings?.shareCycleInfo === true} onChange={(v) => updateSharing('shareCycleInfo', v)} />
+                <SharingToggle label="Share Symptoms" active={user.sharingSettings?.shareSymptoms === true} onChange={(v) => updateSharing('shareSymptoms', v)} />
+                <SharingToggle label="Share Mood" active={user.sharingSettings?.shareMood === true} onChange={(v) => updateSharing('shareMood', v)} />
+                <SharingToggle label="Share Notes" active={user.sharingSettings?.shareNotes === true} onChange={(v) => updateSharing('shareNotes', v)} />
+                <SharingToggle label="Share Fertility Information" active={user.sharingSettings?.shareFertilityInfo === true} onChange={(v) => updateSharing('shareFertilityInfo', v)} />
+                <SharingToggle label="Share Pregnancy Information" active={user.sharingSettings?.sharePregnancyInfo === true} onChange={(v) => updateSharing('sharePregnancyInfo', v)} />
+                <SharingToggle label="Share Doctor Reports" active={user.sharingSettings?.shareDoctorReports === true} onChange={(v) => updateSharing('shareDoctorReports', v)} />
+                <SharingToggle label="Share Appointment Reminders" active={user.sharingSettings?.shareAppointmentReminders === true} onChange={(v) => updateSharing('shareAppointmentReminders', v)} />
+                <SharingToggle label="Share Wellness Updates" active={user.sharingSettings?.shareWellnessUpdates === true} onChange={(v) => updateSharing('shareWellnessUpdates', v)} />
               </div>
 
               {isCustomizingSharing ? (
@@ -2452,7 +2588,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                   type="button"
                   onClick={async () => {
                     await syncUser(user);
-                    alert('Sharing settings successfully saved and synchronized in real-time with your partner! ✨');
+                    showNotice('Sharing settings saved and synchronized securely! ✨', 'success');
                   }}
                   className="w-full mt-6 py-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl font-bold uppercase text-[10px] tracking-widest shadow-lg shadow-pink-150 cursor-pointer"
                 >
@@ -2501,6 +2637,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
   if (user.isPartner && !isConnected) {
     return (
       <div className="space-y-8 animate-fadeIn pb-24 font-sans max-w-2xl mx-auto pt-4">
+        {renderNoticeBanner()}
         {/* Top Header Section for Partner Mode */}
         <header className="flex items-center justify-between px-4 py-3 bg-white/40 backdrop-blur-2xl border border-white/60 shadow-sm rounded-3xl sticky top-2 z-40 flex-wrap gap-2">
           <div className="flex items-center gap-2 flex-wrap">
@@ -2579,12 +2716,13 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
               type="button"
               onClick={async () => {
                 if (user.partnerId) {
-                  const unsub = subscribeToUser(user.partnerId, (pUser) => {
-                    if (pUser) setLinkedUser(pUser);
+                  const unsub = subscribeToPartnerSharedView(user.partnerId, (summary) => {
+                    if (summary) setLinkedSummary(summary);
                   });
-                  setTimeout(unsub, 1000);
+                  setTimeout(unsub, 1500);
                 }
                 await syncUser(user);
+                showNotice('Connection status refreshed.', 'info');
               }}
               className="px-6 py-3 bg-indigo-600 text-white rounded-2xl font-bold text-xs uppercase tracking-wider shadow-md hover:bg-indigo-700 transition-all cursor-pointer"
             >
@@ -3091,25 +3229,40 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="p-6 bg-indigo-50/30 rounded-[2rem] border border-indigo-50">
                 <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-2">Status</p>
-                {targetUser?.sharingSettings?.shareCycleInfo !== false ? (
-                  <>
-                    <p className="text-lg font-serif italic text-indigo-900">Current Phase: <span className="font-bold text-indigo-600">{currentPhase}</span></p>
-                    <p className="text-xs text-indigo-400 mt-1">Cycle Day ~14 • Period estimated in ~14 days</p>
-                  </>
+                {targetUser && targetUser.sharingSettings?.shareCycleInfo === true ? (
+                  (() => {
+                    const sync = calculateCycleSyncData(targetUser, new Date());
+                    return (
+                      <>
+                        <p className="text-lg font-serif italic text-indigo-900">Current Phase: <span className="font-bold text-indigo-600">{currentPhase}</span></p>
+                        <p className="text-xs text-indigo-400 mt-1">
+                          Cycle Day {sync.cycleDay} • Next period in ~{sync.daysUntilNextPeriod} days
+                        </p>
+                      </>
+                    );
+                  })()
                 ) : (
                   <p className="text-xs text-indigo-300 italic">Cycle info is private 🔒</p>
                 )}
               </div>
               <div className="p-6 bg-pink-50/30 rounded-[2rem] border border-pink-50">
                 <p className="text-[10px] font-bold text-pink-400 uppercase tracking-widest mb-2">Mood & Symptoms</p>
-                {targetUser?.sharingSettings?.shareMood !== false || targetUser?.sharingSettings?.shareSymptoms !== false ? (
+                {targetUser && (targetUser.sharingSettings?.shareMood === true || targetUser.sharingSettings?.shareSymptoms === true) ? (
                   <>
-                    <p className="text-lg font-serif italic text-pink-600">
-                      {targetUser?.todaySymptomLog?.mood ? `Mood: ${targetUser.todaySymptomLog.mood}` : ' Mood: Restful & Calm'}
-                    </p>
-                    <p className="text-xs text-pink-400 mt-1">
-                      {targetUser?.todaySymptomLog?.symptoms?.length ? `Symptoms: ${targetUser.todaySymptomLog.symptoms.join(', ')}` : 'Symptoms: Minimal physical fatigue'}
-                    </p>
+                    {targetUser.sharingSettings?.shareMood === true ? (
+                      <p className="text-lg font-serif italic text-pink-600">
+                        {targetUser.todaySymptomLog?.mood ? `Mood: ${targetUser.todaySymptomLog.mood}` : 'Mood: Restful & Calm'}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-pink-300 italic">Mood updates are private 🔒</p>
+                    )}
+                    {targetUser.sharingSettings?.shareSymptoms === true ? (
+                      <p className="text-xs text-pink-400 mt-1">
+                        {targetUser.todaySymptomLog?.symptoms?.length ? `Symptoms: ${targetUser.todaySymptomLog.symptoms.join(', ')}` : 'Symptoms: None logged today'}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-pink-300 italic mt-1">Symptoms are private 🔒</p>
+                    )}
                   </>
                 ) : (
                   <p className="text-xs text-pink-300 italic">Mood & symptoms are private 🔒</p>
@@ -3248,7 +3401,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                     <button 
                       onClick={() => {
                         addReminder(task);
-                        alert(`Added "${task.slice(0, 30)}..." to your Hero Checklist! 🎯`);
+                        showNotice(`Added "${task.slice(0, 30)}..." to your Hero Checklist! 🎯`, 'success');
                       }}
                       className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-wider hover:scale-105 active:scale-95 transition-all shadow-md shrink-0 cursor-pointer"
                     >
@@ -3356,7 +3509,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                         sendDigitalComfort('flower');
                       } else {
                         addReminder(`Get: ${idea.title}`);
-                        alert(`Added "${idea.title}" to your Hero Checklist! 🎁`);
+                        showNotice(`Added "${idea.title}" to your Hero Checklist! 🎁`, 'success');
                       }
                     }}
                     className="px-3.5 py-1.5 bg-pink-500 hover:bg-pink-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider shadow-xs cursor-pointer active:scale-95 transition-all"
@@ -3446,7 +3599,6 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                     <button 
                       onClick={() => {
                         copyToClipboard(note);
-                        alert("Love note copied to clipboard! 📋");
                       }}
                       className="text-[10px] font-bold text-indigo-500 hover:underline uppercase tracking-widest cursor-pointer"
                     >
@@ -3456,7 +3608,6 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                     <button
                       onClick={async () => {
                         await sendDigitalComfort('love_note');
-                        alert("Love note sent directly to her app screen! 💌");
                       }}
                       className="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-wider shadow-xs hover:scale-105 active:scale-95 transition-all cursor-pointer"
                     >
@@ -3564,7 +3715,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                 <span>📅</span> Real-Time Cycle Calendar
               </div>
               <h3 className="text-2xl md:text-3xl font-serif text-indigo-900 italic font-bold">
-                {getCleanName(targetUser?.name, targetUser?.email) || "Your Partner"}'s Live Calendar
+                {getCleanName(targetUser?.name, targetUser?.email) || partnerDisplayName}'s Live Calendar
               </h3>
               <p className="text-xs text-stone-500 italic mt-1">Calculated period phases, fertile window, and mood forecast</p>
             </div>
@@ -3575,160 +3726,177 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                 <span className="w-3 h-3 bg-rose-500 rounded-full inline-block"></span>
                 <span className="text-[10px] font-black uppercase text-stone-600">Period</span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-3 h-3 bg-purple-500 rounded-full inline-block"></span>
-                <span className="text-[10px] font-black uppercase text-stone-600">Fertile</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-3 h-3 bg-amber-400 rounded-full inline-block"></span>
-                <span className="text-[10px] font-black uppercase text-stone-600">Ovulation</span>
-              </div>
+              {targetUser?.sharingSettings?.shareFertilityInfo === true && (
+                <>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 bg-purple-500 rounded-full inline-block"></span>
+                    <span className="text-[10px] font-black uppercase text-stone-600">Fertile</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 bg-amber-400 rounded-full inline-block"></span>
+                    <span className="text-[10px] font-black uppercase text-stone-600">Ovulation</span>
+                  </div>
+                </>
+              )}
             </div>
           </header>
 
-          {/* Interactive Month Calendar */}
-          <div className="p-6 bg-gradient-to-br from-indigo-50/40 via-white to-purple-50/30 rounded-[2.5rem] border border-indigo-100/60 shadow-xs space-y-4">
-            <div className="flex items-center justify-between">
-              <button 
-                type="button"
-                onClick={() => setCalendarMonthOffset(prev => prev - 1)}
-                className="p-2 rounded-xl bg-white border border-indigo-100 text-indigo-600 font-bold hover:bg-indigo-50 transition-colors cursor-pointer"
-              >
-                ← Prev Month
-              </button>
-              
-              <p className="font-serif italic font-bold text-indigo-950 text-lg">
-                {new Date(new Date().getFullYear(), new Date().getMonth() + calendarMonthOffset, 1).toLocaleDateString([], { month: 'long', year: 'numeric' })}
+          {!targetUser || targetUser.sharingSettings?.shareCycleInfo !== true ? (
+            <div className="p-8 bg-indigo-50/40 rounded-[2.5rem] border border-indigo-100 text-center space-y-2">
+              <span className="text-3xl block">🔒</span>
+              <p className="font-serif italic text-indigo-900 text-lg font-bold">Cycle Calendar is Private</p>
+              <p className="text-xs text-stone-500 max-w-md mx-auto">
+                Your partner has not enabled Cycle Information sharing yet. You can still send digital comfort or love notes anytime.
               </p>
-
-              <button 
-                type="button"
-                onClick={() => setCalendarMonthOffset(prev => prev + 1)}
-                className="p-2 rounded-xl bg-white border border-indigo-100 text-indigo-600 font-bold hover:bg-indigo-50 transition-colors cursor-pointer"
-              >
-                Next Month →
-              </button>
             </div>
+          ) : (
+            <>
+              {/* Interactive Month Calendar */}
+              <div className="p-6 bg-gradient-to-br from-indigo-50/40 via-white to-purple-50/30 rounded-[2.5rem] border border-indigo-100/60 shadow-xs space-y-4">
+                <div className="flex items-center justify-between">
+                  <button 
+                    type="button"
+                    onClick={() => setCalendarMonthOffset(prev => prev - 1)}
+                    className="p-2 rounded-xl bg-white border border-indigo-100 text-indigo-600 font-bold hover:bg-indigo-50 transition-colors cursor-pointer"
+                  >
+                    ← Prev Month
+                  </button>
+                  
+                  <p className="font-serif italic font-bold text-indigo-950 text-lg">
+                    {new Date(new Date().getFullYear(), new Date().getMonth() + calendarMonthOffset, 1).toLocaleDateString([], { month: 'long', year: 'numeric' })}
+                  </p>
 
-            {/* Days of Week Header */}
-            <div className="grid grid-cols-7 gap-2 text-center">
-              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
-                <span key={d} className="text-[10px] font-black uppercase tracking-wider text-indigo-400">{d}</span>
-              ))}
-            </div>
+                  <button 
+                    type="button"
+                    onClick={() => setCalendarMonthOffset(prev => prev + 1)}
+                    className="p-2 rounded-xl bg-white border border-indigo-100 text-indigo-600 font-bold hover:bg-indigo-50 transition-colors cursor-pointer"
+                  >
+                    Next Month →
+                  </button>
+                </div>
 
-            {/* Calendar Grid */}
-            <div className="grid grid-cols-7 gap-2">
-              {(() => {
-                const now = new Date();
-                const targetMonth = new Date(now.getFullYear(), now.getMonth() + calendarMonthOffset, 1);
-                const totalDaysInMonth = new Date(targetMonth.getFullYear(), targetMonth.getMonth() + 1, 0).getDate();
-                const startDayOfWeek = targetMonth.getDay();
+                {/* Days of Week Header */}
+                <div className="grid grid-cols-7 gap-2 text-center">
+                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+                    <span key={d} className="text-[10px] font-black uppercase tracking-wider text-indigo-400">{d}</span>
+                  ))}
+                </div>
 
-                const cells = [];
-                // Padding empty cells
-                for (let i = 0; i < startDayOfWeek; i++) {
-                  cells.push(<div key={`empty-${i}`} className="aspect-square opacity-0"></div>);
-                }
+                {/* Calendar Grid */}
+                <div className="grid grid-cols-7 gap-2">
+                  {(() => {
+                    const now = new Date();
+                    const targetMonth = new Date(now.getFullYear(), now.getMonth() + calendarMonthOffset, 1);
+                    const totalDaysInMonth = new Date(targetMonth.getFullYear(), targetMonth.getMonth() + 1, 0).getDate();
+                    const startDayOfWeek = targetMonth.getDay();
+                    const canSeeFertility = targetUser.sharingSettings?.shareFertilityInfo === true;
 
-                for (let d = 1; d <= totalDaysInMonth; d++) {
-                  const cellDate = new Date(targetMonth.getFullYear(), targetMonth.getMonth(), d);
-                  const details = calculateCycleDetailsForDate(cellDate, targetUser);
-                  const isToday = calendarMonthOffset === 0 && d === now.getDate();
-                  const isSelected = selectedCalendarDate.toDateString() === cellDate.toDateString();
+                    const cells = [];
+                    for (let i = 0; i < startDayOfWeek; i++) {
+                      cells.push(<div key={`empty-${i}`} className="aspect-square opacity-0"></div>);
+                    }
 
-                  cells.push(
-                    <div 
-                      key={d}
-                      onClick={() => {
-                        setSelectedCalendarDate(cellDate);
-                      }}
-                      className={`aspect-square rounded-2xl flex flex-col items-center justify-center p-1 cursor-pointer transition-all border relative ${
-                        isToday ? 'ring-2 ring-indigo-600 font-black' : ''
-                      } ${
-                        isSelected ? 'scale-105 shadow-md z-10 ring-2 ring-purple-400' : ''
-                      } ${
-                        details.isPeriod ? 'bg-rose-500 text-white border-rose-400 shadow-sm shadow-rose-200' :
-                        details.isOvulation ? 'bg-amber-400 text-slate-900 font-bold border-amber-300 shadow-sm' :
-                        details.isFertile ? 'bg-purple-500 text-white border-purple-400 shadow-sm' :
-                        'bg-white text-indigo-900 border-indigo-100/60 hover:bg-indigo-50/60'
-                      }`}
-                    >
-                      <span className="text-xs font-bold">{d}</span>
-                      <span className="text-[7.5px] uppercase font-black tracking-tight opacity-90 truncate max-w-full">
-                        {details.isPeriod ? 'Period' : details.isOvulation ? 'Peak ✨' : details.isFertile ? 'Fertile' : ''}
-                      </span>
-                    </div>
-                  );
-                }
+                    for (let d = 1; d <= totalDaysInMonth; d++) {
+                      const cellDate = new Date(targetMonth.getFullYear(), targetMonth.getMonth(), d);
+                      const details = calculateCycleDetailsForDate(cellDate, targetUser);
+                      const isToday = calendarMonthOffset === 0 && d === now.getDate();
+                      const isSelected = selectedCalendarDate.toDateString() === cellDate.toDateString();
 
-                return cells;
-              })()}
-            </div>
-          </div>
-
-          {/* Selected Date Insight Panel */}
-          {(() => {
-            const details = calculateCycleDetailsForDate(selectedCalendarDate, targetUser);
-            return (
-              <div className="p-6 bg-indigo-50/50 rounded-[2.5rem] border border-indigo-100/60 space-y-3">
-                <h4 className="font-serif italic font-bold text-indigo-950 text-base flex items-center gap-2">
-                  <span>🔍</span> Date Details: {selectedCalendarDate.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-stone-700">
-                  <div className="bg-white p-4 rounded-2xl border border-indigo-100/50 space-y-2">
-                    <div>
-                      <p className="font-black text-[10px] uppercase tracking-wider text-indigo-500 mb-0.5">Calculated Cycle Phase:</p>
-                      <p className="font-serif italic text-sm text-indigo-950 font-bold">
-                        {details.phaseName}
-                      </p>
-                      {targetUser?.cycleLength && (
-                        <p className="text-[10px] text-indigo-400 font-semibold mt-0.5">Cycle Day {details.dayInCycle} of {targetUser.cycleLength || 28}</p>
-                      )}
-                    </div>
-
-                    {details.loggedMood && (
-                      <div className="pt-2 border-t border-indigo-50">
-                        <p className="font-black text-[9px] uppercase tracking-wider text-purple-500">Logged Mood:</p>
-                        <p className="text-xs font-bold text-stone-800 capitalize">{details.loggedMood}</p>
-                      </div>
-                    )}
-
-                    {details.loggedSymptoms.length > 0 && (
-                      <div className="pt-2 border-t border-indigo-50">
-                        <p className="font-black text-[9px] uppercase tracking-wider text-rose-500">Logged Symptoms:</p>
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {details.loggedSymptoms.map((sym, idx) => (
-                            <span key={idx} className="px-2 py-0.5 bg-rose-50 text-rose-600 rounded-full text-[9px] font-bold border border-rose-100">{sym}</span>
-                          ))}
+                      cells.push(
+                        <div 
+                          key={d}
+                          onClick={() => {
+                            setSelectedCalendarDate(cellDate);
+                          }}
+                          className={`aspect-square rounded-2xl flex flex-col items-center justify-center p-1 cursor-pointer transition-all border relative ${
+                            isToday ? 'ring-2 ring-indigo-600 font-black' : ''
+                          } ${
+                            isSelected ? 'scale-105 shadow-md z-10 ring-2 ring-purple-400' : ''
+                          } ${
+                            details.isPeriod ? 'bg-rose-500 text-white border-rose-400 shadow-sm shadow-rose-200' :
+                            canSeeFertility && details.isOvulation ? 'bg-amber-400 text-slate-900 font-bold border-amber-300 shadow-sm' :
+                            canSeeFertility && details.isFertile ? 'bg-purple-500 text-white border-purple-400 shadow-sm' :
+                            'bg-white text-indigo-900 border-indigo-100/60 hover:bg-indigo-50/60'
+                          }`}
+                        >
+                          <span className="text-xs font-bold">{d}</span>
+                          <span className="text-[7.5px] uppercase font-black tracking-tight opacity-90 truncate max-w-full">
+                            {details.isPeriod ? 'Period' : canSeeFertility && details.isOvulation ? 'Peak ✨' : canSeeFertility && details.isFertile ? 'Fertile' : ''}
+                          </span>
                         </div>
-                      </div>
-                    )}
-                  </div>
+                      );
+                    }
 
-                  <div className="bg-white p-4 rounded-2xl border border-indigo-100/50 flex flex-col justify-between">
-                    <p className="font-black text-[10px] uppercase tracking-wider text-indigo-500 mb-1">Partner Action Plan:</p>
-                    <p className="text-[11px] text-stone-500 italic mb-3">
-                      {details.isPeriod ? "Offer warm drinks, heating pads, and extra rest support." :
-                       details.isOvulation ? "Great energy day! Ideal time for special dates or quality bonding." :
-                       details.isFertile ? "Higher energy and connection window. Plan fun activities together!" :
-                       "Send gentle love notes or check-in messages to brighten her day."}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        sendDigitalComfort('flower');
-                        alert(`Sent comfort greeting to ${partnerDisplayName} for ${selectedCalendarDate.toLocaleDateString([], { month: 'short', day: 'numeric' })}! 🌸`);
-                      }}
-                      className="px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider shadow-xs hover:scale-105 active:scale-95 transition-all cursor-pointer self-start"
-                    >
-                      Send Comfort Greeting 📲
-                    </button>
-                  </div>
+                    return cells;
+                  })()}
                 </div>
               </div>
-            );
-          })()}
+
+              {/* Selected Date Insight Panel */}
+              {(() => {
+                const details = calculateCycleDetailsForDate(selectedCalendarDate, targetUser);
+                const canSeeMood = targetUser.sharingSettings?.shareMood === true;
+                const canSeeSymptoms = targetUser.sharingSettings?.shareSymptoms === true;
+                return (
+                  <div className="p-6 bg-indigo-50/50 rounded-[2.5rem] border border-indigo-100/60 space-y-3">
+                    <h4 className="font-serif italic font-bold text-indigo-950 text-base flex items-center gap-2">
+                      <span>🔍</span> Date Details: {selectedCalendarDate.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-stone-700">
+                      <div className="bg-white p-4 rounded-2xl border border-indigo-100/50 space-y-2">
+                        <div>
+                          <p className="font-black text-[10px] uppercase tracking-wider text-indigo-500 mb-0.5">Calculated Cycle Phase:</p>
+                          <p className="font-serif italic text-sm text-indigo-950 font-bold">
+                            {details.phaseName}
+                          </p>
+                          {targetUser?.cycleLength && (
+                            <p className="text-[10px] text-indigo-400 font-semibold mt-0.5">Cycle Day {details.dayInCycle} of {targetUser.cycleLength || 28}</p>
+                          )}
+                        </div>
+
+                        {canSeeMood && details.loggedMood && (
+                          <div className="pt-2 border-t border-indigo-50">
+                            <p className="font-black text-[9px] uppercase tracking-wider text-purple-500">Logged Mood:</p>
+                            <p className="text-xs font-bold text-stone-800 capitalize">{details.loggedMood}</p>
+                          </div>
+                        )}
+
+                        {canSeeSymptoms && details.loggedSymptoms.length > 0 && (
+                          <div className="pt-2 border-t border-indigo-50">
+                            <p className="font-black text-[9px] uppercase tracking-wider text-rose-500">Logged Symptoms:</p>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {details.loggedSymptoms.map((sym, idx) => (
+                                <span key={idx} className="px-2 py-0.5 bg-rose-50 text-rose-600 rounded-full text-[9px] font-bold border border-rose-100">{sym}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="bg-white p-4 rounded-2xl border border-indigo-100/50 flex flex-col justify-between">
+                        <p className="font-black text-[10px] uppercase tracking-wider text-indigo-500 mb-1">Partner Action Plan:</p>
+                        <p className="text-[11px] text-stone-500 italic mb-3">
+                          {details.isPeriod ? "Offer warm drinks, heating pads, and extra rest support." :
+                           (targetUser.sharingSettings?.shareFertilityInfo === true && details.isOvulation) ? "Great energy day! Ideal time for special dates or quality bonding." :
+                           (targetUser.sharingSettings?.shareFertilityInfo === true && details.isFertile) ? "Higher energy and connection window. Plan fun activities together!" :
+                           "Send gentle love notes or check-in messages to brighten her day."}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            sendDigitalComfort('flower');
+                          }}
+                          className="px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider shadow-xs hover:scale-105 active:scale-95 transition-all cursor-pointer self-start"
+                        >
+                          Send Comfort Greeting 📲
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </>
+          )}
         </section>
       )}
 
@@ -3911,7 +4079,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
             <button
               onClick={async () => {
                 await syncUser(user);
-                alert("Notification preferences updated successfully! 💜");
+                showNotice("Notification preferences updated successfully! 💜", 'success');
               }}
               className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-2xl text-xs font-bold uppercase tracking-wider shadow-md active:scale-95 transition-all shrink-0 cursor-pointer"
             >
@@ -3996,7 +4164,9 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                         }
                       };
                       setUser(updatedUser);
-                      localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+                      const rememberMe = localStorage.getItem('lumina_remember_me') !== 'false';
+                      void saveEncryptedSessionUser(updatedUser, rememberMe).catch(() => {});
+                      localStorage.removeItem('lumina_user');
                       await syncUser(updatedUser);
                     }}
                     className="w-5 h-5 rounded border-purple-300 text-purple-600 focus:ring-purple-500 mt-0.5 cursor-pointer shrink-0"

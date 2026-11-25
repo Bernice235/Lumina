@@ -22,6 +22,8 @@ import {
 } from '../services/welcomeVoiceService';
 import { sendCompanionChatMessage } from '../services/gemini';
 import { calculateCycleSyncData } from '../services/cycleSyncService';
+import { secureStorage } from '../services/secureStorage';
+import { syncUser } from '../services/firebaseService';
 import { 
   ArrowLeft, 
   Send, 
@@ -70,19 +72,8 @@ export const CompanionChat: React.FC<CompanionChatProps> = ({
   const progression = calculateAvatarProgression(user, currentAvatar);
   const firstName = getUserFirstName(user);
 
-  // States
-  const [messages, setMessages] = useState<CompanionChatMessage[]>(() => {
-    try {
-      const saved = localStorage.getItem(`lumina_chat_${user.id}_${avatarId}`);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch (e) {
-      console.warn("Could not load companion chat history:", e);
-    }
-    return [];
-  });
+  const [messages, setMessages] = useState<CompanionChatMessage[]>([]);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
 
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -92,6 +83,9 @@ export const CompanionChat: React.FC<CompanionChatProps> = ({
   const [isListening, setIsListening] = useState(false);
   const [activeSpeechMessageId, setActiveSpeechMessageId] = useState<string | null>(null);
   const [showAvatarSelector, setShowAvatarSelector] = useState(false);
+  const [chatNotice, setChatNotice] = useState<string | null>(null);
+
+  const isAiPersonalizationAllowed = user.privacyPreferences?.allowAiPersonalization !== false;
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const speechRecognitionRef = useRef<any>(null);
@@ -118,14 +112,47 @@ export const CompanionChat: React.FC<CompanionChatProps> = ({
     ? user.moodLogs[user.moodLogs.length - 1].mood
     : 'Centered';
 
-  // Save messages to localStorage
+  // Load & migrate encrypted chat history from IndexedDB vault
   useEffect(() => {
-    try {
-      localStorage.setItem(`lumina_chat_${user.id}_${avatarId}`, JSON.stringify(messages));
-    } catch (e) {
-      console.warn("Could not save chat history:", e);
-    }
-  }, [messages, user.id, avatarId]);
+    let cancelled = false;
+    setHistoryLoaded(false);
+    (async () => {
+      try {
+        const legacyKey = `lumina_chat_${user.id}_${avatarId}`;
+        const legacyRaw = localStorage.getItem(legacyKey);
+        if (legacyRaw) {
+          await secureStorage.setItem(`chat_${user.id}_${avatarId}`, legacyRaw);
+          localStorage.removeItem(legacyKey);
+        }
+        const saved = await secureStorage.getItem(`chat_${user.id}_${avatarId}`);
+        if (!cancelled && saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setMessages(parsed);
+            setHistoryLoaded(true);
+            return;
+          }
+        }
+      } catch {}
+      if (!cancelled) {
+        const initialGreeting = getInitialGreetingMessage();
+        setMessages([initialGreeting]);
+        setHistoryLoaded(true);
+        if (isVoiceAutoPlay) {
+          handleSpeakMessage(initialGreeting.id, initialGreeting.text);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user.id, avatarId]);
+
+  // Save messages to encrypted IndexedDB vault
+  useEffect(() => {
+    if (!historyLoaded) return;
+    void secureStorage.setItem(`chat_${user.id}_${avatarId}`, JSON.stringify(messages)).catch(() => {});
+  }, [messages, user.id, avatarId, historyLoaded]);
 
   // Scroll to bottom on new messages
   const scrollToBottom = (smooth = true) => {
@@ -139,17 +166,6 @@ export const CompanionChat: React.FC<CompanionChatProps> = ({
   useEffect(() => {
     scrollToBottom(true);
   }, [messages, isTyping]);
-
-  // Initial personalized daily greeting if chat is empty
-  useEffect(() => {
-    if (messages.length === 0) {
-      const initialGreeting = getInitialGreetingMessage();
-      setMessages([initialGreeting]);
-      if (isVoiceAutoPlay) {
-        handleSpeakMessage(initialGreeting.id, initialGreeting.text);
-      }
-    }
-  }, [avatarId]);
 
   // Personalized greeting generator based on avatar personality
   const getInitialGreetingMessage = (): CompanionChatMessage => {
@@ -263,6 +279,12 @@ export const CompanionChat: React.FC<CompanionChatProps> = ({
     const content = (textToSend || inputText).trim();
     if (!content) return;
 
+    if (!isAiPersonalizationAllowed) {
+      setChatNotice('AI Companion messaging is paused in your Privacy Preferences. Enable AI Personalization below to resume.');
+      return;
+    }
+
+    setChatNotice(null);
     setInputText('');
     stopWelcomeVoice();
 
@@ -341,7 +363,7 @@ export const CompanionChat: React.FC<CompanionChatProps> = ({
 
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      alert("Voice input is not supported in this browser. Please type your message.");
+      setChatNotice("Voice input is not supported in this browser. Please type your message below.");
       return;
     }
 
@@ -417,6 +439,7 @@ export const CompanionChat: React.FC<CompanionChatProps> = ({
   const handleClearHistory = () => {
     stopWelcomeVoice();
     localStorage.removeItem(`lumina_chat_${user.id}_${avatarId}`);
+    void secureStorage.removeItem(`chat_${user.id}_${avatarId}`);
     const fresh = getInitialGreetingMessage();
     setMessages([fresh]);
     if (isVoiceAutoPlay) {
@@ -766,6 +789,45 @@ export const CompanionChat: React.FC<CompanionChatProps> = ({
 
       {/* Input Form Bar */}
       <footer className="bg-white/95 backdrop-blur-md border-t border-pink-100 px-4 py-3 sm:px-6">
+        {/* Privacy / Notice Banners */}
+        {!isAiPersonalizationAllowed && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 mb-2 flex items-center justify-between gap-2 text-xs text-amber-900">
+            <span>AI companion replies are paused per your Privacy Preferences.</span>
+            {setUser && (
+              <button
+                type="button"
+                onClick={async () => {
+                  const updatedUser: User = {
+                    ...user,
+                    privacyPreferences: {
+                      shareAnonymousDiagnostics: user.privacyPreferences?.shareAnonymousDiagnostics ?? false,
+                      allowPartnerActivityAlerts: user.privacyPreferences?.allowPartnerActivityAlerts ?? true,
+                      autoLockOnBlur: user.privacyPreferences?.autoLockOnBlur ?? false,
+                      hideNotificationPreviews: user.privacyPreferences?.hideNotificationPreviews ?? true,
+                      dataRetentionDays: user.privacyPreferences?.dataRetentionDays ?? 365,
+                      ...user.privacyPreferences,
+                      allowAiPersonalization: true,
+                      consentUpdatedAt: new Date().toISOString(),
+                    },
+                  };
+                  setUser(updatedUser);
+                  await syncUser(updatedUser);
+                  setChatNotice(null);
+                }}
+                className="px-3 py-1 bg-amber-600 text-white rounded-xl font-bold text-[10px] uppercase tracking-wider cursor-pointer shrink-0"
+              >
+                Enable AI Chat
+              </button>
+            )}
+          </div>
+        )}
+        {chatNotice && (
+          <div role="status" className="bg-rose-50 border border-rose-200 text-rose-700 rounded-2xl px-3 py-2 mb-2 text-xs flex items-center justify-between gap-2">
+            <span>{chatNotice}</span>
+            <button type="button" onClick={() => setChatNotice(null)} className="text-[10px] font-bold uppercase cursor-pointer">Dismiss</button>
+          </div>
+        )}
+
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -793,17 +855,18 @@ export const CompanionChat: React.FC<CompanionChatProps> = ({
               type="text"
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
-              placeholder={isListening ? "Listening to your voice..." : `Message ${preset.name}...`}
-              className="w-full bg-stone-50 hover:bg-stone-100/70 focus:bg-white border border-pink-200/80 rounded-full px-4 py-2.5 text-sm text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:border-transparent transition-all shadow-inner"
+              disabled={!isAiPersonalizationAllowed}
+              placeholder={!isAiPersonalizationAllowed ? 'AI Companion paused in Privacy Settings' : isListening ? "Listening to your voice..." : `Message ${preset.name}...`}
+              className="w-full bg-stone-50 hover:bg-stone-100/70 focus:bg-white border border-pink-200/80 rounded-full px-4 py-2.5 text-sm text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:border-transparent transition-all shadow-inner disabled:opacity-60"
             />
           </div>
 
           {/* Send Button */}
           <button
             type="submit"
-            disabled={!inputText.trim() || isTyping}
+            disabled={!inputText.trim() || isTyping || !isAiPersonalizationAllowed}
             className={`p-2.5 rounded-full transition-all cursor-pointer shrink-0 ${
-              inputText.trim() && !isTyping
+              inputText.trim() && !isTyping && isAiPersonalizationAllowed
                 ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-md hover:opacity-95 active:scale-95'
                 : 'bg-stone-200 text-stone-400 cursor-not-allowed'
             }`}
@@ -813,8 +876,8 @@ export const CompanionChat: React.FC<CompanionChatProps> = ({
           </button>
         </form>
 
-        <p className="text-[10px] text-stone-400 mt-2 text-center">
-          {preset.name} is your daily holistic sanctuary companion. Always consult healthcare professionals for medical advice.
+        <p className="text-[10px] text-stone-500 mt-2 text-center">
+          {preset.name} is an AI wellness companion powered by Google Gemini — not a medical professional or medical advice.
         </p>
       </footer>
     </div>

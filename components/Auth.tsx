@@ -5,30 +5,47 @@ import { doc, getDoc } from 'firebase/firestore';
 import { 
   signInWithPopup, 
   GoogleAuthProvider,
+  OAuthProvider,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   updateProfile,
   sendPasswordResetEmail
 } from 'firebase/auth';
-import { syncUser, subscribeToUser, getInvite, getUserDisplayName, getCleanName, getSanctuaryTitle } from '../services/firebaseService';
+import { syncUser, getInvite, getCleanName } from '../services/firebaseService';
 import { trackSignUp, trackLogin, setUserProperties, logCrashReport } from '../services/analyticsService';
-import { decryptWithPassphrase, scrubLegacySensitiveKeys, secureStorage } from '../services/secureStorage';
+import {
+  decryptWithPassphrase,
+  loadEncryptedSessionUser,
+  saveEncryptedSessionUser,
+  scrubLegacySensitiveKeys,
+  secureStorage
+} from '../services/secureStorage';
 import {
   applyLoginSecurityAudit,
   checkClientRateLimit,
+  clearDiaryPinLockout,
   clearLoginLockout,
   evaluatePasswordStrength,
   getAccountLockoutState,
+  getDiaryPinLockoutState,
   getLocalSessionEpoch,
   isHoneypotTriggered,
   isValidEmailAddress,
+  recordFailedDiaryPinAttempt,
   recordFailedLoginAttempt,
   sanitizeTextInput,
   storeLocalCredentialVerifier,
+  userHasConfiguredPin,
   verifyAndConsumeRecoveryCode,
+  verifyDiaryPin,
   verifyLocalCredential,
   verifyTotpCode
 } from '../services/securityService';
+import {
+  authenticateWithBiometrics,
+  getBiometricCapability,
+  getBiometricProfileHint
+} from '../services/biometricService';
 import { 
   Fingerprint, 
   Scan, 
@@ -54,49 +71,23 @@ interface AuthProps {
   latestCloudLoading?: boolean;
 }
 
-const defaultReturningUser: User = {
-  id: "sandbox_tracker",
-  name: "Bernice",
-  email: "BERNiceAlegbe@gmail.com",
-  partnerName: "",
-  partnerId: undefined,
-  isPartnerLinked: false,
-  isPartner: false,
-  cycleLength: 28,
-  periodLength: 5,
-  lastPeriodStart: new Date().toISOString(),
-  isPregnancyMode: false,
-  onboardingCompleted: true,
-  diaryPin: '1234',
-  theme: 'rose',
-  favoriteSongs: [],
-  customSongs: [],
-  wishlist: [],
-  receivedComforts: [],
-  tempUnit: 'F',
-  waterGoal: 8,
-  sharingSettings: {
-    shareCycleInfo: true,
-    shareSymptoms: true,
-    shareMood: true,
-    shareNotes: true,
-    shareFertilityInfo: false,
-    sharePregnancyInfo: false,
-    shareIntimacyInfo: false,
-    shareDoctorReports: false,
-    shareAppointmentReminders: false,
-    shareWellnessUpdates: false
-  },
-  moodLogs: [
-    { id: '1', date: new Date().toISOString().split('T')[0], mood: 'calm', note: 'Feeling centered and peaceful.' }
-  ],
-  periodLogs: [
-    { date: new Date().toISOString().split('T')[0], intensity: 'medium' }
-  ]
+const DEFAULT_PRIVATE_SHARING_SETTINGS = {
+  shareCycleInfo: false,
+  shareSymptoms: false,
+  shareMood: false,
+  shareNotes: false,
+  shareFertilityInfo: false,
+  sharePregnancyInfo: false,
+  shareIntimacyInfo: false,
+  shareDoctorReports: false,
+  shareAppointmentReminders: false,
+  shareWellnessUpdates: false,
 };
 
 const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, latestCloudUser, latestCloudLoading }) => {
-  const [connectionMode, setConnectionMode] = useState<'cloud' | 'offline'>('cloud');
+  const [connectionMode, setConnectionMode] = useState<'cloud' | 'offline'>(() =>
+    typeof navigator !== 'undefined' && navigator.onLine === false ? 'offline' : 'cloud'
+  );
   const [screen, setScreen] = useState<'returning' | 'welcome' | 'email_login' | 'email_signup' | 'partner_invite' | 'scan_welcome'>(() => {
     if (initialInviteCode) {
       return 'partner_invite';
@@ -105,9 +96,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
     if (loggedOut) {
       return 'email_login';
     }
-    const hasBiometric = !!localStorage.getItem('lumina_biometric_user');
-    const hasSavedEmail = !!localStorage.getItem('lumina_saved_email');
-    if (hasBiometric || hasSavedEmail) {
+    if (latestCloudUser) {
       return 'returning';
     }
     return 'welcome';
@@ -115,13 +104,14 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
   const [welcomeStep, setWelcomeStep] = useState<'choose_experience' | 'auth_creation'>('choose_experience');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [pendingRestoreUser, setPendingRestoreUser] = useState<User | null>(null);
-  
-  // Custom Apple Sign-In sheet simulator
-  const [isAppleSheetOpen, setIsAppleSheetOpen] = useState(false);
-  const [appleEmailPref, setAppleEmailPref] = useState<'share' | 'hide'>('share');
+  const [returningHint, setReturningHint] = useState<{ userId: string; name: string; email: string } | null>(null);
+  const [cachedSecureUser, setCachedSecureUser] = useState<User | null>(null);
+  const [biometricLabel, setBiometricLabel] = useState<string>('Device Biometrics');
+  const [biometricAvailable, setBiometricAvailable] = useState<boolean>(false);
 
-  // Simulated Biometric Screen state
+  // Biometric / Passcode Modal state
   const [biometricScanning, setBiometricScanning] = useState<'none' | 'face' | 'touch' | 'passcode'>('none');
   const [biometricStatus, setBiometricStatus] = useState<'idle' | 'scanning' | 'success' | 'fail'>('idle');
   const [typedPin, setTypedPin] = useState<string>('');
@@ -146,7 +136,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
     }
   });
   const [registerRole, setRegisterRole] = useState<'tracker' | 'partner'>('tracker');
-  const [rememberMe, setRememberMe] = useState(true);
+  const [rememberMe, setRememberMe] = useState(() => localStorage.getItem('lumina_remember_me') !== 'false');
 
   // Two-Factor Verification Challenge state
   const [pending2faChallenge, setPending2faChallenge] = useState<{
@@ -159,86 +149,102 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
 
   const [inviteSenderName, setInviteSenderName] = useState<string>('');
 
-  // Scrub legacy plaintext password keys & check if active device session was globally revoked
+  const getTargetUser = (): User | null => {
+    if (latestCloudUser) {
+      return latestCloudUser;
+    }
+    if (cachedSecureUser) {
+      return cachedSecureUser;
+    }
+    return null;
+  };
+
+  // Scrub legacy plaintext keys, load encrypted returning hint/capability, and check session revocation
   useEffect(() => {
     scrubLegacySensitiveKeys();
-    const target = getTargetUser();
-    const remoteEpoch = target?.securitySettings?.sessionEpoch || 1;
-    const localEpoch = target?.id ? getLocalSessionEpoch(target.id) : 1;
-    if (remoteEpoch > localEpoch) {
-      localStorage.removeItem('lumina_biometric_user');
-      sessionStorage.setItem('lumina_logged_out', 'true');
-      setScreen('email_login');
-      setError('All devices were signed out from Security Settings. Please sign in again.');
-    }
+
+    const handleOnlineStatus = () => {
+      setConnectionMode(navigator.onLine ? 'cloud' : 'offline');
+    };
+    window.addEventListener('online', handleOnlineStatus);
+    window.addEventListener('offline', handleOnlineStatus);
+
+    let cancelled = false;
+    (async () => {
+      const [hint, encryptedProfile] = await Promise.all([
+        getBiometricProfileHint(),
+        loadEncryptedSessionUser<User>(true),
+      ]);
+      if (cancelled) return;
+
+      if (hint) setReturningHint(hint);
+      if (encryptedProfile) setCachedSecureUser(encryptedProfile);
+
+      const target = latestCloudUser || encryptedProfile || null;
+      const cap = await getBiometricCapability(hint?.userId || target?.id);
+      if (cancelled) return;
+      setBiometricAvailable(cap.available);
+      setBiometricLabel(cap.biometryLabel);
+
+      if (target) {
+        const remoteEpoch = target.securitySettings?.sessionEpoch || 1;
+        const localEpoch = target.id ? getLocalSessionEpoch(target.id) : 1;
+        if (remoteEpoch > localEpoch) {
+          await secureStorage.removeItem('biometric_hint_v1');
+          sessionStorage.setItem('lumina_logged_out', 'true');
+          setScreen('email_login');
+          setError('All devices were signed out from Security Settings. Please sign in again.');
+          return;
+        }
+      }
+
+      if (!initialInviteCode) {
+        const loggedOut = sessionStorage.getItem('lumina_logged_out') === 'true';
+        if (loggedOut) {
+          setScreen('email_login');
+        } else if (
+          (hint || target) &&
+          (cap.available || cap.enrolledForUser || userHasConfiguredPin(target))
+        ) {
+          setScreen('returning');
+        }
+      }
+    })();
 
     if (initialInviteCode) {
       setScreen('partner_invite');
       setRegisterRole('partner');
-      getInvite(initialInviteCode).then(async (invite) => {
+      getInvite(initialInviteCode).then((invite) => {
+        if (cancelled) return;
         if (invite) {
-          let resolvedName = invite.senderName;
-          if (invite.senderId) {
-            try {
-              const userSnap = await getDoc(doc(db, "users", invite.senderId));
-              if (userSnap.exists()) {
-                const userData = userSnap.data();
-                if (userData) {
-                  resolvedName = getUserDisplayName(userData);
-                }
-              }
-            } catch (err) {
-              console.error("Failed to pull actual profile from Firebase:", err);
-            }
-          }
-          const cleaned = getCleanName(resolvedName || invite.senderName, invite.senderEmail || '');
-          setInviteSenderName(cleaned || 'Bernice');
+          const cleaned = getCleanName(invite.senderName, invite.senderEmail || '');
+          setInviteSenderName(cleaned || 'Your Partner');
         } else {
-          setInviteSenderName('Bernice');
+          setInviteSenderName('Your Partner');
         }
       }).catch(() => {
-        setInviteSenderName('Bernice');
+        if (!cancelled) setInviteSenderName('Your Partner');
       });
-      return;
     }
-    const loggedOut = sessionStorage.getItem('lumina_logged_out') === 'true';
-    if (loggedOut) {
-      setScreen('email_login');
-    } else {
-      const hasBiometric = !!localStorage.getItem('lumina_biometric_user');
-      const hasSavedEmail = !!localStorage.getItem('lumina_saved_email');
-      if (hasBiometric || hasSavedEmail) {
-        setScreen('returning');
-      } else {
-        setScreen('welcome');
-      }
-    }
-  }, [initialInviteCode]);
 
-  const getTargetUser = (): User => {
-    if (latestCloudUser) {
-      return latestCloudUser;
-    }
-    const registeredUserStr = localStorage.getItem('lumina_biometric_user') || localStorage.getItem('lumina_user');
-    if (registeredUserStr) {
-      try {
-        return JSON.parse(registeredUserStr);
-      } catch {
-        return defaultReturningUser;
-      }
-    }
-    return defaultReturningUser;
-  };
+    return () => {
+      cancelled = true;
+      window.removeEventListener('online', handleOnlineStatus);
+      window.removeEventListener('offline', handleOnlineStatus);
+    };
+  }, [initialInviteCode, latestCloudUser]);
 
   const getDisplayName = (): string => {
     const savedName = localStorage.getItem('lumina_saved_name');
     if (savedName) return savedName;
+    if (returningHint?.name) return returningHint.name;
     const target = getTargetUser();
-    return target.name || 'Bernice';
+    return target?.name || 'there';
   };
 
   const handleSaveCredentials = (emailStr: string, _unused: string, nameStr?: string) => {
     scrubLegacySensitiveKeys();
+    localStorage.setItem('lumina_remember_me', rememberMe ? 'true' : 'false');
     if (rememberMe) {
       localStorage.setItem('lumina_saved_email', emailStr);
       if (nameStr) {
@@ -252,13 +258,10 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
 
   const finalizeAuthenticatedSession = (userToLogin: User, method: string, remember: boolean) => {
     const auditedUser = applyLoginSecurityAudit(userToLogin, method, 'success');
-    if (remember) {
-      localStorage.setItem('lumina_user', JSON.stringify(auditedUser));
-      localStorage.setItem('lumina_biometric_user', JSON.stringify(auditedUser));
-    } else {
-      localStorage.removeItem('lumina_user');
-      localStorage.removeItem('lumina_biometric_user');
-      sessionStorage.setItem('lumina_user', JSON.stringify(auditedUser));
+    localStorage.setItem('lumina_remember_me', remember ? 'true' : 'false');
+    void saveEncryptedSessionUser(auditedUser, remember);
+    if (auditedUser.email) {
+      void secureStorage.setItem('offline_user_' + auditedUser.email.toLowerCase().trim(), JSON.stringify(auditedUser));
     }
     syncUser(auditedUser);
     setUserProperties({
@@ -343,16 +346,43 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
     }
   };
 
-  // Biometric trigger (respects session revocation and 2FA)
+  // Genuine Biometric / Security PIN trigger (never simulates success or auto-unlocks via Firebase alone)
   const handleBiometricAuth = async (type: 'face' | 'touch' | 'passcode') => {
     setError('');
+    setNotice('');
     const targetUser = getTargetUser();
-    const remoteEpoch = targetUser?.securitySettings?.sessionEpoch || 1;
-    const localEpoch = targetUser?.id ? getLocalSessionEpoch(targetUser.id) : 1;
-    if (remoteEpoch > localEpoch) {
-      localStorage.removeItem('lumina_biometric_user');
+    if (!targetUser) {
       setScreen('email_login');
-      setError('Session expired after logging out of all devices. Please sign in with email & password.');
+      setError('No saved profile is available on this device. Please sign in with Email/Password or Google.');
+      return;
+    }
+
+    const remoteEpoch = targetUser.securitySettings?.sessionEpoch || 1;
+    const localEpoch = targetUser.id ? getLocalSessionEpoch(targetUser.id) : 1;
+    if (remoteEpoch > localEpoch) {
+      await secureStorage.removeItem('biometric_hint_v1');
+      setScreen('email_login');
+      setError('Session expired after logging out of all devices. Please sign in with Email/Password or Google.');
+      return;
+    }
+
+    const isCloudProfile = !targetUser.id.startsWith('offline_');
+    if (isCloudProfile && auth.currentUser?.uid !== targetUser.id) {
+      setScreen('email_login');
+      setError('Your cloud session requires fresh sign-in. Please sign in with Email/Password or Continue with Google.');
+      return;
+    }
+
+    if (type === 'passcode') {
+      if (!userHasConfiguredPin(targetUser)) {
+        setScreen('email_login');
+        setError('No private Security PIN has been created yet. Sign in with your password or Google, then set a PIN in Settings.');
+        return;
+      }
+      setBiometricScanning('passcode');
+      setBiometricStatus('idle');
+      setTypedPin('');
+      setPasscodeError('');
       return;
     }
 
@@ -361,66 +391,66 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
     setTypedPin('');
     setPasscodeError('');
 
-    if (type !== 'passcode') {
-      setTimeout(() => {
-        const checkAndProceed = () => {
-          if (latestCloudLoading) {
-            setTimeout(checkAndProceed, 200);
-            return;
-          }
-          const refreshedTarget = getTargetUser();
-          setBiometricStatus('success');
-          setTimeout(() => {
-            setBiometricScanning('none');
-            completeOrChallenge2FA(refreshedTarget, type === 'face' ? 'face_id' : 'touch_id', rememberMe);
-          }, 700);
-        };
-        checkAndProceed();
-      }, 1200);
+    const res = await authenticateWithBiometrics(targetUser, 'Verify your identity to unlock Lumina');
+    if (res.verified) {
+      setBiometricStatus('success');
+      setBiometricScanning('none');
+      completeOrChallenge2FA(targetUser, res.method || type, rememberMe);
     } else {
-      setBiometricStatus('idle');
+      setBiometricStatus('fail');
+      setBiometricScanning('none');
+      setError(res.message);
     }
   };
 
-  // Auto-trigger biometric prompt on returning screen only when not logged out and no 2FA pending
-  useEffect(() => {
-    if (screen === 'returning' && biometricScanning === 'none' && !pending2faChallenge) {
-      const target = getTargetUser();
-      const remoteEpoch = target?.securitySettings?.sessionEpoch || 1;
-      const localEpoch = target?.id ? getLocalSessionEpoch(target.id) : 1;
-      if (remoteEpoch > localEpoch) return;
-      const triggerTimer = setTimeout(() => {
-        handleBiometricAuth('face');
-      }, 700);
-      return () => clearTimeout(triggerTimer);
+  const handlePasscodeSubmit = async (candidatePin: string = typedPin) => {
+    const targetUser = getTargetUser();
+    if (!targetUser) {
+      setBiometricScanning('none');
+      setScreen('email_login');
+      return;
     }
-  }, [screen]);
+
+    const lockout = await getDiaryPinLockoutState(targetUser.id);
+    if (lockout.isLocked) {
+      const mins = Math.max(1, Math.ceil(lockout.remainingMs / 60_000));
+      setPasscodeError(`Too many incorrect PIN attempts. Try again in ${mins} minute(s) or sign in with password.`);
+      return;
+    }
+
+    const verdict = await verifyDiaryPin(candidatePin, targetUser);
+    if (verdict === 'valid') {
+      await clearDiaryPinLockout(targetUser.id);
+      setBiometricStatus('success');
+      setBiometricScanning('none');
+      setTypedPin('');
+      setPasscodeError('');
+      completeOrChallenge2FA(targetUser, 'passcode', rememberMe);
+      return;
+    }
+
+    if (verdict === 'unset') {
+      setBiometricScanning('none');
+      setScreen('email_login');
+      setError('No Security PIN is set on this account yet. Sign in with Email or Google.');
+      return;
+    }
+
+    const failState = await recordFailedDiaryPinAttempt(targetUser.id);
+    setBiometricStatus('fail');
+    setTypedPin('');
+    setPasscodeError(
+      failState.isLocked
+        ? 'PIN locked for 5 minutes after 5 failed attempts.'
+        : `Incorrect Security PIN (${failState.remainingAttempts} attempt(s) left).`
+    );
+  };
 
   const handlePasscodeDigit = (digit: string) => {
-    if (typedPin.length >= 4) return;
-    const newPin = typedPin + digit;
-    setTypedPin(newPin);
-
-    if (newPin.length === 4) {
-      const targetUser = getTargetUser();
-      const expectedPin = targetUser.diaryPin || '1234';
-
-      if (newPin === expectedPin) {
-        setBiometricStatus('success');
-        setTimeout(() => {
-          setBiometricScanning('none');
-          completeOrChallenge2FA(targetUser, 'passcode', rememberMe);
-        }, 650);
-      } else {
-        setBiometricStatus('fail');
-        setPasscodeError('Invalid passcode pin. Try again 💕');
-        setTimeout(() => {
-          setTypedPin('');
-          setBiometricStatus('idle');
-          setPasscodeError('');
-        }, 1250);
-      }
-    }
+    if (typedPin.length >= 6 || biometricStatus === 'success') return;
+    setPasscodeError('');
+    setBiometricStatus('idle');
+    setTypedPin(prev => prev + digit);
   };
 
   const handleBackspace = () => {
@@ -453,90 +483,90 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
     completeOrChallenge2FA(fullExistingUser, method, rememberMe);
   };
 
-  // Google Login proxy
+  // Real Google OAuth Login
   const handleGoogleLogin = async () => {
     setLoading(true);
     setError('');
+    setNotice('');
     try {
       const provider = new GoogleAuthProvider();
       const userCredential = await signInWithPopup(auth, provider);
       const fbUser = userCredential.user;
 
-      // Check if user has existing cloud data (indicating a new device / restored session is required)
       const docSnap = await getDoc(doc(db, "users", fbUser.uid));
-      
       if (docSnap.exists()) {
         const existingData = docSnap.data() as User;
         handleExistingUserLogin(existingData, () => {
-          handleSaveCredentials(existingData.email, 'google_sim', existingData.name);
-        });
+          handleSaveCredentials(existingData.email, 'google', existingData.name);
+        }, 'google');
         return;
       }
 
       const newUser: User = {
         id: fbUser.uid,
-        name: fbUser.displayName || 'Bernice',
-        email: fbUser.email || 'BERNiceAlegbe@gmail.com',
-        partnerName: 'Loving Partner',
+        name: fbUser.displayName || 'Lumina Member',
+        email: fbUser.email || '',
+        partnerName: '',
         cycleLength: 28,
         periodLength: 5,
         lastPeriodStart: new Date().toISOString(),
         isPartner: registerRole === 'partner',
         isPregnancyMode: false,
         theme: 'rose',
-        diaryPin: '1234',
         isPartnerLinked: false,
-        sharingSettings: {
-          shareCycleInfo: true,
-          shareSymptoms: true,
-          shareMood: true,
-          shareNotes: true,
-          shareFertilityInfo: false,
-          sharePregnancyInfo: false,
-          shareIntimacyInfo: false,
-          shareDoctorReports: false,
-          shareAppointmentReminders: false,
-          shareWellnessUpdates: false
-        },
+        sharingSettings: { ...DEFAULT_PRIVATE_SHARING_SETTINGS },
         waterGoal: 8,
         onboardingCompleted: false
       };
 
       await syncUser(newUser);
-      if (rememberMe) {
-        localStorage.setItem('lumina_user', JSON.stringify(newUser));
-        localStorage.setItem('lumina_biometric_user', JSON.stringify(newUser));
-      } else {
-        localStorage.removeItem('lumina_user');
-        localStorage.removeItem('lumina_biometric_user');
-        sessionStorage.setItem('lumina_user', JSON.stringify(newUser));
-      }
-      handleSaveCredentials(newUser.email, 'google_sim', newUser.name);
+      localStorage.setItem('lumina_remember_me', rememberMe ? 'true' : 'false');
+      await saveEncryptedSessionUser(newUser, rememberMe);
+      handleSaveCredentials(newUser.email, 'google', newUser.name);
       setUserProperties({ userId: newUser.id, email: newUser.email, isPartner: newUser.isPartner });
       trackSignUp('google', newUser.isPartner);
       onLogin(newUser, rememberMe);
     } catch (fbErr: any) {
-      console.warn("Google Login failed or was cancelled:", fbErr);
       logCrashReport(fbErr, 'Authentication Error', { provider: 'google' });
-      setError("Google Sign-In could not be completed. Please try again or use email sign-in below. 🌸");
+      const code = fbErr?.code || '';
+      if (code === 'auth/popup-closed-by-user') {
+        setError('Google sign-in popup was closed before completing. Please try again.');
+      } else if (code === 'auth/popup-blocked') {
+        setError('Popup was blocked by your browser. Please allow popups for this site and try again.');
+      } else {
+        setError("Google Sign-In could not be completed. Please try again or use email sign-in.");
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // Apple Login simulation
-  const handleAppleAuthProceed = () => {
+  // Real Firebase Apple OAuth Sign-In (never simulated)
+  const handleAppleLogin = async () => {
     setLoading(true);
-    setIsAppleSheetOpen(false);
-    
-    // Create professional simulated Apple-user linked account
-    setTimeout(() => {
-      const appleUser: User = {
-        id: "apple_client_user",
-        name: "Bernice Alegbe",
-        email: appleEmailPref === 'share' ? "BERNiceAlegbe@gmail.com" : "b.alegbe@privaterelay.appleid.com",
-        partnerName: "",
-        partnerId: undefined,
+    setError('');
+    setNotice('');
+    try {
+      const provider = new OAuthProvider('apple.com');
+      provider.addScope('email');
+      provider.addScope('name');
+      const userCredential = await signInWithPopup(auth, provider);
+      const fbUser = userCredential.user;
+
+      const docSnap = await getDoc(doc(db, "users", fbUser.uid));
+      if (docSnap.exists()) {
+        const existingData = docSnap.data() as User;
+        handleExistingUserLogin(existingData, () => {
+          handleSaveCredentials(existingData.email, 'apple', existingData.name);
+        }, 'apple');
+        return;
+      }
+
+      const newUser: User = {
+        id: fbUser.uid,
+        name: fbUser.displayName || 'Lumina Member',
+        email: fbUser.email || '',
+        partnerName: '',
         isPartnerLinked: false,
         isPartner: registerRole === 'partner',
         cycleLength: 28,
@@ -544,7 +574,6 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
         lastPeriodStart: new Date().toISOString(),
         isPregnancyMode: false,
         onboardingCompleted: false,
-        diaryPin: '1234',
         theme: 'rose',
         favoriteSongs: [],
         customSongs: [],
@@ -552,45 +581,35 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
         receivedComforts: [],
         tempUnit: 'F',
         waterGoal: 8,
-        sharingSettings: {
-          shareCycleInfo: true,
-          shareSymptoms: true,
-          shareMood: true,
-          shareNotes: true,
-          shareFertilityInfo: false,
-          sharePregnancyInfo: false,
-          shareIntimacyInfo: false,
-          shareDoctorReports: false,
-          shareAppointmentReminders: false,
-          shareWellnessUpdates: false
-        },
-        moodLogs: [
-          { id: '1', date: new Date().toISOString().split('T')[0], mood: 'calm', note: 'Secure Apple-linked profile created.' }
-        ],
-        periodLogs: [
-          { date: new Date().toISOString().split('T')[0], intensity: 'medium' }
-        ]
+        sharingSettings: { ...DEFAULT_PRIVATE_SHARING_SETTINGS },
       };
 
-      if (rememberMe) {
-        localStorage.setItem('lumina_user', JSON.stringify(appleUser));
-        localStorage.setItem('lumina_biometric_user', JSON.stringify(appleUser));
+      await syncUser(newUser);
+      localStorage.setItem('lumina_remember_me', rememberMe ? 'true' : 'false');
+      await saveEncryptedSessionUser(newUser, rememberMe);
+      handleSaveCredentials(newUser.email, 'apple', newUser.name);
+      trackSignUp('apple', newUser.isPartner);
+      onLogin(newUser, rememberMe);
+    } catch (fbErr: any) {
+      logCrashReport(fbErr, 'Authentication Error', { provider: 'apple' });
+      const code = fbErr?.code || '';
+      if (code === 'auth/operation-not-allowed') {
+        setError('Apple Sign-In is not enabled in Firebase Authentication Console yet. Please use Google or Email Sign-In.');
+      } else if (code === 'auth/popup-closed-by-user') {
+        setError('Apple sign-in was cancelled.');
       } else {
-        localStorage.removeItem('lumina_user');
-        localStorage.removeItem('lumina_biometric_user');
-        sessionStorage.setItem('lumina_user', JSON.stringify(appleUser));
+        setError('Apple Sign-In could not be completed. Please try Google or Email Sign-In.');
       }
-      handleSaveCredentials(appleUser.email, 'apple_sec_sim', appleUser.name);
-      
-      onLogin(appleUser, rememberMe);
+    } finally {
       setLoading(false);
-    }, 1200);
+    }
   };
 
-  // Email login / signup combined handler with lockout, honeypot, strength checks, and verified offline fallback
+  // Email login / signup combined handler with accurate Firebase error mapping & encrypted offline fallback
   const handleEmailFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setNotice('');
 
     if (isHoneypotTriggered(honeypot)) {
       setError('Submission rejected. Please refresh and try again cleanly.');
@@ -613,7 +632,6 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
       return;
     }
 
-    // Account lockout guard (5 consecutive failed attempts)
     if (!isSignUp) {
       const lockout = await getAccountLockoutState(emailKey);
       if (lockout.isLocked) {
@@ -644,7 +662,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
 
     if (isSignUp) {
       const isPartnerRole = registerRole === 'partner';
-      const hasAllFields = isPartnerRole 
+      const hasAllFields = isPartnerRole
         ? (cleanFirst && cleanLast && cleanDisplay && emailKey && password)
         : (cleanFirst && cleanLast && cleanDisplay && age.trim() && dob.trim() && emailKey && password);
 
@@ -658,29 +676,29 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
       }
     }
 
-    const getSavedUserByEmail = (): User | null => {
-      const savedEmailData = localStorage.getItem('lumina_user_email_' + emailKey);
-      if (savedEmailData) {
-        try {
-          const parsed = JSON.parse(savedEmailData);
-          if (parsed && parsed.email && parsed.email.toLowerCase().trim() === emailKey) {
+    const getEncryptedOfflineUser = async (): Promise<User | null> => {
+      try {
+        const raw = await secureStorage.getItem('offline_user_' + emailKey);
+        if (raw) {
+          const parsed = JSON.parse(raw) as User;
+          if (parsed?.email && parsed.email.toLowerCase().trim() === emailKey) {
             return parsed;
           }
-        } catch {}
-      }
-      const localUser = getTargetUser();
-      if (localUser && localUser.email && localUser.email.toLowerCase().trim() === emailKey) {
-        return localUser;
+        }
+      } catch {}
+      const target = getTargetUser();
+      if (target?.email && target.email.toLowerCase().trim() === emailKey) {
+        return target;
       }
       return null;
     };
 
     const handleOfflineLoginOrSignup = async () => {
-      const existingLocal = getSavedUserByEmail();
+      const existingLocal = await getEncryptedOfflineUser();
 
       if (isSignUp) {
         if (existingLocal) {
-          setError('An account with this email already exists. Please use Sign In instead.');
+          setError('An account with this email already exists on this device. Please use Sign In instead.');
           setLoading(false);
           return;
         }
@@ -689,7 +707,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
           resolvedName,
           emailKey,
           'offline_companion',
-          'Loving Companion',
+          '',
           registerRole === 'partner',
           cleanFirst,
           cleanLast,
@@ -701,7 +719,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
         );
 
         await storeLocalCredentialVerifier(emailKey, password);
-        localStorage.setItem('lumina_user_email_' + emailKey, JSON.stringify(offlineUser));
+        await secureStorage.setItem('offline_user_' + emailKey, JSON.stringify(offlineUser));
         handleSaveCredentials(emailKey, '', resolvedName);
         finalizeAuthenticatedSession(offlineUser, 'email_signup', rememberMe);
         setLoading(false);
@@ -717,28 +735,33 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
         return;
       }
 
-      // Strictly reject any invalid or unknown credential during Sign In and enforce lockout
+      if (credCheck === 'missing') {
+        setError(
+          'You appear to be offline and this email has no cached sign-in verifier on this device yet. Connect to the internet to sign in with Email or Google.'
+        );
+        setLoading(false);
+        return;
+      }
+
       const lockStatus = await recordFailedLoginAttempt(emailKey);
       if (existingLocal) {
         const failedAudit = applyLoginSecurityAudit(
           existingLocal,
           'email',
           lockStatus.isLocked ? 'locked' : 'failed',
-          credCheck === 'missing' ? 'Missing local verifier / cloud verification required' : 'Incorrect password attempt'
+          'Incorrect password attempt'
         );
-        localStorage.setItem('lumina_user_email_' + emailKey, JSON.stringify(failedAudit));
+        await secureStorage.setItem('offline_user_' + emailKey, JSON.stringify(failedAudit));
       }
       setError(
         lockStatus.isLocked
           ? 'Too many unsuccessful sign-in attempts. Your account is temporarily locked for 5 minutes.'
-          : existingLocal && credCheck === 'missing'
-            ? `Unable to verify credentials offline. Please check your password or connect to verify. ${lockStatus.remainingAttempts} attempt(s) remaining.`
-            : `Incorrect email or password. ${lockStatus.remainingAttempts} attempt(s) remaining before temporary lockout.`
+          : `Incorrect email or password. ${lockStatus.remainingAttempts} attempt(s) remaining before temporary lockout.`
       );
       setLoading(false);
     };
 
-    if (connectionMode === 'offline') {
+    if (connectionMode === 'offline' || (typeof navigator !== 'undefined' && navigator.onLine === false)) {
       await handleOfflineLoginOrSignup();
       return;
     }
@@ -760,34 +783,22 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
           dob,
           country: sanitizeTextInput(country, 60) || undefined,
           timezone,
-          partnerName: 'Loving Partner',
+          partnerName: '',
           cycleLength: 28,
           periodLength: 5,
           lastPeriodStart: new Date().toISOString(),
           isPartner: registerRole === 'partner',
           isPregnancyMode: false,
           theme: 'rose',
-          diaryPin: '1234',
           isPartnerLinked: false,
-          sharingSettings: {
-            shareCycleInfo: true,
-            shareSymptoms: true,
-            shareMood: true,
-            shareNotes: true,
-            shareFertilityInfo: false,
-            sharePregnancyInfo: false,
-            shareIntimacyInfo: false,
-            shareDoctorReports: false,
-            shareAppointmentReminders: false,
-            shareWellnessUpdates: false
-          },
+          sharingSettings: { ...DEFAULT_PRIVATE_SHARING_SETTINGS },
           waterGoal: 8,
           onboardingCompleted: false
         };
 
         await storeLocalCredentialVerifier(emailKey, password);
         await syncUser(newUser);
-        localStorage.setItem('lumina_user_email_' + emailKey, JSON.stringify(newUser));
+        await secureStorage.setItem('offline_user_' + emailKey, JSON.stringify(newUser));
         handleSaveCredentials(newUser.email, '', resolvedName);
         trackSignUp('email', newUser.isPartner);
         finalizeAuthenticatedSession(newUser, 'email_signup', rememberMe);
@@ -798,29 +809,91 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
         await clearLoginLockout(emailKey);
         await storeLocalCredentialVerifier(emailKey, password);
 
-        const unsubscribe = subscribeToUser(fbUser.uid, (existingUser) => {
-          if (existingUser) {
-            const localSaved = getSavedUserByEmail();
-            const mergedUser = localSaved && localSaved.lastPeriodStart && localSaved.cycleLength
-              ? { ...localSaved, ...existingUser, cycleLength: existingUser.cycleLength || localSaved.cycleLength, periodLength: existingUser.periodLength || localSaved.periodLength, lastPeriodStart: existingUser.lastPeriodStart || localSaved.lastPeriodStart }
-              : existingUser;
-
-            if (fbUser.emailVerified && mergedUser.securitySettings) {
-              mergedUser.securitySettings.emailVerified = true;
-            }
-            handleExistingUserLogin(mergedUser, () => {
-              handleSaveCredentials(emailKey, '', mergedUser.name);
-            }, 'email');
-          } else {
-            setError('We couldn\'t find a match for this account. Feel free to join today! 💕');
-            setLoading(false);
+        let existingUser: User | null = null;
+        try {
+          const userSnap = await getDoc(doc(db, 'users', fbUser.uid));
+          if (userSnap.exists()) {
+            existingUser = userSnap.data() as User;
           }
-          unsubscribe();
-        });
+        } catch (readErr) {
+          console.warn('[Auth] Firestore profile read fallback:', readErr);
+        }
+
+        const localSaved = await getEncryptedOfflineUser();
+        const resolvedExisting = existingUser || (localSaved && localSaved.id === fbUser.uid ? localSaved : null);
+
+        if (resolvedExisting) {
+          const mergedUser = localSaved && localSaved.lastPeriodStart && localSaved.cycleLength
+            ? {
+                ...localSaved,
+                ...resolvedExisting,
+                cycleLength: resolvedExisting.cycleLength || localSaved.cycleLength,
+                periodLength: resolvedExisting.periodLength || localSaved.periodLength,
+                lastPeriodStart: resolvedExisting.lastPeriodStart || localSaved.lastPeriodStart,
+              }
+            : resolvedExisting;
+
+          if (fbUser.emailVerified && mergedUser.securitySettings) {
+            mergedUser.securitySettings.emailVerified = true;
+          }
+          handleExistingUserLogin(mergedUser, () => {
+            handleSaveCredentials(emailKey, '', mergedUser.name);
+          }, 'email');
+        } else {
+          // Firebase Auth succeeded, bootstrap profile record cleanly if doc doesn't exist yet
+          const bootstrappedUser: User = {
+            id: fbUser.uid,
+            name: fbUser.displayName || emailKey.split('@')[0] || 'Lumina Member',
+            email: fbUser.email || emailKey,
+            partnerName: '',
+            cycleLength: 28,
+            periodLength: 5,
+            lastPeriodStart: new Date().toISOString(),
+            isPartner: Boolean(initialInviteCode) || registerRole === 'partner',
+            isPregnancyMode: false,
+            theme: 'rose',
+            isPartnerLinked: false,
+            sharingSettings: { ...DEFAULT_PRIVATE_SHARING_SETTINGS },
+            waterGoal: 8,
+            onboardingCompleted: false,
+          };
+          await syncUser(bootstrappedUser);
+          handleExistingUserLogin(bootstrappedUser, () => {
+            handleSaveCredentials(emailKey, '', bootstrappedUser.name);
+          }, 'email');
+        }
+        setLoading(false);
       }
     } catch (fbErr: any) {
-      const code = fbErr?.code || '';
-      const msg = fbErr?.message || String(fbErr);
+      const code = String(fbErr?.code || '');
+      const msg = String(fbErr?.message || '');
+
+      if (code === 'auth/operation-not-allowed' || msg.includes('operation-not-allowed')) {
+        setError(
+          'Email/Password sign-in is not currently enabled in Firebase Authentication Console. Use "Continue with Google" below, or enable Email/Password under Firebase Console → Authentication → Sign-in method.'
+        );
+        setLoading(false);
+        return;
+      }
+
+      if (code === 'auth/user-disabled') {
+        setError('This account has been disabled. Please contact support.');
+        setLoading(false);
+        return;
+      }
+
+      if (code === 'auth/invalid-email') {
+        setError('Please enter a valid email address.');
+        setLoading(false);
+        return;
+      }
+
+      if (code === 'auth/email-already-in-use' || msg.includes('email-already-in-use')) {
+        setError('An account already exists with this email. Sign in below or tap "Continue with Google" if you originally registered with Google.');
+        setLoading(false);
+        return;
+      }
+
       const isBadCredentials = [
         'auth/wrong-password',
         'auth/invalid-credential',
@@ -831,36 +904,37 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
 
       if (isBadCredentials) {
         const lockStatus = await recordFailedLoginAttempt(emailKey);
-        const cached = getSavedUserByEmail();
+        const cached = await getEncryptedOfflineUser();
         if (cached) {
           const failedAudit = applyLoginSecurityAudit(cached, 'email', lockStatus.isLocked ? 'locked' : 'failed', 'Failed login attempt');
-          localStorage.setItem('lumina_user_email_' + emailKey, JSON.stringify(failedAudit));
+          await secureStorage.setItem('offline_user_' + emailKey, JSON.stringify(failedAudit));
         }
         setError(
           lockStatus.isLocked || code.includes('too-many-requests')
             ? 'Too many unsuccessful sign-in attempts. Your account is temporarily locked for 5 minutes.'
-            : `Incorrect credentials. ${lockStatus.remainingAttempts} attempt(s) remaining before lockout.`
+            : `Incorrect email or password (${lockStatus.remainingAttempts} attempt(s) left). If you originally signed up with Google, tap "Continue with Google" below.`
         );
         setLoading(false);
         return;
       }
 
-      if (code.includes('auth/email-already-in-use') || msg.includes('auth/email-already-in-use')) {
-        setError("This email configuration belongs to an existing member. Please select login! 🌸");
-        setLoading(false);
+      // Only fall back to encrypted offline verifier when there is a real network connectivity failure
+      if (code.includes('network-request-failed') || (typeof navigator !== 'undefined' && navigator.onLine === false)) {
+        await handleOfflineLoginOrSignup();
         return;
       }
 
-      await handleOfflineLoginOrSignup();
+      setError('Unable to complete cloud sign-in right now. Please try again or use "Continue with Google".');
+      setLoading(false);
     }
   };
 
   const createNewSandboxUser = (
-    currentId: string, 
-    currentName: string, 
-    emailStr: string, 
-    partnerId: string, 
-    partnerName: string, 
+    currentId: string,
+    currentName: string,
+    emailStr: string,
+    _partnerId: string,
+    _partnerName: string,
     isPartner: boolean,
     firstName?: string,
     lastName?: string,
@@ -890,36 +964,20 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
       lastPeriodStart: new Date().toISOString(),
       isPregnancyMode: false,
       onboardingCompleted: false,
-      diaryPin: '1234',
       theme: 'rose',
       favoriteSongs: [],
       customSongs: [],
-      sharingSettings: {
-        shareCycleInfo: true,
-        shareSymptoms: true,
-        shareMood: true,
-        shareNotes: true,
-        shareFertilityInfo: false,
-        sharePregnancyInfo: false,
-        shareIntimacyInfo: false,
-        shareDoctorReports: false,
-        shareAppointmentReminders: false,
-        shareWellnessUpdates: false
-      },
+      sharingSettings: { ...DEFAULT_PRIVATE_SHARING_SETTINGS },
       waterGoal: 8,
-      moodLogs: [
-        { id: '1', date: new Date().toISOString().split('T')[0], mood: 'calm', note: 'Feeling calm and connected.' }
-      ],
-      periodLogs: [
-        { date: new Date().toISOString().split('T')[0], intensity: 'medium' }
-      ]
     };
   };
 
   const handleForgotPassword = async () => {
+    setError('');
+    setNotice('');
     const cleanEmail = sanitizeTextInput(email, 160).toLowerCase();
     if (!isValidEmailAddress(cleanEmail)) {
-      setError("Please enter a valid email address first so we can send a reset link. ✉️");
+      setError("Please enter a valid email address first so we can send a reset link.");
       return;
     }
     const rate = checkClientRateLimit('password_reset', 3, 60_000);
@@ -928,12 +986,24 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
       return;
     }
     setLoading(true);
-    setError('');
     try {
       await sendPasswordResetEmail(auth, cleanEmail);
-      setError("If an account matches this email, reset instructions have been sent. Check your inbox or spam folder. 💕");
-    } catch {
-      setError("We couldn't dispatch a cloud reset email right now. Check the address format and try again.");
+      setNotice(
+        `Password reset requested for ${cleanEmail}. Check Inbox, Spam, and Promotions for an email from noreply@coral-gizmo-05xj8.firebaseapp.com. Note: if this account uses Google Sign-In (no email password was set), no reset email is sent — tap "Continue with Google" instead.`
+      );
+    } catch (fbErr: any) {
+      const code = String(fbErr?.code || '');
+      if (code === 'auth/operation-not-allowed') {
+        setError(
+          'Password reset is unavailable because Email/Password sign-in is disabled in Firebase Authentication Console. Use "Continue with Google" or enable Email/Password in Firebase Console.'
+        );
+      } else if (code === 'auth/too-many-requests') {
+        setError('Too many reset requests were sent recently. Please wait a few minutes before trying again.');
+      } else if (code === 'auth/network-request-failed') {
+        setError('Network error while contacting Firebase. Please check your internet connection and try again.');
+      } else {
+        setError("We couldn't dispatch a password reset email right now. Check the email address or use Continue with Google.");
+      }
     } finally {
       setLoading(false);
     }
@@ -960,10 +1030,15 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
         {/* Dynamic view switcher based on App Open Experience Design */}
         <div className="w-full flex-1 flex flex-col justify-center my-6 space-y-6">
           
-          {/* Output Errors in user-friendly dialogue, no developer references */}
+          {/* Output Errors & Notices in user-friendly dialogue */}
           {error && (
-            <div className="w-full bg-rose-50 text-rose-500 text-[10px] text-center font-serif italic p-4 rounded-2xl border border-rose-100/50 animate-fadeIn leading-relaxed">
+            <div role="alert" className="w-full bg-rose-50 text-rose-700 text-[11px] text-center font-medium p-4 rounded-2xl border border-rose-200 animate-fadeIn leading-relaxed">
               {error}
+            </div>
+          )}
+          {notice && (
+            <div role="status" className="w-full bg-emerald-50 text-emerald-800 text-[11px] text-center font-medium p-4 rounded-2xl border border-emerald-200 animate-fadeIn leading-relaxed">
+              {notice}
             </div>
           )}
 
@@ -1017,15 +1092,9 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
                 <button
                   type="button"
                   id="btn-confirm-restore"
-                  onClick={() => {
-                    if (rememberMe) {
-                      localStorage.setItem('lumina_user', JSON.stringify(pendingRestoreUser));
-                      localStorage.setItem('lumina_biometric_user', JSON.stringify(pendingRestoreUser));
-                    } else {
-                      localStorage.removeItem('lumina_user');
-                      localStorage.removeItem('lumina_biometric_user');
-                      sessionStorage.setItem('lumina_user', JSON.stringify(pendingRestoreUser));
-                    }
+                  onClick={async () => {
+                    localStorage.setItem('lumina_remember_me', rememberMe ? 'true' : 'false');
+                    await saveEncryptedSessionUser(pendingRestoreUser, rememberMe);
                     onLogin(pendingRestoreUser, rememberMe);
                     setPendingRestoreUser(null);
                   }}
@@ -1037,44 +1106,26 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
                 <button
                   type="button"
                   id="btn-cancel-restore"
-                  onClick={() => {
+                  onClick={async () => {
                     const emptyUser: User = {
                       id: pendingRestoreUser.id,
-                      name: pendingRestoreUser.name || 'Bernice',
+                      name: pendingRestoreUser.name || 'Lumina Member',
                       email: pendingRestoreUser.email || '',
-                      partnerName: 'Loving Partner',
+                      partnerName: '',
                       cycleLength: 28,
                       periodLength: 5,
                       lastPeriodStart: new Date().toISOString(),
                       isPartner: pendingRestoreUser.isPartner,
                       isPregnancyMode: false,
                       theme: 'rose',
-                      diaryPin: '1234',
                       isPartnerLinked: false,
-                      sharingSettings: {
-                        shareCycleInfo: true,
-                        shareSymptoms: true,
-                        shareMood: true,
-                        shareNotes: true,
-                        shareFertilityInfo: false,
-                        sharePregnancyInfo: false,
-                        shareIntimacyInfo: false,
-                        shareDoctorReports: false,
-                        shareAppointmentReminders: false,
-                        shareWellnessUpdates: false
-                      },
+                      sharingSettings: { ...DEFAULT_PRIVATE_SHARING_SETTINGS },
                       waterGoal: 8,
                       onboardingCompleted: false,
                       partnerOnboardingCompleted: false
                     };
-                    if (rememberMe) {
-                      localStorage.setItem('lumina_user', JSON.stringify(emptyUser));
-                      localStorage.setItem('lumina_biometric_user', JSON.stringify(emptyUser));
-                    } else {
-                      localStorage.removeItem('lumina_user');
-                      localStorage.removeItem('lumina_biometric_user');
-                      sessionStorage.setItem('lumina_user', JSON.stringify(emptyUser));
-                    }
+                    localStorage.setItem('lumina_remember_me', rememberMe ? 'true' : 'false');
+                    await saveEncryptedSessionUser(emptyUser, rememberMe);
                     onLogin(emptyUser, rememberMe);
                     setPendingRestoreUser(null);
                   }}
@@ -1092,7 +1143,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
               <div className="text-center space-y-3">
                 <span className="text-5xl animate-bounce inline-block">💞</span>
                 <h2 className="text-2xl font-serif text-pink-950 font-black tracking-tight leading-tight px-2">
-                  🌸 {inviteSenderName || 'Bernice'} invited you to join their Lumina Partner Circle.
+                  🌸 {inviteSenderName || 'Your Partner'} invited you to join their Lumina Partner Circle.
                 </h2>
                 <div className="w-12 h-0.5 bg-gradient-to-r from-pink-400 to-rose-450 mx-auto my-2" />
                 <p className="text-xs text-gray-500 italic font-serif leading-relaxed px-1">
@@ -1151,81 +1202,70 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
             <div className="space-y-6 animate-fadeIn">
               <div className="text-center space-y-1.5">
                 <h2 className="text-2xl font-serif text-pink-900 font-semibold">Welcome back, {getDisplayName()} 💕</h2>
-                <p className="text-[11px] text-gray-400/90 italic font-serif">Your sanctuary is locked and safe.</p>
+                <p className="text-[11px] text-gray-500 italic font-serif">Verify with {biometricLabel} or sign in to unlock your sanctuary.</p>
               </div>
 
-              {/* Bio Authenticator stack */}
+              {/* Real Biometric & PIN Options */}
               <div className="space-y-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => handleBiometricAuth('face')}
-                  disabled={loading}
-                  className="w-full py-4.5 bg-white hover:bg-rose-50/40 border border-pink-100/60 rounded-2xl flex items-center px-6 gap-4 hover:scale-[1.01] active:scale-95 hover:border-pink-300 shadow-sm cursor-pointer transition-all"
-                >
-                  <div className="w-9 h-9 bg-pink-50 text-pink-500 rounded-xl flex items-center justify-center">
-                    <Scan size={18} />
-                  </div>
-                  <div className="text-left flex-1">
-                    <p className="text-[10px] font-bold text-pink-900 uppercase tracking-wider">Face ID</p>
-                    <p className="text-[8px] text-gray-400">Unlock with front camera instantly</p>
-                  </div>
-                  <ChevronRight size={14} className="text-pink-200" />
-                </button>
+                {biometricAvailable && (
+                  <button
+                    type="button"
+                    onClick={() => handleBiometricAuth('face')}
+                    disabled={loading}
+                    className="w-full py-4.5 bg-white hover:bg-rose-50/40 border border-pink-100/60 rounded-2xl flex items-center px-6 gap-4 hover:scale-[1.01] active:scale-95 hover:border-pink-300 shadow-sm cursor-pointer transition-all"
+                  >
+                    <div className="w-9 h-9 bg-pink-50 text-pink-500 rounded-xl flex items-center justify-center">
+                      <Fingerprint size={18} />
+                    </div>
+                    <div className="text-left flex-1">
+                      <p className="text-[10px] font-bold text-pink-900 uppercase tracking-wider">{biometricLabel}</p>
+                      <p className="text-[8px] text-gray-500">Verify identity with native device hardware</p>
+                    </div>
+                    <ChevronRight size={14} className="text-pink-200" />
+                  </button>
+                )}
 
-                <button
-                  type="button"
-                  onClick={() => handleBiometricAuth('touch')}
-                  disabled={loading}
-                  className="w-full py-4.5 bg-white hover:bg-rose-50/40 border border-pink-100/60 rounded-2xl flex items-center px-6 gap-4 hover:scale-[1.01] active:scale-95 hover:border-pink-300 shadow-sm cursor-pointer transition-all"
-                >
-                  <div className="w-9 h-9 bg-pink-50 text-pink-500 rounded-xl flex items-center justify-center">
-                    <Fingerprint size={18} />
-                  </div>
-                  <div className="text-left flex-1">
-                    <p className="text-[10px] font-bold text-pink-900 uppercase tracking-wider">Fingerprint</p>
-                    <p className="text-[8px] text-gray-400">Biometric fingerprint verification</p>
-                  </div>
-                  <ChevronRight size={14} className="text-pink-200" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleBiometricAuth('passcode')}
-                  disabled={loading}
-                  className="w-full py-4.5 bg-white hover:bg-rose-50/40 border border-pink-100/60 rounded-2xl flex items-center px-6 gap-4 hover:scale-[1.01] active:scale-95 hover:border-pink-300 shadow-sm cursor-pointer transition-all"
-                >
-                  <div className="w-9 h-9 bg-pink-50 text-pink-500 rounded-xl flex items-center justify-center">
-                    <Lock size={16} />
-                  </div>
-                  <div className="text-left flex-1">
-                    <p className="text-[10px] font-bold text-pink-900 uppercase tracking-wider">Passcode PIN</p>
-                    <p className="text-[8px] text-gray-400">Enter secure 4-digit code</p>
-                  </div>
-                  <ChevronRight size={14} className="text-pink-200" />
-                </button>
+                {userHasConfiguredPin(getTargetUser()) && (
+                  <button
+                    type="button"
+                    onClick={() => handleBiometricAuth('passcode')}
+                    disabled={loading}
+                    className="w-full py-4.5 bg-white hover:bg-rose-50/40 border border-pink-100/60 rounded-2xl flex items-center px-6 gap-4 hover:scale-[1.01] active:scale-95 hover:border-pink-300 shadow-sm cursor-pointer transition-all"
+                  >
+                    <div className="w-9 h-9 bg-pink-50 text-pink-500 rounded-xl flex items-center justify-center">
+                      <Lock size={16} />
+                    </div>
+                    <div className="text-left flex-1">
+                      <p className="text-[10px] font-bold text-pink-900 uppercase tracking-wider">Security PIN</p>
+                      <p className="text-[8px] text-gray-500">Unlock with your private 4–6 digit PIN</p>
+                    </div>
+                    <ChevronRight size={14} className="text-pink-200" />
+                  </button>
+                )}
               </div>
 
-              {/* Reset view fallback */}
               <div className="text-center pt-2 flex flex-col gap-2.5">
                 <button
                   type="button"
                   onClick={() => {
                     setScreen('email_login');
                     setError('');
+                    setNotice('');
                   }}
                   className="text-[10px] font-sans font-bold uppercase tracking-widest text-pink-500 hover:text-pink-600 transition-colors cursor-pointer"
                 >
-                  Sign In with Email / Password
+                  Sign In with Email / Google
                 </button>
                 <button
                   type="button"
                   onClick={() => {
                     setScreen('welcome');
                     setError('');
+                    setNotice('');
                   }}
                   className="text-[9px] font-serif font-semibold italic text-pink-400 hover:text-pink-600 transition-colors cursor-pointer"
                 >
-                  Switch Account or Setup New Device  ✈
+                  Switch Account or Setup New Device ✈
                 </button>
               </div>
             </div>
@@ -1252,6 +1292,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
                     setRegisterRole('tracker');
                     setScreen('email_signup');
                     setError('');
+                    setNotice('');
                   }}
                   className="w-full py-4.5 bg-gradient-to-r from-pink-400 to-rose-450 hover:scale-[1.01] active:scale-95 text-white font-bold rounded-2xl text-[10px] uppercase tracking-[0.15em] shadow-md shadow-pink-150 flex items-center justify-center gap-2 cursor-pointer transition-all"
                 >
@@ -1263,17 +1304,24 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
                   type="button"
                   id="btn-welcome-signin"
                   onClick={() => {
-                    const hasBiometric = !!localStorage.getItem('lumina_biometric_user');
-                    if (hasBiometric) {
-                      setScreen('returning');
-                    } else {
-                      setScreen('email_login');
-                    }
+                    setScreen('email_login');
                     setError('');
+                    setNotice('');
                   }}
                   className="w-full py-4.5 bg-white border border-pink-150 rounded-2xl hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-3 text-pink-850 font-bold text-[10px] uppercase tracking-[0.15em] cursor-pointer shadow-sm hover:bg-rose-50/20 transition-all"
                 >
                   <span>✉️ Sign In</span>
+                </button>
+
+                <button
+                  type="button"
+                  id="btn-welcome-google"
+                  onClick={handleGoogleLogin}
+                  disabled={loading}
+                  className="w-full py-4 bg-white border border-pink-150 rounded-2xl hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-3 text-stone-700 font-bold text-[10px] uppercase tracking-[0.12em] cursor-pointer shadow-xs hover:bg-rose-50/20 transition-all"
+                >
+                  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-4 h-4" referrerPolicy="no-referrer" />
+                  <span>Continue with Google</span>
                 </button>
               </div>
             </div>
@@ -1332,7 +1380,8 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
                 <button
                   type="button"
                   id="btn-scan-apple"
-                  onClick={() => setIsAppleSheetOpen(true)}
+                  onClick={handleAppleLogin}
+                  disabled={loading}
                   className="w-full py-4 bg-black text-white rounded-2xl hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-3 font-bold text-[9px] uppercase tracking-widest cursor-pointer shadow-sm hover:opacity-90 transition-all"
                 >
                   <Smartphone size={14} className="text-white fill-white" />
@@ -1345,6 +1394,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
                   onClick={() => {
                     setScreen('email_signup');
                     setError('');
+                    setNotice('');
                   }}
                   className="w-full py-4 bg-white border border-pink-100 text-pink-500 rounded-2xl hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-3 font-bold text-[9px] uppercase tracking-widest cursor-pointer shadow-sm hover:bg-pink-50/10 transition-all"
                 >
@@ -1358,6 +1408,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
                   onClick={() => {
                     setScreen('email_login');
                     setError('');
+                    setNotice('');
                   }}
                   className="text-[10px] font-sans font-bold uppercase tracking-widest text-pink-500 hover:text-pink-600 transition-colors cursor-pointer"
                 >
@@ -1373,7 +1424,11 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
             <div className="space-y-4 animate-fadeIn">
               <button
                 type="button"
-                onClick={() => setScreen('welcome')}
+                onClick={() => {
+                  setScreen('welcome');
+                  setError('');
+                  setNotice('');
+                }}
                 className="inline-flex items-center gap-1.5 text-[10px] font-sans font-bold uppercase tracking-widest text-pink-700 hover:text-pink-800 cursor-pointer"
               >
                 <ArrowLeft size={12} /> Back
@@ -1381,7 +1436,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
 
               <div className="text-center space-y-1">
                 <h3 className="text-xl font-serif text-pink-950 font-bold italic">Secure Entry</h3>
-                <p className="text-xs text-stone-600">Unlock your password-protected session.</p>
+                <p className="text-xs text-stone-600">Sign in with your verified email &amp; password or Google.</p>
               </div>
 
               <form onSubmit={handleEmailFormSubmit} className="space-y-3 pt-1">
@@ -1444,6 +1499,37 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
                   {loading ? "UNLOCKING SANCTUARY..." : "SECURE ENTRY"}
                 </button>
               </form>
+
+              <div className="relative flex items-center py-1">
+                <div className="flex-grow border-t border-pink-100" />
+                <span className="mx-3 text-[10px] font-bold uppercase tracking-widest text-stone-400">or</span>
+                <div className="flex-grow border-t border-pink-100" />
+              </div>
+
+              <button
+                type="button"
+                id="btn-login-google"
+                onClick={handleGoogleLogin}
+                disabled={loading}
+                className="w-full py-3.5 bg-white border border-pink-200 rounded-2xl flex items-center justify-center gap-3 text-stone-800 font-bold text-[10px] uppercase tracking-widest cursor-pointer shadow-xs hover:bg-rose-50/40 transition-all"
+              >
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-4 h-4" referrerPolicy="no-referrer" />
+                <span>Continue with Google</span>
+              </button>
+
+              <div className="text-center pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setScreen('email_signup');
+                    setError('');
+                    setNotice('');
+                  }}
+                  className="text-[10px] font-bold uppercase tracking-widest text-pink-600 hover:underline cursor-pointer"
+                >
+                  Need an account? Create one
+                </button>
+              </div>
             </div>
           )}
 
@@ -1730,6 +1816,16 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
                     {loading ? "INITIALIZING SANCTUARY..." : "CREATE SANCTUARY"}
                   </button>
                 </form>
+
+                <button
+                  type="button"
+                  onClick={handleGoogleLogin}
+                  disabled={loading}
+                  className="w-full py-3.5 bg-white border border-pink-200 rounded-2xl flex items-center justify-center gap-3 text-stone-800 font-bold text-[10px] uppercase tracking-widest cursor-pointer shadow-xs hover:bg-rose-50/40 transition-all"
+                >
+                  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-4 h-4" referrerPolicy="no-referrer" />
+                  <span>Continue with Google</span>
+                </button>
               </div>
             );
           })()}
@@ -1749,7 +1845,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
 
       </div>
 
-      {/* STABLE HIGH-FIDELITY BIOMETRICS VERIFICATION SIMULATOR SHEET */}
+      {/* GENUINE BIOMETRIC / SECURITY PIN VERIFICATION MODAL */}
       {biometricScanning !== 'none' && (
         <div className="fixed inset-0 bg-white/90 backdrop-blur-xl flex flex-col items-center justify-center z-50 p-6 animate-fadeIn">
           <div className="bg-white p-8 rounded-[3rem] shadow-[0_24px_50px_rgba(244,114,182,0.12)] border border-pink-150/40 w-full max-w-sm flex flex-col items-center justify-center relative overflow-hidden min-h-[440px] animate-scaleIn">
@@ -1763,65 +1859,45 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
                 setPasscodeError('');
               }}
               className="absolute top-5 right-5 w-8 h-8 rounded-full bg-pink-50 hover:bg-pink-100 flex items-center justify-center text-pink-500 hover:text-pink-600 transition-colors cursor-pointer"
+              aria-label="Close verification"
             >
               <X size={15} />
             </button>
 
-            {/* 1. Face ID Simulation */}
-            {biometricScanning === 'face' && (
+            {(biometricScanning === 'face' || biometricScanning === 'touch') && (
               <div className="flex flex-col items-center text-center space-y-6">
                 <div className="relative w-24 h-24 flex items-center justify-center">
                   <span className={`absolute inset-0 rounded-full border-4 border-dashed animate-spin-slow ${biometricStatus === 'success' ? 'border-emerald-400' : 'border-pink-300'}`}></span>
                   <div className={`w-18 h-18 rounded-full flex items-center justify-center transition-all duration-500 shadow-inner ${biometricStatus === 'success' ? 'bg-emerald-50 text-emerald-500' : 'bg-pink-50 text-pink-500'}`}>
-                    {biometricStatus === 'success' ? <Check size={32} className="animate-scaleIn animate-bounce" /> : <Scan size={32} className="animate-pulse" />}
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <h3 className="text-pink-950 font-serif text-lg italic font-extrabold">Face ID Scan</h3>
-                  <p className="text-[10px] text-gray-450 leading-relaxed font-serif max-w-[200px]">
-                    {biometricStatus === 'scanning' && "Aligning mobile camera secure lens..."}
-                    {biometricStatus === 'success' && "Identity match. Welcome home! ✨"}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* 2. Fingerprint Simulation */}
-            {biometricScanning === 'touch' && (
-              <div className="flex flex-col items-center text-center space-y-6">
-                <div className="relative w-24 h-24 flex items-center justify-center">
-                  <span className={`absolute inset-0 rounded-full border-2 animate-ping opacity-25 ${biometricStatus === 'success' ? 'bg-emerald-400 border-emerald-400' : 'bg-pink-300 border-pink-300'}`}></span>
-                  <div className={`w-18 h-18 rounded-full flex items-center justify-center transition-all duration-500 shadow-md ${biometricStatus === 'success' ? 'bg-emerald-500 text-white' : 'bg-gradient-to-tr from-pink-400 to-rose-450 text-white'}`}>
                     {biometricStatus === 'success' ? <Check size={32} /> : <Fingerprint size={32} className="animate-pulse" />}
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <h3 className="text-pink-950 font-serif text-lg italic font-extrabold">Touch ID Sensor</h3>
-                  <p className="text-[10px] text-gray-450 leading-relaxed font-serif max-w-[200px]">
-                    {biometricStatus === 'scanning' && "Hold fingerprint on sensor line..."}
-                    {biometricStatus === 'success' && "Sensor Verified. Entering!"}
+                  <h3 className="text-pink-950 font-serif text-lg italic font-extrabold">{biometricLabel}</h3>
+                  <p className="text-[11px] text-stone-600 leading-relaxed font-serif max-w-[220px]">
+                    {biometricStatus === 'scanning' && 'Waiting for native device authentication prompt...'}
+                    {biometricStatus === 'success' && 'Identity verified cleanly.'}
                   </p>
                 </div>
               </div>
             )}
 
-            {/* 3. PIN code dial keypad layout */}
             {biometricScanning === 'passcode' && (
               <div className="flex flex-col items-center w-full space-y-5 animate-fadeIn">
                 <div className="text-center space-y-1">
-                  <div className={`mx-auto w-10 h-10 rounded-full flex items-center justify-center ${biometricStatus === 'success' ? 'bg-emerald-50 text-emerald-500' : 'bg-pink-50 text-pink-505'}`}>
-                    {biometricStatus === 'success' ? <Check size={18} className="animate-scaleIn" /> : <Lock size={16} className="text-pink-400" />}
+                  <div className={`mx-auto w-10 h-10 rounded-full flex items-center justify-center ${biometricStatus === 'success' ? 'bg-emerald-50 text-emerald-500' : 'bg-pink-50 text-pink-500'}`}>
+                    {biometricStatus === 'success' ? <Check size={18} /> : <Lock size={16} className="text-pink-500" />}
                   </div>
-                  <h3 className="text-pink-950 font-serif text-md font-extrabold italic">Enter Sanctuary PIN</h3>
-                  <p className="text-[9px] text-gray-400 font-medium">Access protected maternal health records</p>
+                  <h3 className="text-pink-950 font-serif text-md font-extrabold italic">Enter Security PIN</h3>
+                  <p className="text-[10px] text-stone-500 font-medium">Enter your private 4–6 digit PIN</p>
                 </div>
 
-                <div className="flex gap-4.5 justify-center items-center h-6">
-                  {[0, 1, 2, 3].map((idx) => (
+                <div className="flex gap-3.5 justify-center items-center h-6">
+                  {[0, 1, 2, 3, 4, 5].map((idx) => (
                     <div 
                       key={idx} 
                       className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                        passcodeError ? 'bg-rose-500 animate-bounce' :
+                        passcodeError ? 'bg-rose-500' :
                         biometricStatus === 'success' ? 'bg-emerald-500 scale-110' :
                         typedPin.length > idx ? 'bg-pink-500 scale-110 shadow-[0_4px_12px_rgba(244,114,182,0.4)]' : 'bg-pink-100'
                       }`}
@@ -1829,11 +1905,10 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
                   ))}
                 </div>
 
-                <div className="h-2 text-center">
-                  {passcodeError && <p className="text-[9px] font-bold text-rose-500 animate-fadeIn">{passcodeError}</p>}
+                <div className="min-h-4 text-center">
+                  {passcodeError && <p className="text-[10px] font-bold text-rose-600 animate-fadeIn">{passcodeError}</p>}
                 </div>
 
-                {/* dial pad layout */}
                 <div className="grid grid-cols-3 gap-y-3.5 gap-x-5 justify-items-center w-full max-w-[220px]">
                   {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => (
                     <button
@@ -1841,7 +1916,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
                       type="button"
                       disabled={biometricStatus === 'success'}
                       onClick={() => handlePasscodeDigit(digit)}
-                      className="w-12 h-12 rounded-full bg-pink-50/20 border border-pink-100/30 hover:bg-pink-50 hover:border-pink-300 active:scale-90 transition-all text-xs font-bold text-pink-600 flex items-center justify-center shadow-xs cursor-pointer font-serif"
+                      className="w-12 h-12 rounded-full bg-pink-50/30 border border-pink-100 hover:bg-pink-50 hover:border-pink-300 active:scale-90 transition-all text-xs font-bold text-pink-700 flex items-center justify-center shadow-xs cursor-pointer font-serif"
                     >
                       {digit}
                     </button>
@@ -1853,7 +1928,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
                       setTypedPin('');
                       setPasscodeError('');
                     }}
-                    className="w-12 h-12 text-[8px] font-bold uppercase tracking-wider text-pink-400 hover:text-pink-600 flex items-center justify-center cursor-pointer"
+                    className="w-12 h-12 text-[9px] font-bold uppercase tracking-wider text-pink-500 hover:text-pink-700 flex items-center justify-center cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -1861,7 +1936,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
                     type="button"
                     disabled={biometricStatus === 'success'}
                     onClick={() => handlePasscodeDigit('0')}
-                    className="w-12 h-12 rounded-full bg-pink-50/20 border border-pink-100/30 hover:bg-pink-50 hover:border-pink-300 active:scale-90 transition-all text-xs font-bold text-pink-600 flex items-center justify-center shadow-xs cursor-pointer font-serif"
+                    className="w-12 h-12 rounded-full bg-pink-50/30 border border-pink-100 hover:bg-pink-50 hover:border-pink-300 active:scale-90 transition-all text-xs font-bold text-pink-700 flex items-center justify-center shadow-xs cursor-pointer font-serif"
                   >
                     0
                   </button>
@@ -1869,102 +1944,23 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
                     type="button"
                     disabled={biometricStatus === 'success' || typedPin.length === 0}
                     onClick={handleBackspace}
-                    className="w-12 h-12 text-pink-400 hover:text-pink-600 flex items-center justify-center active:scale-90 transition-all cursor-pointer"
+                    aria-label="Backspace"
+                    className="w-12 h-12 text-pink-500 hover:text-pink-700 flex items-center justify-center active:scale-90 transition-all cursor-pointer"
                   >
                     <Delete size={15} />
                   </button>
                 </div>
 
-                <p className="text-[8px] text-pink-300/80 uppercase font-sans font-bold tracking-widest text-center italic mt-1">
-                  Default: <span className="underline font-extrabold text-pink-450">1234</span>
-                </p>
+                <button
+                  type="button"
+                  disabled={typedPin.length < 4 || biometricStatus === 'success'}
+                  onClick={() => handlePasscodeSubmit()}
+                  className="w-full max-w-[220px] py-3 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest disabled:opacity-40 cursor-pointer"
+                >
+                  Unlock with PIN
+                </button>
               </div>
             )}
-          </div>
-        </div>
-      )}
-
-      {/* APPLE SIGN-IN BOTTOM SHEET DRAWERS SIMULATOR (iOS native-feel overlay) */}
-      {isAppleSheetOpen && (
-        <div className="fixed inset-0 bg-black/55 backdrop-blur-sm flex justify-center items-end z-50 animate-fadeIn">
-          <div className="bg-[#f2f2f7] w-full max-w-md rounded-t-[2.5rem] p-6 space-y-5 animate-slideUp shadow-2xl relative border-t border-white/30">
-            
-            {/* Apple Top capsule drag handle */}
-            <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto -mt-1 mb-2"></div>
-            
-            <div className="flex justify-between items-center px-1">
-              <div className="flex items-center gap-2 text-black font-semibold text-sm">
-                <Smartphone size={15} className="fill-black" />
-                <span>Apple ID SignIn</span>
-              </div>
-              <button 
-                type="button" 
-                onClick={() => setIsAppleSheetOpen(false)}
-                className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-300 transition-colors cursor-pointer"
-              >
-                <X size={12} />
-              </button>
-            </div>
-
-            <div className="text-center py-2 space-y-1">
-              <h4 className="text-lg font-serif text-gray-900 font-extrabold">Sign In with Apple</h4>
-              <p className="text-[10px] text-gray-500 leading-normal max-w-xs mx-auto">
-                Create a private secure account for <strong className="text-black">Lumina</strong> using your Apple ID device security.
-              </p>
-            </div>
-
-            {/* Apple Account layout block */}
-            <div className="bg-white rounded-2xl p-4.5 border border-gray-150 space-y-4 shadow-xs">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-tr from-gray-200 to-gray-300 rounded-full flex items-center justify-center text-gray-700 font-serif font-black text-xs">
-                  BA
-                </div>
-                <div>
-                  <p className="text-[11px] font-bold text-gray-900">Bernice Alegbe</p>
-                  <p className="text-[9px] text-gray-400 font-mono">BERNiceAlegbe@gmail.com</p>
-                </div>
-              </div>
-
-              <div className="border-t border-gray-100 pt-3.5 space-y-3">
-                <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest leading-none">Choose Preference:</p>
-                <div className="grid grid-cols-2 gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => setAppleEmailPref('share')}
-                    className={`p-3 rounded-xl border text-[9px] font-bold uppercase tracking-widest text-center transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                      appleEmailPref === 'share' ? 'bg-blue-50 border-blue-400 text-blue-600' : 'bg-gray-50/50 border-gray-200 text-gray-450 hover:bg-gray-50'
-                    }`}
-                  >
-                    <span>Share My Email</span>
-                    {appleEmailPref === 'share' && <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAppleEmailPref('hide')}
-                    className={`p-3 rounded-xl border text-[9px] font-bold uppercase tracking-widest text-center transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                      appleEmailPref === 'hide' ? 'bg-blue-50 border-blue-400 text-blue-600' : 'bg-gray-50/50 border-gray-200 text-gray-450 hover:bg-gray-50'
-                    }`}
-                  >
-                    <span>Hide My Email</span>
-                    {appleEmailPref === 'hide' && <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Apple validation submit row */}
-            <button
-              type="button"
-              onClick={handleAppleAuthProceed}
-              className="w-full py-4.5 bg-blue-600 hover:bg-blue-750 text-white rounded-2xl font-bold text-[10px] tracking-widest text-center uppercase shadow-sm cursor-pointer transition-all hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-1.5"
-            >
-              <Smartphone size={13} className="fill-white" />
-              <span>Continue with Face ID / Passcode</span>
-            </button>
-
-            <p className="text-[8px] text-gray-400 text-center uppercase font-mono tracking-widest">
-               Secure Apple ID Authentication System
-            </p>
           </div>
         </div>
       )}

@@ -3,6 +3,7 @@ import { User, AppTheme } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sparkles, Check, Moon, Sun, Heart, Palette, RefreshCw } from 'lucide-react';
 import { syncUser } from '../services/firebaseService';
+import { saveEncryptedSessionUser } from '../services/secureStorage';
 
 export interface WallpaperItem {
   id: string;
@@ -286,7 +287,8 @@ export const WallpapersAndThemesModal: React.FC<WallpapersAndThemesModalProps> =
       useCycleBasedWallpaper: false
     };
     setUser(updatedUser);
-    localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+    const rememberPref = localStorage.getItem('lumina_remember_me') !== 'false';
+    await saveEncryptedSessionUser(updatedUser, rememberPref);
     await syncUser(updatedUser);
   };
 
@@ -296,7 +298,8 @@ export const WallpapersAndThemesModal: React.FC<WallpapersAndThemesModalProps> =
       useCycleBasedWallpaper: enabled
     };
     setUser(updatedUser);
-    localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+    const rememberPref = localStorage.getItem('lumina_remember_me') !== 'false';
+    await saveEncryptedSessionUser(updatedUser, rememberPref);
     await syncUser(updatedUser);
   };
 

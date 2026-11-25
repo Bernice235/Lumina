@@ -1,5 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { logCrashReport } from '../services/analyticsService';
+import { scrubLegacySensitiveKeys } from '../services/secureStorage';
 import { RotateCcw, Home, Sparkles, AlertCircle } from 'lucide-react';
 
 interface Props {
@@ -51,15 +52,7 @@ export class ErrorBoundary extends Component<Props, State> {
     try {
       localStorage.removeItem('pregnancy_weight_undefined');
       localStorage.removeItem('lumina_recent_undefined');
-      // Keep primary user safe but clean potentially corrupted cached sub-states
-      const current = localStorage.getItem('lumina_user');
-      if (current) {
-        try {
-          JSON.parse(current);
-        } catch {
-          localStorage.removeItem('lumina_user');
-        }
-      }
+      scrubLegacySensitiveKeys();
     } catch {}
     this.setState({ hasError: false, error: null, errorInfo: null });
     window.location.reload();

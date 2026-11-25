@@ -47,12 +47,28 @@ import {
 } from './services/welcomeVoiceService';
 import { THEMES, SONGS, THEME_PALETTES } from './constants';
 import { WALLPAPER_LIST } from './components/WallpapersAndThemesModal';
-import { syncUser, subscribeToGifts, subscribeToUser, acceptInvite, subscribeToPartnerRequests, getCleanName, deleteUserAccount } from './services/firebaseService';
-import { parseYMDToLocalDate, reconstructCycleData } from './services/cycleSyncService';
-import { getDefaultNotificationSettings, calculateScheduledNotifications, sanitizeUserNotifications, scheduleNativeLocalNotification } from './services/notificationService';
+import { getDefaultNotificationSettings, calculateScheduledNotifications, sanitizeUserNotifications, scheduleNativeLocalNotification, formatDiscreetOsNotification, registerNativePush } from './services/notificationService';
 import { logAvatarActionReward } from './services/avatarService';
-import { scrubLegacySensitiveKeys } from './services/secureStorage';
-import { getDefaultSecuritySettings, getLocalSessionEpoch, setLocalSessionEpoch } from './services/securityService';
+import { parseYMDToLocalDate, reconstructCycleData } from './services/cycleSyncService';
+import {
+  migrateAndScrubLegacyPlaintextData,
+  saveEncryptedSessionUser,
+  loadEncryptedSessionUser,
+  purgeAllLuminaClientSecrets,
+  secureStorage,
+} from './services/secureStorage';
+import {
+  clearDiaryPinLockout,
+  getDefaultSecuritySettings,
+  getDiaryPinLockoutState,
+  getLocalSessionEpoch,
+  recordFailedDiaryPinAttempt,
+  setLocalSessionEpoch,
+  userHasConfiguredPin,
+  verifyDiaryPin,
+} from './services/securityService';
+import { authenticateWithBiometrics } from './services/biometricService';
+import { syncUser as firebaseSyncUser, subscribeToGifts, subscribeToUser, subscribeToPartnerSharedView, subscribeToIncomingNotifications, markCloudNotificationRead, acceptInvite, subscribeToPartnerRequests, getCleanName, deleteUserAccount, getUserDisplayName } from './services/firebaseService';
 import { saveAutomaticEncryptedSnapshot } from './services/backupService';
 import { trackPageView } from './services/analyticsService';
 import { auth } from './services/firebase';
@@ -139,45 +155,28 @@ const isDeepEqual = (obj1: any, obj2: any): boolean => {
   return true;
 };
 
+const syncUser = firebaseSyncUser;
+
+const normalizeSharingSettings = (s?: Partial<User['sharingSettings']>): User['sharingSettings'] => ({
+  shareCycleInfo: s?.shareCycleInfo === true,
+  shareSymptoms: s?.shareSymptoms === true,
+  shareMood: s?.shareMood === true,
+  shareNotes: s?.shareNotes === true,
+  shareFertilityInfo: s?.shareFertilityInfo === true,
+  sharePregnancyInfo: s?.sharePregnancyInfo === true,
+  shareIntimacyInfo: s?.shareIntimacyInfo === true,
+  shareDoctorReports: s?.shareDoctorReports === true,
+  shareAppointmentReminders: s?.shareAppointmentReminders === true,
+  shareWellnessUpdates: s?.shareWellnessUpdates === true,
+});
+
 const App: React.FC = () => {
-  const [user, setUserState] = useState<User | null>(() => {
-    // Check if there is an active invite link in the URL.
-    // If so, we must NEVER auto-restore any cached session (protect user account isolation).
-    const urlParams = new URLSearchParams(window.location.search);
-    const qInvite = urlParams.get('invite');
-    const pathParts = window.location.pathname.split('/');
-    const inviteIdx = pathParts.indexOf('invite');
-    const hasInvite = !!(qInvite || (inviteIdx !== -1 && pathParts[inviteIdx + 1]));
-
-    if (hasInvite) {
-      localStorage.removeItem('lumina_user');
-      localStorage.removeItem('lumina_biometric_user');
-      sessionStorage.removeItem('lumina_session_unlocked');
-      return null;
-    }
-
-    // Check if we have a saved user to restore automatically on relaunch
-    const saved = localStorage.getItem('lumina_user');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (parsed && parsed.id) {
-          sessionStorage.setItem('lumina_session_unlocked', 'true');
-          parsed.isPremium = true;
-          return parsed;
-        }
-      } catch (err) {
-        console.error('Failed to parse initial user from localStorage', err);
-      }
-    }
-    return null;
-  });
+  const [user, setUserState] = useState<User | null>(null);
   const userRef = useRef<User | null>(user);
   const setUser = (val: User | null | ((prev: User | null) => User | null)) => {
     if (typeof val === 'function') {
       setUserState((prev) => {
         const next = val(prev);
-        if (next) next.isPremium = true;
         if (isDeepEqual(prev, next)) {
           return prev;
         }
@@ -185,7 +184,6 @@ const App: React.FC = () => {
         return next;
       });
     } else {
-      if (val) val.isPremium = true;
       if (isDeepEqual(userRef.current, val)) {
         return;
       }
@@ -222,19 +220,6 @@ const App: React.FC = () => {
     if (route.tabFromPath && route.tabFromPath !== 'dashboard') {
       return route.tabFromPath;
     }
-    const saved = localStorage.getItem('lumina_user');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (parsed) {
-          parsed.isPremium = true;
-          if (parsed.isPartner) return 'partner';
-          if (parsed.isPregnancyMode) return 'cycle';
-        }
-      } catch (err) {
-        console.warn("Failed to parse dynamic starting activeTab:", err);
-      }
-    }
     return 'dashboard';
   });
   const [settingsSubTab, setSettingsSubTab] = useState<'account' | 'cycle' | 'notifications' | 'music' | 'partner' | 'premium' | 'privacy' | 'about' | 'general' | 'billing' | 'invite' | 'mobile' | 'menu' | 'profile' | 'backup_sync' | 'help_support'>('menu');
@@ -266,11 +251,13 @@ const App: React.FC = () => {
   const [hudVolumeVal, setHudVolumeVal] = useState<number>(0.5);
   const [currentTime, setCurrentTime] = useState<string>('12:00 PM');
 
-  // Biometric screen locks on startup
-  const [isSessionUnlocked, setIsSessionUnlocked] = useState<boolean>(() => {
-    return sessionStorage.getItem('lumina_session_unlocked') === 'true';
-  });
-  const [appBiometricResult, setAppBiometricResult] = useState<'idle' | 'scanning' | 'success'>('idle');
+  // Biometric screen locks on cold startup until explicitly verified
+  const [isSessionUnlocked, setIsSessionUnlocked] = useState<boolean>(false);
+  const [appBiometricResult, setAppBiometricResult] = useState<'idle' | 'scanning' | 'success' | 'error'>('idle');
+  const [appLockError, setAppLockError] = useState<string>('');
+  const [appLockPin, setAppLockPin] = useState<string>('');
+  const [showLockPinFallback, setShowLockPinFallback] = useState<boolean>(false);
+  const [showNotifPrePrompt, setShowNotifPrePrompt] = useState<boolean>(false);
 
   // Interactive Asset Creator & Builder States
   const [activeCreatorTab, setActiveCreatorTab] = useState<'icon' | 'screenshots' | 'capacitor'>('icon');
@@ -281,9 +268,9 @@ const App: React.FC = () => {
   const [screenshotPlatform, setScreenshotPlatform] = useState<'ios' | 'android'>('ios');
   const [simulatingBiometricOnApp, setSimulatingBiometricOnApp] = useState<boolean>(false);
 
-  // Scrub any legacy plaintext password keys & sync browser history navigation on mount
+  // Migrate and scrub legacy plaintext localStorage data & sync browser history on mount
   useEffect(() => {
-    scrubLegacySensitiveKeys();
+    migrateAndScrubLegacyPlaintextData().catch(() => {});
     const handlePopState = () => {
       const route = resolveInitialRoute(window.location.pathname);
       setIsNotFoundRoute(route.isNotFound);
@@ -383,20 +370,19 @@ const App: React.FC = () => {
   }, [user?.theme]);
 
   const triggerFullNotification = (title: string, body: string, emoji: string = '🔔') => {
-    if ('Notification' in window) {
-      if (window.Notification.permission === 'granted') {
-        try {
-          new window.Notification(`${emoji} ${title}`, { body });
-        } catch (e) {
-          console.warn("Native Notification trigger failed:", e);
-        }
-      } else if (window.Notification.permission !== 'denied') {
-        window.Notification.requestPermission();
+    const currentUser = userRef.current;
+    const hidePreviews = currentUser?.privacyPreferences?.hideNotificationPreviews ?? true;
+    const discreetOs = formatDiscreetOsNotification(title, body, emoji, hidePreviews);
+
+    if ('Notification' in window && window.Notification.permission === 'granted') {
+      try {
+        new window.Notification(discreetOs.title, { body: discreetOs.body });
+      } catch (e) {
+        console.warn("Native Notification trigger failed:", e);
       }
     }
 
-    if (userRef.current) {
-      const currentUser = userRef.current;
+    if (currentUser) {
       const newAlert = {
         id: Math.random().toString(),
         title,
@@ -413,8 +399,8 @@ const App: React.FC = () => {
       };
       setUser(updatedUser);
       syncUser(updatedUser);
-      localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
-      localStorage.setItem('lumina_biometric_user', JSON.stringify(updatedUser));
+      const rememberMe = localStorage.getItem('lumina_remember_me') !== 'false';
+      saveEncryptedSessionUser(updatedUser, rememberMe).catch(() => {});
     }
   };
 
@@ -638,7 +624,8 @@ const App: React.FC = () => {
     if (hasChange) {
       const updatedUser = { ...user, notifications: updatedNotifs };
       setUser(updatedUser);
-      localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+      const rememberMe = localStorage.getItem('lumina_remember_me') !== 'false';
+      saveEncryptedSessionUser(updatedUser, rememberMe).catch(() => {});
       syncUser(updatedUser);
     }
   }, [user?.id, user?.lastPeriodStart, user?.cycleLength, user?.periodLength, user?.notificationSettings?.enabled, user?.partnerNotificationPreferences]);
@@ -781,10 +768,31 @@ const App: React.FC = () => {
     const hasInvite = !!(qInvite || (inviteIdx !== -1 && pathParts[inviteIdx + 1]));
 
     if (hasInvite) return false;
-    return !localStorage.getItem('lumina_user');
+    return true;
   });
 
-  // Restore Session
+  // Auto-lock on backgrounding or inactivity when enabled
+  useEffect(() => {
+    if (!user || (!user.biometricsEnabled && !user.securitySettings?.biometricQuickUnlock && !user.privacyPreferences?.autoLockOnBlur)) {
+      return;
+    }
+    let lastHiddenAt = 0;
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        lastHiddenAt = Date.now();
+      } else if (document.visibilityState === 'visible') {
+        if (lastHiddenAt && Date.now() - lastHiddenAt > 2000) {
+          setIsSessionUnlocked(false);
+          setAppBiometricResult('idle');
+          setAppLockError('');
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [user?.id, user?.biometricsEnabled, user?.securitySettings?.biometricQuickUnlock, user?.privacyPreferences?.autoLockOnBlur]);
+
+  // Restore Session strictly via Firebase Authentication & AES-GCM-256 Encrypted Storage
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const qInvite = urlParams.get('invite');
@@ -793,143 +801,54 @@ const App: React.FC = () => {
     const hasInvite = !!(qInvite || (inviteIdx !== -1 && pathParts[inviteIdx + 1]));
 
     if (hasInvite) {
-      // Force clear cache and sign out immediately for account isolation
-      localStorage.removeItem('lumina_user');
-      localStorage.removeItem('lumina_biometric_user');
-      sessionStorage.removeItem('lumina_session_unlocked');
+      purgeAllLuminaClientSecrets().catch(() => {});
       auth.signOut().catch(() => {});
       setUser(null);
+      setIsSessionUnlocked(false);
       setAuthLoading(false);
       return;
     }
 
-    const isUnlocked = sessionStorage.getItem('lumina_session_unlocked') === 'true';
+    const rememberPref = localStorage.getItem('lumina_remember_me') !== 'false';
+    try {
+      setPersistence(auth, rememberPref ? indexedDBLocalPersistence : browserSessionPersistence).catch(() => {});
+    } catch {}
+
     let unsubscribeUser: (() => void) | undefined;
 
-    // 1. IF THE CURRENT BROWSER SESSION IS UNLOCKED, RESTORE DATA REALTIME SNAPSHOT
-    if (isUnlocked) {
-      const savedLocalUser = localStorage.getItem('lumina_user');
-      if (savedLocalUser) {
-        try {
-          const parsed = JSON.parse(savedLocalUser);
-          if (parsed && parsed.id) {
-            setWaterGoal(parsed.waterGoal || 8);
-            setAuthLoading(false);
-
-            unsubscribeUser = subscribeToUser(parsed.id, (userData) => {
-              if (userData) {
-                const localUser = userRef.current;
-                if (localUser) {
-                  if (JSON.stringify(userData) === JSON.stringify(localUser)) {
-                    return;
-                  }
-                  let emailBackup: Partial<User> = {};
-                  if (userData.email) {
-                    const savedEmailStr = localStorage.getItem('lumina_user_email_' + userData.email.toLowerCase().trim());
-                    if (savedEmailStr) {
-                      try {
-                        emailBackup = JSON.parse(savedEmailStr);
-                      } catch (e) {
-                        console.warn("Failed to parse emailBackup", e);
-                      }
-                    }
-                  }
-
-                  const fullUser: User = {
-                    ...emailBackup,
-                    ...userData,
-                    cycleLength: userData.cycleLength ?? emailBackup.cycleLength ?? 28,
-                    periodLength: userData.periodLength ?? emailBackup.periodLength ?? 5,
-                    automaticCyclePrediction: userData.automaticCyclePrediction ?? emailBackup.automaticCyclePrediction ?? false,
-                    lastPeriodStart: userData.lastPeriodStart || emailBackup.lastPeriodStart || new Date().toISOString(),
-                    periods: (userData.periods !== undefined) ? userData.periods : (emailBackup.periods || []),
-                    periodDates: (userData.periodDates !== undefined) ? userData.periodDates : (emailBackup.periodDates || []),
-                    periodLogs: (userData.periodLogs !== undefined) ? userData.periodLogs : (emailBackup.periodLogs || []),
-                    symptoms: (userData.symptoms && userData.symptoms.length > 0) ? userData.symptoms : (emailBackup.symptoms || []),
-                    moodLogs: (userData.moodLogs && userData.moodLogs.length > 0) ? userData.moodLogs : (emailBackup.moodLogs || []),
-                    theme: userData.theme || emailBackup.theme || 'rose',
-                    tempUnit: userData.tempUnit || emailBackup.tempUnit || 'C',
-                    isPregnancyMode: userData.isPregnancyMode ?? emailBackup.isPregnancyMode ?? false,
-                    onboardingCompleted: (userData.onboardingCompleted === false || emailBackup.onboardingCompleted === false) ? false : (userData.onboardingCompleted === true || emailBackup.onboardingCompleted === true),
-                    diaryPin: userData.diaryPin || emailBackup.diaryPin || '1234',
-                    favoriteSongs: userData.favoriteSongs || emailBackup.favoriteSongs || [],
-                    customSongs: userData.customSongs || emailBackup.customSongs || [],
-                    isPartnerLinked: userData.isPartnerLinked ?? emailBackup.isPartnerLinked ?? false,
-                    sharingSettings: {
-                      shareCycleInfo: userData.sharingSettings?.shareCycleInfo ?? true,
-                      shareSymptoms: userData.sharingSettings?.shareSymptoms ?? false,
-                      shareMood: userData.sharingSettings?.shareMood ?? false,
-                      shareNotes: userData.sharingSettings?.shareNotes ?? false,
-                      shareFertilityInfo: userData.sharingSettings?.shareFertilityInfo ?? false,
-                      sharePregnancyInfo: userData.sharingSettings?.sharePregnancyInfo ?? false,
-                      shareIntimacyInfo: userData.sharingSettings?.shareIntimacyInfo ?? false,
-                      shareDoctorReports: userData.sharingSettings?.shareDoctorReports ?? false,
-                      shareAppointmentReminders: userData.sharingSettings?.shareAppointmentReminders ?? false,
-                      shareWellnessUpdates: userData.sharingSettings?.shareWellnessUpdates ?? false,
-                    },
-                    birthControlConfig: userData.birthControlConfig || {
-                      method: 'Pill',
-                      frequency: 'daily',
-                      reminderTime: '09:00',
-                      enabled: false
-                    },
-                    waterGoal: userData.waterGoal || 8,
-                    notificationSettings: userData.notificationSettings || getDefaultNotificationSettings()
-                  };
-                  const cloudEpoch = fullUser.securitySettings?.sessionEpoch || 1;
-                  const localEpoch = getLocalSessionEpoch(fullUser.id);
-                  if (cloudEpoch > localEpoch) {
-                    handleLogout();
-                    return;
-                  }
-                  setLocalSessionEpoch(fullUser.id, cloudEpoch);
-
-                  setUser(fullUser);
-                  localStorage.setItem('lumina_user', JSON.stringify(fullUser));
-                  if (localStorage.getItem('lumina_remember_me') !== 'false') {
-                    localStorage.setItem('lumina_biometric_user', JSON.stringify(fullUser));
-                  }
-                  setWaterGoal(fullUser.waterGoal || 8);
-                } else {
-                  handleLogin(userData);
-                }
-              }
-              setAuthLoading(false);
-            });
-          }
-        } catch (err) {
-          console.error('Failed to restore active user session from local storage:', err);
-        }
+    const unsubscribeAuth = onAuthStateChanged(auth, async (fbUser: any) => {
+      if (typeof unsubscribeUser === 'function') {
+        unsubscribeUser();
+        unsubscribeUser = undefined;
       }
-    }
 
-    // 2. ENFORCE RETRIEVING THE LATEST PROFILE SECURELY BEHIND THE BIOMETRIC BLOCK
-    const unsubscribeAuth = onAuthStateChanged(auth, (fbUser: any) => {
       if (hasInvite) {
         setLatestCloudUser(null);
         setLatestCloudLoading(false);
         setAuthLoading(false);
         return;
       }
+
       if (fbUser) {
         setLatestCloudLoading(true);
-        // Retrieve and update cache for user experience, but do NOT log them into Active unlocked state if blocked
-        subscribeToUser(fbUser.uid, (userData) => {
+        const rememberNow = localStorage.getItem('lumina_remember_me') !== 'false';
+        const encryptedCached = await loadEncryptedSessionUser<User>(rememberNow);
+
+        unsubscribeUser = subscribeToUser(fbUser.uid, async (userData) => {
           if (userData) {
-            const isUnlockedNow = sessionStorage.getItem('lumina_session_unlocked') === 'true';
-            
-            // Restore any cached local cycle data for this email if present
             let emailBackup: Partial<User> = {};
             if (userData.email) {
-              const savedEmailStr = localStorage.getItem('lumina_user_email_' + userData.email.toLowerCase().trim());
-              if (savedEmailStr) {
+              const rawEnc = await secureStorage.getItem(`user_email_${userData.email.toLowerCase().trim()}`);
+              if (rawEnc) {
                 try {
-                  emailBackup = JSON.parse(savedEmailStr);
-                } catch (e) {
-                  console.warn("Failed to parse emailBackup", e);
-                }
+                  emailBackup = JSON.parse(rawEnc);
+                } catch {}
               }
             }
+
+            const mergedBio =
+              Boolean(userData.biometricsEnabled ?? emailBackup.biometricsEnabled ?? encryptedCached?.biometricsEnabled) ||
+              Boolean(userData.securitySettings?.biometricQuickUnlock);
 
             const fullUser: User = {
               ...emailBackup,
@@ -938,59 +857,39 @@ const App: React.FC = () => {
               periodLength: userData.periodLength ?? emailBackup.periodLength ?? 5,
               automaticCyclePrediction: userData.automaticCyclePrediction ?? emailBackup.automaticCyclePrediction ?? false,
               lastPeriodStart: userData.lastPeriodStart || emailBackup.lastPeriodStart || new Date().toISOString(),
-              periods: (userData.periods !== undefined) ? userData.periods : (emailBackup.periods || []),
-              periodDates: (userData.periodDates !== undefined) ? userData.periodDates : (emailBackup.periodDates || []),
-              periodLogs: (userData.periodLogs !== undefined) ? userData.periodLogs : (emailBackup.periodLogs || []),
-              symptoms: (userData.symptoms && userData.symptoms.length > 0) ? userData.symptoms : (emailBackup.symptoms || []),
-              moodLogs: (userData.moodLogs && userData.moodLogs.length > 0) ? userData.moodLogs : (emailBackup.moodLogs || []),
+              periods: userData.periods !== undefined ? userData.periods : (emailBackup.periods || []),
+              periodDates: userData.periodDates !== undefined ? userData.periodDates : (emailBackup.periodDates || []),
+              periodLogs: userData.periodLogs !== undefined ? userData.periodLogs : (emailBackup.periodLogs || []),
+              symptoms: userData.symptoms && userData.symptoms.length > 0 ? userData.symptoms : (emailBackup.symptoms || []),
+              moodLogs: userData.moodLogs && userData.moodLogs.length > 0 ? userData.moodLogs : (emailBackup.moodLogs || []),
               theme: userData.theme || emailBackup.theme || 'rose',
               tempUnit: userData.tempUnit || emailBackup.tempUnit || 'C',
               isPregnancyMode: userData.isPregnancyMode ?? emailBackup.isPregnancyMode ?? false,
-              onboardingCompleted: (userData.onboardingCompleted === false || emailBackup.onboardingCompleted === false) ? false : (userData.onboardingCompleted === true || emailBackup.onboardingCompleted === true),
-              diaryPin: userData.diaryPin || emailBackup.diaryPin || '1234',
+              onboardingCompleted:
+                userData.onboardingCompleted === false || emailBackup.onboardingCompleted === false
+                  ? false
+                  : userData.onboardingCompleted === true || emailBackup.onboardingCompleted === true,
+              diaryPin: userData.diaryPin && userData.diaryPin !== '1234' ? userData.diaryPin : undefined,
+              diaryPinHash: userData.diaryPinHash || emailBackup.diaryPinHash,
+              diaryPinSalt: userData.diaryPinSalt || emailBackup.diaryPinSalt,
+              biometricsEnabled: mergedBio,
               favoriteSongs: userData.favoriteSongs || emailBackup.favoriteSongs || [],
               customSongs: userData.customSongs || emailBackup.customSongs || [],
               isPartnerLinked: userData.isPartnerLinked ?? emailBackup.isPartnerLinked ?? false,
-              sharingSettings: {
-                shareCycleInfo: userData.sharingSettings?.shareCycleInfo ?? true,
-                shareSymptoms: userData.sharingSettings?.shareSymptoms ?? false,
-                shareMood: userData.sharingSettings?.shareMood ?? false,
-                shareNotes: userData.sharingSettings?.shareNotes ?? false,
-                shareFertilityInfo: userData.sharingSettings?.shareFertilityInfo ?? false,
-                sharePregnancyInfo: userData.sharingSettings?.sharePregnancyInfo ?? false,
-                shareIntimacyInfo: userData.sharingSettings?.shareIntimacyInfo ?? false,
-                shareDoctorReports: userData.sharingSettings?.shareDoctorReports ?? false,
-                shareAppointmentReminders: userData.sharingSettings?.shareAppointmentReminders ?? false,
-                shareWellnessUpdates: userData.sharingSettings?.shareWellnessUpdates ?? false,
-              },
+              sharingSettings: normalizeSharingSettings(userData.sharingSettings || emailBackup.sharingSettings),
               birthControlConfig: userData.birthControlConfig || emailBackup.birthControlConfig || {
                 method: 'Pill',
                 frequency: 'daily',
                 reminderTime: '09:00',
-                enabled: false
+                enabled: false,
               },
               waterGoal: userData.waterGoal || emailBackup.waterGoal || 8,
-              notificationSettings: userData.notificationSettings || emailBackup.notificationSettings || getDefaultNotificationSettings()
+              notificationSettings: userData.notificationSettings || emailBackup.notificationSettings || getDefaultNotificationSettings(),
             };
-            
-            // Sync with memory
+
             setLatestCloudUser(fullUser);
             setLatestCloudLoading(false);
-            
-            const isRememberEnabled = localStorage.getItem('lumina_remember_me') !== 'false';
-            
-            if (fullUser.email) {
-              localStorage.setItem('lumina_user_email_' + fullUser.email.toLowerCase().trim(), JSON.stringify(fullUser));
-            }
-            
-            // Cache details for biometrics if remember me is enabled
-            if (isRememberEnabled) {
-              localStorage.setItem('lumina_biometric_user', JSON.stringify(fullUser));
-            } else {
-              localStorage.removeItem('lumina_biometric_user');
-            }
-            
-            // Enforce remote "Log out of all devices" via sessionEpoch
+
             const cloudEpoch = fullUser.securitySettings?.sessionEpoch || 1;
             const localEpoch = getLocalSessionEpoch(fullUser.id);
             if (cloudEpoch > localEpoch && userRef.current?.id === fullUser.id) {
@@ -1000,18 +899,23 @@ const App: React.FC = () => {
             }
             setLocalSessionEpoch(fullUser.id, cloudEpoch);
 
-            // Automatically unlock session for any authenticated user on app load or snapshot sync
-            sessionStorage.setItem('lumina_session_unlocked', 'true');
-            
-            const localUser = userRef.current;
-            if (!localUser || JSON.stringify(fullUser) !== JSON.stringify(localUser)) {
-              setUser(fullUser);
-              if (isRememberEnabled) {
-                localStorage.setItem('lumina_user', JSON.stringify(fullUser));
-              } else {
-                sessionStorage.setItem('lumina_user', JSON.stringify(fullUser));
+            if (fullUser.email) {
+              secureStorage.setItem(`user_email_${fullUser.email.toLowerCase().trim()}`, JSON.stringify(fullUser)).catch(() => {});
+            }
+            await saveEncryptedSessionUser(fullUser, rememberNow);
+
+            const requiresBioUnlock = Boolean(fullUser.biometricsEnabled || fullUser.securitySettings?.biometricQuickUnlock);
+            if (!userRef.current) {
+              if (!requiresBioUnlock) {
+                setIsSessionUnlocked(true);
               }
+            }
+
+            if (!userRef.current || JSON.stringify(fullUser) !== JSON.stringify(userRef.current)) {
+              setUser(fullUser);
               setWaterGoal(fullUser.waterGoal || 8);
+              if (fullUser.isPartner) setActiveTab('partner');
+              else if (fullUser.isPregnancyMode) setActiveTab('cycle');
             }
           } else {
             setLatestCloudLoading(false);
@@ -1021,15 +925,13 @@ const App: React.FC = () => {
       } else {
         setLatestCloudUser(null);
         setLatestCloudLoading(false);
-        const isUnlockedNow = sessionStorage.getItem('lumina_session_unlocked') === 'true';
-        if (!isUnlockedNow) {
-          setUser(null);
-        } else {
-          const loggedInUser = localStorage.getItem('lumina_user');
-          if (!loggedInUser) {
-            setUser(null);
-          }
+        const currentInMem = userRef.current;
+        if (currentInMem && (currentInMem.id.startsWith('sandbox_') || currentInMem.id.startsWith('offline_'))) {
+          setAuthLoading(false);
+          return;
         }
+        setUser(null);
+        setIsSessionUnlocked(false);
         setAuthLoading(false);
       }
     });
@@ -1083,20 +985,60 @@ const App: React.FC = () => {
     }
   }, [user?.id]);
 
-  // Sync to Firestore and Local Storage securely to remember all changes
+  // Subscribe to recipient-scoped /notifications collection for cross-user partner alerts & gifts
+  useEffect(() => {
+    if (!user?.id) return;
+    const unsub = subscribeToIncomingNotifications(user.id, (cloudNotifs) => {
+      const current = userRef.current;
+      if (!current || cloudNotifs.length === 0) return;
+
+      const existingIds = new Set((current.notifications || []).map((n) => n.id));
+      const newOnes = cloudNotifs.filter((cn) => !existingIds.has(cn.id));
+      if (newOnes.length > 0) {
+        const mapped: AppNotification[] = newOnes.map((cn) => ({
+          id: cn.id,
+          title: cn.title,
+          body: cn.body,
+          emoji: cn.emoji || '💕',
+          timestamp: cn.timestamp,
+          isRead: Boolean(cn.read || cn.isRead),
+          category: (cn.category as AppNotification['category']) || 'partner',
+          isPartnerRequest: Boolean(cn.isPartnerRequest),
+          isPartner: cn.category === 'partner',
+        }));
+
+        const unreadNew = mapped.find((m) => !m.isRead);
+        if (unreadNew) {
+          setSimulatedNotify({
+            id: unreadNew.id,
+            title: unreadNew.title,
+            body: unreadNew.body,
+            emoji: unreadNew.emoji || '💕',
+            isPartner: Boolean(current.isPartner),
+          });
+        }
+
+        const updated: User = {
+          ...current,
+          notifications: [...mapped, ...(current.notifications || [])].slice(0, 50),
+        };
+        setUser(updated);
+        syncUser(updated);
+        mapped.forEach((m) => markCloudNotificationRead(m.id).catch(() => {}));
+      }
+    });
+    return () => unsub();
+  }, [user?.id]);
+
+  // Sync changes securely to Firestore & AES-GCM-256 encrypted storage (never plaintext localStorage)
   useEffect(() => {
     if (user) {
       syncUser(user);
       if (user.email) {
-        localStorage.setItem('lumina_user_email_' + user.email.toLowerCase().trim(), JSON.stringify(user));
+        secureStorage.setItem(`user_email_${user.email.toLowerCase().trim()}`, JSON.stringify(user)).catch(() => {});
       }
       const isRememberEnabled = localStorage.getItem('lumina_remember_me') !== 'false';
-      if (isRememberEnabled) {
-        localStorage.setItem('lumina_user', JSON.stringify(user));
-        localStorage.setItem('lumina_biometric_user', JSON.stringify(user));
-      } else {
-        sessionStorage.setItem('lumina_user', JSON.stringify(user));
-      }
+      saveEncryptedSessionUser(user, isRememberEnabled).catch(() => {});
     }
   }, [user]);
 
@@ -1148,18 +1090,18 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!user) return;
 
-    // Request browser notification permission if available and default
-    if ('Notification' in window && window.Notification.permission === 'default') {
-      try {
-        window.Notification.requestPermission();
-      } catch (e) {
-        console.warn('Notification permission request error:', e);
-      }
-    }
-
     const activeSettings = user.notificationSettings || getDefaultNotificationSettings();
     if (!activeSettings.enabled && !activeSettings.partnerNotificationsEnabled) {
       return;
+    }
+
+    // Show respectful in-app pre-permission consent card instead of cold browser OS prompt
+    if (
+      'Notification' in window &&
+      window.Notification.permission === 'default' &&
+      localStorage.getItem('lumina_notif_preprompt_dismissed') !== 'true'
+    ) {
+      setShowNotifPrePrompt(true);
     }
 
     const scheduled = calculateScheduledNotifications(user, activeSettings);
@@ -1184,9 +1126,12 @@ const App: React.FC = () => {
 
     if (newNotifsToAdd.length > 0) {
       const topAlert = newNotifsToAdd[0];
+      const hidePreviews = user.privacyPreferences?.hideNotificationPreviews ?? true;
+      const discreetOs = formatDiscreetOsNotification(topAlert.title, topAlert.body, topAlert.emoji, hidePreviews);
+
       if ('Notification' in window && window.Notification.permission === 'granted') {
         try {
-          new window.Notification(`${topAlert.emoji} ${topAlert.title}`, { body: topAlert.body });
+          new window.Notification(discreetOs.title, { body: discreetOs.body });
         } catch (e) {
           console.warn("Native Notification trigger failed:", e);
         }
@@ -1199,8 +1144,8 @@ const App: React.FC = () => {
       };
       setUser(updatedUser);
       syncUser(updatedUser);
-      localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
-      localStorage.setItem('lumina_biometric_user', JSON.stringify(updatedUser));
+      const rememberMe = localStorage.getItem('lumina_remember_me') !== 'false';
+      saveEncryptedSessionUser(updatedUser, rememberMe).catch(() => {});
     }
   }, [
     user?.id,
@@ -1226,22 +1171,14 @@ const App: React.FC = () => {
       onboardingCompleted: (activeData.onboardingCompleted === false || userData.onboardingCompleted === false)
         ? false
         : (activeData.onboardingCompleted === true || userData.onboardingCompleted === true),
-      diaryPin: activeData.diaryPin || '1234',
+      diaryPin: activeData.diaryPin && activeData.diaryPin !== '1234' ? activeData.diaryPin : undefined,
+      diaryPinHash: activeData.diaryPinHash,
+      diaryPinSalt: activeData.diaryPinSalt,
+      biometricsEnabled: Boolean(activeData.biometricsEnabled),
       favoriteSongs: activeData.favoriteSongs || [],
       customSongs: activeData.customSongs || [],
       isPartnerLinked: activeData.isPartnerLinked || false,
-      sharingSettings: {
-        shareCycleInfo: activeData.sharingSettings?.shareCycleInfo ?? true,
-        shareSymptoms: activeData.sharingSettings?.shareSymptoms ?? false,
-        shareMood: activeData.sharingSettings?.shareMood ?? false,
-        shareNotes: activeData.sharingSettings?.shareNotes ?? false,
-        shareFertilityInfo: activeData.sharingSettings?.shareFertilityInfo ?? false,
-        sharePregnancyInfo: activeData.sharingSettings?.sharePregnancyInfo ?? false,
-        shareIntimacyInfo: activeData.sharingSettings?.shareIntimacyInfo ?? false,
-        shareDoctorReports: activeData.sharingSettings?.shareDoctorReports ?? false,
-        shareAppointmentReminders: activeData.sharingSettings?.shareAppointmentReminders ?? false,
-        shareWellnessUpdates: activeData.sharingSettings?.shareWellnessUpdates ?? false,
-      },
+      sharingSettings: normalizeSharingSettings(activeData.sharingSettings),
       birthControlConfig: activeData.birthControlConfig || {
         method: 'Pill',
         frequency: 'daily',
@@ -1252,45 +1189,29 @@ const App: React.FC = () => {
       notificationSettings: activeData.notificationSettings || getDefaultNotificationSettings()
     };
 
-    // Dynamically adjust Firebase Auth persistence based on user preference
     try {
-      if (remember) {
-        setPersistence(auth, indexedDBLocalPersistence).catch((err) => {
-          console.warn("Failed to set persistent local auth persistence:", err);
-        });
-      } else {
-        setPersistence(auth, browserSessionPersistence).catch((err) => {
-          console.warn("Failed to set session auth persistence:", err);
-        });
-      }
+      setPersistence(auth, remember ? indexedDBLocalPersistence : browserSessionPersistence).catch((err) => {
+        console.warn("Failed to configure auth persistence:", err);
+      });
     } catch (e) {
       console.warn("Failed to configure dynamic persistence:", e);
     }
 
-    sessionStorage.setItem('lumina_session_unlocked', 'true');
     sessionStorage.removeItem('lumina_logged_out');
+    localStorage.setItem('lumina_remember_me', remember ? 'true' : 'false');
+    setIsSessionUnlocked(true);
     setUser(fullUser);
-
-    if (remember) {
-      localStorage.setItem('lumina_remember_me', 'true');
-      localStorage.setItem('lumina_user', JSON.stringify(fullUser));
-      localStorage.setItem('lumina_biometric_user', JSON.stringify(fullUser));
-    } else {
-      localStorage.setItem('lumina_remember_me', 'false');
-      localStorage.removeItem('lumina_user');
-      localStorage.removeItem('lumina_biometric_user');
-      sessionStorage.setItem('lumina_user', JSON.stringify(fullUser));
-    }
+    saveEncryptedSessionUser(fullUser, remember).catch(() => {});
 
     setWaterGoal(fullUser.waterGoal || 8);
     playWelcomeVoiceGreeting(fullUser, { force: true }).catch(() => {});
 
     if (fullUser.isPartner) {
-      setActiveTab('partner'); // Routes explicitly to Partner Dashboard / Connect experience
+      setActiveTab('partner');
     } else if (fullUser.isPregnancyMode) {
-      setActiveTab('cycle'); // Routes to Pregnancy Tracker Dashboard
+      setActiveTab('cycle');
     } else {
-      setActiveTab('dashboard'); // Routes to standard Cycle Dashboard
+      setActiveTab('dashboard');
     }
   };
 
@@ -1308,12 +1229,12 @@ const App: React.FC = () => {
       tempUnit: 'C',
       isPregnancyMode: false,
       onboardingCompleted: false, // Force new onboarding experience
-      diaryPin: '1234',
+      diaryPin: undefined,
       favoriteSongs: [],
       customSongs: [],
       isPartnerLinked: false,
       sharingSettings: {
-        shareCycleInfo: true,
+        shareCycleInfo: false,
         shareSymptoms: false,
         shareMood: false,
         shareNotes: false,
@@ -1369,23 +1290,21 @@ const App: React.FC = () => {
   };
 
   const handleLogout = () => {
-    // 1. Completely sign out the user in Firebase Auth
     auth.signOut().catch(() => {});
 
-    // 2. Clear the active session in React state
     setUser(null);
+    setPartnerUser(null);
     setLatestCloudUser(null);
+    setIsSessionUnlocked(false);
+    setAppBiometricResult('idle');
+    setAppLockError('');
+    setAppLockPin('');
+    setShowLockPinFallback(false);
     setIsMusicPlaying(false);
     welcomeVoicePlayedRef.current = null;
 
-    // 3. Clear all active session flags in sessionStorage
-    sessionStorage.removeItem('lumina_session_unlocked');
     sessionStorage.setItem('lumina_logged_out', 'true');
-    sessionStorage.removeItem('lumina_user');
-
-    // 4. Completely purge stored login state and biometric credentials from localStorage
-    localStorage.removeItem('lumina_user');
-    localStorage.removeItem('lumina_biometric_user');
+    purgeAllLuminaClientSecrets().catch(() => {});
     localStorage.removeItem('lumina_saved_email');
     localStorage.removeItem('lumina_saved_password');
     localStorage.removeItem('lumina_saved_name');
@@ -1396,12 +1315,9 @@ const App: React.FC = () => {
   useEffect(() => {
     if (inviteCode && user) {
       if (!user.isPartner) {
-        // Tracker user detected trying to open an invite link meant for partners.
-        // Log out immediately to allow the separate partner (companion) sign-up / log-in flow.
         console.log("Logged in user is a standard cycle tracker. Logging out to ensure separate partner setup.");
         handleLogout();
       } else if (!user.partnerId) {
-        // Valid partner user, but not linked yet. Let's auto-link them!
         const codeToAccept = inviteCode.toUpperCase();
         acceptInvite(codeToAccept, user.id, user.name)
           .then((inviteData) => {
@@ -1414,8 +1330,8 @@ const App: React.FC = () => {
                 isPartner: true
               };
               setUser(updated);
-              localStorage.setItem('lumina_user', JSON.stringify(updated));
-              localStorage.setItem('lumina_biometric_user', JSON.stringify(updated));
+              const rememberMe = localStorage.getItem('lumina_remember_me') !== 'false';
+              saveEncryptedSessionUser(updated, rememberMe).catch(() => {});
               handleClearInvite();
             }
           })
@@ -1426,17 +1342,54 @@ const App: React.FC = () => {
     }
   }, [inviteCode, user?.id, user?.isPartner, user?.partnerId]);
 
-  // Subscribe to partner user data changes in real time
+  // Subscribe linked Partner strictly to /users/{partnerId}/partner_shared/summary (never full user doc)
   useEffect(() => {
-    if (user && user.partnerId) {
-      const unsubscribe = subscribeToUser(user.partnerId, (pUser) => {
-        setPartnerUser(pUser);
+    if (user && user.partnerId && user.isPartner) {
+      const unsubscribe = subscribeToPartnerSharedView(user.partnerId, (summary) => {
+        if (!summary) {
+          setPartnerUser(null);
+          return;
+        }
+        const mappedPartnerView: User = {
+          id: summary.ownerId,
+          name: summary.ownerName,
+          email: '',
+          partnerName: getUserDisplayName(user),
+          partnerId: user.id,
+          isPartnerLinked: summary.isPartnerLinked,
+          isSharingPaused: summary.isSharingPaused,
+          isPartner: false,
+          cycleLength: summary.cycleLength || 28,
+          periodLength: summary.periodLength || 5,
+          lastPeriodStart: summary.lastPeriodStart || new Date().toISOString(),
+          isPregnancyMode: Boolean(summary.isPregnancyMode),
+          isPostpartumMode: Boolean(summary.isPostpartumMode),
+          pregnancyStartDate: summary.pregnancyStartDate,
+          deliveryDate: summary.deliveryDate,
+          theme: summary.theme || 'rose',
+          tempUnit: 'C',
+          onboardingCompleted: true,
+          sharingSettings: summary.sharingSettings,
+          periods: summary.periods || [],
+          periodLogs: summary.periodLogs || [],
+          periodDates: summary.periodDates || [],
+          symptoms: summary.symptoms || [],
+          moodLogs: summary.moodLogs || [],
+          todaySymptomLog: summary.todaySymptomLog,
+          sexualActivityLogs: summary.sexualActivityLogs,
+          wishlist: summary.wishlist,
+          partnerSupportPreferences: summary.partnerSupportPreferences,
+          receivedComforts: summary.receivedComforts,
+          pregnancyAppointments: summary.pregnancyAppointments,
+          waterGoal: 8,
+        };
+        setPartnerUser(mappedPartnerView);
       });
       return () => unsubscribe();
     } else {
       setPartnerUser(null);
     }
-  }, [user?.partnerId]);
+  }, [user?.id, user?.partnerId, user?.isPartner]);
 
   const updateTheme = (newTheme: AppTheme) => {
     if (user) {
@@ -1831,28 +1784,82 @@ const App: React.FC = () => {
       );
     }
 
-    if ((user as any).biometricsEnabled && !isSessionUnlocked) {
+    if ((user.biometricsEnabled || user.securitySettings?.biometricQuickUnlock) && !isSessionUnlocked) {
+      const hasPinConfigured = userHasConfiguredPin(user);
+
+      const handleRealBiometricUnlock = async () => {
+        setAppLockError('');
+        setAppBiometricResult('scanning');
+        const res = await authenticateWithBiometrics(user, 'Verify your identity to unlock Lumina');
+        if (res.verified) {
+          setAppBiometricResult('success');
+          setTimeout(() => {
+            setIsSessionUnlocked(true);
+            setAppBiometricResult('idle');
+            setAppLockError('');
+          }, 500);
+        } else {
+          setAppBiometricResult('error');
+          setAppLockError(res.message);
+        }
+      };
+
+      const handleLockPinSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setAppLockError('');
+        const lockout = await getDiaryPinLockoutState(user.id);
+        if (lockout.isLocked) {
+          const mins = Math.max(1, Math.ceil(lockout.remainingMs / 60_000));
+          setAppLockError(`PIN temporarily locked. Try again in ${mins} minute(s) or sign out and sign in with your password.`);
+          return;
+        }
+        const verdict = await verifyDiaryPin(appLockPin, user);
+        if (verdict === 'valid') {
+          await clearDiaryPinLockout(user.id);
+          setAppBiometricResult('success');
+          setTimeout(() => {
+            setIsSessionUnlocked(true);
+            setAppBiometricResult('idle');
+            setAppLockPin('');
+            setShowLockPinFallback(false);
+          }, 350);
+          return;
+        }
+        const failState = await recordFailedDiaryPinAttempt(user.id);
+        setAppLockPin('');
+        setAppLockError(
+          failState.isLocked
+            ? 'Too many incorrect PIN attempts. Temporarily locked for 5 minutes.'
+            : `Incorrect PIN. ${failState.remainingAttempts} attempt(s) remaining.`
+        );
+      };
+
       return (
         <div className="flex-1 bg-stone-950 flex flex-col items-center justify-center p-8 h-full min-h-[480px] text-stone-100 font-sans">
-          <div className="max-w-xs w-full text-center space-y-8 animate-fadeIn">
+          <div className="max-w-xs w-full text-center space-y-6 animate-fadeIn">
             <div className="w-20 h-20 bg-stone-900 border border-stone-800 rounded-3xl flex items-center justify-center mx-auto text-3xl shadow-lg relative">
-              <span className="animate-pulse">🔒</span>
-              <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-pink-500 rounded-full flex items-center justify-center text-[9px] font-black border-2 border-stone-950 text-stone-100">!</div>
+              <span>🔒</span>
             </div>
 
             <div className="space-y-2">
               <h2 className="text-xl font-serif italic text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-rose-300">Lumina Secured</h2>
-              <p className="text-xs text-stone-400 leading-relaxed">
-                Biometric security is active. Please authenticate using Face ID or your fingerprint scanner to unlock your physical data sanctuary.
+              <p className="text-xs text-stone-300 leading-relaxed">
+                App Lock is active. Verify with your device biometrics {hasPinConfigured ? 'or your Security PIN' : 'or sign in with your password'} to continue.
               </p>
             </div>
+
+            {appLockError && (
+              <div role="alert" className="p-3 rounded-2xl bg-rose-950/70 border border-rose-500/40 text-xs text-rose-200 leading-relaxed">
+                {appLockError}
+              </div>
+            )}
 
             {appBiometricResult === 'scanning' ? (
               <div className="space-y-3 py-4">
                 <div className="w-12 h-12 border-2 border-dashed border-pink-500 rounded-full animate-spin mx-auto flex items-center justify-center">
                   <div className="w-8 h-8 rounded-full bg-pink-500/10 animate-pulse" />
                 </div>
-                <p className="text-[10px] text-pink-500 font-bold uppercase tracking-widest animate-pulse">Scanning biometric signature...</p>
+                <p className="text-[10px] text-pink-400 font-bold uppercase tracking-widest">Waiting for hardware verification...</p>
               </div>
             ) : appBiometricResult === 'success' ? (
               <div className="space-y-2 py-4">
@@ -1861,30 +1868,66 @@ const App: React.FC = () => {
                 </div>
                 <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest">Access Granted</p>
               </div>
+            ) : showLockPinFallback && hasPinConfigured ? (
+              <form onSubmit={handleLockPinSubmit} className="space-y-3">
+                <input
+                  type="password"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={appLockPin}
+                  onChange={(e) => setAppLockPin(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                  placeholder="Enter Security PIN"
+                  aria-label="Security PIN"
+                  className="w-full px-4 py-3.5 rounded-2xl bg-stone-900 border border-stone-700 text-center text-sm font-mono tracking-[0.4em] text-white outline-none focus:border-pink-400"
+                  required
+                />
+                <button
+                  type="submit"
+                  className="w-full py-3.5 bg-gradient-to-r from-pink-500 to-rose-500 text-white font-bold uppercase text-[10px] tracking-widest rounded-full shadow-lg cursor-pointer"
+                >
+                  Unlock with PIN
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowLockPinFallback(false);
+                    setAppLockError('');
+                  }}
+                  className="text-[10px] text-stone-400 hover:text-white uppercase tracking-widest font-bold cursor-pointer"
+                >
+                  Back to Biometrics
+                </button>
+              </form>
             ) : (
-              <button
-                onClick={() => {
-                  setAppBiometricResult('scanning');
-                  setTimeout(() => {
-                    setAppBiometricResult('success');
-                    setTimeout(() => {
-                      setIsSessionUnlocked(true);
-                      sessionStorage.setItem('lumina_session_unlocked', 'true');
-                      setAppBiometricResult('idle');
-                    }, 1000);
-                  }, 1500);
-                }}
-                className="w-full py-4 bg-gradient-to-r from-pink-400 to-rose-400 text-white font-extrabold uppercase text-[10px] tracking-widest rounded-full shadow-lg hover:scale-105 transition-all cursor-pointer"
-              >
-                🔑 Scan Face ID / Touch ID
-              </button>
+              <div className="space-y-3">
+                <button
+                  type="button"
+                  onClick={handleRealBiometricUnlock}
+                  className="w-full py-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white font-extrabold uppercase text-[10px] tracking-widest rounded-full shadow-lg hover:scale-[1.02] transition-all cursor-pointer"
+                >
+                  🔑 Unlock with Device Biometrics
+                </button>
+                {hasPinConfigured && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowLockPinFallback(true);
+                      setAppLockError('');
+                    }}
+                    className="w-full py-3 bg-stone-900 border border-stone-700 text-stone-200 font-bold uppercase text-[10px] tracking-widest rounded-full cursor-pointer hover:bg-stone-800"
+                  >
+                    Use Security PIN Instead
+                  </button>
+                )}
+              </div>
             )}
 
             <button 
+              type="button"
               onClick={handleLogout}
-              className="text-[9px] text-stone-500 hover:text-stone-300 uppercase tracking-widest font-black transition-colors block mx-auto cursor-pointer"
+              className="text-[10px] text-stone-400 hover:text-stone-200 uppercase tracking-widest font-bold transition-colors block mx-auto cursor-pointer"
             >
-              Sign out of account
+              Sign out &amp; verify with password
             </button>
           </div>
         </div>
@@ -1901,9 +1944,10 @@ const App: React.FC = () => {
               setUser={setUser}
               onComplete={(completedUser) => {
                 setUser(completedUser);
-                localStorage.setItem('lumina_user', JSON.stringify(completedUser));
+                const rememberMe = localStorage.getItem('lumina_remember_me') !== 'false';
+                saveEncryptedSessionUser(completedUser, rememberMe).catch(() => {});
                 if (completedUser.email) {
-                  localStorage.setItem('lumina_user_email_' + completedUser.email.toLowerCase().trim(), JSON.stringify(completedUser));
+                  secureStorage.setItem(`user_email_${completedUser.email.toLowerCase().trim()}`, JSON.stringify(completedUser)).catch(() => {});
                 }
                 syncUser(completedUser);
               }}
@@ -1917,9 +1961,10 @@ const App: React.FC = () => {
             setUser={setUser} 
             onComplete={(completedUser) => {
               setUser(completedUser);
-              localStorage.setItem('lumina_user', JSON.stringify(completedUser));
+              const rememberMe = localStorage.getItem('lumina_remember_me') !== 'false';
+              saveEncryptedSessionUser(completedUser, rememberMe).catch(() => {});
               if (completedUser.email) {
-                localStorage.setItem('lumina_user_email_' + completedUser.email.toLowerCase().trim(), JSON.stringify(completedUser));
+                secureStorage.setItem(`user_email_${completedUser.email.toLowerCase().trim()}`, JSON.stringify(completedUser)).catch(() => {});
               }
               syncUser(completedUser);
               try {
@@ -2110,6 +2155,7 @@ const App: React.FC = () => {
           reminders={reminders} 
           setReminders={setReminders} 
           setUser={setUser} 
+          partnerUser={partnerUser}
           onLogout={handleLogout} 
           onOpenNotificationCenter={(notif) => {
             if (notif) setSelectedNotifForModal(notif);
@@ -2225,7 +2271,7 @@ const App: React.FC = () => {
           />
         );
       case 'diary':
-        return <Diary entries={diaryEntries} setEntries={setDiaryEntries} user={user} />;
+        return <Diary entries={diaryEntries} setEntries={setDiaryEntries} user={user} setUser={setUser} />;
       case 'selfcare':
         return <SelfCare tasks={selfCareTasks} setTasks={setSelfCareTasks} user={user} setUser={setUser} />;
       case 'partner':
@@ -2235,6 +2281,7 @@ const App: React.FC = () => {
             reminders={reminders} 
             setReminders={setReminders} 
             setUser={setUser} 
+            partnerUser={partnerUser}
             onLogout={handleLogout} 
             onOpenNotificationCenter={(notif) => {
               if (notif) setSelectedNotifForModal(notif);
@@ -2251,7 +2298,8 @@ const App: React.FC = () => {
             user={user}
             onUpdateUser={(next) => {
               setUser(next);
-              localStorage.setItem('lumina_user', JSON.stringify(next));
+              const rememberMe = localStorage.getItem('lumina_remember_me') !== 'false';
+              saveEncryptedSessionUser(next, rememberMe).catch(() => {});
               syncUser(next);
             }}
             onLogoutAllDevices={handleLogout}
@@ -2332,8 +2380,7 @@ const App: React.FC = () => {
     );
   }
 
-  // If the user is not fully logged in, onboarded, or is locked, render the appropriate active screen directly
-  if (showSplash || authLoading || restoreDataPrompt || !user || ((user as any).biometricsEnabled && !isSessionUnlocked) || !user.onboardingCompleted) {
+  if (showSplash || authLoading || restoreDataPrompt || !user || ((user.biometricsEnabled || user.securitySettings?.biometricQuickUnlock) && !isSessionUnlocked) || !user.onboardingCompleted) {
     return (
       <>
         {renderActiveScreen()}
@@ -2772,6 +2819,49 @@ const App: React.FC = () => {
             onClose={() => setIsAnalyticsOpen(false)}
           />
         </Suspense>
+      )}
+
+      {/* Pre-Permission Notification Privacy Consent Card */}
+      {showNotifPrePrompt && (
+        <div className="fixed bottom-24 left-4 right-4 max-w-md mx-auto bg-white/95 backdrop-blur-2xl border border-pink-200 rounded-3xl p-4 shadow-2xl z-[180] flex flex-col gap-3 animate-fadeIn">
+          <div className="flex items-start gap-3">
+            <span className="text-xl shrink-0">🔔</span>
+            <div className="flex-1 min-w-0">
+              <h4 className="text-xs font-bold text-stone-900">Enable Discreet Cycle &amp; Wellness Alerts?</h4>
+              <p className="text-[11px] text-stone-600 mt-0.5 leading-relaxed">
+                Lumina hides sensitive period &amp; health details on your lock screen by default and only shows neutral titles unless you enable previews in Settings.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                localStorage.setItem('lumina_notif_preprompt_dismissed', 'true');
+                setShowNotifPrePrompt(false);
+              }}
+              className="px-3.5 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold cursor-pointer"
+            >
+              Not Now
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                localStorage.setItem('lumina_notif_preprompt_dismissed', 'true');
+                setShowNotifPrePrompt(false);
+                try {
+                  if ('Notification' in window && window.Notification.requestPermission) {
+                    await window.Notification.requestPermission().catch(() => {});
+                  }
+                  await registerNativePush(true);
+                } catch {}
+              }}
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 text-white text-xs font-bold shadow-sm cursor-pointer"
+            >
+              Allow Alerts
+            </button>
+          </div>
+        </div>
       )}
 
       <CookieConsentBanner />

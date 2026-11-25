@@ -110,6 +110,7 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
   const [deletingIntimacyConfirm, setDeletingIntimacyConfirm] = useState<boolean>(false);
   const [deletingBCConfirm, setDeletingBCConfirm] = useState<boolean>(false);
   const [deletePeriodConfirmId, setDeletePeriodConfirmId] = useState<string | null>(null);
+  const [pendingDeleteTimelineEventId, setPendingDeleteTimelineEventId] = useState<string | null>(null);
   const [activeGraphTab, setActiveGraphTab] = useState<'cycle-length' | 'period-length' | 'symptoms' | 'moods' | 'flows' | 'fertility' | 'pregnancy'>(user.isPregnancyMode ? 'pregnancy' : 'cycle-length');
   const [pregnancyWeightLogs, setPregnancyWeightLogs] = useState<{ week: number; weight: number }[]>(() => {
     try {
@@ -2267,22 +2268,41 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
                               )}
 
                               {/* Delete Action */}
-                              <button
-                                onClick={() => {
-                                  if (confirm(`Are you sure you want to delete this ${event.typeLabel.toLowerCase()}?`)) {
-                                    if (event.category === 'periods' && event.rawItem?.id) {
-                                      handleDeletePeriod(event.rawItem.id);
-                                    } else if (event.category === 'symptoms' && event.rawItem?.id) {
-                                      handleDeleteSymptom(event.rawItem.id);
-                                    } else if (event.category === 'intimacy' && event.rawItem?.id) {
-                                      handleDeleteIntimacyLog(event.rawItem.id);
-                                    }
-                                  }
-                                }}
-                                className="px-3 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-[9.5px] uppercase tracking-wider rounded-lg transition-colors cursor-pointer"
-                              >
-                                Delete
-                              </button>
+                              {pendingDeleteTimelineEventId === event.id ? (
+                                <div className="flex items-center gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (event.category === 'periods' && event.rawItem?.id) {
+                                        handleDeletePeriod(event.rawItem.id);
+                                      } else if (event.category === 'symptoms' && event.rawItem?.id) {
+                                        handleDeleteSymptom(event.rawItem.id);
+                                      } else if (event.category === 'intimacy' && event.rawItem?.id) {
+                                        handleDeleteIntimacyLog(event.rawItem.id);
+                                      }
+                                      setPendingDeleteTimelineEventId(null);
+                                    }}
+                                    className="px-3 py-1 bg-rose-600 text-white font-bold text-[9.5px] uppercase tracking-wider rounded-lg cursor-pointer"
+                                  >
+                                    Confirm Delete
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setPendingDeleteTimelineEventId(null)}
+                                    className="px-2.5 py-1 bg-stone-100 text-stone-600 font-bold text-[9.5px] uppercase tracking-wider rounded-lg cursor-pointer"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => setPendingDeleteTimelineEventId(event.id)}
+                                  className="px-3 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-[9.5px] uppercase tracking-wider rounded-lg transition-colors cursor-pointer"
+                                >
+                                  Delete
+                                </button>
+                              )}
                             </div>
                           </div>
                         )}

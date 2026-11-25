@@ -3,11 +3,24 @@ import { DiaryEntry, User } from '../types';
 import { Lock, Fingerprint, ShieldCheck, AlertCircle, Edit3, PlusCircle, Clock, RotateCcw, CheckCircle2, Calendar, Sparkles, Trash2, Heart } from 'lucide-react';
 import { trackCreateDiaryEntry, trackUpdateDiaryEntry } from '../services/analyticsService';
 import { calculateCycleSyncData } from '../services/cycleSyncService';
+import { saveEncryptedSessionUser, secureStorage } from '../services/secureStorage';
+import { authenticateWithBiometrics, getBiometricCapability } from '../services/biometricService';
+import {
+  clearDiaryPinLockout,
+  getDiaryPinLockoutState,
+  hashDiaryPin,
+  recordFailedDiaryPinAttempt,
+  userHasConfiguredPin,
+  validateNewDiaryPin,
+  verifyDiaryPin
+} from '../services/securityService';
+import { syncUser } from '../services/firebaseService';
 
 interface DiaryProps {
   entries: DiaryEntry[];
   setEntries: React.Dispatch<React.SetStateAction<DiaryEntry[]>>;
   user: User;
+  setUser?: React.Dispatch<React.SetStateAction<User | null>>;
 }
 
 const AESTHETIC_EMOJIS = [
@@ -23,17 +36,21 @@ const getCurrentCyclePhase = (user: User): string => {
   return `${sync.phaseName} • Day ${sync.cycleDay}${fertileTag}`;
 };
 
-const DRAFT_KEY = 'lumina_diary_draft';
+const DRAFT_KEY = 'diary_draft_v1';
 
-const Diary: React.FC<DiaryProps> = ({ entries, setEntries, user }) => {
+const Diary: React.FC<DiaryProps> = ({ entries, setEntries, user, setUser }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [content, setContent] = useState('');
   const [mood, setMood] = useState('Happy');
   const [selectedEmoji, setSelectedEmoji] = useState('✨');
   const [isLocked, setIsLocked] = useState(true);
   const [pinInput, setPinInput] = useState('');
+  const [newPinInput, setNewPinInput] = useState('');
+  const [confirmPinInput, setConfirmPinInput] = useState('');
+  const [pinSaving, setPinSaving] = useState(false);
   const [error, setError] = useState('');
   const [isBiometricSupported, setIsBiometricSupported] = useState(false);
+  const [biometricLabel, setBiometricLabel] = useState('Device Biometrics');
 
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [hasRestoredDraft, setHasRestoredDraft] = useState(false);
@@ -43,40 +60,51 @@ const Diary: React.FC<DiaryProps> = ({ entries, setEntries, user }) => {
   const currentPhaseName = getCurrentCyclePhase(user);
 
   useEffect(() => {
-    // Check if biometric authentication is supported
-    if (window.PublicKeyCredential) {
-      window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
-        .then(available => setIsBiometricSupported(available))
-        .catch(() => setIsBiometricSupported(false));
-    }
-  }, []);
+    let cancelled = false;
+    getBiometricCapability(user.id).then((cap) => {
+      if (cancelled) return;
+      setIsBiometricSupported(cap.available);
+      setBiometricLabel(cap.biometryLabel);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user.id]);
 
-  // Restore Draft on Mount (Draft Recovery)
+  // Restore Encrypted Draft on Mount (Draft Recovery)
   useEffect(() => {
-    try {
-      const savedDraftStr = localStorage.getItem(DRAFT_KEY);
-      if (savedDraftStr) {
-        const draft = JSON.parse(savedDraftStr);
-        if (draft && draft.content && draft.content.trim()) {
-          setContent(draft.content);
-          if (draft.mood) setMood(draft.mood);
-          if (draft.selectedEmoji) setSelectedEmoji(draft.selectedEmoji);
-          if (draft.editingId) setEditingId(draft.editingId);
-          setHasRestoredDraft(true);
-          if (draft.timestamp) {
-            setLastSavedAt(new Date(draft.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+    let cancelled = false;
+    (async () => {
+      try {
+        localStorage.removeItem('lumina_diary_draft');
+        const savedDraftStr = await secureStorage.getItem(DRAFT_KEY);
+        if (!cancelled && savedDraftStr) {
+          const draft = JSON.parse(savedDraftStr);
+          if (draft && draft.content && draft.content.trim()) {
+            setContent(draft.content);
+            if (draft.mood) setMood(draft.mood);
+            if (draft.selectedEmoji) setSelectedEmoji(draft.selectedEmoji);
+            if (draft.editingId) setEditingId(draft.editingId);
+            setHasRestoredDraft(true);
+            if (draft.timestamp) {
+              setLastSavedAt(new Date(draft.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+            }
           }
         }
+      } catch {
+        // Ignore corrupted draft
       }
-    } catch (e) {
-      console.warn('Failed to load diary draft:', e);
-    }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  // Auto-Save Content Changes while typing (Auto Save & Continuation System)
+  // Auto-Save Content Changes into encrypted IndexedDB vault while typing
   useEffect(() => {
     if (!content.trim()) {
-      localStorage.removeItem(DRAFT_KEY);
+      void secureStorage.removeItem(DRAFT_KEY);
+      localStorage.removeItem('lumina_diary_draft');
       setLastSavedAt(null);
       return;
     }
@@ -84,19 +112,16 @@ const Diary: React.FC<DiaryProps> = ({ entries, setEntries, user }) => {
     const nowIso = new Date().toISOString();
     const nowDisplay = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-    // Save to localStorage draft
-    try {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify({
+    void secureStorage.setItem(
+      DRAFT_KEY,
+      JSON.stringify({
         editingId,
         content,
         mood,
         selectedEmoji,
-        timestamp: nowIso
-      }));
-      setLastSavedAt(nowDisplay);
-    } catch (e) {
-      console.warn('Draft save error:', e);
-    }
+        timestamp: nowIso,
+      })
+    ).then(() => setLastSavedAt(nowDisplay)).catch(() => {});
 
     // Auto update existing entry in real-time if editing
     if (editingId) {
@@ -118,22 +143,86 @@ const Diary: React.FC<DiaryProps> = ({ entries, setEntries, user }) => {
     }
   }, [content, mood, selectedEmoji, editingId]);
 
-  const handleUnlock = () => {
-    if (pinInput === (user.diaryPin || '1234')) {
+  const handleCreateCustomPin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    const validation = validateNewDiaryPin(newPinInput);
+    if (!validation.valid) {
+      setError(validation.error || 'Choose a stronger 4–6 digit PIN.');
+      return;
+    }
+    if (newPinInput !== confirmPinInput) {
+      setError('Your two PIN entries do not match. Please try again.');
+      return;
+    }
+
+    setPinSaving(true);
+    try {
+      const { hash, salt } = await hashDiaryPin(newPinInput);
+      const updatedUser: User = {
+        ...user,
+        diaryPin: undefined,
+        diaryPinHash: hash,
+        diaryPinSalt: salt,
+      };
+      if (setUser) setUser(updatedUser);
+      const rememberPref = localStorage.getItem('lumina_remember_me') !== 'false';
+      await saveEncryptedSessionUser(updatedUser, rememberPref);
+      await syncUser(updatedUser);
+      setNewPinInput('');
+      setConfirmPinInput('');
       setIsLocked(false);
-      setError('');
-    } else {
-      setError('Incorrect PIN, beautiful. Try again.');
-      setPinInput('');
+    } catch {
+      setError('Unable to save your new Secret Diary PIN right now.');
+    } finally {
+      setPinSaving(false);
     }
   };
 
+  const handleUnlock = async () => {
+    setError('');
+    const lockout = await getDiaryPinLockoutState(user.id);
+    if (lockout.isLocked) {
+      const mins = Math.max(1, Math.ceil(lockout.remainingMs / 60_000));
+      setError(`Diary PIN temporarily locked after 5 failed attempts. Try again in ${mins} minute(s) or use biometrics.`);
+      return;
+    }
+
+    const verdict = await verifyDiaryPin(pinInput, user);
+    if (verdict === 'valid') {
+      await clearDiaryPinLockout(user.id);
+      // Silently upgrade legacy customized plaintext PIN to salted PBKDF2-SHA256 hash
+      if (!user.diaryPinHash && user.diaryPin && user.diaryPin !== '1234') {
+        try {
+          const { hash, salt } = await hashDiaryPin(pinInput);
+          const upgraded: User = { ...user, diaryPinHash: hash, diaryPinSalt: salt, diaryPin: undefined };
+          if (setUser) setUser(upgraded);
+          await syncUser(upgraded);
+        } catch {}
+      }
+      setIsLocked(false);
+      setPinInput('');
+      setError('');
+      return;
+    }
+
+    const failState = await recordFailedDiaryPinAttempt(user.id);
+    setPinInput('');
+    setError(
+      failState.isLocked
+        ? 'Diary locked for 5 minutes after 5 incorrect PIN attempts.'
+        : `Incorrect PIN (${failState.remainingAttempts} attempt(s) remaining).`
+    );
+  };
+
   const handleBiometricUnlock = async () => {
-    try {
+    setError('');
+    const res = await authenticateWithBiometrics(user, 'Verify your identity to unlock your Secret Diary');
+    if (res.verified) {
       setIsLocked(false);
       setError('');
-    } catch (err) {
-      setError('Biometric authentication failed. Please use your PIN.');
+    } else {
+      setError(res.message);
     }
   };
 
@@ -180,8 +269,9 @@ const Diary: React.FC<DiaryProps> = ({ entries, setEntries, user }) => {
       trackCreateDiaryEntry(mood);
     }
 
-    // Clear Draft
-    localStorage.removeItem(DRAFT_KEY);
+    // Clear Encrypted Draft
+    void secureStorage.removeItem(DRAFT_KEY);
+    localStorage.removeItem('lumina_diary_draft');
     setContent('');
     setEditingId(null);
     setSelectedEmoji('✨');
@@ -206,13 +296,15 @@ const Diary: React.FC<DiaryProps> = ({ entries, setEntries, user }) => {
     setContent('');
     setMood('Happy');
     setSelectedEmoji('✨');
-    localStorage.removeItem(DRAFT_KEY);
+    void secureStorage.removeItem(DRAFT_KEY);
+    localStorage.removeItem('lumina_diary_draft');
     setHasRestoredDraft(false);
     setLastSavedAt(null);
   };
 
   const handleDiscardDraft = () => {
-    localStorage.removeItem(DRAFT_KEY);
+    void secureStorage.removeItem(DRAFT_KEY);
+    localStorage.removeItem('lumina_diary_draft');
     setContent('');
     setEditingId(null);
     setHasRestoredDraft(false);
@@ -228,6 +320,72 @@ const Diary: React.FC<DiaryProps> = ({ entries, setEntries, user }) => {
   };
 
   if (isLocked) {
+    const hasConfiguredPin = userHasConfiguredPin(user);
+
+    if (!hasConfiguredPin) {
+      return (
+        <div className="min-h-[60vh] flex flex-col items-center justify-center p-8 bg-white dark:bg-stone-900 rounded-[3rem] shadow-sm border border-pink-50 dark:border-stone-800 animate-fadeIn">
+          <div className="w-20 h-20 bg-pink-50 dark:bg-stone-800 text-pink-500 rounded-full flex items-center justify-center mb-6 shadow-inner">
+            <ShieldCheck className="w-9 h-9" />
+          </div>
+          <h2 className="text-2xl font-serif text-pink-600 dark:text-pink-400 mb-2 italic text-center">Set Your Private Diary PIN</h2>
+          <p className="text-xs text-stone-600 dark:text-stone-300 mb-6 text-center max-w-sm leading-relaxed">
+            For your privacy, Lumina no longer uses a shared default PIN. Create your own 4–6 digit secret PIN before opening your diary.
+          </p>
+
+          {error && (
+            <div role="alert" className="flex items-center gap-2 mb-4 px-4 py-2.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleCreateCustomPin} className="w-full max-w-xs space-y-3">
+            <input
+              type="password"
+              inputMode="numeric"
+              maxLength={6}
+              value={newPinInput}
+              onChange={(e) => setNewPinInput(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+              placeholder="New 4–6 digit PIN"
+              aria-label="New 4 to 6 digit Diary PIN"
+              className="w-full px-4 py-3.5 rounded-2xl bg-pink-50/40 dark:bg-stone-800 border border-pink-200 dark:border-stone-700 text-center text-sm font-mono tracking-[0.4em] outline-none focus:border-pink-400"
+              required
+            />
+            <input
+              type="password"
+              inputMode="numeric"
+              maxLength={6}
+              value={confirmPinInput}
+              onChange={(e) => setConfirmPinInput(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+              placeholder="Confirm PIN"
+              aria-label="Confirm Diary PIN"
+              className="w-full px-4 py-3.5 rounded-2xl bg-pink-50/40 dark:bg-stone-800 border border-pink-200 dark:border-stone-700 text-center text-sm font-mono tracking-[0.4em] outline-none focus:border-pink-400"
+              required
+            />
+            <button
+              type="submit"
+              disabled={pinSaving}
+              className="w-full py-3.5 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl text-xs font-bold uppercase tracking-widest shadow-md cursor-pointer"
+            >
+              {pinSaving ? 'Encrypting PIN...' : 'Save Private PIN & Open Diary'}
+            </button>
+          </form>
+
+          {isBiometricSupported && (
+            <button
+              type="button"
+              onClick={handleBiometricUnlock}
+              className="mt-5 flex items-center gap-3 px-6 py-3 bg-white dark:bg-stone-800 border border-pink-200 dark:border-stone-700 rounded-2xl text-pink-600 hover:bg-pink-50 transition-all cursor-pointer"
+            >
+              <Fingerprint className="w-5 h-5" />
+              <span className="text-[10px] font-bold uppercase tracking-widest">Or unlock with {biometricLabel}</span>
+            </button>
+          )}
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center p-8 bg-white dark:bg-stone-900 rounded-[3rem] shadow-sm border border-pink-50 dark:border-stone-800 animate-fadeIn">
         <div className="w-20 h-20 bg-pink-50 dark:bg-stone-800 text-pink-400 rounded-full flex items-center justify-center text-4xl mb-6 shadow-inner relative">
@@ -237,31 +395,32 @@ const Diary: React.FC<DiaryProps> = ({ entries, setEntries, user }) => {
           </div>
         </div>
         <h2 className="text-2xl font-serif text-pink-600 dark:text-pink-400 mb-2 italic">Secret Sanctuary</h2>
-        <p className="text-sm text-pink-600 dark:text-pink-300/80 mb-8 text-center italic">Your thoughts are safe here. Enter your secret PIN or use biometrics.</p>
+        <p className="text-sm text-pink-600 dark:text-pink-300/80 mb-8 text-center italic">Your thoughts are safe here. Enter your private PIN or verify with biometrics.</p>
 
-        <div className="flex gap-4 mb-8">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className={`w-4 h-4 rounded-full border-2 border-pink-200 dark:border-stone-700 transition-all duration-300 ${pinInput.length > i ? 'bg-pink-400 border-pink-400 scale-110' : 'bg-transparent'}`}></div>
+        <div className="flex gap-3.5 mb-6">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className={`w-3.5 h-3.5 rounded-full border-2 border-pink-200 dark:border-stone-700 transition-all duration-300 ${pinInput.length > i ? 'bg-pink-500 border-pink-500 scale-110' : 'bg-transparent'}`}></div>
           ))}
         </div>
 
         {error && (
-          <div className="flex items-center gap-2 mb-6 text-rose-400 animate-bounce">
-            <AlertCircle className="w-4 h-4" />
-            <p className="text-[10px] font-bold uppercase tracking-widest">{error}</p>
+          <div role="alert" className="flex items-center gap-2 mb-6 px-4 py-2 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <p className="text-[11px] font-semibold">{error}</p>
           </div>
         )}
 
-        <div className="grid grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-3 gap-5 mb-6">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9, 'C', 0, '✓'].map((num) => (
             <button
               key={num}
+              type="button"
               onClick={() => {
                 if (num === 'C') setPinInput('');
-                else if (num === '✓') handleUnlock();
-                else if (pinInput.length < 4) setPinInput(prev => prev + num);
+                else if (num === '✓') void handleUnlock();
+                else if (pinInput.length < 6) setPinInput(prev => prev + num);
               }}
-              className={`w-16 h-16 rounded-2xl flex items-center justify-center font-bold text-xl transition-all active:scale-95 ${
+              className={`w-16 h-16 rounded-2xl flex items-center justify-center font-bold text-xl transition-all active:scale-95 cursor-pointer ${
                 num === '✓' ? 'bg-pink-500 text-white shadow-lg shadow-pink-100' : 'bg-pink-50/50 dark:bg-stone-800 text-pink-600 dark:text-pink-300 hover:bg-pink-100'
               }`}
             >
@@ -272,11 +431,12 @@ const Diary: React.FC<DiaryProps> = ({ entries, setEntries, user }) => {
 
         {isBiometricSupported && (
           <button
+            type="button"
             onClick={handleBiometricUnlock}
-            className="flex items-center gap-3 px-8 py-4 bg-white dark:bg-stone-800 border-2 border-pink-100 dark:border-stone-700 rounded-2xl text-pink-400 hover:bg-pink-50 transition-all active:scale-95 group cursor-pointer"
+            className="flex items-center gap-3 px-8 py-4 bg-white dark:bg-stone-800 border-2 border-pink-100 dark:border-stone-700 rounded-2xl text-pink-600 hover:bg-pink-50 transition-all active:scale-95 group cursor-pointer"
           >
             <Fingerprint className="w-6 h-6 group-hover:scale-110 transition-transform" />
-            <span className="text-[10px] font-bold uppercase tracking-widest">Unlock with Face ID / Fingerprint</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest">Unlock with {biometricLabel}</span>
           </button>
         )}
       </div>

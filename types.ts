@@ -123,6 +123,8 @@ export interface SecuritySettings {
   activeSessions: ActiveSessionInfo[];
   loginHistory: LoginActivityEntry[];
   biometricQuickUnlock?: boolean;
+  biometricCredentialId?: string;
+  biometricPlatform?: 'ios' | 'android' | 'web';
   lastPasswordChangeAt?: string;
   lastSecurityUpdateAt?: string;
 }
@@ -143,6 +145,39 @@ export interface BackupMetadata {
   lastManualExportAt?: string;
   lastChecksum?: string;
   snapshotCount?: number;
+}
+
+export interface PartnerSharedSummary {
+  ownerId: string;
+  ownerName: string;
+  theme?: AppTheme;
+  isPartnerLinked: boolean;
+  isSharingPaused: boolean;
+  updatedAt: string;
+  sharingSettings: SharingSettings;
+  // Strictly projected cycle fields (populated ONLY when shareCycleInfo === true)
+  cycleLength?: number;
+  previousCycleLength?: number;
+  periodLength?: number;
+  lastPeriodStart?: string;
+  periods?: Period[];
+  periodLogs?: PeriodLog[];
+  periodDates?: string[];
+  // Strictly projected optional health fields (ONLY when explicitly consented)
+  symptoms?: Symptom[];
+  todaySymptomLog?: any;
+  moodLogs?: MoodLog[];
+  notesSummary?: { date: string; snippet: string }[];
+  fertilityStatusShared?: boolean;
+  isPregnancyMode?: boolean;
+  isPostpartumMode?: boolean;
+  pregnancyStartDate?: string;
+  deliveryDate?: string;
+  pregnancyAppointments?: { id: string; date: string; title: string; notes?: string }[];
+  sexualActivityLogs?: SexualActivityLog[];
+  wishlist?: string[];
+  partnerSupportPreferences?: any;
+  receivedComforts?: ReceivedComfort[];
 }
 
 export interface User {
@@ -178,7 +213,12 @@ export interface User {
   partnerEducationPreferences?: string[];
   pregnancyStartDate?: string;
   deliveryDate?: string;
+  /** @deprecated Migrated automatically to diaryPinHash + diaryPinSalt */
   diaryPin?: string;
+  diaryPinHash?: string;
+  diaryPinSalt?: string;
+  diaryPinUpdatedAt?: string;
+  biometricsEnabled?: boolean;
   theme: AppTheme;
   wallpaper?: string;
   useCycleBasedWallpaper?: boolean;
@@ -283,6 +323,7 @@ export interface NotificationSettings {
   enabled: boolean;
   toneStyle: 'supportive' | 'playful' | 'affirming' | 'aesthetic';
   reminderDaysBefore: number;
+  hideNotificationPreviews?: boolean;
   quietHours: {
     enabled: boolean;
     startTime: string;

@@ -375,8 +375,10 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   // --- Partner connection request permission setup states & helpers (Steps 3 & 4) ---
   const [isCustomizingSharing, setIsCustomizingSharing] = useState(false);
+  const [confirmDeclineRequest, setConfirmDeclineRequest] = useState(false);
+  const [partnerNotice, setPartnerNotice] = useState<string | null>(null);
   const [sharingPrefs, setSharingPrefs] = useState({
-    shareCycleInfo: true,
+    shareCycleInfo: false,
     shareFertilityInfo: false,
     sharePregnancyInfo: false,
     shareMood: false,
@@ -441,18 +443,6 @@ const Dashboard: React.FC<DashboardProps> = ({
     setUser(updatedUser);
     await syncUser(updatedUser);
 
-    if (partnerUser) {
-      const updatedPartner = {
-        ...partnerUser,
-        partnerRequest: {
-          ...activeReq,
-          status: 'approved' as const
-        },
-        isPartnerLinked: true
-      };
-      await syncUser(updatedPartner);
-    }
-
     if (partnerRequests && partnerRequests.length > 0) {
       for (const req of partnerRequests) {
         if (req.status === 'pending') {
@@ -469,7 +459,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       });
     }
 
-    alert(`You successfully approved ${targetPartnerName}'s connection and sharing preferences! 💖`);
+    setPartnerNotice(`You approved ${targetPartnerName}'s connection and sharing preferences.`);
   };
 
   const handleSaveCustomSharing = async () => {
@@ -496,23 +486,6 @@ const Dashboard: React.FC<DashboardProps> = ({
     setUser(updatedUser);
     await syncUser(updatedUser);
 
-    if (partnerUser) {
-      const updatedPartner = {
-        ...partnerUser,
-        partnerRequest: {
-          ...(partnerUser.partnerRequest || activeReq || {
-            partnerId: user.id,
-            partnerName: user.name,
-            requestedReceives: [],
-            timestamp: new Date().toISOString()
-          }),
-          status: 'approved' as const
-        },
-        isPartnerLinked: true
-      };
-      await syncUser(updatedPartner);
-    }
-
     if (partnerRequests && partnerRequests.length > 0) {
       for (const req of partnerRequests) {
         if (req.status === 'pending') {
@@ -530,62 +503,45 @@ const Dashboard: React.FC<DashboardProps> = ({
     }
 
     setIsCustomizingSharing(false);
-    alert(`Custom privacy preferences saved and connection approved for ${targetPartnerName}! 💮`);
+    setPartnerNotice(`Custom privacy preferences saved and connection approved for ${targetPartnerName}.`);
   };
 
   const handleDeclineRequest = async () => {
     if (!setUser) return;
     const activeReq = activePendingRequest;
     const targetPartnerId = partnerUser?.id || user.partnerId || activeReq?.partnerId || activeReq?.partner_id;
-    const targetPartnerName = partnerUser?.name || user.partnerName || activeReq?.partnerName || 'Partner';
 
-    if (confirm(`Are you sure you want to decline ${targetPartnerName}'s connection request?`)) {
-      if (partnerUser) {
-        const updatedPartner = {
-          ...partnerUser,
-          partnerRequest: {
-            ...(partnerUser.partnerRequest || activeReq || {
-              partnerId: user.id,
-              partnerName: user.name,
-              requestedReceives: [],
-              timestamp: new Date().toISOString()
-            }),
-            status: 'declined' as const
-          },
-          isPartnerLinked: false
-        };
-        await syncUser(updatedPartner);
-      }
+    const updatedUser = {
+      ...user,
+      partnerId: undefined,
+      partnerName: '',
+      isPartnerLinked: false,
+      partnerRequest: activeReq ? {
+        ...activeReq,
+        status: 'declined' as const
+      } : undefined
+    };
+    setUser(updatedUser);
+    await syncUser(updatedUser);
 
-      const updatedUser = {
-        ...user,
-        partnerId: undefined,
-        partnerName: '',
-        isPartnerLinked: false,
-        partnerRequest: activeReq ? {
-          ...activeReq,
-          status: 'declined' as const
-        } : undefined
-      };
-      setUser(updatedUser);
-      await syncUser(updatedUser);
-
-      if (partnerRequests && partnerRequests.length > 0) {
-        for (const req of partnerRequests) {
-          if (req.status === 'pending') {
-            await updatePartnerRequestStatus(req.id, 'declined');
-          }
+    if (partnerRequests && partnerRequests.length > 0) {
+      for (const req of partnerRequests) {
+        if (req.status === 'pending') {
+          await updatePartnerRequestStatus(req.id, 'declined');
         }
       }
-
-      if (targetPartnerId) {
-        await addNotificationToUser(targetPartnerId, {
-          title: '💔 Connection Declined',
-          body: `${user.name} declined the partner connection request.`,
-          emoji: '💔'
-        });
-      }
     }
+
+    if (targetPartnerId) {
+      await addNotificationToUser(targetPartnerId, {
+        title: '💔 Connection Declined',
+        body: `${user.name} declined the partner connection request.`,
+        emoji: '💔'
+      });
+    }
+
+    setConfirmDeclineRequest(false);
+    setPartnerNotice('Partner connection request declined.');
   };
 
   // Centralized synchronised cycle calculation across Lumina (Dashboard, Companion, Calendar & Stats)
@@ -2712,6 +2668,13 @@ const Dashboard: React.FC<DashboardProps> = ({
         </>
       )}
 
+      {partnerNotice && (
+        <div role="status" className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-5 py-3 rounded-2xl text-xs font-semibold flex items-center justify-between gap-3">
+          <span>{partnerNotice}</span>
+          <button type="button" onClick={() => setPartnerNotice(null)} className="text-emerald-700 font-bold cursor-pointer">✕</button>
+        </div>
+      )}
+
       {/* Step 3 (Partner Connection Request) & Step 4 (Privacy Controls) */}
       {isPendingRequest && activePendingRequest && (
         <section className="bg-gradient-to-br from-purple-50 to-pink-50 p-8 rounded-[2.5rem] border border-pink-100 shadow-sm space-y-6 animate-fadeIn">
@@ -2738,32 +2701,55 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
 
           {!isCustomizingSharing ? (
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <button
+                type="button"
                 onClick={handleApproveAll}
-                className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-2xl text-[10px] uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-md"
+                className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-2xl text-[10px] uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-md cursor-pointer"
               >
                 Approve All
               </button>
               <button
+                type="button"
                 onClick={() => setIsCustomizingSharing(true)}
-                className="px-6 py-3 bg-white text-indigo-600 border border-indigo-100 font-bold rounded-2xl text-[10px] uppercase tracking-widest hover:bg-indigo-50 transition-all"
+                className="px-6 py-3 bg-white text-indigo-600 border border-indigo-100 font-bold rounded-2xl text-[10px] uppercase tracking-widest hover:bg-indigo-50 transition-all cursor-pointer"
               >
                 Customize Sharing
               </button>
-              <button
-                onClick={handleDeclineRequest}
-                className="px-6 py-3 bg-rose-50 text-rose-600 font-bold rounded-2xl text-[10px] uppercase tracking-widest hover:bg-rose-100 transition-all"
-              >
-                Decline
-              </button>
+              {!confirmDeclineRequest ? (
+                <button
+                  type="button"
+                  onClick={() => setConfirmDeclineRequest(true)}
+                  className="px-6 py-3 bg-rose-50 text-rose-600 font-bold rounded-2xl text-[10px] uppercase tracking-widest hover:bg-rose-100 transition-all cursor-pointer"
+                >
+                  Decline
+                </button>
+              ) : (
+                <div className="flex items-center gap-2 bg-rose-50 border border-rose-200 px-3 py-2 rounded-2xl">
+                  <span className="text-[11px] font-semibold text-rose-700">Decline request?</span>
+                  <button
+                    type="button"
+                    onClick={handleDeclineRequest}
+                    className="px-3 py-1 bg-rose-600 text-white rounded-xl text-[10px] font-bold uppercase cursor-pointer"
+                  >
+                    Confirm
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDeclineRequest(false)}
+                    className="px-3 py-1 bg-white text-stone-600 rounded-xl text-[10px] font-bold uppercase cursor-pointer"
+                  >
+                    Keep
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             <div className="space-y-5 bg-white p-6 rounded-3xl border border-pink-100 mt-4 animate-scaleUp">
               <div>
                 <h4 className="text-lg font-serif text-indigo-950 italic">Step 4: Privacy Controls</h4>
                 <p className="text-xs text-gray-500 mt-1">
-                  Fine-tune exactly what information {partnerUser.name} can access. Turn off any sensitive category anytime.
+                  Fine-tune exactly what information {partnerUser?.name || user.partnerName || activePendingRequest.partnerName || 'your partner'} can access. Turn off any sensitive category anytime.
                 </p>
               </div>
 

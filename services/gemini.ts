@@ -2,32 +2,28 @@ import { decodeBase64, decodeAudioData } from "./audio";
 
 import { auth } from "./firebase";
 
-// Helper function to send safe POST requests to our server API proxy endpoints with auth token & timeout
+// Helper function to send authenticated POST requests to our server API proxy endpoints
 async function fetchGeminiProxy(endpoint: string, body: object): Promise<any> {
+  const currentUser = auth.currentUser;
+  if (!currentUser) {
+    throw new Error("Authentication required for cloud AI features.");
+  }
+
+  const token = await currentUser.getIdToken();
+  if (!token) {
+    throw new Error("Missing authentication token.");
+  }
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 8000);
 
   try {
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      "X-Requested-With": "LuminaWebApp",
-    };
-
-    try {
-      const currentUser = auth.currentUser;
-      if (currentUser) {
-        const token = await currentUser.getIdToken();
-        if (token) {
-          headers["Authorization"] = `Bearer ${token}`;
-        }
-      }
-    } catch {
-      // Proceed without token only when running in offline/sandbox auth state
-    }
-
     const response = await fetch(`/api/gemini/${endpoint}`, {
       method: "POST",
-      headers,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
       body: JSON.stringify(body),
       signal: controller.signal,
     });
@@ -186,7 +182,25 @@ export interface CompanionChatResponse {
 
 export async function sendCompanionChatMessage(payload: CompanionChatPayload): Promise<CompanionChatResponse> {
   try {
-    const data = await fetchGeminiProxy("companion-chat", payload);
+    const minimizedPayload = {
+      avatarId: payload.avatarId,
+      avatarName: payload.avatarName,
+      userMessage: payload.userMessage,
+      wellnessContext: {
+        cyclePhase: payload.wellnessContext?.cyclePhase,
+        cycleDay: payload.wellnessContext?.cycleDay,
+        periodStatus: payload.wellnessContext?.periodStatus,
+        symptoms: payload.wellnessContext?.symptoms?.slice(0, 8),
+        isPregnancyMode: payload.wellnessContext?.isPregnancyMode,
+        pregnancyWeek: payload.wellnessContext?.pregnancyWeek,
+        isPostpartumMode: payload.wellnessContext?.isPostpartumMode,
+        recentMood: payload.wellnessContext?.recentMood,
+        waterIntake: payload.wellnessContext?.waterIntake,
+        waterGoal: payload.wellnessContext?.waterGoal,
+      },
+      history: payload.history?.slice(-6),
+    };
+    const data = await fetchGeminiProxy("companion-chat", minimizedPayload);
     if (data?.reply) {
       return {
         reply: data.reply,
@@ -198,7 +212,7 @@ export async function sendCompanionChatMessage(payload: CompanionChatPayload): P
       };
     }
   } catch (error) {
-    console.warn("Companion chat proxy failed:", error);
+    console.warn("Companion chat proxy fallback active:", error instanceof Error ? error.message : 'offline');
   }
 
   // Graceful client fallback

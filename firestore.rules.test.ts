@@ -150,5 +150,33 @@ export const DIRTY_DOZEN_SECURITY_TESTS: SecurityTestCase[] = [
     authUid: 'attacker_uid',
     expectedOutcome: 'PERMISSION_DENIED',
     blockingRule: 'existing().userId == request.auth.uid'
+  },
+  {
+    id: 13,
+    name: 'Linked Partner Direct Full-Profile Read Leak',
+    collectionPath: 'users/primary_uid',
+    operation: 'get',
+    authUid: 'linked_partner_uid',
+    expectedOutcome: 'PERMISSION_DENIED',
+    blockingRule: 'allow get: if isValidId(userId) && isOwner(userId);'
+  },
+  {
+    id: 14,
+    name: 'Unconsented / Paused Partner Reading partner_shared Summary',
+    collectionPath: 'users/primary_uid/partner_shared/summary',
+    operation: 'get',
+    authUid: 'unlinked_or_paused_partner_uid',
+    expectedOutcome: 'PERMISSION_DENIED',
+    blockingRule: 'isMutuallyLinkedPartnerOf(userId)'
+  },
+  {
+    id: 15,
+    name: 'Client Free-Tier Premium Self-Promotion on Signup',
+    collectionPath: 'users/attacker_uid',
+    operation: 'create',
+    authUid: 'attacker_uid',
+    payload: { id: 'attacker_uid', name: 'Attacker', email: 'a@example.com', isPremium: true },
+    expectedOutcome: 'PERMISSION_DENIED',
+    blockingRule: "incoming().get('isPremium', false) == false"
   }
 ];

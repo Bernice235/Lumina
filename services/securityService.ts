@@ -3,6 +3,7 @@ import { sha256Hex, secureStorage } from './secureStorage';
 
 const SESSION_ID_KEY = 'lumina_device_session_id_v1';
 const LOCKOUT_PREFIX = 'lumina_auth_lockout_v1_';
+const DIARY_LOCKOUT_PREFIX = 'lumina_diary_lockout_v1_';
 const CRED_VERIFIER_PREFIX = 'lumina_cred_v2_';
 const FORM_RATE_PREFIX = 'lumina_form_rate_v1_';
 
@@ -19,11 +20,15 @@ const COMMON_WEAK_PASSWORDS = new Set([
   'lumina123',
 ]);
 
+const WEAK_PINS = new Set([
+  '0000', '1111', '2222', '3333', '4444', '5555', '6666', '7777', '8888', '9999',
+  '1234', '4321', '000000', '111111', '123456', '654321',
+]);
+
 // ----------------- Input Sanitization & Validation -----------------
 
 export function sanitizeTextInput(value: unknown, maxLength: number = 500): string {
   if (typeof value !== 'string') return '';
-  // Strip control characters and normalize whitespace safely without corrupting normal punctuation
   return value
     .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '')
     .trim()
@@ -45,6 +50,62 @@ export function isValidEmailAddress(email: string): boolean {
   if (!trimmed || trimmed.length > 160) return false;
   return /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(trimmed);
 }
+
+export function redactEmailForLogs(email?: string | null): string {
+  if (!email) return '[none]';
+  const at = email.indexOf('@');
+  if (at <= 1) return '[redacted]';
+  return `${email[0]}***@${email.slice(at + 1)}`;
+}
+
+function timingSafeEqualStr(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return diff === 0;
+}
+
+function bytesToHex(bytes: Uint8Array): string {
+  return Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+function hexToBytes(hex: string): Uint8Array {
+  const clean = hex.replace(/[^0-9a-fA-F]/g, '');
+  const out = new Uint8Array(clean.length / 2);
+  for (let i = 0; i < out.length; i++) {
+    out[i] = parseInt(clean.slice(i * 2, i * 2 + 2), 16);
+  }
+  return out;
+}
+
+async function pbkdf2Hex(secret: string, saltHex: string, iterations: number = 120_000): Promise<string> {
+  const cryptoObj = globalThis.crypto;
+  if (!cryptoObj?.subtle) {
+    throw new Error('Web Crypto PBKDF2 is unavailable.');
+  }
+  const baseKey = await cryptoObj.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    'PBKDF2',
+    false,
+    ['deriveBits']
+  );
+  const derived = await cryptoObj.subtle.deriveBits(
+    {
+      name: 'PBKDF2',
+      salt: hexToBytes(saltHex) as BufferSource,
+      iterations,
+      hash: 'SHA-256',
+    },
+    baseKey,
+    256
+  );
+  return bytesToHex(new Uint8Array(derived));
+}
+
+// ----------------- Password Strength -----------------
 
 export interface PasswordStrengthResult {
   valid: boolean;
@@ -100,6 +161,138 @@ export function evaluatePasswordStrength(password: string): PasswordStrengthResu
   return { valid, score, label, checks, error };
 }
 
+// ----------------- Salted PBKDF2 Diary PIN Security & Attempt Throttling -----------------
+
+export function validateNewDiaryPin(pin: string): { valid: boolean; error?: string } {
+  const clean = (pin || '').trim();
+  if (!/^\d{4,6}$/.test(clean)) {
+    return { valid: false, error: 'PIN must be 4 to 6 numeric digits.' };
+  }
+  if (WEAK_PINS.has(clean)) {
+    return { valid: false, error: 'Please choose a private PIN other than 1234 or repeated digits.' };
+  }
+  return { valid: true };
+}
+
+export async function hashDiaryPin(pin: string): Promise<{ hash: string; salt: string }> {
+  const clean = (pin || '').trim();
+  const saltBytes = globalThis.crypto.getRandomValues(new Uint8Array(16));
+  const salt = bytesToHex(saltBytes);
+  const hash = await pbkdf2Hex(`lumina_pin_v2:${clean}`, salt, 120_000);
+  return { hash, salt };
+}
+
+export function userHasConfiguredPin(user: User | null | undefined): boolean {
+  if (!user) return false;
+  if (user.diaryPinHash && user.diaryPinSalt) return true;
+  // Legacy PIN counts as configured ONLY if it was actually customized away from the old '1234' default
+  if (user.diaryPin && user.diaryPin !== '1234' && /^\d{4,6}$/.test(user.diaryPin)) {
+    return true;
+  }
+  return false;
+}
+
+export async function verifyDiaryPin(
+  submittedPin: string,
+  user: User
+): Promise<'valid' | 'invalid' | 'unset'> {
+  const clean = (submittedPin || '').trim();
+  if (!clean) return 'invalid';
+
+  if (user.diaryPinHash && user.diaryPinSalt) {
+    const candidate = await pbkdf2Hex(`lumina_pin_v2:${clean}`, user.diaryPinSalt, 120_000);
+    return timingSafeEqualStr(candidate, user.diaryPinHash) ? 'valid' : 'invalid';
+  }
+
+  // Legacy migration: allow custom non-default legacy PIN once so caller can upgrade to diaryPinHash
+  if (user.diaryPin && user.diaryPin !== '1234') {
+    return timingSafeEqualStr(clean, user.diaryPin) ? 'valid' : 'invalid';
+  }
+
+  return 'unset';
+}
+
+const MAX_DIARY_PIN_ATTEMPTS = 5;
+const DIARY_LOCKOUT_DURATION_MS = 5 * 60 * 1000;
+
+export async function getDiaryPinLockoutState(userId: string): Promise<{
+  isLocked: boolean;
+  remainingMs: number;
+  failures: number;
+}> {
+  if (typeof window === 'undefined' || !userId) {
+    return { isLocked: false, remainingMs: 0, failures: 0 };
+  }
+  try {
+    const h = await sha256Hex(userId);
+    const k = DIARY_LOCKOUT_PREFIX + h.slice(0, 24);
+    const raw = localStorage.getItem(k);
+    if (!raw) return { isLocked: false, remainingMs: 0, failures: 0 };
+    const rec: LockoutRecord = JSON.parse(raw);
+    const now = Date.now();
+    if (rec.lockedUntil && rec.lockedUntil > now) {
+      return {
+        isLocked: true,
+        remainingMs: rec.lockedUntil - now,
+        failures: rec.failures || MAX_DIARY_PIN_ATTEMPTS,
+      };
+    }
+    if (rec.lockedUntil && rec.lockedUntil <= now) {
+      localStorage.removeItem(k);
+      return { isLocked: false, remainingMs: 0, failures: 0 };
+    }
+    return { isLocked: false, remainingMs: 0, failures: rec.failures || 0 };
+  } catch {
+    return { isLocked: false, remainingMs: 0, failures: 0 };
+  }
+}
+
+export async function recordFailedDiaryPinAttempt(userId: string): Promise<{
+  isLocked: boolean;
+  remainingMs: number;
+  failures: number;
+  remainingAttempts: number;
+}> {
+  if (typeof window === 'undefined' || !userId) {
+    return { isLocked: false, remainingMs: 0, failures: 1, remainingAttempts: MAX_DIARY_PIN_ATTEMPTS - 1 };
+  }
+  const h = await sha256Hex(userId);
+  const k = DIARY_LOCKOUT_PREFIX + h.slice(0, 24);
+  const now = Date.now();
+  let rec: LockoutRecord = { failures: 0, lockedUntil: 0, lastFailureAt: now };
+  try {
+    const raw = localStorage.getItem(k);
+    if (raw) rec = JSON.parse(raw);
+  } catch {}
+
+  if (now - (rec.lastFailureAt || 0) > 15 * 60 * 1000) {
+    rec.failures = 0;
+    rec.lockedUntil = 0;
+  }
+
+  rec.failures = (rec.failures || 0) + 1;
+  rec.lastFailureAt = now;
+  if (rec.failures >= MAX_DIARY_PIN_ATTEMPTS) {
+    rec.lockedUntil = now + DIARY_LOCKOUT_DURATION_MS;
+  }
+  localStorage.setItem(k, JSON.stringify(rec));
+  const isLocked = rec.lockedUntil > now;
+  return {
+    isLocked,
+    remainingMs: isLocked ? rec.lockedUntil - now : 0,
+    failures: rec.failures,
+    remainingAttempts: Math.max(0, MAX_DIARY_PIN_ATTEMPTS - rec.failures),
+  };
+}
+
+export async function clearDiaryPinLockout(userId: string): Promise<void> {
+  if (typeof window === 'undefined' || !userId) return;
+  try {
+    const h = await sha256Hex(userId);
+    localStorage.removeItem(DIARY_LOCKOUT_PREFIX + h.slice(0, 24));
+  } catch {}
+}
+
 // ----------------- Anti-Spam & Honeypot Protection -----------------
 
 export function isHoneypotTriggered(honeypotValue: string | undefined | null): boolean {
@@ -133,7 +326,7 @@ export function checkClientRateLimit(
 // ----------------- Account Lockout Protection -----------------
 
 const MAX_FAILED_LOGIN_ATTEMPTS = 5;
-const LOCKOUT_DURATION_MS = 5 * 60 * 1000; // 5 minutes
+const LOCKOUT_DURATION_MS = 5 * 60 * 1000;
 
 interface LockoutRecord {
   failures: number;
@@ -168,7 +361,6 @@ export async function getAccountLockoutState(email: string): Promise<{
       };
     }
     if (rec.lockedUntil && rec.lockedUntil <= now) {
-      // Lockout expired: reset cleanly
       localStorage.removeItem(k);
       return { isLocked: false, remainingMs: 0, failures: 0 };
     }
@@ -195,7 +387,6 @@ export async function recordFailedLoginAttempt(email: string): Promise<{
     if (raw) rec = JSON.parse(raw);
   } catch {}
 
-  // Reset counter if last failure was > 30 minutes ago
   if (now - (rec.lastFailureAt || 0) > 30 * 60 * 1000) {
     rec.failures = 0;
     rec.lockedUntil = 0;
@@ -225,32 +416,44 @@ export async function clearLoginLockout(email: string): Promise<void> {
   } catch {}
 }
 
-// ----------------- Salted Local Credential Verifier (Offline/Preview Verification) -----------------
+// ----------------- Salted PBKDF2-SHA256 Local Credential Verifier -----------------
 
 export async function storeLocalCredentialVerifier(email: string, password: string): Promise<void> {
   if (typeof window === 'undefined' || !email || !password) return;
   try {
     const emailHash = await sha256Hex(email.toLowerCase().trim());
-    const saltBytes = new Uint8Array(16);
-    if (window.crypto?.getRandomValues) {
-      window.crypto.getRandomValues(saltBytes);
-    }
-    const saltHex = Array.from(saltBytes).map((b) => b.toString(16).padStart(2, '0')).join('');
-    const digest = await sha256Hex(`lumina_cred:${saltHex}:${password}`);
-    await secureStorage.setItem(CRED_VERIFIER_PREFIX + emailHash.slice(0, 24), JSON.stringify({ salt: saltHex, digest }));
+    const saltBytes = globalThis.crypto.getRandomValues(new Uint8Array(16));
+    const saltHex = bytesToHex(saltBytes);
+    const digest = await pbkdf2Hex(`lumina_cred_v2:${email.toLowerCase().trim()}:${password}`, saltHex, 120_000);
+    await secureStorage.setItem(
+      CRED_VERIFIER_PREFIX + emailHash.slice(0, 24),
+      JSON.stringify({ v: 2, salt: saltHex, digest })
+    );
   } catch {}
 }
 
 export async function verifyLocalCredential(email: string, password: string): Promise<'valid' | 'invalid' | 'missing'> {
   if (typeof window === 'undefined' || !email || !password) return 'missing';
   try {
-    const emailHash = await sha256Hex(email.toLowerCase().trim());
+    const cleanEmail = email.toLowerCase().trim();
+    const emailHash = await sha256Hex(cleanEmail);
     const stored = await secureStorage.getItem(CRED_VERIFIER_PREFIX + emailHash.slice(0, 24));
     if (!stored) return 'missing';
     const parsed = JSON.parse(stored);
     if (!parsed?.salt || !parsed?.digest) return 'missing';
-    const candidate = await sha256Hex(`lumina_cred:${parsed.salt}:${password}`);
-    return candidate === parsed.digest ? 'valid' : 'invalid';
+
+    if (parsed.v === 2) {
+      const candidate = await pbkdf2Hex(`lumina_cred_v2:${cleanEmail}:${password}`, parsed.salt, 120_000);
+      return timingSafeEqualStr(candidate, parsed.digest) ? 'valid' : 'invalid';
+    }
+
+    // Legacy v1 verifier read + auto-upgrade on match
+    const legacyCandidate = await sha256Hex(`lumina_cred:${parsed.salt}:${password}`);
+    if (timingSafeEqualStr(legacyCandidate, parsed.digest)) {
+      await storeLocalCredentialVerifier(cleanEmail, password);
+      return 'valid';
+    }
+    return 'invalid';
   } catch {
     return 'missing';
   }
@@ -262,10 +465,10 @@ const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 
 export function generateTotpSecret(length: number = 32): string {
   const bytes = new Uint8Array(length);
-  if (typeof window !== 'undefined' && window.crypto?.getRandomValues) {
-    window.crypto.getRandomValues(bytes);
+  if (typeof globalThis !== 'undefined' && globalThis.crypto?.getRandomValues) {
+    globalThis.crypto.getRandomValues(bytes);
   } else {
-    for (let i = 0; i < length; i++) bytes[i] = Math.floor(Math.random() * 256);
+    throw new Error('Cryptographic RNG unavailable.');
   }
   let secret = '';
   for (let i = 0; i < length; i++) {
@@ -299,8 +502,8 @@ export function buildOtpAuthUri(accountEmail: string, secret: string, issuer: st
 }
 
 export async function generateTotpToken(secret: string, stepOffset: number = 0): Promise<string> {
-  if (typeof window === 'undefined' || !window.crypto?.subtle) {
-    return '000000';
+  if (typeof globalThis === 'undefined' || !globalThis.crypto?.subtle) {
+    throw new Error('Web Crypto HMAC is unavailable.');
   }
   const keyBytes = base32ToBytes(secret);
   const counter = Math.floor(Date.now() / 1000 / 30) + stepOffset;
@@ -309,14 +512,14 @@ export async function generateTotpToken(secret: string, stepOffset: number = 0):
   view.setUint32(0, Math.floor(counter / 0x100000000), false);
   view.setUint32(4, counter >>> 0, false);
 
-  const hmacKey = await crypto.subtle.importKey(
+  const hmacKey = await globalThis.crypto.subtle.importKey(
     'raw',
     keyBytes as BufferSource,
     { name: 'HMAC', hash: 'SHA-1' },
     false,
     ['sign']
   );
-  const signature = new Uint8Array(await crypto.subtle.sign('HMAC', hmacKey, msg));
+  const signature = new Uint8Array(await globalThis.crypto.subtle.sign('HMAC', hmacKey, msg));
   const offset = signature[signature.length - 1] & 0x0f;
   const binary =
     ((signature[offset] & 0x7f) << 24) |
@@ -331,7 +534,7 @@ export async function verifyTotpCode(secret: string, submittedCode: string): Pro
   if (!/^\d{6}$/.test(cleaned) || !secret) return false;
   for (const offset of [-1, 0, 1]) {
     const expected = await generateTotpToken(secret, offset);
-    if (expected === cleaned) return true;
+    if (timingSafeEqualStr(expected, cleaned)) return true;
   }
   return false;
 }
@@ -343,9 +546,7 @@ export async function generateRecoveryCodes(count: number = 8): Promise<{ plainC
 
   for (let i = 0; i < count; i++) {
     const rand = new Uint8Array(8);
-    if (typeof window !== 'undefined' && window.crypto?.getRandomValues) {
-      window.crypto.getRandomValues(rand);
-    }
+    globalThis.crypto.getRandomValues(rand);
     let code = '';
     for (let j = 0; j < 8; j++) {
       if (j === 4) code += '-';
@@ -366,7 +567,7 @@ export async function verifyAndConsumeRecoveryCode(
   if (!normalized || hashes.length === 0) return { valid: false, updatedHashes: hashes };
 
   const targetHash = await sha256Hex(normalized);
-  const idx = hashes.indexOf(targetHash);
+  const idx = hashes.findIndex((h) => timingSafeEqualStr(h, targetHash));
   if (idx === -1) return { valid: false, updatedHashes: hashes };
 
   const updatedHashes = hashes.filter((_, i) => i !== idx);
@@ -381,9 +582,9 @@ export function getOrCreateDeviceSessionId(): string {
     let sid = localStorage.getItem(SESSION_ID_KEY);
     if (!sid) {
       const rand = new Uint8Array(12);
-      if (window.crypto?.getRandomValues) window.crypto.getRandomValues(rand);
+      window.crypto.getRandomValues(rand);
       const hex = Array.from(rand).map((b) => b.toString(16).padStart(2, '0')).join('');
-      sid = `sess_${hex || Date.now().toString(36)}`;
+      sid = `sess_${hex}`;
       localStorage.setItem(SESSION_ID_KEY, sid);
     }
     return sid;
@@ -466,7 +667,9 @@ export function getDefaultSecuritySettings(existing?: Partial<SecuritySettings>)
     sessionEpoch: existing?.sessionEpoch ?? 1,
     activeSessions: existing?.activeSessions ?? [],
     loginHistory: existing?.loginHistory ?? [],
-    biometricQuickUnlock: existing?.biometricQuickUnlock ?? true,
+    biometricQuickUnlock: existing?.biometricQuickUnlock ?? false,
+    biometricCredentialId: existing?.biometricCredentialId,
+    biometricPlatform: existing?.biometricPlatform,
     lastPasswordChangeAt: existing?.lastPasswordChangeAt,
     lastSecurityUpdateAt: existing?.lastSecurityUpdateAt,
   };
@@ -483,7 +686,6 @@ export function applyLoginSecurityAudit(
   const descriptor = getCurrentDeviceDescriptor();
   const prevSec = getDefaultSecuritySettings(user.securitySettings);
 
-  // Detect suspicious new device or timezone if previous successful logins exist
   const priorSuccess = prevSec.loginHistory.filter((h) => h.status === 'success');
   const knownDevice = priorSuccess.some((h) => h.deviceLabel === descriptor.deviceLabel);
   const knownTimezone = priorSuccess.some((h) => h.timezone === descriptor.timezone);

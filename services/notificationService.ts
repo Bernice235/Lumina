@@ -933,14 +933,32 @@ export function generatePregnancyNotificationText(
 
 // --- NATIVE MOBILE PUSH & LOCAL NOTIFICATION INTEGRATION (CAPACITOR) ---
 
-export const registerNativePush = async (): Promise<boolean> => {
+export function formatDiscreetOsNotification(
+  title: string,
+  body: string,
+  emoji: string = '🌸',
+  hidePreviews: boolean = true
+): { title: string; body: string } {
+  if (!hidePreviews) {
+    return {
+      title: emoji ? `${emoji} ${title}` : title,
+      body,
+    };
+  }
+  return {
+    title: 'Lumina Wellness',
+    body: 'You have a private wellness update waiting inside Lumina.',
+  };
+}
+
+export const registerNativePush = async (userConfirmedConsent: boolean = false): Promise<boolean> => {
   if (!Capacitor.isNativePlatform()) {
-    console.log('Push notification registration is only available on native Android/iOS devices.');
     return false;
   }
   try {
     let perm = await PushNotifications.checkPermissions();
     if (perm.receive !== 'granted') {
+      if (!userConfirmedConsent) return false;
       perm = await PushNotifications.requestPermissions();
     }
     if (perm.receive === 'granted') {
@@ -958,30 +976,38 @@ export const scheduleNativeLocalNotification = async (
   id: number,
   title: string,
   body: string,
-  triggerAt: Date
+  triggerAt: Date,
+  options?: { hidePreviews?: boolean; requestPermissionIfPrompted?: boolean }
 ): Promise<boolean> => {
   if (!Capacitor.isNativePlatform()) {
-    console.log('Local notification scheduling is only available on native Android/iOS devices.');
     return false;
   }
   try {
     let perm = await LocalNotifications.checkPermissions();
     if (perm.display !== 'granted') {
+      if (!options?.requestPermissionIfPrompted) {
+        return false;
+      }
       perm = await LocalNotifications.requestPermissions();
     }
     if (perm.display === 'granted') {
-      // Clear previous matching notification
       try {
         await LocalNotifications.cancel({ notifications: [{ id }] });
-      } catch (e) {
+      } catch {
         // Safe to ignore if not exists
       }
+      const discreet = formatDiscreetOsNotification(
+        title,
+        body,
+        '',
+        options?.hidePreviews ?? true
+      );
       await LocalNotifications.schedule({
         notifications: [
           {
             id,
-            title,
-            body,
+            title: discreet.title,
+            body: discreet.body,
             schedule: { at: triggerAt },
             sound: 'beep.wav',
             smallIcon: 'ic_stat_icon_config_sample',

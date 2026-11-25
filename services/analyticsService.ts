@@ -367,36 +367,59 @@ export const logCrashReport = async (
     const errorStack = (typeof error === 'string' ? '' : error.stack || '').slice(0, 1000);
     const timestamp = new Date().toISOString();
 
+    const safeContext: Record<string, any> = {};
+    for (const [k, v] of Object.entries(additionalContext || {})) {
+      const lower = k.toLowerCase();
+      if (
+        lower.includes('email') ||
+        lower.includes('password') ||
+        lower.includes('pin') ||
+        lower.includes('token') ||
+        lower.includes('secret') ||
+        lower.includes('diary') ||
+        lower.includes('symptom') ||
+        lower.includes('period') ||
+        lower.includes('note')
+      ) {
+        continue;
+      }
+      safeContext[k] = typeof v === 'string' ? v.slice(0, 120) : v;
+    }
+
+    const sanitizedMsg = errorMessage
+      .replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[redacted-email]')
+      .slice(0, 300);
+
     const crashReport = {
       id: `crash_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
       category,
-      errorMessage,
-      errorStack,
+      errorMessage: sanitizedMsg,
+      errorStack: errorStack.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[redacted-email]'),
       userId: currentUserId,
       deviceType: meta.deviceType,
       appVersion: meta.appVersion,
-      context: additionalContext,
+      context: safeContext,
       timestamp,
     };
 
     try {
       const localCrashes = JSON.parse(localStorage.getItem('lumina_crash_reports') || '[]');
       localCrashes.unshift(crashReport);
-      localStorage.setItem('lumina_crash_reports', JSON.stringify(localCrashes.slice(0, 100)));
+      localStorage.setItem('lumina_crash_reports', JSON.stringify(localCrashes.slice(0, 50)));
     } catch {}
 
     if (!hasConsent('analytics') && !hasConsent('performance')) return;
 
     if (firebaseAnalyticsInstance) {
       logEvent(firebaseAnalyticsInstance, 'app_exception', {
-        description: errorMessage.substring(0, 100),
+        description: sanitizedMsg.substring(0, 100),
         fatal: category === 'App Crash' || category === 'Screen Rendering',
         category,
       });
     }
 
     if (isAmplitudeInitialized) {
-      amplitude.track('App Exception', { category, error_message: errorMessage });
+      amplitude.track('App Exception', { category, error_message: sanitizedMsg });
     }
 
     if (db && auth.currentUser?.uid) {

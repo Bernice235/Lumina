@@ -30,6 +30,8 @@ import {
   Target
 } from 'lucide-react';
 import { trackOpenWellnessContent } from '../services/analyticsService';
+import { syncUser } from '../services/firebaseService';
+import { saveEncryptedSessionUser } from '../services/secureStorage';
 
 interface EndometriosisCareProps {
   user: User;
@@ -161,6 +163,14 @@ export const EndometriosisCare: React.FC<EndometriosisCareProps> = ({ user, setU
   const [selectedChars, setSelectedChars] = useState<string[]>(['Dull Heavy Aching']);
   const [painNotes, setPainNotes] = useState<string>('');
   const [painSuccessMsg, setPainSuccessMsg] = useState<string>('');
+  const [painErrorMsg, setPainErrorMsg] = useState<string>('');
+
+  const persistEndoUpdate = (updatedUser: User) => {
+    setUser(updatedUser);
+    const rememberPref = localStorage.getItem('lumina_remember_me') !== 'false';
+    void saveEncryptedSessionUser(updatedUser, rememberPref);
+    void syncUser(updatedUser);
+  };
 
   // Mental wellness form state
   const [mentalMood, setMentalMood] = useState<string>('Resilient');
@@ -220,9 +230,10 @@ export const EndometriosisCare: React.FC<EndometriosisCareProps> = ({ user, setU
 
   const handleSavePainLog = () => {
     if (selectedLocations.length === 0) {
-      alert('Please select at least one pain location.');
+      setPainErrorMsg('Please select at least one pain location before saving.');
       return;
     }
+    setPainErrorMsg('');
 
     const newLog: EndoPainLog = {
       id: `endo_pain_${Date.now()}`,
@@ -241,8 +252,7 @@ export const EndometriosisCare: React.FC<EndometriosisCareProps> = ({ user, setU
       endoPainLogs: updatedLogs
     };
 
-    setUser(updatedUser);
-    localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+    persistEndoUpdate(updatedUser);
     
     setPainNotes('');
     setPainSuccessMsg('✨ Pain pattern logged safely to your Endometriosis record!');
@@ -255,8 +265,7 @@ export const EndometriosisCare: React.FC<EndometriosisCareProps> = ({ user, setU
       ...user,
       endoPainLogs: updatedLogs
     };
-    setUser(updatedUser);
-    localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+    persistEndoUpdate(updatedUser);
   };
 
   const handleSaveMentalLog = () => {
@@ -275,8 +284,7 @@ export const EndometriosisCare: React.FC<EndometriosisCareProps> = ({ user, setU
       endoMentalLogs: updatedLogs
     };
 
-    setUser(updatedUser);
-    localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+    persistEndoUpdate(updatedUser);
     
     setMentalNotes('');
     setMentalSuccessMsg('💖 Mental wellness check-in saved! Be gentle with yourself today.');
@@ -289,8 +297,7 @@ export const EndometriosisCare: React.FC<EndometriosisCareProps> = ({ user, setU
       ...user,
       endoMentalLogs: updatedLogs
     };
-    setUser(updatedUser);
-    localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+    persistEndoUpdate(updatedUser);
   };
 
   const handleToggleQuestion = (id: string) => {
@@ -301,8 +308,7 @@ export const EndometriosisCare: React.FC<EndometriosisCareProps> = ({ user, setU
       ...user,
       endoSpecialistQuestions: updatedQuestions
     };
-    setUser(updatedUser);
-    localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+    persistEndoUpdate(updatedUser);
   };
 
   const handleAddCustomQuestion = () => {
@@ -321,8 +327,7 @@ export const EndometriosisCare: React.FC<EndometriosisCareProps> = ({ user, setU
       ...user,
       endoSpecialistQuestions: updatedQuestions
     };
-    setUser(updatedUser);
-    localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+    persistEndoUpdate(updatedUser);
     setCustomQuestion('');
   };
 
@@ -332,8 +337,7 @@ export const EndometriosisCare: React.FC<EndometriosisCareProps> = ({ user, setU
       ...user,
       endoSpecialistQuestions: updatedQuestions
     };
-    setUser(updatedUser);
-    localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+    persistEndoUpdate(updatedUser);
   };
 
   const handlePrintSummary = () => {
@@ -634,6 +638,12 @@ export const EndometriosisCare: React.FC<EndometriosisCareProps> = ({ user, setU
                 className="w-full p-4 rounded-2xl bg-indigo-50/30 border border-indigo-100 text-xs text-gray-700 outline-none focus:border-indigo-400 shadow-inner font-serif italic"
               />
             </div>
+
+            {painErrorMsg && (
+              <div role="alert" className="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-rose-700 font-bold text-xs flex items-center gap-2 animate-fadeIn">
+                <AlertCircle size={16} /> {painErrorMsg}
+              </div>
+            )}
 
             {painSuccessMsg && (
               <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-700 font-bold text-xs flex items-center gap-2 animate-fadeIn">

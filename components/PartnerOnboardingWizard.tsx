@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { syncUser } from '../services/firebaseService';
 import { trackCompleteOnboarding } from '../services/analyticsService';
+import { saveEncryptedSessionUser, secureStorage } from '../services/secureStorage';
 
 interface PartnerOnboardingWizardProps {
   user: User;
@@ -178,9 +179,10 @@ export const PartnerOnboardingWizard: React.FC<PartnerOnboardingWizardProps> = (
     };
 
     setUser(updatedUser);
-    localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+    const rememberPref = localStorage.getItem('lumina_remember_me') !== 'false';
+    void saveEncryptedSessionUser(updatedUser, rememberPref);
     if (updatedUser.email) {
-      localStorage.setItem('lumina_user_email_' + updatedUser.email.toLowerCase().trim(), JSON.stringify(updatedUser));
+      void secureStorage.setItem('offline_user_' + updatedUser.email.toLowerCase().trim(), JSON.stringify(updatedUser));
     }
     syncUser(updatedUser);
     trackCompleteOnboarding(true);

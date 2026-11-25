@@ -32,10 +32,16 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(userId)).data;
     }
 
-    function isPartnerOf(userId) {
+    function isMutuallyLinkedPartnerOf(userId) {
       return isSignedIn() &&
+             request.auth.uid != userId &&
              exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             getUserData(request.auth.uid).partnerId == userId;
+             exists(/databases/$(database)/documents/users/$(userId)) &&
+             getUserData(request.auth.uid).get('isPartnerLinked', false) == true &&
+             getUserData(request.auth.uid).get('partnerId', '') == userId &&
+             getUserData(userId).get('isPartnerLinked', false) == true &&
+             getUserData(userId).get('partnerId', '') == request.auth.uid &&
+             getUserData(userId).get('isSharingPaused', false) == false;
     }
 
     function isBoundedString(val, minLen, maxLen) {
@@ -58,7 +64,28 @@ service cloud.firestore {
              (!('symptoms' in data) || (data.symptoms is list && data.symptoms.size() <= 1000)) &&
              (!('moodLogs' in data) || (data.moodLogs is list && data.moodLogs.size() <= 1000)) &&
              (!('diaryEntries' in data) || (data.diaryEntries is list && data.diaryEntries.size() <= 500)) &&
+             (!('diaryPinHash' in data) || isBoundedString(data.diaryPinHash, 32, 128)) &&
+             (!('diaryPinSalt' in data) || isBoundedString(data.diaryPinSalt, 16, 128)) &&
              (!('isAdmin' in data));
+    }
+
+    function isValidPartnerSharedSummary(data, userId) {
+      return data.keys().hasAll(['ownerId', 'ownerName', 'isPartnerLinked', 'isSharingPaused', 'updatedAt', 'sharingSettings']) &&
+             data.ownerId == userId &&
+             isBoundedString(data.ownerName, 1, 120) &&
+             data.isPartnerLinked is bool &&
+             data.isSharingPaused is bool &&
+             isBoundedString(data.updatedAt, 10, 64) &&
+             data.sharingSettings is map &&
+             !('diaryEntries' in data) &&
+             !('diaryPin' in data) &&
+             !('diaryPinHash' in data) &&
+             !('diaryPinSalt' in data) &&
+             !('securitySettings' in data) &&
+             !('privacyPreferences' in data) &&
+             !('backupMetadata' in data) &&
+             !('email' in data) &&
+             !('billingHistory' in data);
     }
 
     function isValidInvite(data) {
@@ -121,46 +148,51 @@ service cloud.firestore {
     // --- Collection Rules ---
 
     match /users/{userId} {
-      allow get: if isValidId(userId) && (isOwner(userId) || isPartnerOf(userId));
+      // Strictly owner-only read; partners read only consented projections under /partner_shared/summary
+      allow get: if isValidId(userId) && isOwner(userId);
       allow list: if false;
-      allow create: if isValidId(userId) && isOwner(userId) && isValidUser(incoming()) && incoming().id == request.auth.uid;
-      allow update: if isValidId(userId) && isSignedIn() && isValidUser(incoming()) && (
-        // Tier 1: Owner updates own profile while keeping id immutable and verified email intact
-        (
-          isOwner(userId) &&
-          incoming().id == existing().id &&
-          (incoming().email == existing().email || incoming().email == request.auth.token.email)
-        ) ||
-        // Tier 2A: Requesting partner initiates a pending link on an unlinked target account
-        (
-          existing().get('isPartnerLinked', false) == false &&
-          (existing().get('partnerId', null) == null || existing().get('partnerId', '') == '' || existing().get('partnerId', '') == request.auth.uid) &&
-          incoming().diff(existing()).affectedKeys().hasOnly(['partnerId', 'partnerName', 'isPartnerLinked', 'partnerRequest', 'notifications']) &&
-          incoming().partnerId == request.auth.uid &&
-          incoming().get('isPartnerLinked', false) == false &&
-          (!('partnerRequest' in incoming()) || (incoming().partnerRequest is map && incoming().partnerRequest.partnerId == request.auth.uid && incoming().partnerRequest.status == 'pending'))
-        ) ||
-        // Tier 2B: Linked partner disconnects mutual link cleanly
-        (
-          isPartnerOf(userId) &&
-          incoming().diff(existing()).affectedKeys().hasOnly(['partnerId', 'partnerName', 'isPartnerLinked']) &&
-          incoming().partnerId == null &&
-          incoming().get('isPartnerLinked', false) == false
-        ) ||
-        // Tier 2C: Linked partner sends an update notification
-        (
-          isPartnerOf(userId) &&
-          incoming().diff(existing()).affectedKeys().hasOnly(['notifications'])
-        )
-      );
+      allow create: if isValidId(userId) &&
+                       isOwner(userId) &&
+                       isValidUser(incoming()) &&
+                       incoming().id == request.auth.uid &&
+                       incoming().get('isPremium', false) == false;
+      allow update: if isValidId(userId) &&
+                       isOwner(userId) &&
+                       isValidUser(incoming()) &&
+                       incoming().id == existing().id &&
+                       (incoming().email == existing().email || incoming().email == request.auth.token.email) &&
+                       (
+                         incoming().get('isPremium', false) == existing().get('isPremium', false) ||
+                         incoming().get('isPremium', false) == false ||
+                         (
+                           incoming().get('isPremium', false) == true &&
+                           incoming().get('subscriptionStatus', 'none') == 'active' &&
+                           incoming().get('subscriptionPlan', 'free') in ['monthly', '6month', 'yearly'] &&
+                           'subscriptionEnd' in incoming() &&
+                           isBoundedString(incoming().subscriptionEnd, 10, 64)
+                         )
+                       );
       allow delete: if isValidId(userId) && isOwner(userId);
+
+      // Projected consented summary view accessible strictly to mutually linked non-paused partner
+      match /partner_shared/{docId} {
+        allow get: if isValidId(userId) &&
+                      docId == 'summary' &&
+                      (isOwner(userId) || isMutuallyLinkedPartnerOf(userId));
+        allow list: if false;
+        allow create, update: if isValidId(userId) &&
+                                 docId == 'summary' &&
+                                 isOwner(userId) &&
+                                 isValidPartnerSharedSummary(incoming(), userId);
+        allow delete: if isValidId(userId) && docId == 'summary' && isOwner(userId);
+      }
 
       match /gifts/{giftId} {
         allow get, list: if isValidId(userId) && isOwner(userId);
         allow create: if isValidId(userId) && isValidId(giftId) && isSignedIn() &&
                          isValidGift(incoming()) &&
                          exists(/databases/$(database)/documents/users/$(userId)) &&
-                         (isPartnerOf(userId) || isOwner(userId));
+                         (isMutuallyLinkedPartnerOf(userId) || isOwner(userId));
         allow update: if false;
         allow delete: if isValidId(userId) && isValidId(giftId) && isOwner(userId);
       }
@@ -174,7 +206,7 @@ service cloud.firestore {
       allow delete: if isValidId(code) && isSignedIn() && (
         existing().senderId == request.auth.uid ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-         getUserData(request.auth.uid).partnerId == existing().senderId)
+         getUserData(request.auth.uid).get('partnerId', '') == existing().senderId)
       );
     }
 
@@ -191,14 +223,12 @@ service cloud.firestore {
                        incoming().user_id == existing().user_id &&
                        incoming().partner_id == existing().partner_id &&
                        incoming().created_at == existing().created_at && (
-        // Recipient updates approval status
         (
           request.auth.uid == existing().user_id &&
           existing().status == 'pending' &&
           incoming().diff(existing()).affectedKeys().hasOnly(['status']) &&
           incoming().status in ['approved', 'declined']
         ) ||
-        // Requester updates non-immutable request metadata while pending
         (
           request.auth.uid == existing().partner_id &&
           existing().status == 'pending' &&

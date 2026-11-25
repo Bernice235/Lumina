@@ -84,11 +84,21 @@ import {
   checkClientRateLimit,
   evaluatePasswordStrength,
   getDefaultSecuritySettings,
+  hashDiaryPin,
   isHoneypotTriggered,
   isValidEmailAddress,
   sanitizeTextInput,
   storeLocalCredentialVerifier,
+  userHasConfiguredPin,
+  validateNewDiaryPin,
 } from '../services/securityService';
+import { saveEncryptedSessionUser } from '../services/secureStorage';
+import {
+  BiometricCapability,
+  enrollBiometricForUser,
+  getBiometricCapability,
+  revokeBiometricForUser,
+} from '../services/biometricService';
 import { doc, getDoc } from 'firebase/firestore';
 import { db, auth } from '../services/firebase';
 import { updateEmail, updatePassword } from 'firebase/auth';
@@ -174,10 +184,31 @@ const Settings: React.FC<SettingsProps> = ({
   const [importPassphrase, setImportPassphrase] = useState('');
   const [musicNotice, setMusicNotice] = useState<string | null>(null);
   const [partnerActionNotice, setPartnerActionNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [biometricCap, setBiometricCap] = useState<BiometricCapability | null>(null);
+  const [bioBusy, setBioBusy] = useState(false);
+  const [bioFeedback, setBioFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [pinDraft, setPinDraft] = useState('');
+  const [pinConfirmDraft, setPinConfirmDraft] = useState('');
+  const [pinFeedback, setPinFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [pinSaving, setPinSaving] = useState(false);
+
+  const persistUserLocally = (nextUser: User) => {
+    setUser(nextUser);
+    localStorage.removeItem('lumina_user');
+    localStorage.removeItem('lumina_biometric_user');
+    const rememberPref = localStorage.getItem('lumina_remember_me') !== 'false';
+    void saveEncryptedSessionUser(nextUser, rememberPref);
+  };
 
   React.useEffect(() => {
     setActiveSubTab(getMappedTab(initialSubTab));
   }, [initialSubTab]);
+
+  React.useEffect(() => {
+    if (activeSubTab === 'privacy_security' && user?.id) {
+      getBiometricCapability(user.id).then(setBiometricCap).catch(() => {});
+    }
+  }, [activeSubTab, user?.id, user?.biometricsEnabled]);
 
   React.useEffect(() => {
     if (activeSubTab === 'backup_sync' && user?.id) {
@@ -231,8 +262,7 @@ const Settings: React.FC<SettingsProps> = ({
         `Downloaded ${result.encrypted ? 'AES-256 encrypted' : 'checksum-verified'} backup (${result.filename}).`,
         '📦'
       );
-      setUser(updatedUser);
-      localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+      persistUserLocally(updatedUser);
       syncUser(updatedUser);
       if (encrypted) setExportPassphrase('');
       setLocalFeedback({
@@ -297,8 +327,7 @@ const Settings: React.FC<SettingsProps> = ({
         `${partnerToBlock.name} was disconnected and added to your blocked list.`,
         '🛡️'
       );
-      setUser(updatedUser);
-      localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+      persistUserLocally(updatedUser);
       setPartnerActionNotice({ type: 'success', text: `${partnerToBlock.name} has been blocked.` });
     } catch (err) {
       console.error("Error blocking partner:", err);
@@ -321,8 +350,7 @@ const Settings: React.FC<SettingsProps> = ({
         `${partnerToUnblock.name} was removed from your blocked list.`,
         '🔓'
       );
-      setUser(updatedUser);
-      localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+      persistUserLocally(updatedUser);
       setPartnerActionNotice({ type: 'success', text: `${partnerToUnblock.name} has been unblocked.` });
     } catch (err) {
       console.error("Error unblocking partner:", err);
@@ -430,9 +458,8 @@ const Settings: React.FC<SettingsProps> = ({
         }
       }
 
-      // Save user state
-      setUser(updatedUser);
-      localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+      // Save user state cleanly into encrypted storage + Firestore
+      persistUserLocally(updatedUser);
       await syncUser(updatedUser);
 
       setProfileFeedback({ type: 'success', text: 'Profile updated securely! ✨' });
@@ -469,9 +496,7 @@ const Settings: React.FC<SettingsProps> = ({
           ...cloudUser,
           onboardingCompleted: true
         };
-        setUser(restoredUser);
-        localStorage.setItem('lumina_user', JSON.stringify(restoredUser));
-        localStorage.setItem('lumina_biometric_user', JSON.stringify(restoredUser));
+        persistUserLocally(restoredUser);
         setCloudFeedback({ type: 'success', text: 'Your health data has been successfully restored from the cloud! 🌸' });
       } else {
         setCloudFeedback({ type: 'error', text: 'No cloud backup was found for this account.' });
@@ -506,11 +531,7 @@ const Settings: React.FC<SettingsProps> = ({
         '📥'
       );
 
-      setUser(audited);
-      localStorage.setItem('lumina_user', JSON.stringify(audited));
-      if (localStorage.getItem('lumina_biometric_user')) {
-        localStorage.setItem('lumina_biometric_user', JSON.stringify(audited));
-      }
+      persistUserLocally(audited);
       syncUser(audited);
       setPendingEncryptedImport(null);
       setImportPassphrase('');
@@ -541,8 +562,7 @@ const Settings: React.FC<SettingsProps> = ({
         `Restored automatic snapshot from ${new Date(snapshot.createdAt).toLocaleString()} (${snapshot.recordCount} records).`,
         '⏪'
       );
-      setUser(audited);
-      localStorage.setItem('lumina_user', JSON.stringify(audited));
+      persistUserLocally(audited);
       syncUser(audited);
       setLocalFeedback({
         type: 'success',
@@ -578,8 +598,7 @@ const Settings: React.FC<SettingsProps> = ({
         ...newSettings
       }
     };
-    setUser(updatedUser);
-    localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+    persistUserLocally(updatedUser);
   };
 
   const updateTypes = (key: keyof NotificationSettings['types'], value: boolean) => {
@@ -634,8 +653,7 @@ const Settings: React.FC<SettingsProps> = ({
         [key]: value
       }
     };
-    setUser(updatedUser);
-    localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+    persistUserLocally(updatedUser);
     syncUser(updatedUser);
   };
 
@@ -1087,8 +1105,7 @@ const Settings: React.FC<SettingsProps> = ({
                             }
                           }
                         };
-                        setUser(updatedUser);
-                        localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+                        persistUserLocally(updatedUser);
                       }
                     }}
                     className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
@@ -1121,8 +1138,7 @@ const Settings: React.FC<SettingsProps> = ({
                             }
                           }
                         };
-                        setUser(updatedUser);
-                        localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+                        persistUserLocally(updatedUser);
                       }
                     }}
                     className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
@@ -1166,8 +1182,7 @@ const Settings: React.FC<SettingsProps> = ({
                           ...user,
                           pregnancyStartDate: e.target.value
                         };
-                        setUser(updatedUser);
-                        localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+                        persistUserLocally(updatedUser);
                       }}
                       className="bg-amber-50/60 px-3 py-2 rounded-xl outline-none font-bold text-xs text-amber-800 border border-amber-200/60 text-center shadow-inner"
                     />
@@ -1387,8 +1402,7 @@ const Settings: React.FC<SettingsProps> = ({
                 type="button"
                 onClick={() => {
                   const resetUser = { ...user, onboardingCompleted: false };
-                  setUser(resetUser);
-                  localStorage.setItem('lumina_user', JSON.stringify(resetUser));
+                  persistUserLocally(resetUser);
                   syncUser(resetUser);
                   if (setActiveTab) setActiveTab('dashboard');
                 }}
@@ -1564,8 +1578,7 @@ const Settings: React.FC<SettingsProps> = ({
           <PrivacyDashboard
             user={user}
             onUpdateUser={(next) => {
-              setUser(next);
-              localStorage.setItem('lumina_user', JSON.stringify(next));
+              persistUserLocally(next);
               syncUser(next);
             }}
             onLogoutAllDevices={() => {
@@ -1579,16 +1592,16 @@ const Settings: React.FC<SettingsProps> = ({
             embedded={true}
           />
 
-          {/* Quick Device App Lock (Biometrics & Journal PIN) */}
+          {/* Quick Device App Lock (Real Biometrics & Salted Security PIN) */}
           <section className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-pink-50 space-y-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="space-y-1">
                 <h3 className="text-xl font-serif font-bold text-stone-800 flex items-center gap-2">
                   <Lock size={20} className="text-pink-500" />
-                  Device App Lock & Cookie Controls
+                  Device App Lock &amp; Cookie Controls
                 </h3>
                 <p className="text-xs text-stone-600 leading-relaxed">
-                  Configure device-level biometric unlock, diary PIN, and cookie consent choices.
+                  Configure native Face ID / Fingerprint / WebAuthn passkeys and your private salted diary PIN.
                 </p>
               </div>
               <button
@@ -1602,29 +1615,72 @@ const Settings: React.FC<SettingsProps> = ({
             </div>
 
             <div className="space-y-5">
-              {/* Face ID / Fingerprint Toggle */}
+              {/* Genuine Biometric Enrollment Toggle */}
               <div className="bg-rose-50/30 p-5 rounded-3xl border border-rose-100/40 flex flex-col gap-3">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-4">
                   <div className="space-y-0.5">
                     <p className="text-xs font-bold text-stone-800 flex items-center gap-1.5">
                       <Fingerprint size={15} className="text-pink-500" />
-                      Face ID / Fingerprint Login
+                      {biometricCap?.biometryLabel || 'Face ID / Fingerprint / Passkey'}
                     </p>
-                    <p className="text-[11px] text-stone-600">Unlock Lumina quickly and securely using your device biometrics</p>
+                    <p className="text-[11px] text-stone-600">
+                      {biometricCap?.available
+                        ? 'Requires live hardware biometric confirmation before enabling or unlocking.'
+                        : biometricCap?.reason || 'No platform biometric sensor detected on this device; use a private Security PIN.'}
+                    </p>
                   </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      aria-label="Toggle Face ID or Fingerprint login"
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                    <input
+                      type="checkbox"
+                      aria-label="Toggle biometric app lock"
                       className="sr-only peer"
-                      checked={!!localStorage.getItem('lumina_biometric_user')}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          localStorage.setItem('lumina_biometric_user', JSON.stringify(user));
-                          setUser({ ...user });
-                        } else {
-                          localStorage.removeItem('lumina_biometric_user');
-                          setUser({ ...user });
+                      disabled={bioBusy}
+                      checked={Boolean(user.biometricsEnabled || user.securitySettings?.biometricQuickUnlock)}
+                      onChange={async (e) => {
+                        setBioFeedback(null);
+                        const wantEnable = e.target.checked;
+                        setBioBusy(true);
+                        try {
+                          if (wantEnable) {
+                            const res = await enrollBiometricForUser(user);
+                            if (!res.verified) {
+                              setBioFeedback({ type: 'error', text: res.message });
+                              return;
+                            }
+                            const nextSec = {
+                              ...getDefaultSecuritySettings(user.securitySettings),
+                              biometricQuickUnlock: true,
+                              biometricCredentialId: res.credentialId,
+                              biometricPlatform: biometricCap?.platform || 'web',
+                            };
+                            const updatedUser = appendSecurityEventToUser(
+                              { ...user, biometricsEnabled: true, securitySettings: nextSec },
+                              'Biometric App Lock Enabled',
+                              `${biometricCap?.biometryLabel || 'Device Biometrics'} verified and enabled for this device.`,
+                              '🔑'
+                            );
+                            persistUserLocally(updatedUser);
+                            await syncUser(updatedUser);
+                            setBioFeedback({ type: 'success', text: res.message });
+                          } else {
+                            await revokeBiometricForUser(user.id);
+                            const nextSec = {
+                              ...getDefaultSecuritySettings(user.securitySettings),
+                              biometricQuickUnlock: false,
+                              biometricCredentialId: undefined,
+                            };
+                            const updatedUser = appendSecurityEventToUser(
+                              { ...user, biometricsEnabled: false, securitySettings: nextSec },
+                              'Biometric App Lock Disabled',
+                              'Device biometric unlock was removed from your sanctuary settings.',
+                              '🔓'
+                            );
+                            persistUserLocally(updatedUser);
+                            await syncUser(updatedUser);
+                            setBioFeedback({ type: 'success', text: 'Biometric lock disabled cleanly.' });
+                          }
+                        } finally {
+                          setBioBusy(false);
                         }
                       }}
                     />
@@ -1632,48 +1688,131 @@ const Settings: React.FC<SettingsProps> = ({
                   </label>
                 </div>
 
+                {bioFeedback && (
+                  <div
+                    role="status"
+                    className={`p-3 rounded-2xl text-[11px] font-semibold border ${
+                      bioFeedback.type === 'success'
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                        : 'bg-rose-50 text-rose-700 border-rose-200'
+                    }`}
+                  >
+                    {bioFeedback.text}
+                  </div>
+                )}
+
                 <div className="pt-2 border-t border-rose-100/40">
-                  {localStorage.getItem('lumina_biometric_user') ? (
+                  {user.biometricsEnabled || user.securitySettings?.biometricQuickUnlock ? (
                     <span className="text-[11px] text-emerald-700 font-semibold flex items-center gap-1">
                       <CheckCircle2 size={13} />
-                      Enabled • Quick biometric unlock active
+                      Enabled • Genuine biometric verification required on resume
                     </span>
                   ) : (
                     <span className="text-[11px] text-stone-600 font-medium">
-                      Disabled • Unlock with your password or PIN
+                      Disabled • Unlock with your account password or private PIN
                     </span>
                   )}
                 </div>
               </div>
 
-              {/* Set custom 4-digit PIN */}
-              <div className="bg-rose-50/20 p-5 rounded-3xl border border-rose-100/40 flex flex-col gap-2">
-                <label htmlFor="settings-diary-pin" className="text-xs font-bold text-stone-700 flex items-center gap-1.5">
-                  <Lock size={14} className="text-pink-500" />
-                  Security PIN
-                </label>
-                <div className="relative">
-                  <input 
+              {/* Set / Update Private Salted 4-6 Digit Security PIN */}
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  setPinFeedback(null);
+                  const check = validateNewDiaryPin(pinDraft);
+                  if (!check.valid) {
+                    setPinFeedback({ type: 'error', text: check.error || 'Choose a valid 4–6 digit PIN.' });
+                    return;
+                  }
+                  if (pinDraft !== pinConfirmDraft) {
+                    setPinFeedback({ type: 'error', text: 'Your two PIN entries do not match.' });
+                    return;
+                  }
+                  setPinSaving(true);
+                  try {
+                    const { hash, salt } = await hashDiaryPin(pinDraft);
+                    const updatedUser = appendSecurityEventToUser(
+                      { ...user, diaryPin: undefined, diaryPinHash: hash, diaryPinSalt: salt },
+                      'Security PIN Updated',
+                      'Your Secret Diary & Sanctuary PIN was updated with salted PBKDF2-SHA256 encryption.',
+                      '🔐'
+                    );
+                    persistUserLocally(updatedUser);
+                    await syncUser(updatedUser);
+                    setPinDraft('');
+                    setPinConfirmDraft('');
+                    setPinFeedback({ type: 'success', text: 'Private Security PIN saved and salted securely.' });
+                  } catch {
+                    setPinFeedback({ type: 'error', text: 'Unable to save Security PIN right now.' });
+                  } finally {
+                    setPinSaving(false);
+                  }
+                }}
+                className="bg-rose-50/20 p-5 rounded-3xl border border-rose-100/40 flex flex-col gap-3"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <label htmlFor="settings-diary-pin" className="text-xs font-bold text-stone-700 flex items-center gap-1.5">
+                    <Lock size={14} className="text-pink-500" />
+                    Private Security &amp; Diary PIN
+                  </label>
+                  <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
+                    userHasConfiguredPin(user) ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
+                  }`}>
+                    {userHasConfiguredPin(user) ? 'Configured' : 'Not Set'}
+                  </span>
+                </div>
+
+                {pinFeedback && (
+                  <div
+                    role="status"
+                    className={`p-3 rounded-2xl text-[11px] font-semibold border ${
+                      pinFeedback.type === 'success'
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                        : 'bg-rose-50 text-rose-700 border-rose-200'
+                    }`}
+                  >
+                    {pinFeedback.text}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <input
                     id="settings-diary-pin"
-                    type="text" 
-                    maxLength={4}
-                    value={user.diaryPin || '1234'} 
-                    onChange={(e) => {
-                      const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 4) || '1234';
-                      const updatedUser = { ...user, diaryPin: val };
-                      setUser(updatedUser);
-                      localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
-                      syncUser(updatedUser);
-                      if (localStorage.getItem('lumina_biometric_user')) {
-                        localStorage.setItem('lumina_biometric_user', JSON.stringify(updatedUser));
-                      }
-                    }}
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={6}
+                    value={pinDraft}
+                    onChange={(e) => setPinDraft(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
                     className="bg-white px-4 py-3 rounded-2xl outline-none font-bold text-sm tracking-[0.4em] text-pink-700 border border-pink-100 shadow-sm w-full focus:border-pink-300 transition-colors text-center"
-                    placeholder="1234"
+                    placeholder="New 4–6 digit PIN"
+                    aria-label="New 4 to 6 digit PIN"
+                  />
+                  <input
+                    id="settings-diary-pin-confirm"
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={6}
+                    value={pinConfirmDraft}
+                    onChange={(e) => setPinConfirmDraft(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                    className="bg-white px-4 py-3 rounded-2xl outline-none font-bold text-sm tracking-[0.4em] text-pink-700 border border-pink-100 shadow-sm w-full focus:border-pink-300 transition-colors text-center"
+                    placeholder="Confirm PIN"
+                    aria-label="Confirm PIN"
                   />
                 </div>
-                <span className="text-[11px] text-stone-600">Use this 4-digit PIN to keep your personal journal notes and wellness entries private</span>
-              </div>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-[11px] text-stone-600">
+                    Stored only as a salted PBKDF2-SHA256 hash. Weak codes like 1234 are rejected.
+                  </span>
+                  <button
+                    type="submit"
+                    disabled={pinSaving || pinDraft.length < 4}
+                    className="px-4 py-2 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-xl text-xs font-bold cursor-pointer disabled:opacity-40"
+                  >
+                    {pinSaving ? 'Encrypting...' : userHasConfiguredPin(user) ? 'Update Private PIN' : 'Set Private PIN'}
+                  </button>
+                </div>
+              </form>
             </div>
           </section>
 
@@ -1809,8 +1948,7 @@ const Settings: React.FC<SettingsProps> = ({
                           snapshotCount: autoSnapshots.length,
                         },
                       };
-                      setUser(nextUser);
-                      localStorage.setItem('lumina_user', JSON.stringify(nextUser));
+                      persistUserLocally(nextUser);
                       syncUser(nextUser);
                     }}
                   />
@@ -1841,8 +1979,7 @@ const Settings: React.FC<SettingsProps> = ({
                           snapshotCount: nextList.length,
                         },
                       };
-                      setUser(nextUser);
-                      localStorage.setItem('lumina_user', JSON.stringify(nextUser));
+                      persistUserLocally(nextUser);
                       setLocalFeedback({ type: 'success', text: `Encrypted snapshot saved (${snap.recordCount} records, SHA-256 ${snap.checksum.slice(0, 10)}…).` });
                     }
                   }}
@@ -2309,8 +2446,7 @@ const Settings: React.FC<SettingsProps> = ({
                       const val = e.target.checked;
                       updateSettings({ welcomeVoiceEnabled: val, voiceGreetingsEnabled: val });
                       const updatedUser = { ...user, welcomeVoiceEnabled: val, voiceGreetingsEnabled: val };
-                      setUser(updatedUser);
-                      localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+                      persistUserLocally(updatedUser);
                       syncUser(updatedUser);
                     }}
                   />
@@ -2336,8 +2472,7 @@ const Settings: React.FC<SettingsProps> = ({
                       const val = e.target.checked;
                       updateSettings({ dailyAffirmationsEnabled: val });
                       const updatedUser = { ...user, dailyAffirmationsEnabled: val };
-                      setUser(updatedUser);
-                      localStorage.setItem('lumina_user', JSON.stringify(updatedUser));
+                      persistUserLocally(updatedUser);
                       syncUser(updatedUser);
                     }}
                   />
@@ -2938,13 +3073,100 @@ const Settings: React.FC<SettingsProps> = ({
       /* 12. PREMIUM */
       /* ========================================================================= */
       ) : activeSubTab === 'premium' ? (
-        <div className="space-y-6 animate-fadeIn text-center">
-          <div className="bg-white p-8 rounded-[2.5rem] border border-pink-50 space-y-4 max-w-md mx-auto">
-            <span className="text-4xl">👑</span>
-            <h3 className="text-xl font-serif font-bold text-stone-800">Lumina Premium</h3>
-            <p className="text-xs text-stone-500 leading-relaxed">
-              Lumina is currently free for you. All cycle tracking, doctor reports, self-care guides, and soundscapes are unlocked! ✨
-            </p>
+        <div className="space-y-6 animate-fadeIn">
+          <div className="bg-white p-6 md:p-8 rounded-[2.5rem] border border-pink-100 shadow-sm space-y-5 max-w-2xl mx-auto text-center">
+            <span className="text-4xl inline-block">👑</span>
+            <h3 className="text-2xl font-serif font-bold text-stone-800">Lumina Premium</h3>
+            {user.isPremium ? (
+              <div className="space-y-2">
+                <span className="inline-block px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold uppercase tracking-wider">
+                  Active Subscription {user.subscriptionPlan ? `(${user.subscriptionPlan})` : ''}
+                </span>
+                <p className="text-xs text-stone-600">
+                  {user.subscriptionEnd
+                    ? `Verified through ${new Date(user.subscriptionEnd).toLocaleDateString()}.`
+                    : 'All Lumina Premium features are active on your account.'}
+                </p>
+              </div>
+            ) : (
+              <p className="text-xs text-stone-600 max-w-md mx-auto leading-relaxed">
+                Upgrade with verified in-app billing (App Store / Google Play via RevenueCat or verified Paystack checkout) to unlock AI Doctor Reports, deep cycle trends, and full soundscapes.
+              </p>
+            )}
+
+            {billingError && (
+              <div role="alert" className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-700 font-medium">
+                {billingError}
+              </div>
+            )}
+            {billingSuccess && (
+              <div role="status" className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 font-medium">
+                {billingSuccess}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-left">
+              {REVENUECAT_PLANS.map((plan) => (
+                <button
+                  key={plan.id}
+                  type="button"
+                  onClick={() => setSelectedPlanId(plan.id)}
+                  className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+                    selectedPlanId === plan.id
+                      ? 'border-pink-500 bg-pink-50/70 shadow-sm'
+                      : 'border-pink-100 bg-white hover:border-pink-200'
+                  }`}
+                >
+                  <p className="text-xs font-bold text-stone-800">{plan.name}</p>
+                  <p className="text-lg font-serif font-extrabold text-pink-600 mt-1">{plan.priceFormatted}</p>
+                  <p className="text-[11px] text-stone-500 mt-0.5">{plan.description}</p>
+                </button>
+              ))}
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+              <button
+                type="button"
+                onClick={async () => {
+                  setBillingError(null);
+                  setBillingSuccess(null);
+                  setBillingProgress('Verifying subscription with billing provider...');
+                  try {
+                    const selected = REVENUECAT_PLANS.find((p) => p.id === selectedPlanId) || REVENUECAT_PLANS[0];
+                    const res = await purchasePremiumPlan(selected, user, setUser);
+                    if (res.success) {
+                      setBillingSuccess(`${selected.name} is now active and verified.`);
+                    } else {
+                      setBillingError(res.error || 'Could not complete purchase verification.');
+                    }
+                  } finally {
+                    setBillingProgress(null);
+                  }
+                }}
+                disabled={Boolean(billingProgress)}
+                className="px-6 py-3.5 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl text-xs font-bold uppercase tracking-widest shadow-md cursor-pointer disabled:opacity-50"
+              >
+                {billingProgress || 'Upgrade / Subscribe'}
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  setBillingError(null);
+                  setBillingSuccess(null);
+                  const res = await restorePremiumPurchases(user, setUser);
+                  if (res.success && res.restored) {
+                    setBillingSuccess('Verified active subscription restored to your account.');
+                  } else if (res.success && !res.restored) {
+                    setBillingError('No active App Store, Google Play, or verified cloud subscription found.');
+                  } else {
+                    setBillingError(res.error || 'Restore check failed.');
+                  }
+                }}
+                className="px-6 py-3.5 bg-white border border-pink-200 text-pink-700 rounded-2xl text-xs font-bold uppercase tracking-widest cursor-pointer hover:bg-pink-50"
+              >
+                Restore Purchases
+              </button>
+            </div>
           </div>
         </div>
       ) : null}
