@@ -511,19 +511,30 @@ export async function loadEncryptedSessionUser<T = any>(rememberMe: boolean): Pr
 export async function purgeAllLuminaClientSecrets(options?: {
   clearOfflineVerifiers?: boolean;
   clearBiometricBinding?: boolean;
+  fullAccountErasure?: boolean;
+  userId?: string;
 }): Promise<void> {
   if (typeof window === 'undefined') return;
 
   try {
     await secureStorage.removeItem('active_user_profile_v3');
     await secureStorage.removeItem('diary_draft_v1');
-    if (options?.clearBiometricBinding) {
+    if (options?.clearBiometricBinding || options?.fullAccountErasure) {
       await secureStorage.removeItem('biometric_hint_v1');
+    }
+    if (options?.userId) {
+      await secureStorage.removeItem(`user_profile_${options.userId}`);
+      await secureStorage.removeItem(`partner_shared_${options.userId}`);
+      await secureStorage.removeItem(`gifts_${options.userId}`);
+      await secureStorage.removeItem(`totp_secret_${options.userId}`);
+      await secureStorage.removeItem(`onboarding_draft_${options.userId}`);
+      await secureStorage.removeItem(`pregnancy_weight_${options.userId}`);
     }
 
     const vaultKeys = await idbGetAllKeys(VAULT_STORE_NAME);
     for (const vk of vaultKeys) {
       if (
+        options?.fullAccountErasure ||
         vk.startsWith('chat_') ||
         vk === 'active_user_profile_v3' ||
         vk === 'diary_draft_v1' ||
@@ -534,8 +545,12 @@ export async function purgeAllLuminaClientSecrets(options?: {
       }
     }
 
-    if (options?.clearOfflineVerifiers) {
+    if (options?.clearOfflineVerifiers || options?.fullAccountErasure) {
       await idbDelete(KEYSTORE_STORE_NAME, SESSION_KEY_ID);
+    }
+    if (options?.fullAccountErasure) {
+      await idbDelete(KEYSTORE_STORE_NAME, MASTER_KEY_ID);
+      inMemoryMasterKey = null;
     }
     inMemorySessionKey = null;
 
@@ -543,11 +558,25 @@ export async function purgeAllLuminaClientSecrets(options?: {
       localStorage.removeItem(k);
     }
 
+    const extraDeletionPrefixes = [
+      'pregnancy_weight_',
+      'auto_backups_v2_',
+      'lumina_session_epoch_',
+      'lumina_auth_lockout_',
+      'lumina_diary_lockout_',
+      'lumina_form_rate_',
+      'lumina_secure_',
+    ];
+
     const toDelete: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
       if (!k) continue;
-      if (LEGACY_PLAINTEXT_PREFIXES.some((prefix) => k.startsWith(prefix))) {
+      if (
+        LEGACY_PLAINTEXT_PREFIXES.some((prefix) => k.startsWith(prefix)) ||
+        (options?.fullAccountErasure &&
+          (k.startsWith('lumina_') || extraDeletionPrefixes.some((p) => k.startsWith(p))))
+      ) {
         toDelete.push(k);
       }
     }
@@ -558,6 +587,9 @@ export async function purgeAllLuminaClientSecrets(options?: {
     sessionStorage.removeItem('lumina_user');
     sessionStorage.removeItem('lumina_saved_password');
     sessionStorage.removeItem('lumina_partnermode_subtab');
+    if (options?.fullAccountErasure) {
+      sessionStorage.clear();
+    }
   } catch {
     // Best-effort full cleanup
   }

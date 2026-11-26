@@ -59,7 +59,7 @@ const PregnancyTracker: React.FC<PregnancyTrackerProps> = ({ user, setUser, onOp
   const handleAddAppointment = () => {
     if (!setUser || !newApTitle || !newApDate) return;
     const newAp = {
-      id: Math.random().toString(36).substring(7),
+      id: crypto.randomUUID(),
       date: newApDate,
       title: newApTitle,
       notes: newApNotes

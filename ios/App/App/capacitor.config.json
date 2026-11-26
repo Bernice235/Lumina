@@ -19,6 +19,7 @@
 		}
 	},
 	"packageClassList": [
+		"BiometricAuthNative",
 		"LocalNotificationsPlugin",
 		"PushNotificationsPlugin",
 		"PurchasesPlugin"

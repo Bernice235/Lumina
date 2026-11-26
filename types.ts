@@ -134,6 +134,7 @@ export interface PrivacyPreferences {
   allowPartnerActivityAlerts: boolean;
   allowAiPersonalization: boolean;
   autoLockOnBlur: boolean;
+  autoLockTimeoutMinutes?: number;
   hideNotificationPreviews: boolean;
   dataRetentionDays: number;
   consentUpdatedAt?: string;

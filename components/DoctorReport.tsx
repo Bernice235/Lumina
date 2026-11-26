@@ -92,7 +92,12 @@ const DoctorReport: React.FC<DoctorReportProps> = ({ isOpen, onClose, user, symp
     day: 'numeric', 
     year: 'numeric' 
   });
-  const reportId = `LMN-RE-${Math.floor(100000 + Math.random() * 900000)}`;
+  const randCode = (() => {
+    const arr = new Uint32Array(1);
+    globalThis.crypto.getRandomValues(arr);
+    return 100000 + (arr[0] % 900000);
+  })();
+  const reportId = `LMN-RE-${randCode}`;
 
   // Pregnancy parameters
   const pregStats = getPregnancyStats(user);

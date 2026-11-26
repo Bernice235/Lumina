@@ -35,6 +35,8 @@ import { AvatarVisual } from './components/AvatarVisual';
 import { CompanionChat } from './components/CompanionChat';
 import { CookieConsentBanner } from './components/CookieConsentBanner';
 import { NotFoundPage } from './components/NotFoundPage';
+import { DeleteAccountPage } from './components/DeleteAccountPage';
+import { DeleteAccountModal } from './components/DeleteAccountModal';
 import { getOrCreateUserAvatar } from './services/avatarService';
 import { playWelcomeVoice } from './services/gemini';
 import { 
@@ -68,9 +70,10 @@ import {
   verifyDiaryPin,
 } from './services/securityService';
 import { authenticateWithBiometrics } from './services/biometricService';
-import { syncUser as firebaseSyncUser, subscribeToGifts, subscribeToUser, subscribeToPartnerSharedView, subscribeToIncomingNotifications, markCloudNotificationRead, acceptInvite, subscribeToPartnerRequests, getCleanName, deleteUserAccount, getUserDisplayName } from './services/firebaseService';
+import { syncUser as firebaseSyncUser, subscribeToGifts, subscribeToUser, subscribeToPartnerSharedView, subscribeToIncomingNotifications, markCloudNotificationRead, acceptInvite, subscribeToPartnerRequests, getCleanName, deleteUserAccount, getUserDisplayName, checkIsOnboardingCompleted } from './services/firebaseService';
 import { saveAutomaticEncryptedSnapshot } from './services/backupService';
 import { trackPageView } from './services/analyticsService';
+import { parsePasswordResetParams } from './services/passwordResetService';
 import { auth } from './services/firebase';
 import { onAuthStateChanged, setPersistence, browserSessionPersistence, indexedDBLocalPersistence } from 'firebase/auth';
 import { SplashScreen } from './components/SplashScreen';
@@ -121,15 +124,18 @@ const PATH_TO_TAB: Record<string, string> = {
   '/companion': 'companion_chat',
 };
 
-function resolveInitialRoute(pathname: string): { isNotFound: boolean; tabFromPath: string | null } {
+function resolveInitialRoute(pathname: string): { isNotFound: boolean; isDeleteAccountRoute: boolean; tabFromPath: string | null } {
   const normalized = (pathname || '/').replace(/\/+$/, '') || '/';
-  if (normalized.startsWith('/invite/')) {
-    return { isNotFound: false, tabFromPath: null };
+  if (normalized === '/delete-account' || normalized === '/account-deletion') {
+    return { isNotFound: false, isDeleteAccountRoute: true, tabFromPath: null };
+  }
+  if (normalized.startsWith('/invite/') || normalized === '/reset-password' || normalized === '/__/auth/action') {
+    return { isNotFound: false, isDeleteAccountRoute: false, tabFromPath: null };
   }
   if (Object.prototype.hasOwnProperty.call(PATH_TO_TAB, normalized)) {
-    return { isNotFound: false, tabFromPath: PATH_TO_TAB[normalized] };
+    return { isNotFound: false, isDeleteAccountRoute: false, tabFromPath: PATH_TO_TAB[normalized] };
   }
-  return { isNotFound: true, tabFromPath: null };
+  return { isNotFound: true, isDeleteAccountRoute: false, tabFromPath: null };
 }
 
 const isDeepEqual = (obj1: any, obj2: any): boolean => {
@@ -161,11 +167,11 @@ const normalizeSharingSettings = (s?: Partial<User['sharingSettings']>): User['s
   shareCycleInfo: s?.shareCycleInfo === true,
   shareSymptoms: s?.shareSymptoms === true,
   shareMood: s?.shareMood === true,
-  shareNotes: s?.shareNotes === true,
+  shareNotes: false,
   shareFertilityInfo: s?.shareFertilityInfo === true,
   sharePregnancyInfo: s?.sharePregnancyInfo === true,
   shareIntimacyInfo: s?.shareIntimacyInfo === true,
-  shareDoctorReports: s?.shareDoctorReports === true,
+  shareDoctorReports: false,
   shareAppointmentReminders: s?.shareAppointmentReminders === true,
   shareWellnessUpdates: s?.shareWellnessUpdates === true,
 });
@@ -213,7 +219,58 @@ const App: React.FC = () => {
     window.history.replaceState({}, document.title, newUrl);
   };
 
+  const [passwordResetFlow, setPasswordResetFlow] = useState<{
+    active: boolean;
+    oobCode: string | null;
+    postResetNotice: boolean;
+  }>(() => {
+    const parsed = parsePasswordResetParams(window.location.search, window.location.hash);
+    if (parsed.isResetFlow) {
+      return { active: true, oobCode: parsed.oobCode, postResetNotice: false };
+    }
+    if (parsed.isPostFirebaseContinue) {
+      return { active: false, oobCode: null, postResetNotice: true };
+    }
+    return { active: false, oobCode: null, postResetNotice: false };
+  });
+
+  const handleClearPasswordReset = (didCompleteReset?: boolean) => {
+    setPasswordResetFlow({ active: false, oobCode: null, postResetNotice: Boolean(didCompleteReset) });
+    if (didCompleteReset) {
+      sessionStorage.setItem('lumina_logged_out', 'true');
+      auth.signOut().catch(() => {});
+      setUser(null);
+      setIsSessionUnlocked(false);
+    }
+    try {
+      window.history.replaceState({}, document.title, '/');
+    } catch {}
+  };
+
+  useEffect(() => {
+    const parsed = parsePasswordResetParams(window.location.search, window.location.hash);
+    if (parsed.isResetFlow) {
+      setPasswordResetFlow({ active: true, oobCode: parsed.oobCode, postResetNotice: false });
+      try {
+        const cleanPath = window.location.pathname === '/reset-password' ? '/reset-password' : '/';
+        window.history.replaceState({}, document.title, cleanPath);
+      } catch {}
+    } else if (parsed.isPostFirebaseContinue) {
+      sessionStorage.setItem('lumina_logged_out', 'true');
+      auth.signOut().catch(() => {});
+      setUser(null);
+      setIsSessionUnlocked(false);
+      setPasswordResetFlow({ active: false, oobCode: null, postResetNotice: true });
+      try {
+        window.history.replaceState({}, document.title, '/');
+      } catch {}
+    }
+  }, []);
+
   const [isNotFoundRoute, setIsNotFoundRoute] = useState<boolean>(() => resolveInitialRoute(window.location.pathname).isNotFound);
+  const [isDeleteAccountRoute, setIsDeleteAccountRoute] = useState<boolean>(() => resolveInitialRoute(window.location.pathname).isDeleteAccountRoute);
+  const [showGlobalDeleteModal, setShowGlobalDeleteModal] = useState<boolean>(false);
+  const skipNextCloudWriteRef = useRef<boolean>(false);
 
   const [activeTab, setActiveTab] = useState(() => {
     const route = resolveInitialRoute(window.location.pathname);
@@ -274,7 +331,8 @@ const App: React.FC = () => {
     const handlePopState = () => {
       const route = resolveInitialRoute(window.location.pathname);
       setIsNotFoundRoute(route.isNotFound);
-      if (!route.isNotFound && route.tabFromPath) {
+      setIsDeleteAccountRoute(route.isDeleteAccountRoute);
+      if (!route.isNotFound && !route.isDeleteAccountRoute && route.tabFromPath) {
         setActiveTab(route.tabFromPath);
       }
     };
@@ -282,15 +340,25 @@ const App: React.FC = () => {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
+  const openExternalDeletionPage = () => {
+    setShowGlobalDeleteModal(false);
+    setIsNotFoundRoute(false);
+    setIsDeleteAccountRoute(true);
+    try {
+      window.history.pushState({}, '', '/delete-account');
+    } catch {}
+  };
+
   // Track consent-gated screen navigation
   useEffect(() => {
-    if (user && user.onboardingCompleted && !isNotFoundRoute) {
+    if (user && user.onboardingCompleted && !isNotFoundRoute && !isDeleteAccountRoute) {
       trackPageView(activeTab);
     }
-  }, [activeTab, user?.id, user?.onboardingCompleted, isNotFoundRoute]);
+  }, [activeTab, user?.id, user?.onboardingCompleted, isNotFoundRoute, isDeleteAccountRoute]);
 
   const handleNavigateFrom404 = (targetTab: string = 'dashboard') => {
     setIsNotFoundRoute(false);
+    setIsDeleteAccountRoute(false);
     setActiveTab(targetTab);
     try {
       window.history.pushState({}, '', '/');
@@ -384,7 +452,7 @@ const App: React.FC = () => {
 
     if (currentUser) {
       const newAlert = {
-        id: Math.random().toString(),
+        id: crypto.randomUUID(),
         title,
         body,
         emoji,
@@ -550,7 +618,7 @@ const App: React.FC = () => {
         }
 
         setSimulatedNotify({
-          id: Math.random().toString(),
+          id: crypto.randomUUID(),
           title: detail.title,
           body: detail.body,
           emoji: detail.emoji || '🔔',
@@ -629,7 +697,10 @@ const App: React.FC = () => {
       syncUser(updatedUser);
     }
   }, [user?.id, user?.lastPeriodStart, user?.cycleLength, user?.periodLength, user?.notificationSettings?.enabled, user?.partnerNotificationPreferences]);
-  const [showSplash, setShowSplash] = useState(true);
+  const [showSplash, setShowSplash] = useState(() => {
+    const parsed = parsePasswordResetParams(window.location.search, window.location.hash);
+    return !parsed.isResetFlow && !parsed.isPostFirebaseContinue;
+  });
   const [restoreDataPrompt, setRestoreDataPrompt] = useState<{ userData: User } | null>(null);
   const [latestCloudUser, setLatestCloudUser] = useState<User | null>(null);
   const [latestCloudLoading, setLatestCloudLoading] = useState(false);
@@ -766,31 +837,72 @@ const App: React.FC = () => {
     const pathParts = window.location.pathname.split('/');
     const inviteIdx = pathParts.indexOf('invite');
     const hasInvite = !!(qInvite || (inviteIdx !== -1 && pathParts[inviteIdx + 1]));
+    const parsedReset = parsePasswordResetParams(window.location.search, window.location.hash);
 
-    if (hasInvite) return false;
+    if (hasInvite || parsedReset.isResetFlow || parsedReset.isPostFirebaseContinue) return false;
     return true;
   });
 
-  // Auto-lock on backgrounding or inactivity when enabled
+  // Auto-lock on backgrounding or inactivity when App Lock or Auto-Lock is enabled
   useEffect(() => {
-    if (!user || (!user.biometricsEnabled && !user.securitySettings?.biometricQuickUnlock && !user.privacyPreferences?.autoLockOnBlur)) {
+    const canLockWithPin = userHasConfiguredPin(user);
+    const lockEnabled = Boolean(
+      user && (
+        user.biometricsEnabled ||
+        user.securitySettings?.biometricQuickUnlock ||
+        (user.privacyPreferences?.autoLockOnBlur && canLockWithPin)
+      )
+    );
+    if (!lockEnabled || !isSessionUnlocked) {
       return;
     }
+
     let lastHiddenAt = 0;
+    let inactivityTimer: ReturnType<typeof setTimeout> | null = null;
+    const timeoutMinutes = Math.max(1, Math.min(30, Number(user?.privacyPreferences?.autoLockTimeoutMinutes) || 5));
+
+    const lockSessionNow = () => {
+      setIsSessionUnlocked(false);
+      setAppBiometricResult('idle');
+      setAppLockError('');
+    };
+
+    const resetInactivity = () => {
+      if (inactivityTimer) clearTimeout(inactivityTimer);
+      inactivityTimer = setTimeout(lockSessionNow, timeoutMinutes * 60 * 1000);
+    };
+
     const handleVisibility = () => {
       if (document.visibilityState === 'hidden') {
         lastHiddenAt = Date.now();
+        if (user?.privacyPreferences?.autoLockOnBlur) {
+          lockSessionNow();
+        }
       } else if (document.visibilityState === 'visible') {
         if (lastHiddenAt && Date.now() - lastHiddenAt > 2000) {
-          setIsSessionUnlocked(false);
-          setAppBiometricResult('idle');
-          setAppLockError('');
+          lockSessionNow();
         }
       }
     };
+
+    const activityEvents: (keyof WindowEventMap)[] = ['pointerdown', 'keydown', 'touchstart', 'scroll'];
+    activityEvents.forEach((ev) => window.addEventListener(ev, resetInactivity, { passive: true }));
     document.addEventListener('visibilitychange', handleVisibility);
-    return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [user?.id, user?.biometricsEnabled, user?.securitySettings?.biometricQuickUnlock, user?.privacyPreferences?.autoLockOnBlur]);
+    resetInactivity();
+
+    return () => {
+      if (inactivityTimer) clearTimeout(inactivityTimer);
+      activityEvents.forEach((ev) => window.removeEventListener(ev, resetInactivity));
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [
+    user?.id,
+    user?.biometricsEnabled,
+    user?.securitySettings?.biometricQuickUnlock,
+    user?.privacyPreferences?.autoLockOnBlur,
+    user?.privacyPreferences?.autoLockTimeoutMinutes,
+    isSessionUnlocked
+  ]);
 
   // Restore Session strictly via Firebase Authentication & AES-GCM-256 Encrypted Storage
   useEffect(() => {
@@ -865,10 +977,7 @@ const App: React.FC = () => {
               theme: userData.theme || emailBackup.theme || 'rose',
               tempUnit: userData.tempUnit || emailBackup.tempUnit || 'C',
               isPregnancyMode: userData.isPregnancyMode ?? emailBackup.isPregnancyMode ?? false,
-              onboardingCompleted:
-                userData.onboardingCompleted === false || emailBackup.onboardingCompleted === false
-                  ? false
-                  : userData.onboardingCompleted === true || emailBackup.onboardingCompleted === true,
+              onboardingCompleted: checkIsOnboardingCompleted(userData, emailBackup),
               diaryPin: userData.diaryPin && userData.diaryPin !== '1234' ? userData.diaryPin : undefined,
               diaryPinHash: userData.diaryPinHash || emailBackup.diaryPinHash,
               diaryPinSalt: userData.diaryPinSalt || emailBackup.diaryPinSalt,
@@ -891,8 +1000,9 @@ const App: React.FC = () => {
             setLatestCloudLoading(false);
 
             const cloudEpoch = fullUser.securitySettings?.sessionEpoch || 1;
+            const hasLocalEpoch = localStorage.getItem(`lumina_session_epoch_${fullUser.id}`) !== null;
             const localEpoch = getLocalSessionEpoch(fullUser.id);
-            if (cloudEpoch > localEpoch && userRef.current?.id === fullUser.id) {
+            if (hasLocalEpoch && cloudEpoch > localEpoch) {
               handleLogout();
               setAuthLoading(false);
               return;
@@ -900,22 +1010,32 @@ const App: React.FC = () => {
             setLocalSessionEpoch(fullUser.id, cloudEpoch);
 
             if (fullUser.email) {
-              secureStorage.setItem(`user_email_${fullUser.email.toLowerCase().trim()}`, JSON.stringify(fullUser)).catch(() => {});
+              const emailCacheKey = `user_email_${fullUser.email.toLowerCase().trim()}`;
+              if (rememberNow) {
+                secureStorage.setItem(emailCacheKey, JSON.stringify(fullUser)).catch(() => {});
+              } else {
+                secureStorage.removeItem(emailCacheKey).catch(() => {});
+              }
             }
             await saveEncryptedSessionUser(fullUser, rememberNow);
 
             const requiresBioUnlock = Boolean(fullUser.biometricsEnabled || fullUser.securitySettings?.biometricQuickUnlock);
-            if (!userRef.current) {
+            const hadUserBefore = Boolean(userRef.current);
+            if (!hadUserBefore) {
               if (!requiresBioUnlock) {
                 setIsSessionUnlocked(true);
               }
             }
 
-            if (!userRef.current || JSON.stringify(fullUser) !== JSON.stringify(userRef.current)) {
+            if (!hadUserBefore || !isDeepEqual(fullUser, userRef.current)) {
+              skipNextCloudWriteRef.current = true;
               setUser(fullUser);
               setWaterGoal(fullUser.waterGoal || 8);
-              if (fullUser.isPartner) setActiveTab('partner');
-              else if (fullUser.isPregnancyMode) setActiveTab('cycle');
+              const initialRoute = resolveInitialRoute(window.location.pathname);
+              if (!hadUserBefore && !initialRoute.tabFromPath) {
+                if (fullUser.isPartner) setActiveTab('partner');
+                else if (fullUser.isPregnancyMode) setActiveTab('cycle');
+              }
             }
           } else {
             setLatestCloudLoading(false);
@@ -925,6 +1045,10 @@ const App: React.FC = () => {
       } else {
         setLatestCloudUser(null);
         setLatestCloudLoading(false);
+        if (sessionStorage.getItem('lumina_deletion_in_progress') === 'true') {
+          setAuthLoading(false);
+          return;
+        }
         const currentInMem = userRef.current;
         if (currentInMem && (currentInMem.id.startsWith('sandbox_') || currentInMem.id.startsWith('offline_'))) {
           setAuthLoading(false);
@@ -1033,6 +1157,10 @@ const App: React.FC = () => {
   // Sync changes securely to Firestore & AES-GCM-256 encrypted storage (never plaintext localStorage)
   useEffect(() => {
     if (user) {
+      if (skipNextCloudWriteRef.current) {
+        skipNextCloudWriteRef.current = false;
+        return;
+      }
       syncUser(user);
       if (user.email) {
         secureStorage.setItem(`user_email_${user.email.toLowerCase().trim()}`, JSON.stringify(user)).catch(() => {});
@@ -1158,8 +1286,8 @@ const App: React.FC = () => {
     JSON.stringify(user?.notificationSettings?.types || {})
   ]);
 
-  const proceedWithLogin = (userData: User, remember: boolean = true) => {
-    const activeData = (latestCloudUser && latestCloudUser.id === userData.id)
+  const proceedWithLogin = (userData: User, remember: boolean = true, options?: { skipCloudOverride?: boolean }) => {
+    const activeData = (!options?.skipCloudOverride && latestCloudUser && latestCloudUser.id === userData.id)
       ? latestCloudUser
       : userData;
 
@@ -1168,9 +1296,9 @@ const App: React.FC = () => {
       theme: activeData.theme || 'rose',
       tempUnit: activeData.tempUnit || 'C',
       isPregnancyMode: activeData.isPregnancyMode || false,
-      onboardingCompleted: (activeData.onboardingCompleted === false || userData.onboardingCompleted === false)
-        ? false
-        : (activeData.onboardingCompleted === true || userData.onboardingCompleted === true),
+      onboardingCompleted: options?.skipCloudOverride
+        ? Boolean(userData.onboardingCompleted)
+        : checkIsOnboardingCompleted(activeData, userData),
       diaryPin: activeData.diaryPin && activeData.diaryPin !== '1234' ? activeData.diaryPin : undefined,
       diaryPinHash: activeData.diaryPinHash,
       diaryPinSalt: activeData.diaryPinSalt,
@@ -1263,7 +1391,7 @@ const App: React.FC = () => {
       tempLogs: [],
     };
     
-    proceedWithLogin(newUserObj, true);
+    proceedWithLogin(newUserObj, true, { skipCloudOverride: true });
     setRestoreDataPrompt(null);
   };
 
@@ -1428,7 +1556,7 @@ const App: React.FC = () => {
     const endStr = end.toDateString();
 
     const newPeriod: Period = {
-      id: Math.random().toString(36).substring(2, 9),
+      id: crypto.randomUUID(),
       startDate: startStr,
       endDate: endStr,
       intensity
@@ -1474,7 +1602,7 @@ const App: React.FC = () => {
     const endStr = end.toDateString();
 
     const newPeriod: Period = {
-      id: Math.random().toString(36).substring(2, 9),
+      id: crypto.randomUUID(),
       startDate: startStr,
       endDate: endStr,
       intensity
@@ -1513,7 +1641,7 @@ const App: React.FC = () => {
   const handleLogMood = (mood: any, note?: string) => {
     if (!user) return;
     const newMoodEntry = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: crypto.randomUUID(),
       date: new Date().toDateString(),
       mood,
       note
@@ -1531,7 +1659,7 @@ const App: React.FC = () => {
   const handleLogSexualActivity = (isProtected: boolean, notes?: string) => {
     if (!user) return;
     const newLog = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: crypto.randomUUID(),
       date: new Date().toDateString(),
       protected: isProtected,
       notes
@@ -1545,7 +1673,7 @@ const App: React.FC = () => {
   const handleLogSymptom = (type: Symptom['type'], intensity: Symptom['intensity']) => {
     if (!user) return;
     const newSymptom: Symptom = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: crypto.randomUUID(),
       date: new Date().toDateString(),
       type,
       intensity
@@ -1772,20 +1900,28 @@ const App: React.FC = () => {
       );
     }
 
-    if (!user) {
+    if (!user || passwordResetFlow.active) {
       return (
         <Auth 
           onLogin={handleLogin} 
           initialInviteCode={inviteCode} 
           onClearInvite={handleClearInvite}
+          initialPasswordResetActive={passwordResetFlow.active}
+          initialPasswordResetCode={passwordResetFlow.oobCode}
+          initialForgotPasswordActive={!passwordResetFlow.active && !passwordResetFlow.postResetNotice && window.location.pathname.replace(/\/+$/, '') === '/reset-password'}
+          initialPostResetNotice={passwordResetFlow.postResetNotice}
+          onClearPasswordReset={handleClearPasswordReset}
           latestCloudUser={latestCloudUser}
           latestCloudLoading={latestCloudLoading}
         />
       );
     }
 
-    if ((user.biometricsEnabled || user.securitySettings?.biometricQuickUnlock) && !isSessionUnlocked) {
-      const hasPinConfigured = userHasConfiguredPin(user);
+    const hasPinConfigured = userHasConfiguredPin(user);
+    const hasBiometricUnlock = Boolean(user.biometricsEnabled || user.securitySettings?.biometricQuickUnlock);
+    const requiresSessionLock = Boolean(hasBiometricUnlock || (user.privacyPreferences?.autoLockOnBlur && hasPinConfigured));
+
+    if (requiresSessionLock && !isSessionUnlocked) {
 
       const handleRealBiometricUnlock = async () => {
         setAppLockError('');
@@ -1844,7 +1980,7 @@ const App: React.FC = () => {
             <div className="space-y-2">
               <h2 className="text-xl font-serif italic text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-rose-300">Lumina Secured</h2>
               <p className="text-xs text-stone-300 leading-relaxed">
-                App Lock is active. Verify with your device biometrics {hasPinConfigured ? 'or your Security PIN' : 'or sign in with your password'} to continue.
+                App Lock is active. Verify with {hasBiometricUnlock ? 'your device biometrics' : 'your Security PIN'} {hasBiometricUnlock && hasPinConfigured ? 'or your Security PIN' : ''} to continue.
               </p>
             </div>
 
@@ -1868,7 +2004,7 @@ const App: React.FC = () => {
                 </div>
                 <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest">Access Granted</p>
               </div>
-            ) : showLockPinFallback && hasPinConfigured ? (
+            ) : (showLockPinFallback || !hasBiometricUnlock) && hasPinConfigured ? (
               <form onSubmit={handleLockPinSubmit} className="space-y-3">
                 <input
                   type="password"
@@ -1887,16 +2023,18 @@ const App: React.FC = () => {
                 >
                   Unlock with PIN
                 </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowLockPinFallback(false);
-                    setAppLockError('');
-                  }}
-                  className="text-[10px] text-stone-400 hover:text-white uppercase tracking-widest font-bold cursor-pointer"
-                >
-                  Back to Biometrics
-                </button>
+                {hasBiometricUnlock && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowLockPinFallback(false);
+                      setAppLockError('');
+                    }}
+                    className="text-[10px] text-stone-400 hover:text-white uppercase tracking-widest font-bold cursor-pointer"
+                  >
+                    Back to Biometrics
+                  </button>
+                )}
               </form>
             ) : (
               <div className="space-y-3">
@@ -1934,48 +2072,49 @@ const App: React.FC = () => {
       );
     }
 
-    if (!user.onboardingCompleted) {
-      if (user.isPartner) {
-        const isApproved = user.isPartnerLinked || user.partnerRequest?.status === 'approved';
-        if (isApproved && !user.partnerOnboardingCompleted) {
-          return (
-            <PartnerOnboardingWizard
-              user={user}
-              setUser={setUser}
-              onComplete={(completedUser) => {
-                setUser(completedUser);
-                const rememberMe = localStorage.getItem('lumina_remember_me') !== 'false';
-                saveEncryptedSessionUser(completedUser, rememberMe).catch(() => {});
-                if (completedUser.email) {
-                  secureStorage.setItem(`user_email_${completedUser.email.toLowerCase().trim()}`, JSON.stringify(completedUser)).catch(() => {});
-                }
-                syncUser(completedUser);
-              }}
-            />
-          );
-        }
-      } else {
-        return (
-          <OnboardingWizard 
-            user={user} 
-            setUser={setUser} 
-            onComplete={(completedUser) => {
-              setUser(completedUser);
-              const rememberMe = localStorage.getItem('lumina_remember_me') !== 'false';
-              saveEncryptedSessionUser(completedUser, rememberMe).catch(() => {});
-              if (completedUser.email) {
-                secureStorage.setItem(`user_email_${completedUser.email.toLowerCase().trim()}`, JSON.stringify(completedUser)).catch(() => {});
-              }
-              syncUser(completedUser);
-              try {
-                playWelcomeVoiceGreeting(completedUser, { force: true }).catch(() => {});
-              } catch (e) {
-                console.warn("TTS Welcome Voice skip:", e);
-              }
-            }} 
-          />
-        );
-      }
+    const isPartnerApproved = Boolean(user.isPartnerLinked || user.partnerRequest?.status === 'approved');
+    const needsPartnerOnboarding = Boolean(user.isPartner && isPartnerApproved && !user.partnerOnboardingCompleted);
+    const needsPrimaryOnboarding = Boolean(!user.isPartner && !user.onboardingCompleted);
+
+    if (needsPartnerOnboarding) {
+      return (
+        <PartnerOnboardingWizard
+          user={user}
+          setUser={setUser}
+          onComplete={(completedUser) => {
+            setUser(completedUser);
+            const rememberMe = localStorage.getItem('lumina_remember_me') !== 'false';
+            saveEncryptedSessionUser(completedUser, rememberMe).catch(() => {});
+            if (completedUser.email) {
+              secureStorage.setItem(`user_email_${completedUser.email.toLowerCase().trim()}`, JSON.stringify(completedUser)).catch(() => {});
+            }
+            syncUser(completedUser);
+          }}
+        />
+      );
+    }
+
+    if (needsPrimaryOnboarding) {
+      return (
+        <OnboardingWizard 
+          user={user} 
+          setUser={setUser} 
+          onComplete={(completedUser) => {
+            setUser(completedUser);
+            const rememberMe = localStorage.getItem('lumina_remember_me') !== 'false';
+            saveEncryptedSessionUser(completedUser, rememberMe).catch(() => {});
+            if (completedUser.email) {
+              secureStorage.setItem(`user_email_${completedUser.email.toLowerCase().trim()}`, JSON.stringify(completedUser)).catch(() => {});
+            }
+            syncUser(completedUser);
+            try {
+              playWelcomeVoiceGreeting(completedUser, { force: true }).catch(() => {});
+            } catch (e) {
+              console.warn("TTS Welcome Voice skip:", e);
+            }
+          }} 
+        />
+      );
     }
 
     const unreadCount = (user?.notifications || []).filter(n => {
@@ -2303,10 +2442,7 @@ const App: React.FC = () => {
               syncUser(next);
             }}
             onLogoutAllDevices={handleLogout}
-            onRequestDeleteAccount={() => {
-              setSettingsSubTab('privacy');
-              setActiveTab('settings');
-            }}
+            onRequestDeleteAccount={() => setShowGlobalDeleteModal(true)}
             onNavigateToBackup={() => {
               setSettingsSubTab('backup_sync');
               setActiveTab('settings');
@@ -2325,6 +2461,7 @@ const App: React.FC = () => {
             tempLogs={tempLogs}
             initialSubTab={settingsSubTab}
             setActiveTab={setActiveTab}
+            onOpenExternalDeletionPage={openExternalDeletionPage}
           />
         );
       default:
@@ -2380,7 +2517,40 @@ const App: React.FC = () => {
     );
   }
 
-  if (showSplash || authLoading || restoreDataPrompt || !user || ((user.biometricsEnabled || user.securitySettings?.biometricQuickUnlock) && !isSessionUnlocked) || !user.onboardingCompleted) {
+  // Render Public Account Deletion & DSAR Page for /delete-account or /account-deletion
+  if (!showSplash && isDeleteAccountRoute) {
+    return (
+      <>
+        <DeleteAccountPage
+          signedInUserId={user?.id}
+          signedInUserEmail={user?.email}
+          onBackHome={() => handleNavigateFrom404('dashboard')}
+          onAccountDeleted={() => {
+            handleLogout();
+            handleNavigateFrom404('dashboard');
+          }}
+        />
+        <CookieConsentBanner />
+      </>
+    );
+  }
+
+  const requiresGateOnboarding = Boolean(
+    user && (
+      (!user.isPartner && !user.onboardingCompleted) ||
+      (user.isPartner && (user.isPartnerLinked || user.partnerRequest?.status === 'approved') && !user.partnerOnboardingCompleted)
+    )
+  );
+
+  const hasAppLockActive = Boolean(
+    user && (
+      user.biometricsEnabled ||
+      user.securitySettings?.biometricQuickUnlock ||
+      (user.privacyPreferences?.autoLockOnBlur && userHasConfiguredPin(user))
+    )
+  );
+
+  if (showSplash || authLoading || restoreDataPrompt || passwordResetFlow.active || !user || (hasAppLockActive && !isSessionUnlocked) || requiresGateOnboarding) {
     return (
       <>
         {renderActiveScreen()}
@@ -2581,6 +2751,13 @@ const App: React.FC = () => {
             >
               Backups &amp; Recovery
             </button>
+            <button
+              type="button"
+              onClick={openExternalDeletionPage}
+              className="text-rose-700 hover:underline cursor-pointer"
+            >
+              Delete Account
+            </button>
           </div>
         </footer>
       </main>
@@ -2737,7 +2914,7 @@ const App: React.FC = () => {
             }
             const matchingNotif = user?.notifications?.find(n => n.title === simulatedNotify.title || n.body === simulatedNotify.body);
             const targetNotif: AppNotification = matchingNotif || {
-              id: simulatedNotify.id || Math.random().toString(),
+              id: simulatedNotify.id || crypto.randomUUID(),
               title: simulatedNotify.title,
               body: simulatedNotify.body,
               emoji: simulatedNotify.emoji,
@@ -2863,6 +3040,14 @@ const App: React.FC = () => {
           </div>
         </div>
       )}
+
+      <DeleteAccountModal
+        isOpen={showGlobalDeleteModal}
+        user={user}
+        onClose={() => setShowGlobalDeleteModal(false)}
+        onDeleted={handleLogout}
+        onOpenExternalPage={openExternalDeletionPage}
+      />
 
       <CookieConsentBanner />
     </div>

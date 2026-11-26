@@ -77,7 +77,11 @@ service cloud.firestore {
              data.isSharingPaused is bool &&
              isBoundedString(data.updatedAt, 10, 64) &&
              data.sharingSettings is map &&
+             data.sharingSettings.get('shareNotes', false) == false &&
+             data.sharingSettings.get('shareDoctorReports', false) == false &&
              !('diaryEntries' in data) &&
+             !('doctorReports' in data) &&
+             !('notes' in data) &&
              !('diaryPin' in data) &&
              !('diaryPinHash' in data) &&
              !('diaryPinSalt' in data) &&
@@ -90,12 +94,11 @@ service cloud.firestore {
 
     function isValidInvite(data) {
       return data.keys().hasAll(['code', 'senderId', 'senderName', 'createdAt']) &&
-             data.keys().hasOnly(['code', 'senderId', 'senderName', 'senderEmail', 'createdAt']) &&
+             data.keys().hasOnly(['code', 'senderId', 'senderName', 'createdAt']) &&
              data.senderId == request.auth.uid &&
              isBoundedString(data.code, 6, 12) &&
              data.code.matches('^[A-Z0-9]+$') &&
              isBoundedString(data.senderName, 1, 120) &&
-             (!('senderEmail' in data) || isBoundedString(data.senderEmail, 0, 160)) &&
              isBoundedString(data.createdAt, 10, 64);
     }
 
@@ -156,13 +159,18 @@ service cloud.firestore {
                        isValidUser(incoming()) &&
                        incoming().id == request.auth.uid &&
                        incoming().get('isPremium', false) == false;
+      // Note: On Spark/Starter tier without Firebase Admin IAM server writes, entitlement sync verifies Paystack/RevenueCat server receipts before updating plan metadata.
       allow update: if isValidId(userId) &&
                        isOwner(userId) &&
                        isValidUser(incoming()) &&
                        incoming().id == existing().id &&
                        (incoming().email == existing().email || incoming().email == request.auth.token.email) &&
                        (
-                         incoming().get('isPremium', false) == existing().get('isPremium', false) ||
+                         (
+                           incoming().get('isPremium', false) == existing().get('isPremium', false) &&
+                           incoming().get('subscriptionPlan', 'free') == existing().get('subscriptionPlan', 'free') &&
+                           incoming().get('subscriptionStatus', 'none') == existing().get('subscriptionStatus', 'none')
+                         ) ||
                          incoming().get('isPremium', false) == false ||
                          (
                            incoming().get('isPremium', false) == true &&
@@ -200,7 +208,7 @@ service cloud.firestore {
 
     match /invites/{code} {
       allow get: if isValidId(code) && isSignedIn();
-      allow list: if false;
+      allow list: if isSignedIn() && existing().senderId == request.auth.uid;
       allow create: if isValidId(code) && isSignedIn() && isValidInvite(incoming()) && incoming().code == code;
       allow update: if false;
       allow delete: if isValidId(code) && isSignedIn() && (
@@ -218,6 +226,7 @@ service cloud.firestore {
       allow create: if isValidId(requestId) && isSignedIn() &&
                        isValidPartnerRequest(incoming()) &&
                        request.auth.uid == incoming().partner_id &&
+                       incoming().user_id != request.auth.uid &&
                        exists(/databases/$(database)/documents/users/$(incoming().user_id));
       allow update: if isValidId(requestId) && isSignedIn() && isValidPartnerRequest(incoming()) &&
                        incoming().user_id == existing().user_id &&
@@ -266,14 +275,16 @@ service cloud.firestore {
       allow get: if isValidId(eventId) && isSignedIn() && existing().userId == request.auth.uid;
       allow list: if isSignedIn() && existing().userId == request.auth.uid;
       allow create: if isValidId(eventId) && isSignedIn() && isValidTelemetry(incoming());
-      allow update, delete: if false;
+      allow update: if false;
+      allow delete: if isValidId(eventId) && isSignedIn() && existing().userId == request.auth.uid;
     }
 
     match /crash_reports/{reportId} {
       allow get: if isValidId(reportId) && isSignedIn() && existing().userId == request.auth.uid;
       allow list: if isSignedIn() && existing().userId == request.auth.uid;
       allow create: if isValidId(reportId) && isSignedIn() && isValidTelemetry(incoming());
-      allow update, delete: if false;
+      allow update: if false;
+      allow delete: if isValidId(reportId) && isSignedIn() && existing().userId == request.auth.uid;
     }
   }
 }

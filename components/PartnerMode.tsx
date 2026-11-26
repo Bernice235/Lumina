@@ -27,6 +27,7 @@ import { saveEncryptedSessionUser, secureStorage } from '../services/secureStora
 import { trackSendPartnerInvite, trackAcceptPartnerInvite, trackDeclinePartnerInvite } from '../services/analyticsService';
 import { calculateCycleSyncData } from '../services/cycleSyncService';
 import { QrCodeCanvas } from './QrCodeCanvas';
+import { DeleteAccountModal } from './DeleteAccountModal';
 
 interface PartnerModeProps {
   user: User;
@@ -42,8 +43,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
-  const [deleteConfirmInput, setDeleteConfirmInput] = useState('');
-  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [isPreviewingCompanion, setIsPreviewingCompanion] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const unreadPartnerNotifications = user.notifications?.filter(n => !n.isRead) || [];
   const hasUnreadPartnerAlerts = unreadPartnerNotifications.length > 0;
@@ -70,26 +70,26 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
   const [partnerCodeInput, setPartnerCodeInput] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [connectionRequest, setConnectionRequest] = useState<any | null>(null);
-  const [onboardingStep, setOnboardingStep] = useState<number>(user.isPartner && !user.onboardingCompleted ? 1 : 0);
+  const isPartnerOnboardingDone = Boolean(user.partnerOnboardingCompleted ?? user.onboardingCompleted);
+  const [onboardingStep, setOnboardingStep] = useState<number>(user.isPartner && !isPartnerOnboardingDone ? 1 : 0);
   const [partnerStep, setPartnerStep] = useState<number>(() => {
     if (!user.isPartner) return 0;
     if (!user.partnerId) return 0;
     if (!user.partnerRequest) return 1;
     if (user.partnerRequest.status === 'pending') return 3;
-    if (user.partnerRequest.status === 'approved' && !user.onboardingCompleted) return 4;
+    if (user.partnerRequest.status === 'approved' && !isPartnerOnboardingDone) return 4;
     if (user.partnerRequest.status === 'declined') return 5;
     return 6;
   });
   const [requestedReceives, setRequestedReceives] = useState<string[]>(() => {
-    return user.partnerRequest?.requestedReceives || [
+    return (user.partnerRequest?.requestedReceives || [
       "Cycle status",
       "Period predictions",
       "Mood updates",
       "Symptoms",
       "Cravings",
-      "Wellness insights",
-      "Journal access (optional)"
-    ];
+      "Wellness insights"
+    ]).filter((item) => !/journal|diary|doctor|report|note/i.test(item));
   });
   const [notificationStyle, setNotificationStyle] = useState<'gentle' | 'full'>('gentle');
   const [copied, setCopied] = useState(false);
@@ -199,7 +199,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
           setUser(syncedPartner);
           void syncUser(syncedPartner);
         }
-        if (!user.onboardingCompleted) {
+        if (!user.partnerOnboardingCompleted) {
           setPartnerStep(4);
         } else {
           setPartnerStep(6);
@@ -229,15 +229,15 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
         setPartnerStep(1);
       } else if (user.partnerRequest.status === 'pending') {
         setPartnerStep(3);
-      } else if (user.partnerRequest.status === 'approved' && !user.onboardingCompleted) {
+      } else if (user.partnerRequest.status === 'approved' && !user.partnerOnboardingCompleted) {
         setPartnerStep(4);
       } else if (user.partnerRequest.status === 'declined') {
         setPartnerStep(5);
-      } else if (user.onboardingCompleted) {
+      } else if (user.partnerOnboardingCompleted || user.onboardingCompleted) {
         setPartnerStep(6);
       }
     }
-  }, [outgoingRequests, user.isPartner, user.partnerId, user.partnerRequest?.status, user.onboardingCompleted, user.isPartnerLinked]);
+  }, [outgoingRequests, user.isPartner, user.partnerId, user.partnerRequest?.status, user.partnerOnboardingCompleted, user.onboardingCompleted, user.isPartnerLinked]);
 
   // Listen to visual navigation tab changes from banner clicks
   useEffect(() => {
@@ -483,7 +483,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
     // Add deliberate premium delay for loader visibility so they know it is building the tunnel
     await new Promise(resolve => setTimeout(resolve, 1500));
     try {
-      const code = await createInvite(user.id, getUserDisplayName(user), user.email);
+      const code = await createInvite(user.id, getUserDisplayName(user));
       if (code) {
         setUser({ ...user, partnerCode: code });
         setInviteSuccess(true);
@@ -500,7 +500,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
     setInviteSuccess(false);
     await new Promise(resolve => setTimeout(resolve, 1500));
     try {
-      const code = await createInvite(user.id, getUserDisplayName(user), user.email);
+      const code = await createInvite(user.id, getUserDisplayName(user));
       if (code) {
         setUser({ ...user, partnerCode: code });
         setInviteSuccess(true);
@@ -824,7 +824,6 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                 type="button"
                 onClick={() => {
                   setIsMenuOpen(false);
-                  setDeleteConfirmInput('');
                   setShowDeleteAccountModal(true);
                 }}
                 className="w-full py-3 rounded-2xl bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 cursor-pointer transition-all shadow-md shadow-rose-200"
@@ -920,8 +919,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                 <SharingToggle label="Share Cycle Information" active={user.sharingSettings?.shareCycleInfo === true} onChange={(v) => updateSharing('shareCycleInfo', v)} />
                 <SharingToggle label="Share Symptoms & Comfort" active={user.sharingSettings?.shareSymptoms === true} onChange={(v) => updateSharing('shareSymptoms', v)} />
                 <SharingToggle label="Share Mood Updates" active={user.sharingSettings?.shareMood === true} onChange={(v) => updateSharing('shareMood', v)} />
-                <SharingToggle label="Share Notes & Reminders" active={user.sharingSettings?.shareNotes === true} onChange={(v) => updateSharing('shareNotes', v)} />
-                <SharingToggle label="Share Doctor Reports" active={user.sharingSettings?.shareDoctorReports === true} onChange={(v) => updateSharing('shareDoctorReports', v)} />
+                <SharingToggle label="Share Appointment Reminders" active={user.sharingSettings?.shareAppointmentReminders === true} onChange={(v) => updateSharing('shareAppointmentReminders', v)} />
               </div>
             </div>
 
@@ -1020,7 +1018,6 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                 type="button"
                 onClick={() => {
                   setShowSettings(false);
-                  setDeleteConfirmInput('');
                   setShowDeleteAccountModal(true);
                 }}
                 className="w-full py-3 bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white rounded-2xl font-bold uppercase text-xs tracking-widest shadow-md shadow-rose-200 cursor-pointer transition-all flex items-center justify-center gap-2"
@@ -1076,78 +1073,16 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
         </div>
       )}
 
-      {/* GLOBAL DELETE ACCOUNT CONFIRMATION MODAL */}
-      {showDeleteAccountModal && (
-        <div className="fixed inset-0 bg-stone-900/70 backdrop-blur-md z-[180] flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-[2.5rem] p-6 sm:p-8 max-w-md w-full space-y-5 border border-rose-100 shadow-2xl text-center">
-            <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center text-rose-600 mx-auto text-2xl shadow-inner border border-rose-100">
-              ⚠️
-            </div>
-            <div className="space-y-2">
-              <h3 className="font-serif font-bold text-xl text-stone-900">Delete Account Permanently</h3>
-              <p className="text-xs text-stone-600 leading-relaxed">
-                This will permanently delete your account, remove your partner link, and erase all synced data. <strong className="text-rose-600">This action cannot be undone.</strong>
-              </p>
-            </div>
-
-            <div className="bg-rose-50/50 p-4 rounded-2xl border border-rose-100/60 text-left space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-rose-700 block">
-                Type <span className="font-mono bg-white px-1.5 py-0.5 rounded border border-rose-200">DELETE</span> to confirm:
-              </label>
-              <input
-                type="text"
-                value={deleteConfirmInput}
-                onChange={(e) => setDeleteConfirmInput(e.target.value)}
-                placeholder="Type DELETE"
-                className="w-full px-3.5 py-2.5 text-xs font-mono font-bold border border-rose-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-400 bg-white text-stone-800"
-              />
-            </div>
-
-            <div className="flex gap-3 pt-2">
-              <button
-                type="button"
-                disabled={isDeletingAccount}
-                onClick={() => {
-                  setShowDeleteAccountModal(false);
-                  setDeleteConfirmInput('');
-                }}
-                className="flex-1 py-3 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs uppercase tracking-wider rounded-2xl transition-all cursor-pointer disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={deleteConfirmInput.trim() !== 'DELETE' || isDeletingAccount}
-                onClick={async () => {
-                  try {
-                    setIsDeletingAccount(true);
-                    await deleteUserAccount(user.id);
-                    setIsDeletingAccount(false);
-                    setShowDeleteAccountModal(false);
-                    if (onLogout) {
-                      onLogout();
-                    } else {
-                      window.location.reload();
-                    }
-                  } catch (err) {
-                    console.error("Account deletion failed:", err);
-                    showNotice("Could not delete account. Please try again.", 'error');
-                    setIsDeletingAccount(false);
-                  }
-                }}
-                className="flex-1 py-3 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 text-white font-bold text-xs uppercase tracking-wider rounded-2xl transition-all cursor-pointer shadow-md shadow-rose-200 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
-              >
-                {isDeletingAccount ? (
-                  <span className="inline-block animate-spin">⏳</span>
-                ) : (
-                  <Trash2 className="w-4 h-4" />
-                )}
-                {isDeletingAccount ? 'Deleting...' : 'Delete Now'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* GLOBAL REAUTHENTICATED DELETE ACCOUNT MODAL */}
+      <DeleteAccountModal
+        isOpen={showDeleteAccountModal}
+        user={user}
+        onClose={() => setShowDeleteAccountModal(false)}
+        onDeleted={() => {
+          if (onLogout) onLogout();
+          else setUser(null);
+        }}
+      />
     </>
   );
 
@@ -1387,7 +1322,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
     const finalStep = text || newReminderText;
     if (!finalStep.trim()) return;
     const reminder: Reminder = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: crypto.randomUUID(),
       text: finalStep,
       time: newReminderTime || 'Today',
       isCompleted: false
@@ -1411,11 +1346,11 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
   };
 
   const finishOnboarding = () => {
-    setUser({ ...user, onboardingCompleted: true });
+    setUser({ ...user, onboardingCompleted: true, partnerOnboardingCompleted: true });
     setPartnerStep(6);
   };
 
-  if (user.isPartner && (partnerStep === 4 || ((user.isPartnerLinked || user.partnerRequest?.status === 'approved' || outgoingRequests.some(r => r.status === 'approved')) && (!user.partnerOnboardingCompleted || !user.onboardingCompleted)))) {
+  if (user.isPartner && (partnerStep === 4 || ((user.isPartnerLinked || user.partnerRequest?.status === 'approved' || outgoingRequests.some(r => r.status === 'approved')) && !user.partnerOnboardingCompleted))) {
     return (
       <>
         {renderNoticeBanner()}
@@ -1529,7 +1464,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                       partnerId: targetPartnerId,
                       partnerName: targetPartnerName,
                       partnerRequest: req,
-                      onboardingCompleted: false
+                      partnerOnboardingCompleted: false
                     };
                     setUser(updatedUser);
                     await syncUser(updatedUser);
@@ -1649,7 +1584,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                 onClick={async () => {
                   setLoading(true);
                   try {
-                    const updatedUser = { ...user, onboardingCompleted: true };
+                    const updatedUser = { ...user, onboardingCompleted: true, partnerOnboardingCompleted: true };
                     setUser(updatedUser);
                     await syncUser(updatedUser);
                     setPartnerStep(6);
@@ -1909,7 +1844,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
     );
   }
 
-  if (!user.isPartner && (user.partnerId || incomingRequests.some(r => r.status === 'pending') || user.partnerRequest?.status === 'pending' || hasPendingNotificationRequest)) {
+  if (!user.isPartner && !isPreviewingCompanion && (user.partnerId || incomingRequests.some(r => r.status === 'pending') || user.partnerRequest?.status === 'pending' || hasPendingNotificationRequest)) {
     const activePendingRequest = incomingRequests.find(r => r.status === 'pending') || 
       (user.partnerRequest?.status === 'pending' ? {
         id: `${user.id}_${user.partnerRequest.partnerId || 'partner'}`,
@@ -1935,9 +1870,9 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
         sharePregnancyInfo: lowercasePerms.some(p => p.includes('pregnancy')),
         shareSymptoms: lowercasePerms.some(p => p.includes('symptom') || p.includes('craving')),
         shareMood: lowercasePerms.some(p => p.includes('mood')),
-        shareNotes: lowercasePerms.some(p => p.includes('journal') || p.includes('diary') || p.includes('note')),
+        shareNotes: false,
         shareIntimacyInfo: false,
-        shareDoctorReports: lowercasePerms.some(p => p.includes('doctor') || p.includes('report') || p.includes('appointment')),
+        shareDoctorReports: false,
         shareAppointmentReminders: lowercasePerms.some(p => p.includes('appointment') || p.includes('reminder')),
         shareWellnessUpdates: lowercasePerms.some(p => p.includes('wellness') || p.includes('insight') || p.includes('support') || p.includes('gift') || p.includes('message')),
       };
@@ -2199,10 +2134,10 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                 {isApproved && (
                   <button 
                     type="button"
-                    onClick={() => setUser({ ...user, isPartner: true })}
+                    onClick={() => setIsPreviewingCompanion(true)}
                     className="w-full py-4 bg-gradient-to-r from-pink-500 to-rose-400 text-white rounded-2xl font-bold uppercase text-[10px] tracking-widest shadow-lg shadow-pink-100 hover:scale-[1.01] active:scale-95 transition-all cursor-pointer"
                   >
-                    View Companion Dashboard 💻
+                    Preview Companion Dashboard 💻
                   </button>
                 )}
                 
@@ -2567,10 +2502,8 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                 <SharingToggle label="Share Cycle Information" active={user.sharingSettings?.shareCycleInfo === true} onChange={(v) => updateSharing('shareCycleInfo', v)} />
                 <SharingToggle label="Share Symptoms" active={user.sharingSettings?.shareSymptoms === true} onChange={(v) => updateSharing('shareSymptoms', v)} />
                 <SharingToggle label="Share Mood" active={user.sharingSettings?.shareMood === true} onChange={(v) => updateSharing('shareMood', v)} />
-                <SharingToggle label="Share Notes" active={user.sharingSettings?.shareNotes === true} onChange={(v) => updateSharing('shareNotes', v)} />
                 <SharingToggle label="Share Fertility Information" active={user.sharingSettings?.shareFertilityInfo === true} onChange={(v) => updateSharing('shareFertilityInfo', v)} />
                 <SharingToggle label="Share Pregnancy Information" active={user.sharingSettings?.sharePregnancyInfo === true} onChange={(v) => updateSharing('sharePregnancyInfo', v)} />
-                <SharingToggle label="Share Doctor Reports" active={user.sharingSettings?.shareDoctorReports === true} onChange={(v) => updateSharing('shareDoctorReports', v)} />
                 <SharingToggle label="Share Appointment Reminders" active={user.sharingSettings?.shareAppointmentReminders === true} onChange={(v) => updateSharing('shareAppointmentReminders', v)} />
                 <SharingToggle label="Share Wellness Updates" active={user.sharingSettings?.shareWellnessUpdates === true} onChange={(v) => updateSharing('shareWellnessUpdates', v)} />
               </div>
@@ -2816,10 +2749,10 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            {!user.isPartner && (
+            {(!user.isPartner || isPreviewingCompanion) && (
               <button 
                 type="button"
-                onClick={() => setUser({ ...user, isPartner: false })}
+                onClick={() => setIsPreviewingCompanion(false)}
                 className="px-3 py-2 text-[10px] font-bold text-indigo-600 bg-indigo-50/50 hover:bg-indigo-100/50 rounded-2xl border border-indigo-100/50 transition-all active:scale-95 cursor-pointer"
               >
                 ← Back to My Account
@@ -2874,7 +2807,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
             <ComfortButton icon="🍵" label="Warm Tea" onClick={() => sendDigitalComfort('tea')} />
           </div>
           <button 
-            onClick={() => setUser({ ...user, isPartner: false })}
+            onClick={() => setIsPreviewingCompanion(false)}
             className="text-[10px] font-black text-indigo-505 uppercase tracking-widest hover:underline mt-4 cursor-pointer"
           >
             ← Back to My Account
@@ -3018,10 +2951,10 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
-          {!user.isPartner && (
+          {(!user.isPartner || isPreviewingCompanion) && (
             <button 
               type="button"
-              onClick={() => setUser({ ...user, isPartner: false })}
+              onClick={() => setIsPreviewingCompanion(false)}
               className="px-3 py-2 text-[10px] font-bold text-indigo-600 bg-indigo-50/50 hover:bg-indigo-100/50 rounded-2xl border border-indigo-100/50 transition-all active:scale-95 cursor-pointer"
             >
               ← Back to My Account
@@ -3216,9 +3149,9 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
               <h3 className="text-2xl font-serif text-indigo-600 italic">
                 {getCleanName(targetUser?.name, targetUser?.email) || "Your Partner"}'s Cycle Status
               </h3>
-              {!user.isPartner && (
+              {(!user.isPartner || isPreviewingCompanion) && (
                 <button 
-                  onClick={() => setUser({ ...user, isPartner: false })}
+                  onClick={() => setIsPreviewingCompanion(false)}
                   className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest cursor-pointer hover:underline"
                 >
                   ← Back to My Account

@@ -54,7 +54,8 @@ const DEFAULT_PRIVACY_PREFS: PrivacyPreferences = {
   allowPartnerActivityAlerts: true,
   allowAiPersonalization: false,
   autoLockOnBlur: false,
-  hideNotificationPreviews: false,
+  autoLockTimeoutMinutes: 5,
+  hideNotificationPreviews: true,
   dataRetentionDays: 365,
 };
 
@@ -529,16 +530,24 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
             {showPolicy && (
               <div className="pt-3 border-t border-pink-100 text-xs text-stone-700 space-y-2.5 leading-relaxed">
                 <p>
-                  <strong>1. Zero Health-Data Selling:</strong> Lumina never sells, rents, or brokers your menstrual, symptom, pregnancy, intimacy, or diary entries to advertisers or data brokers.
+                  <strong>1. Data Controller &amp; DPO (NDPA 2023 / GDPR):</strong> Lumina: Bloom &amp; Balance acts as Data Controller for your wellness sanctuary. Contact our Data Protection Officer at{' '}
+                  <a href="mailto:privacy@luminabloom.app" className="text-pink-700 font-bold underline">privacy@luminabloom.app</a>{' '}
+                  for access, rectification, portability, restriction, objection, or erasure inquiries.
                 </p>
                 <p>
-                  <strong>2. Encryption &amp; Isolation:</strong> Local offline snapshots and 2FA secrets are encrypted with AES-256-GCM via Web Crypto, and cloud records in Firestore are protected by strict owner-only security rules.
+                  <strong>2. Zero Health-Data Selling &amp; Explicit Consent:</strong> Sensitive reproductive health data (menstrual dates, symptoms, pregnancy logs, mood, and diary text) is processed strictly on your explicit consent and is never sold, rented, or brokered for advertising.
                 </p>
                 <p>
-                  <strong>3. Opt-In Telemetry Only:</strong> Navigation metrics and Web Vitals are disabled until you explicitly grant permission via Cookie Preferences. Notes and diary text are stripped before any analytics call.
+                  <strong>3. Encryption &amp; Owner-Only Isolation:</strong> Local snapshots, PIN verifiers, and 2FA secrets are encrypted/salted with Web Crypto (AES-256-GCM / PBKDF2-SHA256). Firestore security rules keep diary entries and doctor reports strictly owner-only — never shared in Partner Mode.
                 </p>
                 <p>
-                  <strong>4. Right to Export &amp; Erasure:</strong> You may download a verified portable copy or permanently erase your account and linked cloud documents at any time.
+                  <strong>4. Sub-Processors &amp; Cross-Border Safeguards:</strong> Lumina relies on vetted infrastructure sub-processors: <strong>Google Cloud / Firebase</strong> (authentication &amp; encrypted database storage), <strong>Google Gemini API</strong> (optional de-identified AI companion wellness replies without direct identifiers), <strong>Paystack</strong> &amp; <strong>RevenueCat</strong> (subscription billing verification). Cross-border transfers use TLS 1.3 encryption in transit and standard contractual data protection safeguards.
+                </p>
+                <p>
+                  <strong>5. Automated Cycle &amp; AI Profiling Notice:</strong> Cycle phase and ovulation predictions are statistical estimates derived from your logged dates. Personalized AI Wellness Companion prompts are strictly opt-in and never make binding medical or legal decisions.
+                </p>
+                <p>
+                  <strong>6. Concrete Retention &amp; 72-Hour Breach Notification:</strong> Active cycle and diary data is retained while your account remains active (default telemetry window: {privacyPrefs.dataRetentionDays || 365} days) and erased permanently upon verified account deletion, excluding minimal hashed billing/audit logs legally retained under statutory financial tax rules (up to 6 years). Any confirmed personal-data breach affecting user rights will be reported to relevant supervisory authorities within 72 hours and communicated promptly to affected members.
                 </p>
               </div>
             )}
@@ -594,6 +603,32 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
                 />
               </label>
             ))}
+
+            <div className="p-4 rounded-2xl bg-stone-50/70 border border-stone-200 flex items-center justify-between gap-4">
+              <div>
+                <span className="text-sm font-bold text-stone-900 block">Inactivity Auto-Lock Timer</span>
+                <span className="text-xs text-stone-600 block mt-0.5">
+                  Automatically lock Secret Diary and App Lock after periods of inactivity.
+                </span>
+              </div>
+              <select
+                aria-label="Inactivity Auto-Lock Timer"
+                value={privacyPrefs.autoLockTimeoutMinutes ?? 5}
+                onChange={(e) =>
+                  updatePrivacyPrefs(
+                    { autoLockTimeoutMinutes: Number(e.target.value) },
+                    'Inactivity Auto-Lock Timer'
+                  )
+                }
+                className="px-3 py-2 rounded-xl border border-stone-200 bg-white text-xs font-bold text-stone-800 outline-none"
+              >
+                <option value={1}>1 minute</option>
+                <option value={3}>3 minutes</option>
+                <option value={5}>5 minutes</option>
+                <option value={15}>15 minutes</option>
+                <option value={30}>30 minutes</option>
+              </select>
+            </div>
           </div>
 
           {/* Partner Data-Sharing Permissions */}
@@ -637,8 +672,8 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
                 { key: 'shareFertilityInfo' as const, label: 'Estimated Fertility Window' },
                 { key: 'shareSymptoms' as const, label: 'Symptom Support Alerts' },
                 { key: 'shareMood' as const, label: 'Mood Status Updates' },
+                { key: 'shareAppointmentReminders' as const, label: 'Appointment Reminders' },
                 { key: 'shareWellnessUpdates' as const, label: 'Hydration & Wellness Goals' },
-                { key: 'shareNotes' as const, label: 'Shared Wellness Notes' },
               ].map((perm) => (
                 <label
                   key={perm.key}
@@ -1100,49 +1135,14 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
               </div>
             </div>
 
-            {!showDeleteConfirm ? (
-              <button
-                type="button"
-                onClick={() => setShowDeleteConfirm(true)}
-                className="px-4 py-2.5 rounded-2xl bg-white border border-rose-300 text-rose-800 hover:bg-rose-100 text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
-              >
-                <Trash2 size={14} aria-hidden="true" />
-                <span>Request Account Deletion</span>
-              </button>
-            ) : (
-              <div className="p-4 rounded-2xl bg-white border border-rose-200 space-y-3">
-                <label className="text-xs font-bold text-stone-800 block">
-                  Type <span className="font-mono text-rose-700">DELETE</span> to permanently erase your account:
-                </label>
-                <input
-                  type="text"
-                  value={deleteConfirmText}
-                  onChange={(e) => setDeleteConfirmText(sanitizeTextInput(e.target.value, 20))}
-                  placeholder="Type DELETE"
-                  className="w-full px-3.5 py-2 rounded-xl border border-rose-200 text-xs text-stone-900"
-                />
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    disabled={deleteConfirmText.trim().toUpperCase() !== 'DELETE'}
-                    onClick={onRequestDeleteAccount}
-                    className="px-4 py-2 rounded-xl bg-rose-600 disabled:bg-rose-300 text-white text-xs font-bold cursor-pointer"
-                  >
-                    Confirm Permanent Deletion
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowDeleteConfirm(false);
-                      setDeleteConfirmText('');
-                    }}
-                    className="px-4 py-2 rounded-xl bg-stone-100 text-stone-800 text-xs font-bold cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
+            <button
+              type="button"
+              onClick={onRequestDeleteAccount}
+              className="px-4 py-2.5 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer shadow-sm"
+            >
+              <Trash2 size={14} aria-hidden="true" />
+              <span>Verify Identity &amp; Delete Account</span>
+            </button>
           </div>
         </div>
       )}

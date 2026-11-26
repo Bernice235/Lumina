@@ -124,7 +124,7 @@ export const ExpectedPeriodCheckInCard: React.FC<ExpectedPeriodCheckInCardProps>
     const endDateStr = endDate.toDateString();
 
     const newPeriod: Period = {
-      id: Math.random().toString(36).substring(2, 9),
+      id: crypto.randomUUID(),
       startDate: logDateStr,
       endDate: endDateStr,
       intensity: selectedIntensity

@@ -807,7 +807,9 @@ export function generatePregnancyNotificationText(
             `Check in on her today 💕 a little love goes a long way 🌸`,
             `She’s carrying your little one 💗 support means everything 🩷`
           ];
-          const index = data?.index !== undefined ? data.index : (Math.floor(Math.random() * texts.length));
+          const randArr = new Uint32Array(1);
+          globalThis.crypto.getRandomValues(randArr);
+          const index = data?.index !== undefined ? data.index : (randArr[0] % texts.length);
           return texts[index];
         }
     }
@@ -924,7 +926,9 @@ export function generatePregnancyNotificationText(
             `Hey mama 🌷 you are doing an amazing job. One day at a time 💖`,
             `Hey mama 💕 your body is creating life. Be proud of yourself 🌸`
           ];
-          const index = data?.index !== undefined ? data.index : (Math.floor(Math.random() * texts.length));
+          const randArr = new Uint32Array(1);
+          globalThis.crypto.getRandomValues(randArr);
+          const index = data?.index !== undefined ? data.index : (randArr[0] % texts.length);
           return texts[index];
         }
     }

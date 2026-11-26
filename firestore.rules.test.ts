@@ -178,5 +178,57 @@ export const DIRTY_DOZEN_SECURITY_TESTS: SecurityTestCase[] = [
     payload: { id: 'attacker_uid', name: 'Attacker', email: 'a@example.com', isPremium: true },
     expectedOutcome: 'PERMISSION_DENIED',
     blockingRule: "incoming().get('isPremium', false) == false"
+  },
+  {
+    id: 16,
+    name: 'Partner Shared Projection Exposing Diary Notes or Doctor Reports',
+    collectionPath: 'users/primary_uid/partner_shared/summary',
+    operation: 'update',
+    authUid: 'primary_uid',
+    payload: {
+      ownerId: 'primary_uid',
+      ownerName: 'User',
+      isPartnerLinked: true,
+      isSharingPaused: false,
+      updatedAt: new Date().toISOString(),
+      sharingSettings: { shareNotes: true, shareDoctorReports: true },
+      doctorReports: [{ summary: 'private' }]
+    },
+    expectedOutcome: 'PERMISSION_DENIED',
+    blockingRule: "data.sharingSettings.get('shareNotes', false) == false && !('doctorReports' in data)"
+  },
+  {
+    id: 17,
+    name: 'Invite Creation Leaking senderEmail PII',
+    collectionPath: 'invites/ABCD1234',
+    operation: 'create',
+    authUid: 'sender_uid',
+    payload: {
+      code: 'ABCD1234',
+      senderId: 'sender_uid',
+      senderName: 'Sender',
+      senderEmail: 'sender@example.com',
+      createdAt: new Date().toISOString()
+    },
+    expectedOutcome: 'PERMISSION_DENIED',
+    blockingRule: "data.keys().hasOnly(['code', 'senderId', 'senderName', 'createdAt'])"
+  },
+  {
+    id: 18,
+    name: 'Cross-User Telemetry Deletion Attempt',
+    collectionPath: 'analytics_events/evt_victim_1',
+    operation: 'delete',
+    authUid: 'attacker_uid',
+    expectedOutcome: 'PERMISSION_DENIED',
+    blockingRule: 'existing().userId == request.auth.uid'
+  },
+  {
+    id: 19,
+    name: 'Unowned Invite Directory Enumeration',
+    collectionPath: 'invites',
+    operation: 'list',
+    authUid: 'attacker_uid',
+    expectedOutcome: 'PERMISSION_DENIED',
+    blockingRule: 'allow list: if isSignedIn() && existing().senderId == request.auth.uid;'
   }
 ];

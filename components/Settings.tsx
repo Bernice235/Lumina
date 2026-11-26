@@ -58,7 +58,8 @@ import {
   stopWelcomeVoice, 
   WelcomeGreeting 
 } from '../services/welcomeVoiceService';
-import { syncUser, blockPartner, unblockPartner, deleteUserAccount } from '../services/firebaseService';
+import { syncUser, blockPartner, unblockPartner } from '../services/firebaseService';
+import { DeleteAccountModal } from './DeleteAccountModal';
 import { 
   applyPeriodDurationChange, 
   applyCycleLengthChange, 
@@ -122,6 +123,7 @@ interface SettingsProps {
   isMusicActive?: boolean;
   toggleMusicActive?: () => void;
   setActiveTab?: (tab: any) => void;
+  onOpenExternalDeletionPage?: () => void;
 }
 
 const Settings: React.FC<SettingsProps> = ({ 
@@ -142,7 +144,8 @@ const Settings: React.FC<SettingsProps> = ({
   toggleMusic = () => {},
   isMusicActive = false,
   toggleMusicActive = () => {},
-  setActiveTab
+  setActiveTab,
+  onOpenExternalDeletionPage
 }) => {
   const getMappedTab = (tab: any): 'menu' | 'profile' | 'account' | 'cycle' | 'notifications' | 'music_sanctuary' | 'partner' | 'premium' | 'privacy_security' | 'backup_sync' | 'help_support' | 'invite' => {
     if (tab === 'menu') return 'menu';
@@ -284,28 +287,8 @@ const Settings: React.FC<SettingsProps> = ({
 
   // Account Deletion & Partner Control States
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
-  const [deleteAccountInput, setDeleteAccountInput] = useState('');
-  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [partnerToBlock, setPartnerToBlock] = useState<{ id: string; name: string } | null>(null);
   const [partnerToUnblock, setPartnerToUnblock] = useState<{ id: string; name: string } | null>(null);
-
-  const handleDeleteUserAccount = async () => {
-    if (deleteAccountInput.trim() !== 'DELETE') return;
-    setIsDeletingAccount(true);
-    try {
-      await deleteUserAccount(user.id);
-      if (onLogout) {
-        onLogout();
-      } else {
-        setUser(null);
-      }
-    } catch (err) {
-      console.error("Account deletion error:", err);
-      setPartnerActionNotice({ type: 'error', text: 'Could not delete account right now. Please sign in recently and try again.' });
-    } finally {
-      setIsDeletingAccount(false);
-    }
-  };
 
   const handleBlockPartnerConfirm = async () => {
     if (!partnerToBlock) return;
@@ -1585,7 +1568,6 @@ const Settings: React.FC<SettingsProps> = ({
               if (onLogout) onLogout();
             }}
             onRequestDeleteAccount={() => {
-              setDeleteAccountInput('');
               setShowDeleteAccountModal(true);
             }}
             onNavigateToBackup={() => setActiveSubTab('backup_sync')}
@@ -2399,10 +2381,7 @@ const Settings: React.FC<SettingsProps> = ({
             </p>
             <button
               type="button"
-              onClick={() => {
-                setDeleteAccountInput('');
-                setShowDeleteAccountModal(true);
-              }}
+              onClick={() => setShowDeleteAccountModal(true)}
               className="w-full py-3.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-2xl text-xs transition-all cursor-pointer shadow-md shadow-rose-200"
             >
               🗑️ Delete Account
@@ -3382,65 +3361,17 @@ const Settings: React.FC<SettingsProps> = ({
         </div>
       )}
 
-      {/* DELETE ACCOUNT CONFIRMATION MODAL */}
-      {showDeleteAccountModal && (
-        <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-[2.5rem] p-6 max-w-md w-full space-y-5 border border-rose-100 shadow-2xl">
-            <div className="flex items-center gap-3 text-rose-600">
-              <div className="p-3 bg-rose-100/60 rounded-2xl">
-                <ShieldAlert size={24} />
-              </div>
-              <div>
-                <h3 className="font-serif font-bold text-lg text-stone-800">Delete Your Account?</h3>
-                <p className="text-[10px] font-bold text-rose-500 uppercase tracking-widest">Permanent & Irreversible</p>
-              </div>
-            </div>
-
-            <div className="space-y-2 text-xs text-stone-600 bg-rose-50/50 p-4 rounded-2xl border border-rose-100/60">
-              <p className="font-bold text-rose-800">Deleting your account will permanently remove:</p>
-              <ul className="list-disc pl-5 space-y-1 text-[11px]">
-                <li>Cycle history and predictions</li>
-                <li>Symptoms and mood logs</li>
-                <li>Journal entries and notes</li>
-                <li>Partner connections and sharing</li>
-                <li>All profile settings</li>
-              </ul>
-              <p className="font-bold text-rose-700 pt-1">This action cannot be undone.</p>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-stone-700 block">
-                To confirm, please type <span className="text-rose-600 font-mono font-bold">DELETE</span> below:
-              </label>
-              <input
-                type="text"
-                value={deleteAccountInput}
-                onChange={(e) => setDeleteAccountInput(e.target.value)}
-                placeholder="Type DELETE to confirm"
-                className="w-full bg-stone-50 border border-stone-200 px-4 py-3 rounded-2xl text-xs font-mono text-stone-800 focus:border-rose-400 outline-none"
-              />
-            </div>
-
-            <div className="flex gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowDeleteAccountModal(false)}
-                className="flex-1 py-3 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs rounded-xl transition-all cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={deleteAccountInput.trim() !== 'DELETE' || isDeletingAccount}
-                onClick={handleDeleteUserAccount}
-                className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-md shadow-rose-200"
-              >
-                {isDeletingAccount ? 'Deleting...' : 'Delete Account'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* REAUTHENTICATED DELETE ACCOUNT MODAL */}
+      <DeleteAccountModal
+        isOpen={showDeleteAccountModal}
+        user={user}
+        onClose={() => setShowDeleteAccountModal(false)}
+        onDeleted={() => {
+          if (onLogout) onLogout();
+          else setUser(null);
+        }}
+        onOpenExternalPage={onOpenExternalDeletionPage}
+      />
 
       {/* BLOCK PARTNER MODAL */}
       {partnerToBlock && (

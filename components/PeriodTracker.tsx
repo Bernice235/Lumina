@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   FileText, 
   TrendingUp, 
@@ -38,6 +38,7 @@ import {
 } from '../services/cycleSyncService';
 import { syncUser } from '../services/firebaseService';
 import { logAvatarActionReward } from '../services/avatarService';
+import { secureStorage } from '../services/secureStorage';
 import { 
   BarChart, 
   Bar, 
@@ -112,28 +113,44 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
   const [deletePeriodConfirmId, setDeletePeriodConfirmId] = useState<string | null>(null);
   const [pendingDeleteTimelineEventId, setPendingDeleteTimelineEventId] = useState<string | null>(null);
   const [activeGraphTab, setActiveGraphTab] = useState<'cycle-length' | 'period-length' | 'symptoms' | 'moods' | 'flows' | 'fertility' | 'pregnancy'>(user.isPregnancyMode ? 'pregnancy' : 'cycle-length');
-  const [pregnancyWeightLogs, setPregnancyWeightLogs] = useState<{ week: number; weight: number }[]>(() => {
-    try {
-      const local = localStorage.getItem(`pregnancy_weight_${user?.id || 'default'}`);
-      return local ? JSON.parse(local) : [
-        { week: 4, weight: 62.0 },
-        { week: 8, weight: 62.8 },
-        { week: 12, weight: 63.5 },
-        { week: 16, weight: 64.8 },
-        { week: 20, weight: 66.2 },
-        { week: 24, weight: 68.0 },
-      ];
-    } catch {
-      return [
-        { week: 4, weight: 62.0 },
-        { week: 8, weight: 62.8 },
-        { week: 12, weight: 63.5 },
-        { week: 16, weight: 64.8 },
-        { week: 20, weight: 66.2 },
-        { week: 24, weight: 68.0 },
-      ];
-    }
-  });
+  const DEFAULT_PREGNANCY_WEIGHTS = [
+    { week: 4, weight: 62.0 },
+    { week: 8, weight: 62.8 },
+    { week: 12, weight: 63.5 },
+    { week: 16, weight: 64.8 },
+    { week: 20, weight: 66.2 },
+    { week: 24, weight: 68.0 },
+  ];
+  const [pregnancyWeightLogs, setPregnancyWeightLogs] = useState<{ week: number; weight: number }[]>(DEFAULT_PREGNANCY_WEIGHTS);
+
+  useEffect(() => {
+    let cancelled = false;
+    const key = `pregnancy_weight_${user?.id || 'default'}`;
+    (async () => {
+      try {
+        const legacyPlain = localStorage.getItem(key);
+        if (legacyPlain) {
+          const parsed = JSON.parse(legacyPlain);
+          await secureStorage.setItem(key, JSON.stringify(parsed));
+          localStorage.removeItem(key);
+          if (!cancelled && Array.isArray(parsed)) {
+            setPregnancyWeightLogs(parsed);
+            return;
+          }
+        }
+        const encrypted = await secureStorage.getItem(key);
+        if (!cancelled && encrypted) {
+          const parsed = JSON.parse(encrypted);
+          if (Array.isArray(parsed)) setPregnancyWeightLogs(parsed);
+        }
+      } catch {
+        // Retain default fallback on storage error
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
   const [newWeightVal, setNewWeightVal] = useState('');
   const [newWeightWeek, setNewWeightWeek] = useState('25');
   const [showExportReport, setShowExportReport] = useState(false);
@@ -327,7 +344,9 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
     if (!isNaN(w) && !isNaN(wk) && w > 0 && wk > 0 && wk <= 42) {
       const nextLogs = [...pregnancyWeightLogs, { week: wk, weight: w }].sort((a, b) => a.week - b.week);
       setPregnancyWeightLogs(nextLogs);
-      localStorage.setItem(`pregnancy_weight_${user.id}`, JSON.stringify(nextLogs));
+      const key = `pregnancy_weight_${user?.id || 'default'}`;
+      void secureStorage.setItem(key, JSON.stringify(nextLogs));
+      try { localStorage.removeItem(key); } catch {}
       setNewWeightVal('');
       setNewWeightWeek(String(wk + 1));
     }
@@ -347,7 +366,7 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
     }
 
     const nextPeriod: Period = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: crypto.randomUUID(),
       startDate: startLocal.toDateString(),
       endDate: endLocal.toDateString(),
       intensity: newPeriodData.intensity
@@ -533,7 +552,7 @@ const PeriodTracker: React.FC<PeriodTrackerProps> = ({
     } else {
       const existing = logIdx !== -1 ? currentLogs[logIdx] : {} as any;
       const updatedLog = {
-        id: logIdx !== -1 ? currentLogs[logIdx].id : Math.random().toString(36).substr(2, 9),
+        id: logIdx !== -1 ? currentLogs[logIdx].id : crypto.randomUUID(),
         date: dateStr,
         protected: protection === 'protected',
         hadSex: true,

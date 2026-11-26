@@ -25,7 +25,7 @@ const TemperatureTracker: React.FC<TemperatureTrackerProps> = ({ user, logs, set
     if (isNaN(val)) return;
 
     const newLog: TemperatureLog = {
-      id: Math.random().toString(),
+      id: crypto.randomUUID(),
       date: today,
       value: val,
       unit

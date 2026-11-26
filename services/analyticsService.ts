@@ -57,6 +57,21 @@ export function hasConsent(category: 'essential' | 'analytics' | 'performance' |
   return state.decided && Boolean(state[category]);
 }
 
+export function purgeTelemetryStorage(categories: { analytics?: boolean; performance?: boolean } = { analytics: true, performance: true }): void {
+  if (typeof window === 'undefined') return;
+  try {
+    if (categories.analytics) {
+      localStorage.removeItem('lumina_analytics_events');
+    }
+    if (categories.performance) {
+      localStorage.removeItem('lumina_perf_metrics');
+    }
+    if (categories.analytics && categories.performance) {
+      localStorage.removeItem('lumina_crash_reports');
+    }
+  } catch {}
+}
+
 export function setCookieConsent(
   next: Partial<Pick<CookieConsentState, 'analytics' | 'performance' | 'personalization'>> & { decided?: boolean }
 ): CookieConsentState {
@@ -73,6 +88,13 @@ export function setCookieConsent(
   if (typeof window !== 'undefined') {
     try {
       localStorage.setItem(COOKIE_CONSENT_KEY, JSON.stringify(updated));
+      purgeTelemetryStorage({
+        analytics: !updated.analytics,
+        performance: !updated.performance,
+      });
+      if (!updated.analytics && !updated.performance) {
+        localStorage.removeItem('lumina_crash_reports');
+      }
       window.dispatchEvent(new CustomEvent('lumina:consent-changed', { detail: updated }));
     } catch {}
   }
@@ -236,7 +258,7 @@ if (typeof window !== 'undefined') {
 
 export const getDeviceMetadata = () => {
   if (typeof window === 'undefined') {
-    return { country: 'Unknown', deviceType: 'Desktop', appVersion: '1.0.0' };
+    return { country: 'Unknown', deviceType: 'Desktop', appVersion: '2.4.0' };
   }
   const ua = navigator.userAgent;
   let deviceType = 'Desktop';
@@ -251,7 +273,7 @@ export const getDeviceMetadata = () => {
   return {
     country: timeZone.split('/')[0] || language,
     deviceType,
-    appVersion: '1.0.0',
+    appVersion: '2.4.0',
     language,
     timeZone,
     screenResolution: `${window.screen.width}x${window.screen.height}`,
@@ -360,6 +382,8 @@ export const logCrashReport = async (
   category: 'App Crash' | 'Screen Rendering' | 'Authentication Error' | 'Partner Error' | 'Notification Failure' | 'Payment Error' | 'Network Error' = 'App Crash',
   additionalContext: Record<string, any> = {}
 ) => {
+  // Never write or transmit crash/telemetry records without explicit user consent
+  if (!hasConsent('analytics') && !hasConsent('performance')) return;
   try {
     const meta = getDeviceMetadata();
     const currentUserId = auth.currentUser?.uid || 'anonymous';
@@ -391,7 +415,7 @@ export const logCrashReport = async (
       .slice(0, 300);
 
     const crashReport = {
-      id: `crash_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      id: `crash_${crypto.randomUUID()}`,
       category,
       errorMessage: sanitizedMsg,
       errorStack: errorStack.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[redacted-email]'),
@@ -407,8 +431,6 @@ export const logCrashReport = async (
       localCrashes.unshift(crashReport);
       localStorage.setItem('lumina_crash_reports', JSON.stringify(localCrashes.slice(0, 50)));
     } catch {}
-
-    if (!hasConsent('analytics') && !hasConsent('performance')) return;
 
     if (firebaseAnalyticsInstance) {
       logEvent(firebaseAnalyticsInstance, 'app_exception', {

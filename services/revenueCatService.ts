@@ -55,13 +55,15 @@ async function verifyEntitlementWithServer(payload: {
   productId?: string;
 }): Promise<{
   verified: boolean;
+  status?: number;
+  unconfigured?: boolean;
   planId?: 'monthly' | '6month' | 'yearly';
   expirationDate?: string;
   error?: string;
 }> {
   const currentUser = auth.currentUser;
   if (!currentUser) {
-    return { verified: false, error: 'Sign in with your account before verifying purchases.' };
+    return { verified: false, status: 401, error: 'Sign in with your account before verifying purchases.' };
   }
   const token = await currentUser.getIdToken();
   const res = await fetch('/api/subscription/verify', {
@@ -74,10 +76,16 @@ async function verifyEntitlementWithServer(payload: {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !data?.verified) {
-    return { verified: false, error: data?.error || 'Subscription verification failed.' };
+    return {
+      verified: false,
+      status: res.status,
+      unconfigured: res.status === 503,
+      error: data?.error || 'Subscription verification failed.',
+    };
   }
   return {
     verified: true,
+    status: res.status,
     planId: data.planId,
     expirationDate: data.expirationDate,
   };
@@ -141,7 +149,7 @@ export const purchasePremiumPlan = async (
     const daysToAdd = plan.id === 'monthly' ? 30 : plan.id === '6month' ? 180 : 365;
     const expiryDate = serverCheck.expirationDate || new Date(now.getTime() + daysToAdd * 24 * 60 * 60 * 1000).toISOString();
     const newBilling: BillingItem = {
-      id: `rc_bill_${Date.now()}`,
+      id: `rc_bill_${typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Date.now()}`,
       date: now.toISOString(),
       amount: plan.priceNGN,
       currency: 'NGN',
@@ -176,21 +184,33 @@ export const purchasePremiumPlan = async (
       return { success: false, error: 'Store purchase completed without an active entitlement.' };
     }
 
-    // Server-side cross-check when configured; otherwise enforce store-verified CustomerInfo dates
-    const serverCheck = await verifyEntitlementWithServer({
-      provider: 'revenuecat',
-      productId: plan.productId,
-    }).catch(() => null);
+    // Server-side cross-check when backend verifier is reachable; reject explicit server denials (402/403/404)
+    let serverCheck: Awaited<ReturnType<typeof verifyEntitlementWithServer>> | null = null;
+    try {
+      serverCheck = await verifyEntitlementWithServer({
+        provider: 'revenuecat',
+        productId: plan.productId,
+      });
+      if (!serverCheck.verified && !serverCheck.unconfigured) {
+        return {
+          success: false,
+          error: serverCheck.error || 'Purchase receipt failed server entitlement verification.',
+        };
+      }
+    } catch {
+      // Allow native App Store / Google Play CustomerInfo entitlement only when server is unreachable offline
+      serverCheck = null;
+    }
 
     const entitlement: PurchasesEntitlementInfo = customerInfo.entitlements.active[ENTITLEMENT_ID];
-    const expirationDate = serverCheck?.expirationDate
+    const expirationDate = serverCheck?.verified && serverCheck?.expirationDate
       ? new Date(serverCheck.expirationDate)
       : entitlement.expirationDate
         ? new Date(entitlement.expirationDate)
         : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
     const newBilling: BillingItem = {
-      id: `rc_native_${Date.now()}`,
+      id: `rc_native_${typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Date.now()}`,
       date: now.toISOString(),
       amount: plan.priceNGN,
       currency: 'NGN',

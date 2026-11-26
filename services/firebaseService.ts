@@ -2,6 +2,7 @@ import {
   doc,
   setDoc,
   getDoc,
+  getDocs,
   updateDoc,
   onSnapshot,
   collection,
@@ -9,6 +10,14 @@ import {
   where,
   deleteDoc
 } from 'firebase/firestore';
+import {
+  EmailAuthProvider,
+  GoogleAuthProvider,
+  OAuthProvider,
+  deleteUser,
+  reauthenticateWithCredential,
+  reauthenticateWithPopup
+} from 'firebase/auth';
 import { db, auth, handleFirestoreError, OperationType } from './firebase';
 import { User, ReceivedComfort, PartnerSharedSummary } from '../types';
 import {
@@ -16,7 +25,7 @@ import {
   saveEncryptedSessionUser,
   secureStorage
 } from './secureStorage';
-import { redactEmailForLogs } from './securityService';
+import { redactEmailForLogs, verifyLocalCredential } from './securityService';
 
 function cleanUndefined<T>(obj: T): T {
   if (obj === null || typeof obj !== 'object') {
@@ -52,10 +61,10 @@ const isSandboxId = (id?: string | null): boolean => {
 export const checkIsOnboardingCompleted = (userObj?: Partial<User> | null, backupObj?: Partial<User> | null): boolean => {
   if (!userObj && !backupObj) return false;
 
-  if (userObj?.onboardingCompleted === false) return false;
-  if (backupObj?.onboardingCompleted === false && userObj?.onboardingCompleted !== true) return false;
-
+  // Cloud / primary user flag === true is strictly sticky so stale local backups never push returning users back into onboarding
   if (userObj?.onboardingCompleted === true) return true;
+  if (userObj?.onboardingCompleted === false) return false;
+
   if (backupObj?.onboardingCompleted === true) return true;
 
   const hasLoggedData = !!(
@@ -70,7 +79,10 @@ export const checkIsOnboardingCompleted = (userObj?: Partial<User> | null, backu
     (backupObj?.moodLogs && backupObj.moodLogs.length > 0)
   );
 
-  return hasLoggedData;
+  if (hasLoggedData) return true;
+  if (backupObj?.onboardingCompleted === false) return false;
+
+  return false;
 };
 
 /**
@@ -82,11 +94,11 @@ export function buildPartnerSharedProjection(user: User): PartnerSharedSummary {
     shareCycleInfo: user.sharingSettings?.shareCycleInfo === true,
     shareSymptoms: user.sharingSettings?.shareSymptoms === true,
     shareMood: user.sharingSettings?.shareMood === true,
-    shareNotes: user.sharingSettings?.shareNotes === true,
+    shareNotes: false,
     shareFertilityInfo: user.sharingSettings?.shareFertilityInfo === true,
     sharePregnancyInfo: user.sharingSettings?.sharePregnancyInfo === true,
     shareIntimacyInfo: user.sharingSettings?.shareIntimacyInfo === true,
-    shareDoctorReports: user.sharingSettings?.shareDoctorReports === true,
+    shareDoctorReports: false,
     shareAppointmentReminders: user.sharingSettings?.shareAppointmentReminders === true,
     shareWellnessUpdates: user.sharingSettings?.shareWellnessUpdates === true,
   };
@@ -134,7 +146,6 @@ export function buildPartnerSharedProjection(user: User): PartnerSharedSummary {
       id: m.id,
       date: m.date,
       mood: m.mood,
-      ...(settings.shareNotes && m.note ? { note: m.note } : {}),
     }));
   }
 
@@ -302,13 +313,18 @@ export const subscribeToPartnerSharedView = (
   );
 };
 
-export const createInvite = async (userId: string, userName: string, userEmail?: string) => {
-  const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+export const createInvite = async (userId: string, userName: string) => {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const randBytes = new Uint8Array(8);
+  globalThis.crypto.getRandomValues(randBytes);
+  let code = '';
+  for (let i = 0; i < 8; i++) {
+    code += alphabet[randBytes[i] % alphabet.length];
+  }
   const inviteData = {
     code,
     senderId: userId,
     senderName: userName,
-    senderEmail: userEmail || '',
     createdAt: new Date().toISOString()
   };
 
@@ -337,7 +353,7 @@ export const addNotificationToUser = async (
     (notification.title && notification.title.toLowerCase().includes('invite'));
 
   const nowIso = new Date().toISOString();
-  const notifId = `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+  const notifId = `notif_${crypto.randomUUID()}`;
   const senderUid = auth.currentUser?.uid || targetUserId;
 
   if (isSandboxId(targetUserId)) {
@@ -564,7 +580,7 @@ export const disconnectPartner = async (userId: string, partnerId: string) => {
 };
 
 export const sendGift = async (senderName: string, senderId: string, receiverId: string, type: string) => {
-  const giftId = Math.random().toString(36).substring(2, 11);
+  const giftId = crypto.randomUUID();
   const giftObj = {
     id: giftId,
     type,
@@ -683,7 +699,7 @@ export const submitPartnerRequest = async (
   requestedPermissions: string[]
 ) => {
   const isSandbox = isSandboxId(userId) || isSandboxId(partnerId);
-  const request_id = isSandbox ? Math.random().toString(36).substring(2, 11) : `${userId}_${partnerId}`;
+  const request_id = isSandbox ? crypto.randomUUID() : `${userId}_${partnerId}`;
   const nowIso = new Date().toISOString();
 
   const requestData: DPartnerRequest & { userId?: string; partnerId?: string; createdAt?: string } = {
@@ -888,7 +904,8 @@ export interface GlobalBankConfig {
 
 export const saveGlobalBankDetails = async (config: GlobalBankConfig) => {
   try {
-    localStorage.setItem('lumina_global_bank_config', JSON.stringify(config));
+    await secureStorage.setItem('lumina_global_bank_config', JSON.stringify(config));
+    try { localStorage.removeItem('lumina_global_bank_config'); } catch {}
   } catch {}
 };
 
@@ -897,12 +914,24 @@ export const getGlobalBankDetails = async (): Promise<GlobalBankConfig | null> =
     const docSnap = await getDoc(doc(db, 'global_config', 'payment'));
     if (docSnap.exists()) {
       const data = docSnap.data() as GlobalBankConfig;
-      localStorage.setItem('lumina_global_bank_config', JSON.stringify(data));
+      await secureStorage.setItem('lumina_global_bank_config', JSON.stringify(data));
+      try { localStorage.removeItem('lumina_global_bank_config'); } catch {}
       return data;
     }
   } catch {}
-  const cached = localStorage.getItem('lumina_global_bank_config');
-  return safeJsonParse<GlobalBankConfig | null>(cached, null);
+  const cachedSecure = await secureStorage.getItem('lumina_global_bank_config');
+  if (cachedSecure) {
+    return safeJsonParse<GlobalBankConfig | null>(cachedSecure, null);
+  }
+  try {
+    const legacy = localStorage.getItem('lumina_global_bank_config');
+    if (legacy) {
+      await secureStorage.setItem('lumina_global_bank_config', legacy);
+      localStorage.removeItem('lumina_global_bank_config');
+      return safeJsonParse<GlobalBankConfig | null>(legacy, null);
+    }
+  } catch {}
+  return null;
 };
 
 export const blockPartner = async (
@@ -1006,43 +1035,240 @@ export const unblockPartner = async (userId: string, partnerIdToUnblock: string)
   }
 };
 
-export const deleteUserAccount = async (userId: string) => {
-  if (!userId) return;
+export function getCurrentAuthProviders(): string[] {
+  const fbUser = auth.currentUser;
+  if (!fbUser) return [];
+  return (fbUser.providerData || []).map((p) => p.providerId).filter(Boolean);
+}
 
-  try {
-    const userRaw = await secureStorage.getItem(`user_profile_${userId}`);
-    if (userRaw) {
-      const u: User = safeJsonParse<any>(userRaw, {});
-      if (u.partnerId) {
-        await disconnectPartner(userId, u.partnerId);
+/**
+ * Enforces recent authentication (password credential or Google/Apple OAuth popup)
+ * before destructive account actions. Throws clear user-facing error on failure.
+ */
+export const reauthenticateCurrentUser = async (options?: {
+  password?: string;
+  email?: string;
+  userId?: string;
+}): Promise<void> => {
+  const fbUser = auth.currentUser;
+
+  if (!fbUser || (options?.userId && isSandboxId(options.userId))) {
+    // Sandbox / offline-only account: if a password was supplied and a local verifier exists, validate it
+    const targetEmail = options?.email?.trim();
+    if (targetEmail && options?.password) {
+      const verdict = await verifyLocalCredential(targetEmail, options.password);
+      if (verdict === 'invalid') {
+        throw new Error('Incorrect password. Please enter your current password to continue.');
       }
     }
-  } catch (e) {
-    console.warn('Error disconnecting partner before delete:', e);
+    return;
   }
 
-  try {
-    if (!isSandboxId(userId)) {
-      await deleteDoc(doc(db, 'users', userId, 'partner_shared', 'summary')).catch(() => {});
-      await deleteDoc(doc(db, 'users', userId));
+  const providers = getCurrentAuthProviders();
+  if (providers.includes('password') && fbUser.email) {
+    const pwd = options?.password;
+    if (!pwd) {
+      throw new Error('Please enter your current password to verify your identity before deleting your account.');
     }
-  } catch (error) {
-    console.warn('Firestore user delete notice:', error);
-  }
-
-  try {
-    if (auth.currentUser) {
-      const { deleteUser } = await import('firebase/auth');
-      await deleteUser(auth.currentUser);
+    try {
+      const cred = EmailAuthProvider.credential(fbUser.email, pwd);
+      await reauthenticateWithCredential(fbUser, cred);
+      return;
+    } catch (err: any) {
+      const code = err?.code || '';
+      if (code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
+        throw new Error('Incorrect password. Please check your current password and try again.');
+      }
+      if (code === 'auth/too-many-requests') {
+        throw new Error('Too many failed verification attempts. Please wait a few minutes before trying again.');
+      }
+      if (code === 'auth/network-request-failed') {
+        throw new Error('A network connection is required to verify your identity and permanently delete your cloud account.');
+      }
+      throw new Error(err?.message || 'Unable to verify your password right now.');
     }
-  } catch (authErr) {
-    console.warn('Firebase auth deletion warning:', authErr);
   }
 
-  await secureStorage.removeItem(`user_profile_${userId}`);
-  await purgeAllLuminaClientSecrets({ clearOfflineVerifiers: true, clearBiometricBinding: true });
+  if (providers.includes('google.com')) {
+    try {
+      const provider = new GoogleAuthProvider();
+      await reauthenticateWithPopup(fbUser, provider);
+      return;
+    } catch (err: any) {
+      if (err?.code === 'auth/popup-closed-by-user') {
+        throw new Error('Google verification window was closed before confirmation completed.');
+      }
+      throw new Error(err?.message || 'Google identity verification failed. Please try again.');
+    }
+  }
+
+  if (providers.includes('apple.com')) {
+    try {
+      const provider = new OAuthProvider('apple.com');
+      await reauthenticateWithPopup(fbUser, provider);
+      return;
+    } catch (err: any) {
+      if (err?.code === 'auth/popup-closed-by-user') {
+        throw new Error('Apple verification window was closed before confirmation completed.');
+      }
+      throw new Error(err?.message || 'Apple identity verification failed. Please try again.');
+    }
+  }
+
+  // Fallback token refresh check
+  await fbUser.getIdToken(true);
 };
 
-export const deletePartnerAccount = async (partnerId: string) => {
-  return deleteUserAccount(partnerId);
+async function deleteQueryDocs(qRef: ReturnType<typeof query>): Promise<void> {
+  try {
+    const snap = await getDocs(qRef);
+    await Promise.all(snap.docs.map((d) => deleteDoc(d.ref).catch(() => {})));
+  } catch {
+    // Best-effort cleanup for secondary collections
+  }
+}
+
+export interface AccountDeletionResult {
+  uid: string;
+  deletedAt: string;
+  cloudDeleted: boolean;
+  authDeleted: boolean;
+}
+
+export const deleteUserAccount = async (
+  userId: string,
+  options?: { password?: string; email?: string; skipReauth?: boolean }
+): Promise<AccountDeletionResult> => {
+  if (!userId) {
+    throw new Error('Missing user identifier for account deletion.');
+  }
+
+  const sandbox = isSandboxId(userId);
+  const fbUser = auth.currentUser;
+
+  // 1. Mandatory Reauthentication FIRST — never delete any cloud records unless identity is freshly verified
+  if (!options?.skipReauth) {
+    await reauthenticateCurrentUser({
+      password: options?.password,
+      email: options?.email || fbUser?.email || undefined,
+      userId,
+    });
+  }
+
+  if (!sandbox && fbUser && fbUser.uid !== userId) {
+    throw new Error('Signed-in session does not match the account requested for deletion.');
+  }
+
+  // 2. Read user profile metadata (partnerId / partnerCode / email) before purging Firestore
+  let partnerIdToDisconnect = '';
+  let partnerCodeToDelete = '';
+  let userEmail = options?.email || fbUser?.email || '';
+  try {
+    if (!sandbox) {
+      const cloudSnap = await getDoc(doc(db, 'users', userId)).catch(() => null);
+      if (cloudSnap?.exists()) {
+        const u = cloudSnap.data() as User;
+        partnerIdToDisconnect = u.partnerId || '';
+        partnerCodeToDelete = u.partnerCode || '';
+        userEmail = userEmail || u.email || '';
+      }
+    }
+    const userRaw = await secureStorage.getItem(`user_profile_${userId}`);
+    if (userRaw) {
+      const localU: User = safeJsonParse<any>(userRaw, {});
+      partnerIdToDisconnect = partnerIdToDisconnect || localU.partnerId || '';
+      partnerCodeToDelete = partnerCodeToDelete || localU.partnerCode || '';
+      userEmail = userEmail || localU.email || '';
+    }
+  } catch {}
+
+  // 3. Disconnect partner cleanly before deleting user document
+  if (partnerIdToDisconnect) {
+    try {
+      await disconnectPartner(userId, partnerIdToDisconnect);
+    } catch (e) {
+      console.warn('Error disconnecting partner before delete:', e);
+    }
+  }
+
+  // 4. Delete all Firestore documents owned by this user while request.auth is still active
+  let cloudDeleted = false;
+  if (!sandbox) {
+    try {
+      await deleteDoc(doc(db, 'users', userId, 'partner_shared', 'summary')).catch(() => {});
+
+      // Delete gifts subcollection
+      try {
+        const giftsSnap = await getDocs(collection(db, 'users', userId, 'gifts'));
+        await Promise.all(giftsSnap.docs.map((d) => deleteDoc(d.ref).catch(() => {})));
+      } catch {}
+
+      // Delete active invite code if stored
+      if (partnerCodeToDelete) {
+        await deleteDoc(doc(db, 'invites', partnerCodeToDelete.toUpperCase())).catch(() => {});
+      }
+      await deleteQueryDocs(query(collection(db, 'invites'), where('senderId', '==', userId)));
+
+      // Delete partner requests where user is primary user or partner
+      await deleteQueryDocs(query(collection(db, 'partner_requests'), where('user_id', '==', userId)));
+      await deleteQueryDocs(query(collection(db, 'partner_requests'), where('partner_id', '==', userId)));
+
+      // Delete notifications sent or received by user
+      await deleteQueryDocs(query(collection(db, 'notifications'), where('recipientId', '==', userId)));
+      await deleteQueryDocs(query(collection(db, 'notifications'), where('senderId', '==', userId)));
+
+      // Delete telemetry & crash reports scoped to user (GDPR/NDPA erasure)
+      await deleteQueryDocs(query(collection(db, 'analytics_events'), where('userId', '==', userId)));
+      await deleteQueryDocs(query(collection(db, 'crash_reports'), where('userId', '==', userId)));
+
+      // Delete primary user document
+      await deleteDoc(doc(db, 'users', userId));
+      cloudDeleted = true;
+    } catch (error: any) {
+      handleFirestoreError(error, OperationType.DELETE, `users/${userId}`);
+      throw new Error(error?.message || 'Unable to erase cloud health records. Please check your connection and try again.');
+    }
+  }
+
+  // 5. Permanently delete Firebase Auth user record & revoke tokens
+  let authDeleted = false;
+  if (!sandbox && auth.currentUser) {
+    try {
+      await deleteUser(auth.currentUser);
+      authDeleted = true;
+    } catch (authErr: any) {
+      const code = authErr?.code || '';
+      if (code === 'auth/requires-recent-login') {
+        throw new Error('Your login session expired during deletion. Please re-enter your credentials and try again.');
+      }
+      throw new Error(authErr?.message || 'Unable to remove your authentication account right now.');
+    }
+  }
+
+  // 6. Erase all local encrypted vaults, offline verifiers, backups, and storage keys
+  if (userEmail) {
+    const cleanEmail = userEmail.toLowerCase().trim();
+    await secureStorage.removeItem(`user_email_${cleanEmail}`).catch(() => {});
+    await secureStorage.removeItem(`offline_user_${cleanEmail}`).catch(() => {});
+  }
+  await purgeAllLuminaClientSecrets({
+    clearOfflineVerifiers: true,
+    clearBiometricBinding: true,
+    fullAccountErasure: true,
+    userId,
+  });
+
+  return {
+    uid: userId,
+    deletedAt: new Date().toISOString(),
+    cloudDeleted,
+    authDeleted,
+  };
+};
+
+export const deletePartnerAccount = async (
+  partnerId: string,
+  options?: { password?: string; email?: string; skipReauth?: boolean }
+) => {
+  return deleteUserAccount(partnerId, options);
 };

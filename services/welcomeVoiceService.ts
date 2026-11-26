@@ -323,7 +323,7 @@ export function getWelcomeGreeting(
 
 /**
  * Returns the signature introduction text for an avatar companion
- * Example: “Hi Bernice 🌸. I’m Amara and I’ll be your wellness companion inside Lumina. I’ll guide you through your cycle, symptoms, wellness goals, and daily check-ins.”
+ * Example: “Hi friend 🌸. I’m Amara and I’ll be your wellness companion inside Lumina. I’ll guide you through your cycle, symptoms, wellness goals, and daily check-ins.”
  */
 export function getAvatarIntroduction(
   avatarId: AvatarId = 'amara',

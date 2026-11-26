@@ -38,6 +38,31 @@ async function fetchGeminiProxy(endpoint: string, body: object): Promise<any> {
   }
 }
 
+function checkClientClinicalRedFlags(text: string): { matched: boolean; reply: string; category?: 'crisis' | 'emergency' } {
+  const input = text || '';
+  if (/\b(suicide|kill myself|end my life|self[- ]?harm|want to die|hurt myself)\b/i.test(input)) {
+    return {
+      matched: true,
+      category: 'crisis',
+      reply:
+        "You deserve immediate human care and support right now. Please contact your local emergency services or a trusted crisis helpline (such as 988 in the US/Canada, 999/111 in the UK, or 112/emergency services in your area) and reach out to someone safe nearby. Lumina cannot provide emergency crisis care.",
+    };
+  }
+  if (
+    /\b(soaking (?:through )?(?:a )?pad(?:s)? (?:every|each|per) hour|hemorrhag(?:e|ing)|gushing blood|passing huge clots|bleeding (?:very )?heavily|sharp one[- ]sided pain|severe unilateral|ectopic|shoulder[- ]?tip pain|fainting|passed out|severe pelvic pain|unbearable pain|(?:severe|worst) headache.*(vision|blurr|swell|spots|flash)|blurred vision.*pregnan|sudden swelling.*(face|hands)|preeclampsia|seizure|chest pain|shortness of breath|difficulty breathing|high fever|fever (?:over|above) (?:38|39|40|100\.4|101|102)|foul[- ]smelling discharge.*fever)\b/i.test(
+      input
+    )
+  ) {
+    return {
+      matched: true,
+      category: 'emergency',
+      reply:
+        "The symptoms you described can be urgent warning signs that need prompt in-person medical evaluation. Please seek urgent medical care or contact a qualified doctor/emergency service right away—especially if pain, heavy bleeding, fever, dizziness, or vision changes are present. (Urgent wellness triage notice — not a substitute for emergency medical care.)",
+    };
+  }
+  return { matched: false, reply: '' };
+}
+
 function generateClientFallbackAffirmation(name: string, phase?: string, mood?: string): string {
   const n = name || 'beautiful';
   const m = mood?.toLowerCase() || '';
@@ -75,16 +100,20 @@ export async function getDailyAffirmation(name: string, phase?: string, mood?: s
 }
 
 export async function getSupplementAdvice(symptoms: string[]): Promise<string> {
+  const triage = checkClientClinicalRedFlags(symptoms.join(", "));
+  if (triage.matched) return triage.reply;
   try {
     const data = await fetchGeminiProxy("supplement-advice", { symptoms });
     if (data?.text) return data.text;
   } catch (error) {
     console.warn("Proxy supplement advice unavailable, using fallback:", error);
   }
-  return "Your body is doing its best! Consider magnesium for cramps and some quiet rest. Always check with a professional first, sweet girl!";
+  return "Prioritize rest, gentle hydration, and warmth for comfort. Always check with a qualified healthcare professional before starting any supplements or treatments. (Informational wellness guidance only — not medical advice.)";
 }
 
 export async function getLuminaAdvice(question: string): Promise<string> {
+  const triage = checkClientClinicalRedFlags(question);
+  if (triage.matched) return triage.reply;
   try {
     const data = await fetchGeminiProxy("lumina-advice", { question });
     if (data?.text) return data.text;
@@ -95,6 +124,8 @@ export async function getLuminaAdvice(question: string): Promise<string> {
 }
 
 export async function getProductAdvice(product: string, concern: string): Promise<string> {
+  const triage = checkClientClinicalRedFlags(`${product} ${concern}`);
+  if (triage.matched) return triage.reply;
   try {
     const data = await fetchGeminiProxy("product-advice", { product, concern });
     if (data?.text) return data.text;
@@ -181,6 +212,13 @@ export interface CompanionChatResponse {
 }
 
 export async function sendCompanionChatMessage(payload: CompanionChatPayload): Promise<CompanionChatResponse> {
+  const triage = checkClientClinicalRedFlags(payload.userMessage);
+  if (triage.matched) {
+    return {
+      reply: triage.reply,
+      suggestedPrompts: ["Contact emergency services 🚑", "Find urgent care nearby 🏥"],
+    };
+  }
   try {
     const minimizedPayload = {
       avatarId: payload.avatarId,

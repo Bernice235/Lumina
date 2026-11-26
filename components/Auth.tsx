@@ -4,13 +4,16 @@ import { auth, db } from '../services/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { 
   signInWithPopup, 
-  GoogleAuthProvider,
   OAuthProvider,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   updateProfile,
-  sendPasswordResetEmail
+  setPersistence,
+  indexedDBLocalPersistence,
+  browserSessionPersistence
 } from 'firebase/auth';
+import { ForgotPasswordScreen } from './ForgotPasswordScreen';
+import { ResetPasswordConfirmScreen } from './ResetPasswordConfirmScreen';
 import { syncUser, getInvite, getCleanName } from '../services/firebaseService';
 import { trackSignUp, trackLogin, setUserProperties, logCrashReport } from '../services/analyticsService';
 import {
@@ -67,6 +70,11 @@ interface AuthProps {
   onLogin: (user: User, rememberMe?: boolean) => void;
   initialInviteCode?: string | null;
   onClearInvite?: () => void;
+  initialPasswordResetActive?: boolean;
+  initialPasswordResetCode?: string | null;
+  initialForgotPasswordActive?: boolean;
+  initialPostResetNotice?: boolean;
+  onClearPasswordReset?: (didCompleteReset?: boolean) => void;
   latestCloudUser?: User | null;
   latestCloudLoading?: boolean;
 }
@@ -84,11 +92,41 @@ const DEFAULT_PRIVATE_SHARING_SETTINGS = {
   shareWellnessUpdates: false,
 };
 
-const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, latestCloudUser, latestCloudLoading }) => {
+const Auth: React.FC<AuthProps> = ({
+  onLogin,
+  initialInviteCode,
+  onClearInvite,
+  initialPasswordResetActive = false,
+  initialPasswordResetCode,
+  initialForgotPasswordActive = false,
+  initialPostResetNotice = false,
+  onClearPasswordReset,
+  latestCloudUser,
+  latestCloudLoading,
+}) => {
   const [connectionMode, setConnectionMode] = useState<'cloud' | 'offline'>(() =>
     typeof navigator !== 'undefined' && navigator.onLine === false ? 'offline' : 'cloud'
   );
-  const [screen, setScreen] = useState<'returning' | 'welcome' | 'email_login' | 'email_signup' | 'partner_invite' | 'scan_welcome'>(() => {
+  const [activeResetCode, setActiveResetCode] = useState<string | null>(() => initialPasswordResetCode || null);
+  const [screen, setScreen] = useState<
+    | 'returning'
+    | 'welcome'
+    | 'email_login'
+    | 'email_signup'
+    | 'partner_invite'
+    | 'scan_welcome'
+    | 'forgot_password'
+    | 'reset_password_confirm'
+  >(() => {
+    if (initialPasswordResetActive || initialPasswordResetCode) {
+      return 'reset_password_confirm';
+    }
+    if (initialForgotPasswordActive) {
+      return 'forgot_password';
+    }
+    if (initialPostResetNotice) {
+      return 'email_login';
+    }
     if (initialInviteCode) {
       return 'partner_invite';
     }
@@ -104,7 +142,11 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
   const [welcomeStep, setWelcomeStep] = useState<'choose_experience' | 'auth_creation'>('choose_experience');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
+  const [notice, setNotice] = useState(() =>
+    initialPostResetNotice
+      ? 'Your Lumina | Bloom & Balance password has been reset. Please sign in with your new password.'
+      : ''
+  );
   const [pendingRestoreUser, setPendingRestoreUser] = useState<User | null>(null);
   const [returningHint, setReturningHint] = useState<{ userId: string; name: string; email: string } | null>(null);
   const [cachedSecureUser, setCachedSecureUser] = useState<User | null>(null);
@@ -198,7 +240,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
         }
       }
 
-      if (!initialInviteCode) {
+      if (!initialInviteCode && !initialPasswordResetActive && !initialPasswordResetCode && !initialForgotPasswordActive && !initialPostResetNotice) {
         const loggedOut = sessionStorage.getItem('lumina_logged_out') === 'true';
         if (loggedOut) {
           setScreen('email_login');
@@ -211,7 +253,18 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
       }
     })();
 
-    if (initialInviteCode) {
+    if (initialPasswordResetActive || initialPasswordResetCode) {
+      setActiveResetCode(initialPasswordResetCode || null);
+      setScreen('reset_password_confirm');
+      setError('');
+      setNotice('');
+    } else if (initialPostResetNotice) {
+      setScreen('email_login');
+      setError('');
+      setNotice('Your Lumina | Bloom & Balance password has been reset. Please sign in with your new password.');
+    } else if (initialForgotPasswordActive) {
+      setScreen('forgot_password');
+    } else if (initialInviteCode) {
       setScreen('partner_invite');
       setRegisterRole('partner');
       getInvite(initialInviteCode).then((invite) => {
@@ -232,7 +285,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
       window.removeEventListener('online', handleOnlineStatus);
       window.removeEventListener('offline', handleOnlineStatus);
     };
-  }, [initialInviteCode, latestCloudUser]);
+  }, [initialInviteCode, initialPasswordResetActive, initialPasswordResetCode, initialForgotPasswordActive, initialPostResetNotice, latestCloudUser]);
 
   const getDisplayName = (): string => {
     const savedName = localStorage.getItem('lumina_saved_name');
@@ -353,7 +406,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
     const targetUser = getTargetUser();
     if (!targetUser) {
       setScreen('email_login');
-      setError('No saved profile is available on this device. Please sign in with Email/Password or Google.');
+      setError('No saved profile is available on this device. Please sign in with your Email and Password.');
       return;
     }
 
@@ -362,21 +415,21 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
     if (remoteEpoch > localEpoch) {
       await secureStorage.removeItem('biometric_hint_v1');
       setScreen('email_login');
-      setError('Session expired after logging out of all devices. Please sign in with Email/Password or Google.');
+      setError('Session expired after logging out of all devices. Please sign in again with your Email and Password.');
       return;
     }
 
     const isCloudProfile = !targetUser.id.startsWith('offline_');
     if (isCloudProfile && auth.currentUser?.uid !== targetUser.id) {
       setScreen('email_login');
-      setError('Your cloud session requires fresh sign-in. Please sign in with Email/Password or Continue with Google.');
+      setError('Your cloud session requires fresh verification. Please sign in with your Email and Password.');
       return;
     }
 
     if (type === 'passcode') {
       if (!userHasConfiguredPin(targetUser)) {
         setScreen('email_login');
-        setError('No private Security PIN has been created yet. Sign in with your password or Google, then set a PIN in Settings.');
+        setError('No private Security PIN has been created yet. Sign in with your email and password, then set a PIN in Settings.');
         return;
       }
       setBiometricScanning('passcode');
@@ -432,7 +485,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
     if (verdict === 'unset') {
       setBiometricScanning('none');
       setScreen('email_login');
-      setError('No Security PIN is set on this account yet. Sign in with Email or Google.');
+      setError('No Security PIN is set on this account yet. Please sign in with Email and Password.');
       return;
     }
 
@@ -483,70 +536,13 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
     completeOrChallenge2FA(fullExistingUser, method, rememberMe);
   };
 
-  // Real Google OAuth Login
-  const handleGoogleLogin = async () => {
-    setLoading(true);
-    setError('');
-    setNotice('');
-    try {
-      const provider = new GoogleAuthProvider();
-      const userCredential = await signInWithPopup(auth, provider);
-      const fbUser = userCredential.user;
-
-      const docSnap = await getDoc(doc(db, "users", fbUser.uid));
-      if (docSnap.exists()) {
-        const existingData = docSnap.data() as User;
-        handleExistingUserLogin(existingData, () => {
-          handleSaveCredentials(existingData.email, 'google', existingData.name);
-        }, 'google');
-        return;
-      }
-
-      const newUser: User = {
-        id: fbUser.uid,
-        name: fbUser.displayName || 'Lumina Member',
-        email: fbUser.email || '',
-        partnerName: '',
-        cycleLength: 28,
-        periodLength: 5,
-        lastPeriodStart: new Date().toISOString(),
-        isPartner: registerRole === 'partner',
-        isPregnancyMode: false,
-        theme: 'rose',
-        isPartnerLinked: false,
-        sharingSettings: { ...DEFAULT_PRIVATE_SHARING_SETTINGS },
-        waterGoal: 8,
-        onboardingCompleted: false
-      };
-
-      await syncUser(newUser);
-      localStorage.setItem('lumina_remember_me', rememberMe ? 'true' : 'false');
-      await saveEncryptedSessionUser(newUser, rememberMe);
-      handleSaveCredentials(newUser.email, 'google', newUser.name);
-      setUserProperties({ userId: newUser.id, email: newUser.email, isPartner: newUser.isPartner });
-      trackSignUp('google', newUser.isPartner);
-      onLogin(newUser, rememberMe);
-    } catch (fbErr: any) {
-      logCrashReport(fbErr, 'Authentication Error', { provider: 'google' });
-      const code = fbErr?.code || '';
-      if (code === 'auth/popup-closed-by-user') {
-        setError('Google sign-in popup was closed before completing. Please try again.');
-      } else if (code === 'auth/popup-blocked') {
-        setError('Popup was blocked by your browser. Please allow popups for this site and try again.');
-      } else {
-        setError("Google Sign-In could not be completed. Please try again or use email sign-in.");
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // Real Firebase Apple OAuth Sign-In (never simulated)
   const handleAppleLogin = async () => {
     setLoading(true);
     setError('');
     setNotice('');
     try {
+      await setPersistence(auth, rememberMe ? indexedDBLocalPersistence : browserSessionPersistence).catch(() => {});
       const provider = new OAuthProvider('apple.com');
       provider.addScope('email');
       provider.addScope('name');
@@ -594,11 +590,11 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
       logCrashReport(fbErr, 'Authentication Error', { provider: 'apple' });
       const code = fbErr?.code || '';
       if (code === 'auth/operation-not-allowed') {
-        setError('Apple Sign-In is not enabled in Firebase Authentication Console yet. Please use Google or Email Sign-In.');
+        setError('Apple Sign-In is not enabled in Firebase Authentication Console yet. Please use Email Sign-In.');
       } else if (code === 'auth/popup-closed-by-user') {
         setError('Apple sign-in was cancelled.');
       } else {
-        setError('Apple Sign-In could not be completed. Please try Google or Email Sign-In.');
+        setError('Apple Sign-In could not be completed. Please try Email Sign-In.');
       }
     } finally {
       setLoading(false);
@@ -737,7 +733,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
 
       if (credCheck === 'missing') {
         setError(
-          'You appear to be offline and this email has no cached sign-in verifier on this device yet. Connect to the internet to sign in with Email or Google.'
+          'You appear to be offline and this email has no cached sign-in verifier on this device yet. Connect to the internet to sign in with Email and Password.'
         );
         setLoading(false);
         return;
@@ -767,6 +763,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
     }
 
     try {
+      await setPersistence(auth, rememberMe ? indexedDBLocalPersistence : browserSessionPersistence).catch(() => {});
       if (isSignUp) {
         const userCredential = await createUserWithEmailAndPassword(auth, emailKey, password);
         const fbUser = userCredential.user;
@@ -868,9 +865,9 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
       const code = String(fbErr?.code || '');
       const msg = String(fbErr?.message || '');
 
-      if (code === 'auth/operation-not-allowed' || msg.includes('operation-not-allowed')) {
+      if (code === 'auth/operation-not-allowed' || msg.includes('operation-not-allowed') || msg.includes('PASSWORD_LOGIN_DISABLED')) {
         setError(
-          'Email/Password sign-in is not currently enabled in Firebase Authentication Console. Use "Continue with Google" below, or enable Email/Password under Firebase Console → Authentication → Sign-in method.'
+          'Email/Password sign-in is disabled in Firebase Console for this project. Open Firebase Console → Authentication → Sign-in method and enable "Email/Password", then retry.'
         );
         setLoading(false);
         return;
@@ -889,7 +886,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
       }
 
       if (code === 'auth/email-already-in-use' || msg.includes('email-already-in-use')) {
-        setError('An account already exists with this email. Sign in below or tap "Continue with Google" if you originally registered with Google.');
+        setError('An account already exists with this email. Please use Sign In or "Forgot password?" instead.');
         setLoading(false);
         return;
       }
@@ -912,7 +909,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
         setError(
           lockStatus.isLocked || code.includes('too-many-requests')
             ? 'Too many unsuccessful sign-in attempts. Your account is temporarily locked for 5 minutes.'
-            : `Incorrect email or password (${lockStatus.remainingAttempts} attempt(s) left). If you originally signed up with Google, tap "Continue with Google" below.`
+            : `Incorrect email or password (${lockStatus.remainingAttempts} attempt(s) left). If you have not created an Email/Password account yet, tap "Need an account? Create one" below.`
         );
         setLoading(false);
         return;
@@ -924,7 +921,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
         return;
       }
 
-      setError('Unable to complete cloud sign-in right now. Please try again or use "Continue with Google".');
+      setError('Unable to complete cloud sign-in right now. Please check your connection and try again.');
       setLoading(false);
     }
   };
@@ -972,43 +969,6 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
     };
   };
 
-  const handleForgotPassword = async () => {
-    setError('');
-    setNotice('');
-    const cleanEmail = sanitizeTextInput(email, 160).toLowerCase();
-    if (!isValidEmailAddress(cleanEmail)) {
-      setError("Please enter a valid email address first so we can send a reset link.");
-      return;
-    }
-    const rate = checkClientRateLimit('password_reset', 3, 60_000);
-    if (!rate.allowed) {
-      setError(`Please wait ${rate.retryAfterSec}s before requesting another password reset link.`);
-      return;
-    }
-    setLoading(true);
-    try {
-      await sendPasswordResetEmail(auth, cleanEmail);
-      setNotice(
-        `Password reset requested for ${cleanEmail}. Check Inbox, Spam, and Promotions for an email from noreply@coral-gizmo-05xj8.firebaseapp.com. Note: if this account uses Google Sign-In (no email password was set), no reset email is sent — tap "Continue with Google" instead.`
-      );
-    } catch (fbErr: any) {
-      const code = String(fbErr?.code || '');
-      if (code === 'auth/operation-not-allowed') {
-        setError(
-          'Password reset is unavailable because Email/Password sign-in is disabled in Firebase Authentication Console. Use "Continue with Google" or enable Email/Password in Firebase Console.'
-        );
-      } else if (code === 'auth/too-many-requests') {
-        setError('Too many reset requests were sent recently. Please wait a few minutes before trying again.');
-      } else if (code === 'auth/network-request-failed') {
-        setError('Network error while contacting Firebase. Please check your internet connection and try again.');
-      } else {
-        setError("We couldn't dispatch a password reset email right now. Check the email address or use Continue with Google.");
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-[#fffafb] flex items-center justify-center p-4 relative overflow-hidden select-none">
       {/* Elegantly Crafted Ambient Background Blobs */}
@@ -1024,7 +984,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
             <Heart className="text-white fill-white" size={20} />
           </div>
           <h1 className="text-4xl font-serif text-pink-500 font-extrabold italic tracking-tight">Lumina</h1>
-          <p className="text-pink-300 uppercase tracking-[0.3em] text-[8px] font-bold mt-1">Sanctuary of Wellness</p>
+          <p className="text-pink-400 uppercase tracking-[0.26em] text-[9px] font-bold mt-1">Lumina | Bloom &amp; Balance</p>
         </div>
 
         {/* Dynamic view switcher based on App Open Experience Design */}
@@ -1254,7 +1214,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
                   }}
                   className="text-[10px] font-sans font-bold uppercase tracking-widest text-pink-500 hover:text-pink-600 transition-colors cursor-pointer"
                 >
-                  Sign In with Email / Google
+                  Sign In with Email &amp; Password
                 </button>
                 <button
                   type="button"
@@ -1312,17 +1272,6 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
                 >
                   <span>✉️ Sign In</span>
                 </button>
-
-                <button
-                  type="button"
-                  id="btn-welcome-google"
-                  onClick={handleGoogleLogin}
-                  disabled={loading}
-                  className="w-full py-4 bg-white border border-pink-150 rounded-2xl hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-3 text-stone-700 font-bold text-[10px] uppercase tracking-[0.12em] cursor-pointer shadow-xs hover:bg-rose-50/20 transition-all"
-                >
-                  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-4 h-4" referrerPolicy="no-referrer" />
-                  <span>Continue with Google</span>
-                </button>
               </div>
             </div>
           )}
@@ -1365,16 +1314,6 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
                   className="w-full py-4.5 bg-gradient-to-r from-pink-500 to-rose-450 hover:scale-[1.01] active:scale-95 text-white font-bold rounded-2xl text-[9px] uppercase tracking-widest shadow-md shadow-pink-100 flex items-center justify-center gap-2 cursor-pointer transition-all"
                 >
                   Create Account
-                </button>
-
-                <button
-                  type="button"
-                  id="btn-scan-google"
-                  onClick={handleGoogleLogin}
-                  className="w-full py-4 bg-white border border-pink-100 rounded-2xl hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-3 text-pink-900 font-bold text-[9px] uppercase tracking-widest cursor-pointer shadow-sm hover:bg-rose-50/30 transition-all"
-                >
-                  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-4 h-4" referrerPolicy="no-referrer" />
-                  <span>Continue with Google</span>
                 </button>
 
                 <button
@@ -1436,7 +1375,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
 
               <div className="text-center space-y-1">
                 <h3 className="text-xl font-serif text-pink-950 font-bold italic">Secure Entry</h3>
-                <p className="text-xs text-stone-600">Sign in with your verified email &amp; password or Google.</p>
+                <p className="text-xs text-stone-600">Sign in with your verified email &amp; password.</p>
               </div>
 
               <form onSubmit={handleEmailFormSubmit} className="space-y-3 pt-1">
@@ -1484,7 +1423,11 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
                   </label>
                   <button
                     type="button"
-                    onClick={handleForgotPassword}
+                    onClick={() => {
+                      setError('');
+                      setNotice('');
+                      setScreen('forgot_password');
+                    }}
                     className="text-[10px] font-bold text-pink-700 hover:text-pink-900 uppercase tracking-wider transition-colors cursor-pointer"
                   >
                     Forgot password?
@@ -1500,23 +1443,6 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
                 </button>
               </form>
 
-              <div className="relative flex items-center py-1">
-                <div className="flex-grow border-t border-pink-100" />
-                <span className="mx-3 text-[10px] font-bold uppercase tracking-widest text-stone-400">or</span>
-                <div className="flex-grow border-t border-pink-100" />
-              </div>
-
-              <button
-                type="button"
-                id="btn-login-google"
-                onClick={handleGoogleLogin}
-                disabled={loading}
-                className="w-full py-3.5 bg-white border border-pink-200 rounded-2xl flex items-center justify-center gap-3 text-stone-800 font-bold text-[10px] uppercase tracking-widest cursor-pointer shadow-xs hover:bg-rose-50/40 transition-all"
-              >
-                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-4 h-4" referrerPolicy="no-referrer" />
-                <span>Continue with Google</span>
-              </button>
-
               <div className="text-center pt-1">
                 <button
                   type="button"
@@ -1531,6 +1457,50 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
                 </button>
               </div>
             </div>
+          )}
+
+          {/* 3B. DEDICATED FORGOT PASSWORD SCREEN */}
+          {!pendingRestoreUser && !pending2faChallenge && screen === 'forgot_password' && (
+            <ForgotPasswordScreen
+              initialEmail={email}
+              onEmailChange={(val) => setEmail(val)}
+              onBackToSignIn={() => {
+                setError('');
+                setNotice('');
+                setPassword('');
+                setScreen('email_login');
+              }}
+            />
+          )}
+
+          {/* 3C. PASSWORD RESET COMPLETION SCREEN (FIREBASE oobCode) */}
+          {!pendingRestoreUser && !pending2faChallenge && screen === 'reset_password_confirm' && (
+            <ResetPasswordConfirmScreen
+              oobCode={activeResetCode}
+              onRequestNewLink={() => {
+                setActiveResetCode(null);
+                onClearPasswordReset?.(false);
+                setError('');
+                setNotice('');
+                setScreen('forgot_password');
+              }}
+              onResetConsumed={() => {
+                setActiveResetCode(null);
+              }}
+              onBackToSignIn={(prefillEmail, didCompleteReset) => {
+                setActiveResetCode(null);
+                onClearPasswordReset?.(Boolean(didCompleteReset));
+                if (prefillEmail) setEmail(prefillEmail);
+                setPassword('');
+                setError('');
+                setNotice(
+                  didCompleteReset
+                    ? 'Your password has been updated. Please sign in with your new password.'
+                    : ''
+                );
+                setScreen('email_login');
+              }}
+            />
           )}
 
           {/* TWO-FACTOR AUTHENTICATION CHALLENGE */}
@@ -1816,16 +1786,6 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialInviteCode, onClearInvite, 
                     {loading ? "INITIALIZING SANCTUARY..." : "CREATE SANCTUARY"}
                   </button>
                 </form>
-
-                <button
-                  type="button"
-                  onClick={handleGoogleLogin}
-                  disabled={loading}
-                  className="w-full py-3.5 bg-white border border-pink-200 rounded-2xl flex items-center justify-center gap-3 text-stone-800 font-bold text-[10px] uppercase tracking-widest cursor-pointer shadow-xs hover:bg-rose-50/40 transition-all"
-                >
-                  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-4 h-4" referrerPolicy="no-referrer" />
-                  <span>Continue with Google</span>
-                </button>
               </div>
             );
           })()}

@@ -647,7 +647,7 @@ export function createSecurityNotification(
   emoji: string = '🛡️'
 ): AppNotification {
   return {
-    id: `sec_notif_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    id: `sec_notif_${crypto.randomUUID()}`,
     title,
     body,
     emoji,
@@ -695,7 +695,7 @@ export function applyLoginSecurityAudit(
     (!knownDevice || !knownTimezone);
 
   const loginEntry: LoginActivityEntry = {
-    id: `login_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    id: `login_${crypto.randomUUID()}`,
     timestamp: nowIso,
     method,
     status,
@@ -759,7 +759,7 @@ export function appendSecurityEventToUser(
   const nowIso = new Date().toISOString();
   const notif = createSecurityNotification(title, body, emoji);
   const entry: LoginActivityEntry = {
-    id: `sec_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    id: `sec_${crypto.randomUUID()}`,
     timestamp: nowIso,
     method: 'security_setting',
     status: 'security_change',

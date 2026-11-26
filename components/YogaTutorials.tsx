@@ -55,10 +55,6 @@ const YogaTutorials: React.FC<YogaTutorialsProps> = ({ user, setUser, todaysSymp
   const [aiLoading, setAiLoading] = useState<boolean>(false);
   const [isChimeEnabled, setIsChimeEnabled] = useState<boolean>(true);
 
-  // Simulated metrics
-  const [simulatedHeartRate, setSimulatedHeartRate] = useState<number>(72);
-  const [simulatedAlignment, setSimulatedAlignment] = useState<number>(98);
-
   // Logging states
   const [loggedSuccessfully, setLoggedSuccessfully] = useState<boolean>(false);
   const [showHistoryModal, setShowHistoryModal] = useState<boolean>(false);
@@ -240,28 +236,6 @@ const YogaTutorials: React.FC<YogaTutorialsProps> = ({ user, setUser, todaysSymp
 
     return () => clearInterval(interval);
   }, [isPlaying]);
-
-  // Simulated metrics fluctuating
-  useEffect(() => {
-    if (!isPlaying) return;
-
-    const interval = setInterval(() => {
-      setSimulatedHeartRate(prev => {
-        const delta = Math.floor(Math.random() * 3) - 1;
-        const target = breathState === 'Inhale' ? 74 : breathState === 'Exhale' ? 68 : 71;
-        const step = prev < target ? 1 : prev > target ? -1 : delta;
-        return Math.max(60, Math.min(85, prev + step));
-      });
-
-      setSimulatedAlignment(prev => {
-        const delta = Math.floor(Math.random() * 3) - 1;
-        const next = prev + delta;
-        return Math.max(95, Math.min(100, next));
-      });
-    }, 1500);
-
-    return () => clearInterval(interval);
-  }, [isPlaying, breathState]);
 
   // Soft wellness chime synth player
   const playChime = (freq: number, duration: number) => {
@@ -841,16 +815,16 @@ const YogaTutorials: React.FC<YogaTutorialsProps> = ({ user, setUser, todaysSymp
                       </div>
                     </div>
 
-                    {/* Simulated HUD Metrics */}
+                    {/* Guided Breath & Pacing HUD */}
                     <div className="flex items-center gap-4 bg-black/35 px-4 py-2.5 rounded-2xl border border-white/5 shrink-0">
                       <div className="flex items-center gap-1.5 text-rose-400">
-                        <Heart size={14} className="animate-pulse" />
-                        <span className="text-xs font-mono font-bold text-white">{simulatedHeartRate} <span className="text-[8px] text-stone-500 uppercase">bpm</span></span>
+                        <Heart size={14} />
+                        <span className="text-xs font-mono font-bold text-white">{breathState} <span className="text-[8px] text-stone-500 uppercase">phase</span></span>
                       </div>
                       <span className="text-white/10">|</span>
                       <div className="flex items-center gap-1.5 text-emerald-400">
                         <Activity size={14} />
-                        <span className="text-xs font-mono font-bold text-white">{simulatedAlignment}% <span className="text-[8px] text-stone-500 uppercase">align</span></span>
+                        <span className="text-xs font-mono font-bold text-white">6s <span className="text-[8px] text-stone-500 uppercase">pace</span></span>
                       </div>
                     </div>
 

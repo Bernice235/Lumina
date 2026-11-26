@@ -139,8 +139,8 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   // Dynamic speech bubble prompts: starts with the warm personalized greeting
   const companionPrompts = [
-    companionGreeting.displayText || `${getGreeting()} ${user.firstName || user.name || "Bernice"} 🌞`,
-    `${getGreeting()} ${user.firstName || user.name || "Bernice"} 🌞`,
+    companionGreeting.displayText || `${getGreeting()} ${user.firstName || user.name || "friend"} 🌞`,
+    `${getGreeting()} ${user.firstName || user.name || "friend"} 🌞`,
     "How are you feeling today?",
     "Need help tracking symptoms?",
     avatarSpeech.cycleStatusText,
@@ -164,7 +164,7 @@ const Dashboard: React.FC<DashboardProps> = ({
     // Automatically welcome and greet user visually & with voice when app opens
     if (user) {
       const greetingWord = getGreeting();
-      const userName = user.firstName || user.name || "Bernice";
+      const userName = user.firstName || user.name || "friend";
       setCompanionReaction({
         message: `${greetingWord}, ${userName}! 🌸 Welcome to Lumina.`,
         emoji: '👋',
@@ -324,10 +324,8 @@ const Dashboard: React.FC<DashboardProps> = ({
   const [videoTimer, setVideoTimer] = useState(10);
   const [isDeliveredModalOpen, setIsDeliveredModalOpen] = useState(false);
 
-  // AI Video Coach States
+  // Guided Breath & Posture Coach States
   const [coachMode, setCoachMode] = useState<'ai' | 'classic'>('ai');
-  const [simulatedHeartRate, setSimulatedHeartRate] = useState(72);
-  const [simulatedAlignment, setSimulatedAlignment] = useState(95);
   const [coachInstructionIndex, setCoachInstructionIndex] = useState(0);
   const [videoTick, setVideoTick] = useState(0);
   const [dashBreathTime, setDashBreathTime] = useState(0);
@@ -384,7 +382,6 @@ const Dashboard: React.FC<DashboardProps> = ({
     shareMood: false,
     shareSymptoms: false,
     shareIntimacyInfo: false,
-    shareDoctorReports: false,
     shareAppointmentReminders: false,
     shareWellnessUpdates: false
   });
@@ -399,8 +396,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         shareSymptoms: requested.some((r: string) => r.includes('Symptom')),
         shareMood: requested.some((r: string) => r.includes('Mood')),
         shareIntimacyInfo: false, // Default to false for privacy
-        shareDoctorReports: false, // Default to false for privacy
-        shareAppointmentReminders: requested.some((r: string) => r.includes('Appointment') || r.includes('Doctor')),
+        shareAppointmentReminders: requested.some((r: string) => r.includes('Appointment') || r.includes('Reminder')),
         shareWellnessUpdates: requested.some((r: string) => r.includes('Wellness') || r.includes('Suggestions') || r.includes('Support') || r.includes('Gift') || r.includes('Messages')),
       });
     }
@@ -421,10 +417,10 @@ const Dashboard: React.FC<DashboardProps> = ({
       sharePregnancyInfo: requested.some((r: string) => r.includes('Pregnancy')),
       shareSymptoms: requested.some((r: string) => r.includes('Symptom')),
       shareMood: requested.some((r: string) => r.includes('Mood')),
-      shareNotes: user.sharingSettings?.shareNotes || false,
+      shareNotes: false,
       shareIntimacyInfo: false,
       shareDoctorReports: false,
-      shareAppointmentReminders: requested.some((r: string) => r.includes('Appointment') || r.includes('Doctor')),
+      shareAppointmentReminders: requested.some((r: string) => r.includes('Appointment') || r.includes('Reminder')),
       shareWellnessUpdates: requested.some((r: string) => r.includes('Wellness') || r.includes('Suggestions') || r.includes('Support') || r.includes('Gift') || r.includes('Messages')),
     };
     
@@ -473,7 +469,8 @@ const Dashboard: React.FC<DashboardProps> = ({
       sharingSettings: {
         ...user.sharingSettings,
         ...sharingPrefs,
-        shareNotes: user.sharingSettings?.shareNotes || false
+        shareNotes: false,
+        shareDoctorReports: false,
       },
       isPartnerLinked: true,
       partnerId: targetPartnerId,
@@ -957,30 +954,15 @@ const Dashboard: React.FC<DashboardProps> = ({
     };
   }, [simulatedVideo, videoLoading]);
 
-  // AI Video Coach Simulation Logic & Effects
+  // Guided Breath & Posture Coach Instruction Rotation
   useEffect(() => {
     if (!simulatedVideo || coachMode !== 'ai') return;
-
-    const interval = setInterval(() => {
-      setSimulatedHeartRate(prev => {
-        const delta = Math.floor(Math.random() * 3) - 1;
-        const next = prev + delta;
-        return Math.max(65, Math.min(85, next));
-      });
-
-      setSimulatedAlignment(prev => {
-        const delta = Math.floor(Math.random() * 3) - 1;
-        const next = prev + delta;
-        return Math.max(90, Math.min(100, next));
-      });
-    }, 1500);
 
     const instructionInterval = setInterval(() => {
       setCoachInstructionIndex(prev => (prev + 1) % 5);
     }, 5000);
 
     return () => {
-      clearInterval(interval);
       clearInterval(instructionInterval);
     };
   }, [simulatedVideo, coachMode]);
@@ -2761,7 +2743,6 @@ const Dashboard: React.FC<DashboardProps> = ({
                   { label: "Share Fertility Information", desc: "Fertile windows, ovulation history", key: "shareFertilityInfo" },
                   { label: "Share Pregnancy Information", desc: "Pregnancy progression and due dates", key: "sharePregnancyInfo" },
                   { label: "Share Intimacy Logs", desc: "Intimacy tracking and contraceptive use", key: "shareIntimacyInfo" },
-                  { label: "Share Doctor Reports", desc: "Logs related to professional body checks", key: "shareDoctorReports" },
                   { label: "Share Appointment Reminders", desc: "Upcoming doctor appointments and timing", key: "shareAppointmentReminders" },
                   { label: "Share Wellness Updates", desc: "Wellness missions, self-care suggestions", key: "shareWellnessUpdates" }
                 ].map((pref) => (
@@ -2902,7 +2883,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                   {/* Floating HUD Indicators */}
                   <div className="absolute top-3 left-3 bg-slate-900/90 border border-slate-700/50 px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-md">
                     <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-                    <span className="text-[9px] font-mono font-bold text-slate-300">LIVE AI PROCEDURAL COACHING</span>
+                    <span className="text-[9px] font-mono font-bold text-slate-300">GUIDED BREATH & POSTURE</span>
                   </div>
 
                   <div className="absolute top-3 right-3 bg-slate-900/90 border border-slate-700/50 px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-md">
@@ -2912,21 +2893,21 @@ const Dashboard: React.FC<DashboardProps> = ({
               )}
             </div>
 
-            {/* Dynamic Biofeedback HUD Controls */}
+            {/* Guided Breath & Pacing HUD */}
             {!videoLoading && (
               <div className="grid grid-cols-3 gap-3 w-full text-left">
                 <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800 flex items-center gap-2">
-                  <Heart size={16} className="text-rose-400 animate-pulse shrink-0" />
+                  <Heart size={16} className="text-rose-400 shrink-0" />
                   <div>
-                    <p className="text-[8px] uppercase text-stone-500 font-bold tracking-widest">Somatic Heart</p>
-                    <p className="text-xs font-mono font-bold text-slate-200">{simulatedHeartRate} bpm</p>
+                    <p className="text-[8px] uppercase text-stone-500 font-bold tracking-widest">Breath Phase</p>
+                    <p className="text-xs font-mono font-bold text-slate-200">{dashBreathState}</p>
                   </div>
                 </div>
                 <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800 flex items-center gap-2">
                   <Activity size={16} className="text-emerald-400 shrink-0" />
                   <div>
-                    <p className="text-[8px] uppercase text-stone-500 font-bold tracking-widest">Pelvic Alignment</p>
-                    <p className="text-xs font-mono font-bold text-slate-200">{simulatedAlignment}%</p>
+                    <p className="text-[8px] uppercase text-stone-500 font-bold tracking-widest">Guidance</p>
+                    <p className="text-xs font-mono font-bold text-slate-200">Slow &amp; Controlled</p>
                   </div>
                 </div>
                 <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800 flex items-center gap-2">

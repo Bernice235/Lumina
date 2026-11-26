@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img" aria-label="Bound Angle Pose Illustration">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fae8ff"/>
+      <stop offset="100%" stop-color="#fecdd3"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" fill="url(#g)"/>
+  <circle cx="330" cy="60" r="70" fill="#ffffff" opacity="0.22"/>
+  <circle cx="70" cy="250" r="85" fill="#9333ea" opacity="0.1"/>
+  <ellipse cx="200" cy="218" rx="115" ry="18" fill="#d8b4fe" opacity="0.35"/><path d="M200 125 L200 192 M155 195 Q200 175 245 195 M165 162 L200 150 L235 162" stroke="#fff" stroke-width="16" stroke-linecap="round" fill="none" opacity="0.9"/><circle cx="200" cy="105" r="18" fill="#fff" opacity="0.92"/>
+</svg>

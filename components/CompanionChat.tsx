@@ -85,7 +85,7 @@ export const CompanionChat: React.FC<CompanionChatProps> = ({
   const [showAvatarSelector, setShowAvatarSelector] = useState(false);
   const [chatNotice, setChatNotice] = useState<string | null>(null);
 
-  const isAiPersonalizationAllowed = user.privacyPreferences?.allowAiPersonalization !== false;
+  const isAiPersonalizationAllowed = user.privacyPreferences?.allowAiPersonalization === true;
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const speechRecognitionRef = useRef<any>(null);

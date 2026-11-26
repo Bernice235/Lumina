@@ -71,6 +71,37 @@ const Diary: React.FC<DiaryProps> = ({ entries, setEntries, user, setUser }) => 
     };
   }, [user.id]);
 
+  // Auto-lock Secret Diary on backgrounding or inactivity
+  useEffect(() => {
+    if (isLocked) return;
+    const timeoutMins = Math.max(1, Math.min(30, Number(user.privacyPreferences?.autoLockTimeoutMinutes) || 5));
+    let timerId: ReturnType<typeof setTimeout> | null = null;
+
+    const resetInactivityTimer = () => {
+      if (timerId) clearTimeout(timerId);
+      timerId = setTimeout(() => {
+        setIsLocked(true);
+      }, timeoutMins * 60 * 1000);
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden' && user.privacyPreferences?.autoLockOnBlur) {
+        setIsLocked(true);
+      }
+    };
+
+    const events: (keyof WindowEventMap)[] = ['pointerdown', 'keydown', 'touchstart', 'scroll'];
+    events.forEach((ev) => window.addEventListener(ev, resetInactivityTimer, { passive: true }));
+    document.addEventListener('visibilitychange', handleVisibility);
+    resetInactivityTimer();
+
+    return () => {
+      if (timerId) clearTimeout(timerId);
+      events.forEach((ev) => window.removeEventListener(ev, resetInactivityTimer));
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [isLocked, user.privacyPreferences?.autoLockOnBlur, user.privacyPreferences?.autoLockTimeoutMinutes]);
+
   // Restore Encrypted Draft on Mount (Draft Recovery)
   useEffect(() => {
     let cancelled = false;
@@ -256,7 +287,7 @@ const Diary: React.FC<DiaryProps> = ({ entries, setEntries, user, setUser }) => 
     } else {
       // Create new entry
       const newEntry: DiaryEntry = {
-        id: Math.random().toString(),
+        id: crypto.randomUUID(),
         date: fullFormattedDate,
         createdAt: nowTimeString,
         updatedAt: nowTimeString,

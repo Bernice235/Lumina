@@ -1,67 +1,56 @@
 # Security Summary
 
-Lumina: Bloom & Balance underwent a comprehensive security, privacy, performance, and functionality upgrade across its backend server, cloud database rules, authentication flows, backup encryption, consent management, and user interface.
+Lumina: Bloom & Balance underwent a comprehensive pre-launch security, privacy, authentication, compliance, and reliability hardening pass across its Web, iOS, Android, Express backend, Cloud Firestore rules, and AI wellness modules while preserving all existing features and user data.
 
 ## Key Protections & Improvements Implemented
 
-1. **Server-Side Secret Isolation & Hardened HTTP Security**
-   - Moved Gemini AI API key handling strictly to server-side environment configuration so private AI keys never enter client JavaScript bundles.
-   - Enforced same-origin checks, `X-Requested-With: LuminaWebApp` verification, or valid Firebase ID Bearer token verification via Firebase Admin Auth on all `POST /api/*` routes.
-   - Added sliding-window per-IP rate limiting (30 requests/minute on AI routes; 5 requests/minute on support submissions with `Retry-After` headers).
-   - Added HTTP security headers (`Content-Security-Policy`, `X-Frame-Options: SAMEORIGIN`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy`, and production HTTPS redirect + `Strict-Transport-Security`).
-   - Added 100KB JSON body size caps and control-character/length sanitization on all backend inputs.
+1. **Authentication, Session Security & Native Biometrics**
+   - Replaced simulated biometric delays with real platform authentication: native Face ID / Touch ID / Android BiometricPrompt via `@aparajita/capacitor-biometric-auth` (with iOS `NSFaceIDUsageDescription` configured in `ios/App/App/Info.plist`), WebAuthn/passkey verification on browsers, and an authenticated user-password fallback.
+   - Removed silent auto-account creation on failed or unknown-email sign-in attempts, removed legacy plaintext password storage, hardened offline sign-in verification with salted PBKDF2-SHA256 hashes, enforced strong password creation and recovery validation, and added active session management plus cross-device session revocation (`sessionEpoch`), TOTP 2FA with local QR generation and backup codes, and login lockout protection.
+   - Configured Android release obfuscation (`minifyEnabled true`, `shrinkResources true`) and ProGuard keep rules (`android/app/proguard-rules.pro`) and synchronized native Capacitor plugins (`@aparajita/capacitor-biometric-auth`, notifications, RevenueCat) across both Android and iOS targets.
 
-2. **Database Rules & Access Control Hardening**
-   - Updated Cloud Firestore security rules to enforce strict owner-only access (`request.auth.uid == userId`), immutable ownership checks on updates, schema validation for cycle records, notifications, partner connection requests, gift records, and community insights, plus anti-tamper guards preventing privilege escalation or forged cross-account edits.
-   - Audited rules with `@firebase/eslint-plugin-security-rules` and deployed the verified ruleset live to Firebase.
+2. **Privacy Isolation, Account Deletion & Regulatory Transparency (NDPA 2023 / GDPR)**
+   - Enforced strict owner-only isolation for personal diary entries, mood notes, and doctor reports: partner data-sharing toggles, client projections (`buildPartnerSharedProjection`), `firebase-blueprint.json`, and deployed `firestore.rules` explicitly block `shareNotes`, `shareDoctorReports`, `diaryEntries`, `doctorReports`, `notes`, and `email` from partner projections.
+   - Migrated local session, pregnancy weight tracking, and cached bank config data to encrypted client storage (`secureStorage`), replaced non-cryptographic ID/invite generators with `crypto.randomUUID()` / CSPRNG tokens, and enforced opt-in telemetry gating with automated telemetry purging on opt-out.
+   - Preserved and hardened permanent account deletion with mandatory reauthentication, multi-step confirmation, session revocation, cascading personal cloud/invite/telemetry cleanup, legal retention disclosures, confirmation receipts, and public `/delete-account` and `/account-deletion` routes backed by rate-limited `POST /api/account-deletion-request`.
+   - Added complete NDPA 2023 & GDPR disclosures in the Privacy Dashboard (controller identity, DPO contact `privacy@luminabloom.app`, named sub-processors, cross-border safeguards, automated profiling notice, retention schedules, and 72-hour breach notification commitments).
 
-3. **Authentication, Credentials & Account Protection**
-   - Removed legacy plaintext password storage (`lumina_saved_password`) and scrubbed stale client keys automatically on startup.
-   - Added PBKDF2-SHA256 salted credential verifiers for offline sign-in resilience and strictly disabled silent account auto-creation during failed or unknown-email sign-in attempts.
-   - Enforced strong password rules (8+ characters with uppercase, lowercase, digit, and symbol), 5-attempt failed-login lockout (5-minute cooldown), email verification status and resend support, password reset flows, RFC 6238 TOTP Two-Factor Authentication with locally rendered QR setup and 8 single-use backup recovery codes, active device/session listing, suspicious/new-device alerts, security change notifications, and remote "Log out of all devices" via synchronized `sessionEpoch` invalidation.
+3. **Backend, Subscription Verification & Cloud Firestore Hardening**
+   - Protected all `POST /api/gemini/*` and `POST /api/subscription/verify` routes with strict Firebase ID token verification (via Firebase Admin Auth), same-origin & trusted Capacitor origin checks, sliding-window per-IP and per-UID rate limiting, 100 KB payload limits, control-character/tag sanitization, and CSP / security headers (`X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`, `Referrer-Policy`, `Permissions-Policy`, production HSTS/HTTPS redirect).
+   - Hardened Paystack verification on `/api/subscription/verify` to check `NGN` currency, authenticated UID metadata ownership, and minimum plan amounts (`450000`, `2250000`, `3999900` kobo). Updated native RevenueCat verification so explicit server rejections (`402`/`403`/`404`) deny access instead of falling through.
+   - Audited and deployed hardened `firestore.rules` (enforcing mutual partner checks, blocking `senderEmail` leaks on invites, restricting invite `list` to `senderId`, adding owner delete access on `analytics_events` and `crash_reports`, and documenting the Spark/Starter-tier boundary on client-synced subscription fields until Firebase Admin server-side entitlement writes are connected on a Blaze plan).
 
-4. **Privacy Dashboard, Consent & Spam Protection**
-   - Added a dedicated Privacy & Security Vault accessible from the header, navigation, Settings, and footer, allowing users to inspect collected data categories, manage granular privacy & partner-sharing toggles, manage active sessions, export encrypted backups, review the privacy policy, and perform typed-confirmation account and cloud data deletion.
-   - Added a first-visit Cookie & Privacy Consent Banner (`Accept All`, `Reject Non-Essential`, `Customize`) gating optional Amplitude/Firebase Analytics, Web Vitals performance diagnostics, and personalization, with sensitive diary/note fields stripped before telemetry.
-   - Added hidden honeypot traps, strict email/length validation, and rate limiting to Authentication and Support/Feedback forms backed by `POST /api/support`.
+4. **AI Clinical Safety Triage & Removal of Simulated Telemetry**
+   - Added deterministic pre-AI clinical red-flag triage (`detectClinicalRedFlags` on the server and `checkClientClinicalRedFlags` in the client safety fallback) for crisis/self-harm, obstetric hemorrhage, severe unilateral/ectopic pain, preeclampsia warning signs, and high fever across symptom advice, Ask Lumina, product advice, and Companion Chat, plus strict `allowAiPersonalization === true` opt-in enforcement in Companion Chat.
+   - Removed unconditioned supplement recommendations from offline fallbacks, upgraded `@google/genai` to `^3.6.1`, and used free-tier compatible Gemini models (`gemini-4-hydrogen`, `gemini-3.1-flash-lite`, `gemini-3.8-flash-lite-tts`).
+   - Removed fabricated `Math.random()` heart-rate/alignment biofeedback displays in `Dashboard` and `YogaTutorials`, replaced hardcoded `Math.random()` analytics arrays with real session-backed reporting, and replaced fabricated Apple Health / Google Fit sleep/exercise imports in `HealthService` with honest native bridge checks and manual logging.
 
-5. **AES-256-GCM Backups, SEO, Performance & Accessibility**
-   - Implemented AES-256-GCM encrypted local automatic snapshots (rolling history with SHA-256 checksums) and portable/passphrase-encrypted backup exports with verified import/restore and recovery guidance.
-   - Added local OpenGraph/app icon assets, `robots.txt`, `sitemap.xml`, `manifest.json`, Schema.org metadata, custom branded 404 recovery page, `React.lazy` route/component code splitting, local QR rendering (`qrcode` package without external QR image servers), local botanical yoga SVGs, and higher-contrast accessible text and form labels.
+5. **Dependency Upgrades**
+   - Upgraded runtime packages to `@google/genai@3.6.1`, `firebase-admin@14.5.1`, `express@5.3.0`, `@capacitor/core@6.2.4`, `@capacitor/android@6.2.4`, and `@capacitor/ios@6.2.4` (staying on Capacitor 6 to preserve plugin compatibility with notifications and biometrics). Residual `npm audit --omit=dev` lockfile advisories remain recorded for future major-version Capacitor 8 migration if native plugin major versions are upgraded together.
 
 ---
 
 ## PoC Verification
 
-All checks below were executed directly against the running application, built bundle, and deployed security rules:
+All verification checks below were executed directly after the final code and dependency updates:
 
-### 1. Live HTTP, Header, Auth, Anti-Spam & Rate-Limit Verification (`http://localhost:3000`)
-- **Health & Security Headers (`GET /api/health`)**: Returned `200 OK` (`{"status":"ok","mode":"development"}`) with `x-content-type-options: nosniff`, `x-frame-options: SAMEORIGIN`, `referrer-policy: strict-origin-when-cross-origin`, `permissions-policy: camera=(self), microphone=(self), geolocation=(self), interest-cohort=()`, and `content-security-policy`.
-- **Static SEO & PWA Assets (`GET /robots.txt`, `/sitemap.xml`, `/manifest.json`, `/og-image.jpg`)**: All returned `200 OK` with expected MIME types and non-empty payloads.
-- **CSRF / Missing Header Protection (`POST /api/gemini/daily-affirmation` without `X-Requested-With`)**: Rejected with HTTP `403 Forbidden` (`{"error":"Missing required security verification header."}`).
-- **Invalid Token Verification (`POST /api/gemini/daily-affirmation` with `Authorization: Bearer invalid.jwt.token`)**: Rejected with HTTP `401 Unauthorized` (`{"error":"Invalid or expired authentication token."}`).
-- **Support Honeypot Spam Trap (`POST /api/support` with populated `website` field)**: Rejected with HTTP `400 Bad Request` (`{"error":"Submission rejected."}`).
-- **Support Input Validation (`POST /api/support` with 2-character message)**: Rejected with HTTP `400 Bad Request` (`{"error":"Message must be at least 10 characters long."}`).
-- **Support Valid Submission & Rate Limiting (`POST /api/support`)**: Valid request returned HTTP `201 Created` with ticket reference (`{"ok":true,"ticketId":"LMN-DCB7AC28",...}`); exceeding 5 requests in 60 seconds triggered HTTP `429 Too Many Requests` with header `Retry-After: 60`.
-- **Built Bundle Secret Scan (`dist/assets/`)**: Zero occurrences of `GEMINI_API_KEY` or private backend credentials; `lumina_saved_password` appears only in startup cleanup removal calls.
+1. **Live HTTP Server Security & Route Guards (`http://localhost:3000`)**
+   - `GET /api/health` returned `200 OK` with `X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`, and `Content-Security-Policy`.
+   - `POST /api/gemini/daily-affirmation` without an auth header returned `401` (`Authentication required. Missing Bearer token.`).
+   - `POST /api/gemini/companion-chat` with an invalid Bearer token returned `401` (`Invalid or expired authentication token.`).
+   - `POST /api/subscription/verify` without an auth header returned `401` (`Authentication required. Missing Bearer token.`).
+   - `POST /api/support` with an untrusted cross-origin `Origin` header returned `403` (`Cross-origin POST requests are forbidden.`).
+   - `POST /api/account-deletion-request` with a populated honeypot field returned `400` (`Submission rejected.`), and invalid email format returned `400` (`Please provide a valid account email address.`).
+   - `POST /api/support` with a `>100 KB` JSON payload returned `413` (`Request payload exceeds maximum allowed size.`).
+   - `GET /api/unknown-route` returned `404` (`API route not found.`).
 
-### 2. Cloud Firestore Security Rules Verification
-- **Static Rule Security Linting**: `npx eslint DRAFT_firestore.rules firestore.rules` exited with code `0` and zero findings.
-- **Live Deployment**: Rules deployed directly to the project's live Firestore database (`DeployRules` completed cleanly).
+2. **Privacy Projection, Clinical Triage & Native Health Refusal Assertions**
+   - Executed runtime assertions (`npx tsx`) verifying `buildPartnerSharedProjection` forces `shareNotes: false` and `shareDoctorReports: false` and strips `diaryEntries`, `doctorReports`, `notes`, `email`, and mood note text even when passed permissive input flags.
+   - Verified `getLuminaAdvice` and `sendCompanionChatMessage` return urgent crisis helpline / emergency evaluation guidance deterministically when red-flag crisis or hemorrhage inputs are submitted.
+   - Verified `HealthService.importHealthMetrics` rejects Apple Health and Google Fit simulated imports when native permissions/bridges are unavailable.
 
-### 3. Headless Chromium End-to-End Verification
-- **Cookie Consent Banner & Persistence**: Banner rendered on initial load; `Customize` panel toggled privacy-safe analytics; saving preferences persisted `lumina_cookie_consent_v1` in `localStorage`.
-- **Custom 404 Page & Recovery**: Navigating to `/nonexistent-sanctuary-page` rendered the branded `Error 404` page, and clicking `Return to Home Dashboard` returned cleanly to `/`.
-- **Authentication Hardening**:
-  - Weak sign-up password (`weak123`) was blocked with clear policy guidance before submission.
-  - Invalid sign-in attempts stayed rejected (did not auto-create or log into any session), and 5 consecutive failed attempts triggered the 5-minute account lockout notice.
-- **Privacy Dashboard, 2FA, Backups & Support Form**:
-  - Privacy Dashboard opened cleanly from navigation and rendered Data & Policy, Account & 2FA, Devices & Activity (`Log Out of All Devices`), and Download & Delete sections.
-  - Enabling 2FA rendered the TOTP setup QR image locally via data URI (`img[src^="data:image/png"]`) with zero external QR network calls.
-  - Settings → Backup & Sync rendered encrypted export and snapshot recovery history controls.
-  - Submitting the Settings → Help & Support modal form returned a verified live ticket confirmation (`Reference: LMN-8510F611`).
-- **Responsive Mobile Layout & Runtime Errors**: Tested at `1440x900` and `375x812` viewports across Auth, Home Dashboard, and Privacy Dashboard with `scrollWidth === 375` (zero horizontal overflow) and zero uncaught page errors or CSP violations.
-
-### 4. Build & TypeScript Verification
-- `tsc --noEmit` (`lint_applet`) passed with zero errors.
-- Production compilation (`compile_applet` / `npm run build`) succeeded cleanly.
+3. **Firestore Security Rules, Bundle Hygiene, Capacitor Sync & Build**
+   - `npx eslint firestore.rules` exited with code `0` (zero errors or warnings), and rules deployed live to Firebase.
+   - Production Vite + esbuild bundle (`npm run build`) succeeded cleanly, `CI=true npx cap sync` synchronized `@aparajita/capacitor-biometric-auth@8.0.2`, `@capacitor/local-notifications@6.1.3`, `@capacitor/push-notifications@6.0.5`, and `@revenuecat/purchases-capacitor@9.2.2` into both `android/app/capacitor.build.gradle` and `ios/App/Podfile`.
+   - Built client asset scan (`dist/assets/`) confirmed zero occurrences of `GEMINI_API_KEY`, `PAYSTACK_SECRET_KEY`, or `REVENUECAT_SECRET_API_KEY`.
+   - Final TypeScript check (`lint_applet`) and build verification (`compile_applet`) passed with zero errors.

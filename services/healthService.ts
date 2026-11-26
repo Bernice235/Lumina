@@ -1,8 +1,9 @@
+import { Capacitor } from '@capacitor/core';
 import { User } from '../types';
 import { syncUser } from './firebaseService';
 
 export interface HealthSyncStatus {
-  connectedSource: 'apple_health' | 'google_fit' | null;
+  connectedSource: 'apple_health' | 'google_fit' | 'manual' | null;
   lastSyncTimestamp: string | null;
   sleepHours: number;
   exerciseMinutes: number;
@@ -10,76 +11,76 @@ export interface HealthSyncStatus {
 }
 
 /**
- * Service to bridge Apple HealthKit and Google Fit data.
- * Supports Capacitor native execution models and Web premium sandboxed simulations.
+ * Service for Apple HealthKit / Google Health Connect readiness and honest manual wellness tracking.
+ * Never returns fabricated sensor readings or simulated device approvals.
  */
 export const HealthService = {
   /**
-   * Checks the authorization status for Apple HealthKit or Google Fit.
+   * Returns true only when running inside a native iOS/Android shell with a live Health bridge registered.
    */
   async checkPermission(source: 'apple_health' | 'google_fit'): Promise<boolean> {
-    console.log(`🌸 Checking permissions for ${source}...`);
-    // Simulated native check delay
-    await new Promise((resolve) => setTimeout(resolve, 600));
-    return true;
+    if (!Capacitor.isNativePlatform()) {
+      return false;
+    }
+    const platform = Capacitor.getPlatform();
+    if (source === 'apple_health' && platform !== 'ios') return false;
+    if (source === 'google_fit' && platform !== 'android') return false;
+    return false;
   },
 
   /**
-   * Requests connection & authentication with Apple HealthKit or Google Fit.
+   * Checks native health bridge availability without simulating OAuth or HealthKit authorization.
    */
   async requestConnection(source: 'apple_health' | 'google_fit'): Promise<boolean> {
-    console.log(`🌸 Requesting OAuth connection / Health Permissions for ${source}...`);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    return true;
+    if (!Capacitor.isNativePlatform()) {
+      return false;
+    }
+    return this.checkPermission(source);
   },
 
   /**
-   * Imports sleep and exercise metrics.
-   * Generates real, believable metrics corresponding to healthy/active patterns.
+   * Rejects simulated metric imports when no native HealthKit/Health Connect plugin is active.
    */
   async importHealthMetrics(source: 'apple_health' | 'google_fit'): Promise<{ sleepHours: number; exerciseMinutes: number }> {
-    console.log(`🌸 Syncing metrics from ${source}...`);
-    await new Promise((resolve) => setTimeout(resolve, 1200));
-
-    if (source === 'apple_health') {
-      // Return high-quality, realistic HealthKit metrics
-      return {
-        sleepHours: 7.8, // 7h 48m
-        exerciseMinutes: 45 // 45 mins of cardio/yoga
-      };
-    } else {
-      // Return Google Fit metrics
-      return {
-        sleepHours: 7.2, // 7h 12m
-        exerciseMinutes: 35 // 35 mins active walk/strength
-      };
+    const granted = await this.checkPermission(source);
+    if (!granted) {
+      throw new Error(
+        source === 'apple_health'
+          ? 'Apple HealthKit requires a native iOS build with HealthKit permission enabled. Please log sleep and activity manually.'
+          : 'Health Connect requires a native Android build with Health Connect permissions enabled. Please log sleep and activity manually.'
+      );
     }
+    throw new Error('No native health connector plugin is configured in this build.');
   },
 
   /**
-   * Syncs wellness values directly to user profile state and saves to Firebase Cloud.
+   * Saves user-entered sleep and exercise metrics directly to the user profile without fabricated values.
    */
-  async syncToUserProfile(
+  async saveManualHealthMetrics(
     user: User,
-    source: 'apple_health' | 'google_fit',
+    metrics: { sleepHours: number; exerciseMinutes: number },
     setUser: (u: User) => void
   ): Promise<{ sleepHours: number; exerciseMinutes: number }> {
-    const metrics = await this.importHealthMetrics(source);
-    
+    const cleanSleep = Math.max(0, Math.min(24, Number(metrics.sleepHours) || 0));
+    const cleanExercise = Math.max(0, Math.min(600, Math.round(Number(metrics.exerciseMinutes) || 0)));
+
+    const filteredPrefs = (user.wellnessPreferences || []).filter(
+      (p) => !p.startsWith('health_source:') && !p.startsWith('last_sync:') && !p.startsWith('synced_sleep:') && !p.startsWith('synced_exercise:')
+    );
+
     const updatedUser: User = {
       ...user,
-      // Persist sync status in custom preferences / metadata
       wellnessPreferences: [
-        ...(user.wellnessPreferences || []),
-        `health_source:${source}`,
+        ...filteredPrefs,
+        'health_source:manual',
         `last_sync:${new Date().toISOString()}`,
-        `synced_sleep:${metrics.sleepHours}`,
-        `synced_exercise:${metrics.exerciseMinutes}`
-      ]
+        `synced_sleep:${cleanSleep}`,
+        `synced_exercise:${cleanExercise}`,
+      ],
     };
 
     setUser(updatedUser);
     await syncUser(updatedUser);
-    return metrics;
-  }
+    return { sleepHours: cleanSleep, exerciseMinutes: cleanExercise };
+  },
 };

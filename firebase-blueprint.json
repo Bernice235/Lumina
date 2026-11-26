@@ -30,13 +30,12 @@
     },
     "Invite": {
       "title": "Invite",
-      "description": "Maps a secure code to a user who generated it.",
+      "description": "Maps a secure code to a user who generated it (excludes senderEmail PII).",
       "type": "object",
       "properties": {
         "code": { "type": "string", "minLength": 6, "maxLength": 12, "pattern": "^[A-Z0-9]+$" },
         "senderId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
         "senderName": { "type": "string", "maxLength": 120 },
-        "senderEmail": { "type": "string", "maxLength": 160 },
         "createdAt": { "type": "string", "format": "date-time", "maxLength": 64 }
       },
       "required": ["code", "senderId", "senderName", "createdAt"]
@@ -124,7 +123,7 @@
     },
     "PartnerSharedSummary": {
       "title": "PartnerSharedSummary",
-      "description": "Strictly consent-filtered summary shared with a mutually linked partner (excludes diary entries, PINs, 2FA, and unconsented records).",
+      "description": "Strictly consent-filtered summary shared with a mutually linked partner (excludes diary entries, doctor reports, personal notes, PINs, 2FA, and unconsented records).",
       "type": "object",
       "properties": {
         "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },

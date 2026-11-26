@@ -45,6 +45,8 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Lumina uses Face ID to protect access to your private health profile and secret diary.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

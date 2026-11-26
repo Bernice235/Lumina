@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { User, AppTheme, Symptom, NotificationSettings, AvatarId, SkinTone, UserAvatar } from '../types';
 import { THEMES } from '../constants';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -66,7 +66,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
 
     playAvatarIntroduction(
       id, 
-      { firstName: name?.trim() || 'Bernice' },
+      { firstName: name?.trim() || 'friend' },
       {
         accent: preset?.defaultAccent,
         personality: preset?.defaultPersonality,
@@ -86,30 +86,110 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
   const [cycleLength, setCycleLength] = useState<number>(user.cycleLength || 28);
   const [periodLength, setPeriodLength] = useState<number>(user.periodLength || 5);
 
-  // Wellness goals
-  const [wellnessGoals, setWellnessGoals] = useState<string[]>([
+  // Seed Wellness goals from saved user preferences if returning to wizard
+  const KNOWN_GOALS = [
     'Understanding my cycle',
-    'Period tracking'
-  ]);
+    'Period tracking',
+    'Tracking fertility',
+    'Hormone balance',
+    'Mental wellness',
+    'Pregnancy preparation',
+  ];
+  const KNOWN_SANCTUARY = ['Music', 'Meditation', 'Breathing exercises', 'Journaling', 'Yoga tutorials'];
 
-  // Reminders preferences
-  const [reminders, setReminders] = useState<string[]>([
-    'Period reminders',
-    'Ovulation reminders'
-  ]);
+  const [wellnessGoals, setWellnessGoals] = useState<string[]>(() => {
+    const saved = (user.wellnessPreferences || []).filter((p) => KNOWN_GOALS.includes(p));
+    return saved.length > 0 ? saved : ['Understanding my cycle', 'Period tracking'];
+  });
 
-  // Partner mode preference
-  const [partnerMode, setPartnerMode] = useState<'yes' | 'no' | null>(null);
+  // Reminders preferences seeded from user.notificationSettings if present
+  const [reminders, setReminders] = useState<string[]>(() => {
+    const ns = user.notificationSettings;
+    if (!ns) return ['Period reminders', 'Ovulation reminders'];
+    const list: string[] = [];
+    if (ns.types?.periodStarting || ns.types?.periodStarted) list.push('Period reminders');
+    if (ns.types?.ovulation || ns.types?.fertileWindow) list.push('Ovulation reminders');
+    if (ns.pregnancyTypes?.medicationVitamin) list.push('Medication reminders');
+    if (ns.pregnancyTypes?.hydration) list.push('Water reminders');
+    return list.length > 0 ? list : ['Period reminders', 'Ovulation reminders'];
+  });
 
-  // Sanctuary preferences
-  const [sanctuaryPrefs, setSanctuaryPrefs] = useState<string[]>([
-    'Music',
-    'Meditation',
-    'Breathing exercises'
-  ]);
+  // Partner mode preference seeded if previously set
+  const [partnerMode, setPartnerMode] = useState<'yes' | 'no' | null>(() => {
+    if (user.notificationSettings?.partnerNotificationsEnabled === true) return 'yes';
+    if (user.notificationSettings?.partnerNotificationsEnabled === false) return 'no';
+    return null;
+  });
+
+  // Sanctuary preferences seeded from saved preferences
+  const [sanctuaryPrefs, setSanctuaryPrefs] = useState<string[]>(() => {
+    const saved = (user.wellnessPreferences || []).filter((p) => KNOWN_SANCTUARY.includes(p));
+    return saved.length > 0 ? saved : ['Music', 'Meditation', 'Breathing exercises'];
+  });
 
   // Notification permissions
-  const [notificationsAllowed, setNotificationsAllowed] = useState<boolean | null>(null);
+  const [notificationsAllowed, setNotificationsAllowed] = useState<boolean | null>(() =>
+    typeof user.notificationSettings?.enabled === 'boolean' ? user.notificationSettings.enabled : null
+  );
+
+  // Restore any interrupted encrypted draft so step/answers never fluctuate across refreshes
+  useEffect(() => {
+    let active = true;
+    secureStorage.getItem(`onboarding_draft_${user.id}`).then((raw) => {
+      if (!active || !raw) return;
+      try {
+        const d = JSON.parse(raw);
+        if (typeof d.step === 'number' && d.step >= 1 && d.step <= totalSteps) setStep(d.step);
+        if (typeof d.name === 'string' && d.name.trim()) setName(d.name);
+        if (typeof d.dob === 'string') setDob(d.dob);
+        if (d.selectedAvatarId) setSelectedAvatarId(d.selectedAvatarId);
+        if (d.selectedSkinTone) setSelectedSkinTone(d.selectedSkinTone);
+        if (typeof d.lastPeriodStart === 'string') setLastPeriodStart(d.lastPeriodStart);
+        if (typeof d.cycleLength === 'number') setCycleLength(d.cycleLength);
+        if (typeof d.periodLength === 'number') setPeriodLength(d.periodLength);
+        if (Array.isArray(d.wellnessGoals)) setWellnessGoals(d.wellnessGoals);
+        if (Array.isArray(d.reminders)) setReminders(d.reminders);
+        if (d.partnerMode === 'yes' || d.partnerMode === 'no') setPartnerMode(d.partnerMode);
+        if (Array.isArray(d.sanctuaryPrefs)) setSanctuaryPrefs(d.sanctuaryPrefs);
+        if (typeof d.notificationsAllowed === 'boolean') setNotificationsAllowed(d.notificationsAllowed);
+      } catch {}
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [user.id]);
+
+  useEffect(() => {
+    const draft = {
+      step,
+      name,
+      dob,
+      selectedAvatarId,
+      selectedSkinTone,
+      lastPeriodStart,
+      cycleLength,
+      periodLength,
+      wellnessGoals,
+      reminders,
+      partnerMode,
+      sanctuaryPrefs,
+      notificationsAllowed,
+    };
+    secureStorage.setItem(`onboarding_draft_${user.id}`, JSON.stringify(draft)).catch(() => {});
+  }, [
+    user.id,
+    step,
+    name,
+    dob,
+    selectedAvatarId,
+    selectedSkinTone,
+    lastPeriodStart,
+    cycleLength,
+    periodLength,
+    wellnessGoals,
+    reminders,
+    partnerMode,
+    sanctuaryPrefs,
+    notificationsAllowed,
+  ]);
 
   // error state
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -261,6 +341,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
     if (updatedUser.email) {
       void secureStorage.setItem('offline_user_' + updatedUser.email.toLowerCase().trim(), JSON.stringify(updatedUser));
     }
+    void secureStorage.removeItem(`onboarding_draft_${user.id}`).catch(() => {});
     syncUser(updatedUser);
     trackCompleteOnboarding(false);
     onComplete(updatedUser);
@@ -511,7 +592,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                     <div className="bg-white/90 backdrop-blur-xs p-3 rounded-2xl border border-pink-100/80 shadow-xs relative">
                       <div className="absolute -top-1.5 left-6 w-3 h-3 bg-white border-t border-l border-pink-100 transform rotate-45" />
                       <p className="text-xs text-stone-800 font-medium leading-relaxed italic">
-                        "{getAvatarIntroduction(selectedAvatarId, name?.trim() || 'Bernice', AVATAR_PRESETS[selectedAvatarId]?.defaultPersonality).displayText}"
+                        "{getAvatarIntroduction(selectedAvatarId, name?.trim() || 'friend', AVATAR_PRESETS[selectedAvatarId]?.defaultPersonality).displayText}"
                       </p>
                       
                       <div className="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-pink-50 text-[10px]">
