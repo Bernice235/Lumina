@@ -137,17 +137,18 @@ const PregnancyTracker: React.FC<PregnancyTrackerProps> = ({ user, setUser, onOp
   const predefinedSupplements = ['Prenatal DHA', 'Folic Acid', 'Iron Chewable', 'Vitamin D3', 'Calcium & Zinc'];
 
   return (
-    <div className="space-y-8 animate-fadeIn pb-12 font-sans placeholder:text-indigo-250 select-none">
-      {/* Redesigned Glassmorphic Screen Header */}
-      <header className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 text-center md:text-left bg-white/40 backdrop-blur-xl p-6 md:p-8 rounded-[2.5rem] border border-white/60 shadow-[inset_0_2px_4px_rgba(255,255,255,0.6),_0_12px_36px_rgba(244,114,182,0.03)]">
+    <div className="space-y-6 animate-fadeIn pb-12 font-sans">
+      {/* Screen Header */}
+      <header className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 bg-white dark:bg-[#1a1816] p-6 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-xs">
         <div>
-          <h2 className="text-3xl font-serif text-pink-600 font-bold tracking-tight">Calendar</h2>
-          <p className="text-xs text-stone-500 font-serif italic mt-1">Track your cycle and important dates</p>
+          <h2 className="text-2xl sm:text-3xl font-serif font-semibold text-stone-900 dark:text-stone-100">Pregnancy Sanctuary</h2>
+          <p className="text-sm text-stone-500 dark:text-stone-400 mt-1">Track gestational milestones, appointments, supplements, and maternal notes</p>
         </div>
         {onOpenDoctorReport && (
           <button
+            type="button"
             onClick={onOpenDoctorReport}
-            className="px-6 py-3 bg-gradient-to-r from-pink-500 to-rose-450 text-white rounded-2xl font-bold text-[9px] uppercase tracking-widest shadow-md flex items-center justify-center gap-2 transition-all self-center md:self-auto hover:scale-[1.02] active:scale-95 cursor-pointer"
+            className="px-4 py-2.5 bg-pink-600 hover:bg-pink-700 text-white rounded-xl font-semibold text-xs transition-colors flex items-center justify-center gap-2 self-start sm:self-auto cursor-pointer whitespace-nowrap"
           >
             <span>Generate Doctor Report</span>
           </button>
@@ -155,193 +156,196 @@ const PregnancyTracker: React.FC<PregnancyTrackerProps> = ({ user, setUser, onOp
       </header>
 
       {/* Main Weekly Card */}
-      <section className="bg-white p-12 rounded-[3.5rem] shadow-sm border border-indigo-50 flex flex-col items-center relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-2 bg-indigo-50">
-          <div className="h-full bg-indigo-400 transition-all duration-1000" style={{ width: `${progress}%` }}></div>
+      <section className="bg-white dark:bg-[#1a1816] p-6 sm:p-10 rounded-2xl shadow-xs border border-stone-200/80 dark:border-[#2e2a26] flex flex-col items-center relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-1.5 bg-stone-100 dark:bg-[#23201d]">
+          <div className="h-full bg-indigo-600 transition-all duration-700" style={{ width: `${progress}%` }}></div>
         </div>
-        
-        <div className="relative group mb-10 w-full flex flex-col items-center">
-          <div className="absolute -inset-6 bg-indigo-100 rounded-full blur-2xl opacity-25 group-hover:opacity-40 transition-opacity"></div>
-          <div className="relative w-56 h-56 bg-gradient-to-br from-indigo-50 to-white rounded-full flex items-center justify-center text-8xl shadow-inner border-4 border-white">
+
+        <div className="relative mb-6 w-full flex flex-col items-center">
+          <div className="relative w-40 h-40 bg-[#faf8f6] dark:bg-[#23201d] rounded-full flex items-center justify-center text-7xl border border-stone-200/80 dark:border-[#342f2b]">
             {currentBaby.fruit}
-            <div className="absolute -bottom-2 -right-2 w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-md border border-indigo-50 text-2xl">
+            <div className="absolute -bottom-1 -right-1 w-10 h-10 bg-white dark:bg-[#1a1816] rounded-full flex items-center justify-center shadow-xs border border-stone-200 dark:border-[#342f2b] text-lg">
               👶
             </div>
           </div>
         </div>
 
-        <div className="text-center space-y-3">
-          <h3 className="text-5xl font-serif text-indigo-600 italic">Week {weeks}</h3>
+        <div className="text-center space-y-2">
+          <h3 className="text-4xl font-serif font-semibold text-stone-900 dark:text-stone-100 tabular-nums">Week {weeks}</h3>
           <div className="flex flex-col items-center gap-1">
-            <span className="text-xs font-bold text-indigo-300 uppercase tracking-widest">Size comparison</span>
-            <p className="text-2xl font-serif italic text-indigo-500">A Sweet {currentBaby.size}</p>
+            <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">Size Comparison</span>
+            <p className="text-xl font-serif text-stone-700 dark:text-stone-200">About the size of a {currentBaby.size}</p>
           </div>
         </div>
 
-        <div className="mt-12 grid grid-cols-3 gap-8 w-full border-t border-indigo-50 pt-8">
-           <div className="text-center">
-             <p className="text-[10px] font-bold text-indigo-300 uppercase mb-1">Remaining</p>
-             <p className="text-xl font-serif text-indigo-600 italic">{Math.max(0, 40 - weeks)} Weeks</p>
-           </div>
-           <div className="text-center">
-             <p className="text-[10px] font-bold text-indigo-300 uppercase mb-1">Trimester</p>
-             <p className="text-xl font-serif text-indigo-600 italic">
-               {trimester === 1 ? '1st' : trimester === 2 ? '2nd' : '3rd'}
-             </p>
-           </div>
-           <div className="text-center">
-             <p className="text-[10px] font-bold text-indigo-300 uppercase mb-1">Progress</p>
-             <p className="text-xl font-serif text-indigo-600 italic">{progress.toFixed(0)}%</p>
-           </div>
+        <div className="mt-8 grid grid-cols-3 gap-4 sm:gap-8 w-full border-t border-stone-200/70 dark:border-[#2e2a26] pt-6">
+          <div className="text-center">
+            <p className="text-xs font-medium text-stone-500 dark:text-stone-400 mb-1">Remaining</p>
+            <p className="text-xl font-serif font-semibold text-stone-900 dark:text-stone-100 tabular-nums">{Math.max(0, 40 - weeks)} Weeks</p>
+          </div>
+          <div className="text-center">
+            <p className="text-xs font-medium text-stone-500 dark:text-stone-400 mb-1">Trimester</p>
+            <p className="text-xl font-serif font-semibold text-stone-900 dark:text-stone-100 tabular-nums">
+              {trimester === 1 ? '1st' : trimester === 2 ? '2nd' : '3rd'}
+            </p>
+          </div>
+          <div className="text-center">
+            <p className="text-xs font-medium text-stone-500 dark:text-stone-400 mb-1">Progress</p>
+            <p className="text-xl font-serif font-semibold text-stone-900 dark:text-stone-100 tabular-nums">{progress.toFixed(0)}%</p>
+          </div>
         </div>
       </section>
 
       {/* Wellness & Growth Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-         <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-indigo-50 hover:scale-[1.01] transition-transform">
-            <h4 className="text-lg font-serif text-indigo-500 mb-6 flex items-center gap-3 italic font-bold">
-               <span className="w-10 h-10 bg-indigo-50/70 rounded-full flex items-center justify-center text-xl">✨</span> 
-               Mama's Glow
-            </h4>
-            <ul className="space-y-4 text-base text-gray-650 font-serif italic">
-               <li className="flex gap-3">
-                 <span className="text-indigo-300 mt-1">•</span> 
-                 Take your prenatal vitamins with a glass of infused water.
-               </li>
-               <li className="flex gap-3">
-                 <span className="text-indigo-300 mt-1">•</span> 
-                 Gentle stretches can help with that new back tension, darling.
-               </li>
-               <li className="flex gap-3">
-                 <span className="text-indigo-300 mt-1">•</span> 
-                 Keep tracking your supplement intake and pregnancy notes.
-               </li>
-            </ul>
-         </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white dark:bg-[#1a1816] p-6 rounded-2xl shadow-xs border border-stone-200/80 dark:border-[#2e2a26]">
+          <h4 className="text-lg font-serif text-stone-900 dark:text-stone-100 mb-4 flex items-center gap-2.5 font-semibold">
+            <span className="w-8 h-8 bg-indigo-50 dark:bg-indigo-950/40 rounded-lg flex items-center justify-center text-base">✨</span>
+            Maternal Wellness Focus
+          </h4>
+          <ul className="space-y-3 text-sm text-stone-600 dark:text-stone-300">
+            <li className="flex gap-2.5">
+              <span className="text-indigo-500 font-bold">•</span>
+              Take your prenatal vitamins with water and a balanced meal.
+            </li>
+            <li className="flex gap-2.5">
+              <span className="text-indigo-500 font-bold">•</span>
+              Gentle pelvic tilts and prenatal stretches can ease lower-back tension.
+            </li>
+            <li className="flex gap-2.5">
+              <span className="text-indigo-500 font-bold">•</span>
+              Keep your supplement intake and clinical questions logged for your next visit.
+            </li>
+          </ul>
+        </div>
 
-         <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-indigo-50 hover:scale-[1.01] transition-transform">
-            <h4 className="text-lg font-serif text-indigo-500 mb-6 flex items-center gap-3 italic font-bold">
-               <span className="w-10 h-10 bg-indigo-50/70 rounded-full flex items-center justify-center text-xl">👶</span> 
-               Baby's Bloom
-            </h4>
-            <div className="p-6 bg-indigo-50/30 rounded-3xl border border-indigo-50/50">
-               <p className="text-base text-indigo-900 font-serif italic leading-relaxed">
-                {weeks < 12 ? 
-                  "Your little one's tiny heart is beating like a drum! Major organs are settling into their places." : 
-                  weeks < 24 ? 
-                  "Baby is starting to hear your voice! They're practicing their tiny kicks and stretches right now." : 
-                  "Lungs are maturing and eyes are beginning to blink. Your little sprout is getting ready for the world!"}
-               </p>
-            </div>
-         </div>
+        <div className="bg-white dark:bg-[#1a1816] p-6 rounded-2xl shadow-xs border border-stone-200/80 dark:border-[#2e2a26]">
+          <h4 className="text-lg font-serif text-stone-900 dark:text-stone-100 mb-4 flex items-center gap-2.5 font-semibold">
+            <span className="w-8 h-8 bg-pink-50 dark:bg-pink-950/40 rounded-lg flex items-center justify-center text-base">👶</span>
+            Fetal Development Note
+          </h4>
+          <div className="p-4 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl border border-stone-200/80 dark:border-[#342f2b]">
+            <p className="text-sm text-stone-700 dark:text-stone-200 leading-relaxed">
+              {weeks < 12 ?
+                "Your baby's heart is beating steadily and major foundational organ systems are forming." :
+                weeks < 24 ?
+                "Baby is developing hearing sensitivity and practicing early movements and stretches." :
+                "Lungs continue maturing and eyelids are opening as baby grows steadily each week."}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Maternal Sanctuary Parameters Panel */}
-      <section className="bg-white p-8 rounded-[3.5rem] shadow-sm border border-indigo-50 space-y-8">
-        <div className="border-b border-indigo-50 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      <section className="bg-white dark:bg-[#1a1816] p-6 sm:p-8 rounded-2xl shadow-xs border border-stone-200/80 dark:border-[#2e2a26] space-y-6">
+        <div className="border-b border-stone-200/70 dark:border-[#2e2a26] pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
-            <h3 className="text-2xl font-serif text-indigo-600 font-bold italic">Maternal Settings</h3>
-            <p className="text-[10px] text-indigo-300 uppercase tracking-wider font-bold">Configure clinical due date, supplements list, and milestones</p>
+            <h3 className="text-xl font-serif text-stone-900 dark:text-stone-100 font-semibold">Maternal Care Settings</h3>
+            <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">Configure clinical due date, prenatal supplements, and milestones</p>
           </div>
-          <span className="text-[9px] font-extrabold bg-indigo-50 text-indigo-500 px-3 py-1 rounded-full uppercase tracking-wider">🤰 Clinically Managed</span>
+          <span className="text-xs font-semibold bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 px-3 py-1 rounded-lg border border-indigo-200/60 dark:border-indigo-900/50 self-start sm:self-auto">
+            Clinically Tracked
+          </span>
         </div>
 
         {/* Due Date Config */}
-        <div className="space-y-3 pb-6 border-b border-indigo-50">
-          <div className="flex justify-between items-center bg-indigo-50/20 p-5 rounded-2xl border border-indigo-50/40">
+        <div className="space-y-3 pb-6 border-b border-stone-200/70 dark:border-[#2e2a26]">
+          <div className="flex flex-wrap justify-between items-center gap-3 bg-[#faf8f6] dark:bg-[#23201d] p-4 rounded-xl border border-stone-200/80 dark:border-[#342f2b]">
             <div>
-              <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Configured Due Date (Delivery Date)</p>
-              <p className="text-lg font-serif text-indigo-600 font-bold mt-1">
+              <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">Configured Due Date (Delivery Date)</p>
+              <p className="text-lg font-serif text-stone-900 dark:text-stone-100 font-semibold mt-0.5 tabular-nums">
                 {user.deliveryDate ? new Date(user.deliveryDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Not set'}
               </p>
             </div>
             <button
+              type="button"
               onClick={() => {
                 setTempDueDate(user.deliveryDate || '');
                 setIsEditingDueDate(!isEditingDueDate);
               }}
-              className="px-4 py-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-full font-serif font-bold italic text-xs border border-indigo-100 transition-colors cursor-pointer"
+              className="px-4 py-2 bg-white dark:bg-[#1a1816] text-indigo-600 dark:text-indigo-400 hover:bg-stone-50 dark:hover:bg-[#2c2824] rounded-xl font-semibold text-xs border border-stone-200/80 dark:border-[#342f2b] transition-colors cursor-pointer whitespace-nowrap"
             >
-              {isEditingDueDate ? 'Close' : '✍️ Edit Due Date'}
+              {isEditingDueDate ? 'Close' : 'Edit Due Date'}
             </button>
           </div>
 
           {isEditingDueDate && (
-            <div className="bg-indigo-50/10 border border-indigo-100/50 p-6 rounded-2xl space-y-4 animate-slideDownBlock">
-              <label className="block text-[10px] font-bold text-indigo-400 uppercase">Select Clinician Estimated Due Date</label>
+            <div className="bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] p-5 rounded-xl space-y-3 animate-slideDownBlock">
+              <label className="block text-xs font-semibold text-stone-600 dark:text-stone-300">Select Clinician Estimated Due Date</label>
               <div className="flex flex-col sm:flex-row gap-3">
-                <input 
+                <input
                   type="date"
                   value={tempDueDate}
                   onChange={(e) => setTempDueDate(e.target.value)}
-                  className="p-3 bg-white border border-indigo-150 rounded-xl text-xs text-indigo-750 focus:outline-indigo-300 flex-1"
+                  className="h-11 px-3.5 bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#342f2b] rounded-xl text-xs text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 flex-1"
                 />
                 <button
+                  type="button"
                   onClick={handleSaveDueDate}
-                  className="px-5 py-3 bg-indigo-500 text-white font-bold rounded-xl text-[10px] uppercase tracking-widest hover:bg-indigo-600 cursor-pointer transition-colors"
+                  className="h-11 px-5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-xs cursor-pointer transition-colors whitespace-nowrap"
                 >
                   Recalculate Progression
                 </button>
               </div>
-              <p className="text-[10px] text-indigo-300 italic">Changing the due date automatically shifts the 40-week gestational calendar and size tracker predictions correspondingly.</p>
+              <p className="text-xs text-stone-500 dark:text-stone-400">Changing the due date shifts the 40-week gestational calendar and size tracker accordingly.</p>
             </div>
           )}
         </div>
 
         {/* Appointments Tracker */}
-        <div className="space-y-4 pb-6 border-b border-indigo-50">
-          <div className="flex justify-between items-center">
+        <div className="space-y-4 pb-6 border-b border-stone-200/70 dark:border-[#2e2a26]">
+          <div className="flex flex-wrap justify-between items-center gap-3">
             <div>
-              <h4 className="text-sm font-bold text-indigo-600 uppercase tracking-widest flex items-center gap-1.5">
-                <span>🗓️</span> Prenatal Appointments
-              </h4>
-              <p className="text-[10px] text-gray-400">Keep safe records of doctor visits and checkups</p>
+              <h4 className="text-sm font-semibold text-stone-900 dark:text-stone-100">Prenatal Appointments</h4>
+              <p className="text-xs text-stone-500 dark:text-stone-400">Keep organized records of doctor visits and checkups</p>
             </div>
             <button
+              type="button"
               onClick={() => setIsAddingAppointment(!isAddingAppointment)}
-              className="px-4 py-2 bg-gradient-to-r from-indigo-400 to-purple-400 hover:from-indigo-500 hover:to-purple-500 text-white rounded-full font-serif font-bold italic text-xs shadow-sm transition-all cursor-pointer"
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold text-xs transition-colors cursor-pointer whitespace-nowrap"
             >
-              {isAddingAppointment ? '✕ Done' : '➕ Log Appointment'}
+              {isAddingAppointment ? 'Close' : '+ Log Appointment'}
             </button>
           </div>
 
           {isAddingAppointment && (
-            <div className="bg-indigo-50/10 border border-indigo-100/50 p-6 rounded-2xl space-y-4 animate-slideDownBlock text-left">
-              <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Add Prenatal Appointment</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] p-5 rounded-xl space-y-4 animate-slideDownBlock text-left">
+              <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">Add Prenatal Appointment</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-bold text-gray-400 uppercase">Title / Doctor</label>
-                  <input 
+                  <label className="text-xs font-medium text-stone-600 dark:text-stone-300 block">Title / Doctor</label>
+                  <input
                     type="text"
                     placeholder="OB-GYN Routine Ultrasound"
                     value={newApTitle}
                     onChange={(e) => setNewApTitle(e.target.value)}
-                    className="p-3 w-full bg-white border border-indigo-150 rounded-xl text-xs"
+                    className="h-11 px-3.5 w-full bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#342f2b] rounded-xl text-xs text-stone-900 dark:text-stone-100"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-bold text-gray-400 uppercase">Appointment Date</label>
-                  <input 
+                  <label className="text-xs font-medium text-stone-600 dark:text-stone-300 block">Appointment Date</label>
+                  <input
                     type="date"
                     value={newApDate}
                     onChange={(e) => setNewApDate(e.target.value)}
-                    className="p-3 w-full bg-white border border-indigo-150 rounded-xl text-xs"
+                    className="h-11 px-3.5 w-full bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#342f2b] rounded-xl text-xs text-stone-900 dark:text-stone-100"
                   />
                 </div>
                 <div className="space-y-1.5 sm:col-span-2">
-                  <label className="text-[9px] font-bold text-gray-400 uppercase">Preparations / Notes</label>
-                  <input 
+                  <label className="text-xs font-medium text-stone-600 dark:text-stone-300 block">Preparations / Notes</label>
+                  <input
                     type="text"
-                    placeholder="Drink 3 glasses of water 1 hour prior. Partner invited!"
+                    placeholder="Drink water prior to scan; partner attending"
                     value={newApNotes}
                     onChange={(e) => setNewApNotes(e.target.value)}
-                    className="p-3 w-full bg-white border border-indigo-150 rounded-xl text-xs"
+                    className="h-11 px-3.5 w-full bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#342f2b] rounded-xl text-xs text-stone-900 dark:text-stone-100"
                   />
                 </div>
               </div>
               <button
+                type="button"
                 onClick={handleAddAppointment}
-                className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white text-[9px] font-extrabold uppercase tracking-widest rounded-full cursor-pointer transition-colors"
+                className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl cursor-pointer transition-colors"
               >
                 Save Appointment
               </button>
@@ -350,35 +354,37 @@ const PregnancyTracker: React.FC<PregnancyTrackerProps> = ({ user, setUser, onOp
 
           {/* List Appointments */}
           {(!user.pregnancyAppointments || user.pregnancyAppointments.length === 0) ? (
-            <p className="text-xs text-indigo-300 italic py-2">No upcoming wellness appointments documented.</p>
+            <p className="text-xs text-stone-500 dark:text-stone-400 py-2">No upcoming appointments documented.</p>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               {user.pregnancyAppointments.map((ap) => (
-                <div key={ap.id} className="bg-white p-5 rounded-2xl border border-indigo-50 text-left space-y-2 flex flex-col justify-between">
+                <div key={ap.id} className="bg-[#faf8f6] dark:bg-[#23201d] p-4 rounded-xl border border-stone-200/80 dark:border-[#342f2b] text-left space-y-2 flex flex-col justify-between">
                   <div>
                     <div className="flex justify-between items-start gap-2">
-                      <h5 className="font-serif italic font-bold text-indigo-700 text-sm">{ap.title}</h5>
-                      <span className="text-[9px] bg-indigo-100 text-indigo-600 font-bold px-2 py-0.5 rounded-full whitespace-nowrap">
+                      <h5 className="font-serif font-semibold text-stone-900 dark:text-stone-100 text-sm">{ap.title}</h5>
+                      <span className="text-xs bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-semibold px-2.5 py-0.5 rounded-lg whitespace-nowrap tabular-nums border border-indigo-200/60 dark:border-indigo-900/50">
                         {new Date(ap.date).toLocaleDateString()}
                       </span>
                     </div>
-                    {ap.notes && <p className="text-xs text-gray-500 font-serif italic mt-1">{ap.notes}</p>}
+                    {ap.notes && <p className="text-xs text-stone-600 dark:text-stone-400 mt-1.5">{ap.notes}</p>}
                   </div>
 
-                  <div className="pt-3 border-t border-indigo-50/50 mt-2 flex justify-end">
+                  <div className="pt-2.5 border-t border-stone-200/70 dark:border-[#342f2b] mt-2 flex justify-end">
                     {deletingAppointmentId === ap.id ? (
-                      <div className="bg-rose-50 p-2.5 rounded-xl border border-rose-100 text-center w-full space-y-2">
-                        <p className="text-[9px] text-rose-850 font-bold">Are you sure you want to delete this entry?</p>
+                      <div className="bg-rose-50 dark:bg-rose-950/40 p-2.5 rounded-xl border border-rose-200 dark:border-rose-900/50 text-center w-full space-y-2">
+                        <p className="text-xs text-rose-800 dark:text-rose-200 font-semibold">Delete this appointment?</p>
                         <div className="flex justify-center gap-2">
                           <button
+                            type="button"
                             onClick={() => handleDeleteAppointment(ap.id)}
-                            className="bg-rose-600 text-white text-[8px] font-bold px-3 py-1 rounded-full cursor-pointer hover:bg-rose-700"
+                            className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold px-3 py-1 rounded-lg cursor-pointer"
                           >
                             Yes, Delete
                           </button>
                           <button
+                            type="button"
                             onClick={() => setDeletingAppointmentId(null)}
-                            className="bg-white border border-gray-200 text-gray-500 text-[8px] font-bold px-3 py-1 rounded-full cursor-pointer hover:bg-gray-50"
+                            className="bg-white dark:bg-[#1a1816] border border-stone-200 dark:border-[#342f2b] text-stone-700 dark:text-stone-300 text-xs font-semibold px-3 py-1 rounded-lg cursor-pointer"
                           >
                             Cancel
                           </button>
@@ -386,10 +392,11 @@ const PregnancyTracker: React.FC<PregnancyTrackerProps> = ({ user, setUser, onOp
                       </div>
                     ) : (
                       <button
+                        type="button"
                         onClick={() => setDeletingAppointmentId(ap.id)}
-                        className="text-[9px] text-rose-500 hover:text-rose-700 flex items-center gap-1 cursor-pointer"
+                        className="text-xs text-rose-600 dark:text-rose-400 hover:underline font-medium cursor-pointer"
                       >
-                        🗑️ Delete Visit
+                        Delete Visit
                       </button>
                     )}
                   </div>
@@ -400,15 +407,13 @@ const PregnancyTracker: React.FC<PregnancyTrackerProps> = ({ user, setUser, onOp
         </div>
 
         {/* Prenatal Supplements Tracker */}
-        <div className="space-y-4 pb-6 border-b border-indigo-50">
+        <div className="space-y-4 pb-6 border-b border-stone-200/70 dark:border-[#2e2a26]">
           <div>
-            <h4 className="text-sm font-bold text-indigo-600 uppercase tracking-widest flex items-center gap-1.5">
-              <span>💊</span> Prenatal Supplement Sanctuary
-            </h4>
-            <p className="text-[10px] text-gray-400">Manage maternal prescription checklists and daily vitamins</p>
+            <h4 className="text-sm font-semibold text-stone-900 dark:text-stone-100">Prenatal Supplements</h4>
+            <p className="text-xs text-stone-500 dark:text-stone-400">Manage maternal supplements and daily vitamins</p>
           </div>
 
-          <div className="bg-indigo-50/10 p-5 rounded-2xl border border-indigo-50/40 space-y-4">
+          <div className="bg-[#faf8f6] dark:bg-[#23201d] p-4 sm:p-5 rounded-xl border border-stone-200/80 dark:border-[#342f2b] space-y-4">
             {/* Quick add checklist */}
             <div className="flex flex-wrap gap-2">
               {predefinedSupplements.map((preset) => {
@@ -416,14 +421,15 @@ const PregnancyTracker: React.FC<PregnancyTrackerProps> = ({ user, setUser, onOp
                 return (
                   <button
                     key={preset}
+                    type="button"
                     onClick={() => isConfigured ? handleDeleteSupplement(preset) : handleAddSupplement(preset)}
-                    className={`px-3 py-1.5 text-[9px] font-bold rounded-lg border transition-all cursor-pointer ${
-                      isConfigured 
-                        ? 'bg-indigo-500 border-indigo-500 text-white shadow-sm font-extrabold' 
-                        : 'bg-white border-indigo-100 text-indigo-400 hover:bg-indigo-50/50'
+                    className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors cursor-pointer ${
+                      isConfigured
+                        ? 'bg-indigo-600 border-indigo-600 text-white'
+                        : 'bg-white dark:bg-[#1a1816] border-stone-200/80 dark:border-[#342f2b] text-stone-700 dark:text-stone-300 hover:border-indigo-400'
                     }`}
                   >
-                    {preset} {isConfigured ? '✓' : '＋'}
+                    {preset} {isConfigured ? '✓' : '+'}
                   </button>
                 );
               })}
@@ -433,52 +439,56 @@ const PregnancyTracker: React.FC<PregnancyTrackerProps> = ({ user, setUser, onOp
             <div className="flex gap-2">
               <input
                 type="text"
-                placeholder="Or log another medicine/supplement..."
+                placeholder="Add another medication or supplement..."
                 value={newSupplementName}
                 onChange={(e) => setNewSupplementName(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleAddSupplement(newSupplementName);
                 }}
-                className="p-3 bg-white border border-indigo-150 rounded-xl text-xs flex-1 text-indigo-750 focus:outline-indigo-300"
+                className="h-11 px-3.5 bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#342f2b] rounded-xl text-xs flex-1 text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
               />
               <button
+                type="button"
                 onClick={() => handleAddSupplement(newSupplementName)}
-                className="px-4 py-3 bg-indigo-500 text-white font-bold rounded-xl text-[9px] uppercase tracking-widest hover:bg-indigo-600 cursor-pointer transition-colors"
+                className="h-11 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-xs cursor-pointer transition-colors whitespace-nowrap"
               >
-                Log Custom
+                Add
               </button>
             </div>
           </div>
 
           {/* List Logged Medicines */}
           {(!user.pregnancySupplements || user.pregnancySupplements.length === 0) ? (
-            <p className="text-xs text-indigo-300 italic py-2">No medications or supplements logged yet.</p>
+            <p className="text-xs text-stone-500 dark:text-stone-400 py-1">No medications or supplements logged yet.</p>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
               {user.pregnancySupplements.map((sup) => (
-                <div key={sup} className="bg-white px-4 py-3 rounded-2xl border border-indigo-50 flex items-center justify-between gap-2">
-                  <span className="text-xs text-indigo-900 font-serif italic">{sup}</span>
-                  
+                <div key={sup} className="bg-[#faf8f6] dark:bg-[#23201d] px-3.5 py-2.5 rounded-xl border border-stone-200/80 dark:border-[#342f2b] flex items-center justify-between gap-2">
+                  <span className="text-xs font-medium text-stone-800 dark:text-stone-200">{sup}</span>
+
                   {deletingSupplementName === sup ? (
-                    <div className="flex gap-1 bg-rose-50 p-1 rounded-lg border border-rose-100">
+                    <div className="flex gap-1 bg-rose-50 dark:bg-rose-950/40 p-1 rounded-lg border border-rose-200 dark:border-rose-900/50">
                       <button
+                        type="button"
                         onClick={() => handleDeleteSupplement(sup)}
-                        className="bg-rose-650 text-white text-[8px] px-2 py-0.5 rounded cursor-pointer font-bold hover:bg-rose-700"
+                        className="bg-rose-600 text-white text-xs px-2 py-0.5 rounded cursor-pointer font-semibold hover:bg-rose-700"
                       >
                         Yes
                       </button>
                       <button
+                        type="button"
                         onClick={() => setDeletingSupplementName(null)}
-                        className="bg-white border border-gray-200 text-gray-500 text-[8px] px-2 py-0.5 rounded cursor-pointer hover:bg-gray-50"
+                        className="bg-white dark:bg-[#1a1816] border border-stone-200 dark:border-[#342f2b] text-stone-600 dark:text-stone-300 text-xs px-2 py-0.5 rounded cursor-pointer"
                       >
                         No
                       </button>
                     </div>
                   ) : (
                     <button
+                      type="button"
                       onClick={() => setDeletingSupplementName(sup)}
-                      className="text-rose-450 hover:text-rose-650 text-[10px] cursor-pointer"
-                      title="Are you sure you want to delete this entry?"
+                      className="text-stone-400 hover:text-rose-600 text-xs cursor-pointer p-1"
+                      title="Delete supplement"
                     >
                       ✕
                     </button>
@@ -490,23 +500,22 @@ const PregnancyTracker: React.FC<PregnancyTrackerProps> = ({ user, setUser, onOp
         </div>
 
         {/* Maternal Notes & Journaling */}
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
+        <div className="space-y-3">
+          <div className="flex flex-wrap justify-between items-center gap-2">
             <div>
-              <h4 className="text-sm font-bold text-indigo-600 uppercase tracking-widest flex items-center gap-1.5">
-                <span>✍️</span> Maternal Journal & Notes
-              </h4>
-              <p className="text-[10px] text-gray-400">Keep personal thoughts, guidelines, or questions for your midwife</p>
+              <h4 className="text-sm font-semibold text-stone-900 dark:text-stone-100">Maternal Journal & Notes</h4>
+              <p className="text-xs text-stone-500 dark:text-stone-400">Record physical notes, kick counts, or questions for your midwife</p>
             </div>
             {!isEditingNotes && (
               <button
+                type="button"
                 onClick={() => {
                   setTempNotes(user.pregnancyNotes || '');
                   setIsEditingNotes(true);
                 }}
-                className="px-4 py-1.5 rounded-full font-serif font-bold italic text-xs border border-indigo-50 text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer"
+                className="px-3.5 py-2 rounded-xl font-semibold text-xs border border-stone-200/80 dark:border-[#342f2b] bg-[#faf8f6] dark:bg-[#23201d] text-indigo-600 dark:text-indigo-400 hover:bg-stone-100 dark:hover:bg-[#2c2824] transition-colors cursor-pointer whitespace-nowrap"
               >
-                ✍️ Update journaling
+                Edit Notes
               </button>
             )}
           </div>
@@ -516,61 +525,53 @@ const PregnancyTracker: React.FC<PregnancyTrackerProps> = ({ user, setUser, onOp
               <textarea
                 value={tempNotes}
                 onChange={(e) => setTempNotes(e.target.value)}
-                placeholder="State your notes here, physical changes, kick counts, or questions for your OB-GYN..."
+                placeholder="Write notes, physical changes, kick counts, or questions for your OB-GYN..."
                 rows={5}
-                className="w-full p-4 bg-indigo-50/5 border border-indigo-150 rounded-2xl text-xs text-indigo-900 font-serif leading-relaxed focus:outline-indigo-300 focus:bg-white"
+                className="w-full p-4 bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] rounded-xl text-sm text-stone-900 dark:text-stone-100 leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
               />
               <div className="flex gap-2">
                 <button
+                  type="button"
                   onClick={handleSaveNotes}
-                  className="px-5 py-2.5 bg-indigo-500 text-white font-bold rounded-full text-[9px] uppercase tracking-widest hover:bg-indigo-600 cursor-pointer transition-colors"
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-xs cursor-pointer transition-colors"
                 >
-                  Save journaling
+                  Save Notes
                 </button>
                 <button
+                  type="button"
                   onClick={() => setIsEditingNotes(false)}
-                  className="px-5 py-2.5 bg-white border border-gray-150 text-gray-500 rounded-full text-[9px] font-bold uppercase tracking-widest hover:bg-gray-50 cursor-pointer transition-all"
+                  className="px-4 py-2 bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] text-stone-700 dark:text-stone-300 rounded-xl text-xs font-semibold hover:bg-stone-100 dark:hover:bg-[#2c2824] cursor-pointer transition-colors"
                 >
                   Cancel
                 </button>
               </div>
             </div>
           ) : (
-            <div className="p-5 bg-indigo-50/15 border border-indigo-50/50 rounded-2xl text-left">
-              <p className="text-xs text-indigo-950 font-serif italic whitespace-pre-wrap leading-relaxed">
-                {user.pregnancyNotes || "Your maternal sanctuary diary is empty. Click 'Update journaling' to compose your first message or diary entry."}
+            <div className="p-4 bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] rounded-xl text-left">
+              <p className="text-sm text-stone-700 dark:text-stone-300 whitespace-pre-wrap leading-relaxed">
+                {user.pregnancyNotes || "Your maternal journal is empty. Click 'Edit Notes' to add your first entry."}
               </p>
             </div>
           )}
         </div>
       </section>
 
-      {/* Bottom Hero */}
-      <div className="p-10 bg-gradient-to-br from-indigo-500 via-indigo-400 to-purple-400 rounded-[3rem] text-white shadow-xl shadow-indigo-100 relative overflow-hidden group">
-         <div className="relative z-10 text-left">
-            <h4 className="font-serif italic text-3xl mb-3 leading-tight">"A mother's love is the first <br/>heartbeat baby hears."</h4>
-            <p className="text-[10px] opacity-80 uppercase font-bold tracking-[0.3em]">Nurtured by Lumina Sanctuary</p>
-         </div>
-         <span className="absolute -bottom-10 -right-10 text-[14rem] opacity-10 group-hover:scale-110 transition-transform duration-1000">🤰</span>
-         <div className="absolute top-0 right-0 p-8">
-            <span className="text-4xl animate-pulse">✨</span>
-         </div>
-      </div>
-
       {/* Doctor Report Selection Promo card */}
       {onOpenDoctorReport && (
-        <div className="bg-indigo-50 p-8 rounded-[2.5rem] border border-indigo-100/60 text-center space-y-2">
-          <h4 className="text-lg font-serif text-indigo-600 italic">Upcoming OB-GYN Visit?</h4>
-          <p className="text-xs text-indigo-400 italic max-w-md mx-auto">Create a comprehensive prenatal health summary detailing your week-by-week progress, weight, medications, and wellness logs for your healthcare provider.</p>
-          <div className="pt-2">
-            <button 
-              onClick={onOpenDoctorReport}
-              className="w-full py-4 bg-white text-indigo-600 rounded-3xl font-bold text-[10px] uppercase tracking-widest shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-95 duration-200 cursor-pointer"
-            >
-              <span>🤰</span>
-              Generate Doctor Report
-            </button>
+        <div className="bg-white dark:bg-[#1a1816] p-6 sm:p-8 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <h4 className="text-lg font-serif font-semibold text-stone-900 dark:text-stone-100">Upcoming OB-GYN Visit?</h4>
+            <p className="text-xs text-stone-600 dark:text-stone-300 max-w-xl leading-relaxed">
+              Generate a structured prenatal summary detailing your week-by-week progress, medications, and logged notes for your clinician.
+            </p>
           </div>
+          <button
+            type="button"
+            onClick={onOpenDoctorReport}
+            className="px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap shrink-0"
+          >
+            Generate Doctor Report
+          </button>
         </div>
       )}
     </div>

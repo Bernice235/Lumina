@@ -18,39 +18,39 @@ export const NotFoundPage: React.FC<NotFoundPageProps> = ({
     <main
       role="main"
       aria-labelledby="not-found-heading"
-      className="min-h-[70vh] flex items-center justify-center px-4 py-12"
+      className="min-h-[70vh] flex items-center justify-center px-4 py-12 bg-[#faf8f6] dark:bg-[#11100f]"
     >
-      <div className="max-w-md w-full bg-white/95 border border-pink-100 rounded-[2.5rem] p-8 sm:p-10 text-center shadow-[0_24px_60px_rgba(244,114,182,0.1)] space-y-6">
-        <div className="mx-auto w-16 h-16 rounded-3xl bg-gradient-to-tr from-pink-100 to-purple-100 border border-pink-200 flex items-center justify-center text-3xl">
+      <div className="max-w-md w-full bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] rounded-2xl p-7 sm:p-9 text-center shadow-sm space-y-6">
+        <div className="mx-auto w-14 h-14 rounded-2xl bg-pink-50 dark:bg-pink-950/40 border border-pink-200/70 dark:border-pink-900/50 flex items-center justify-center text-2xl">
           <span role="img" aria-label="Cherry blossom">
             🌸
           </span>
         </div>
 
         <div className="space-y-2">
-          <p className="text-xs font-bold uppercase tracking-widest text-pink-700">
+          <p className="text-xs font-semibold text-pink-600 dark:text-pink-400 tabular-nums">
             Error 404 • Page Not Found
           </p>
           <h1
             id="not-found-heading"
-            className="text-3xl font-serif font-bold text-stone-900"
+            className="text-2xl sm:text-3xl font-serif font-semibold text-stone-900 dark:text-stone-100"
           >
-            This Sanctuary Path Doesn&apos;t Exist
+            Page Not Found
           </h1>
-          <p className="text-sm text-stone-600 leading-relaxed">
+          <p className="text-sm text-stone-600 dark:text-stone-300 leading-relaxed">
             We couldn&apos;t find a page matching{' '}
-            <code className="px-2 py-0.5 rounded-lg bg-pink-50 text-pink-800 text-xs font-mono break-all">
+            <code className="px-2 py-0.5 rounded-lg bg-[#faf8f6] dark:bg-[#23201d] text-pink-700 dark:text-pink-300 text-xs font-mono border border-stone-200/70 dark:border-[#342f2b] break-all">
               {requestedPath || '/'}
             </code>
-            . Let&apos;s gently bring you back to your dashboard.
+            . Return to your dashboard below.
           </p>
         </div>
 
-        <div className="space-y-3 pt-2">
+        <div className="space-y-2.5 pt-1">
           <button
             type="button"
             onClick={onGoHome}
-            className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-pink-500 to-rose-500 text-white text-sm font-bold shadow-md shadow-pink-100 hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-pink-400 flex items-center justify-center gap-2 cursor-pointer transition-all"
+            className="w-full py-3 px-5 rounded-xl bg-pink-600 hover:bg-pink-700 text-white text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-pink-400 flex items-center justify-center gap-2 cursor-pointer transition-colors"
           >
             <ArrowLeft size={16} aria-hidden="true" />
             <span>Return to Home Dashboard</span>
@@ -61,7 +61,7 @@ export const NotFoundPage: React.FC<NotFoundPageProps> = ({
               <button
                 type="button"
                 onClick={onGoCycle}
-                className="py-2.5 px-3 rounded-2xl bg-pink-50 hover:bg-pink-100 text-pink-800 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                className="py-2.5 px-3 rounded-xl bg-[#faf8f6] dark:bg-[#23201d] hover:bg-stone-100 dark:hover:bg-[#2c2824] text-stone-800 dark:text-stone-200 border border-stone-200/80 dark:border-[#342f2b] text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
               >
                 <Calendar size={14} aria-hidden="true" />
                 <span>Cycle Calendar</span>
@@ -71,7 +71,7 @@ export const NotFoundPage: React.FC<NotFoundPageProps> = ({
               <button
                 type="button"
                 onClick={onGoPrivacy}
-                className="py-2.5 px-3 rounded-2xl bg-purple-50 hover:bg-purple-100 text-purple-900 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                className="py-2.5 px-3 rounded-xl bg-[#faf8f6] dark:bg-[#23201d] hover:bg-stone-100 dark:hover:bg-[#2c2824] text-stone-800 dark:text-stone-200 border border-stone-200/80 dark:border-[#342f2b] text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
               >
                 <ShieldCheck size={14} aria-hidden="true" />
                 <span>Privacy Vault</span>
@@ -80,9 +80,9 @@ export const NotFoundPage: React.FC<NotFoundPageProps> = ({
           </div>
         </div>
 
-        <p className="text-xs text-stone-500 flex items-center justify-center gap-1.5 pt-2">
-          <Sparkles size={13} className="text-pink-600" aria-hidden="true" />
-          <span>Your cycle &amp; wellness records remain safely encrypted.</span>
+        <p className="text-xs text-stone-500 dark:text-stone-400 flex items-center justify-center gap-1.5 pt-1">
+          <Sparkles size={13} className="text-pink-600 dark:text-pink-400" aria-hidden="true" />
+          <span>Your cycle &amp; wellness records remain encrypted.</span>
         </p>
       </div>
     </main>

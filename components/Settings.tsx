@@ -41,7 +41,17 @@ import {
   HeartHandshake,
   Cookie,
   KeyRound,
-  AlertTriangle
+  AlertTriangle,
+  Flower2,
+  Mail,
+  Music,
+  Crown,
+  SlidersHorizontal,
+  Trash2,
+  FolderUp,
+  Sun,
+  Sunrise,
+  Sunset
 } from 'lucide-react';
 import { 
   getCyclePredictions, 
@@ -816,10 +826,11 @@ const Settings: React.FC<SettingsProps> = ({
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn pb-16">
-      {/* Top Header */}
-      <header className="flex items-center justify-between px-5 py-4 bg-white/60 backdrop-blur-xl border border-pink-100/60 shadow-[0_8px_32px_rgba(244,114,182,0.04)] rounded-3xl sticky top-2 z-40">
+    <div className="space-y-6 animate-fadeIn pb-16 max-w-4xl mx-auto">
+      {/* Sub-navigation Header */}
+      <header className="flex items-center justify-between gap-4 pb-3 border-b border-stone-200/80 dark:border-[#2e2a26]">
         <button 
+          type="button"
           onClick={() => {
             if (activeSubTab === 'menu') {
               if (setActiveTab) setActiveTab('dashboard');
@@ -827,13 +838,14 @@ const Settings: React.FC<SettingsProps> = ({
               setActiveSubTab('menu');
             }
           }}
-          className="p-2.5 rounded-2xl bg-white hover:bg-pink-50/40 text-pink-500 transition-all duration-200 border border-pink-100/50 cursor-pointer flex items-center justify-center active:scale-95 shadow-sm"
+          className="h-9 px-3 rounded-xl bg-white dark:bg-[#1a1816] hover:bg-stone-50 dark:hover:bg-[#23201d] text-stone-700 dark:text-stone-200 transition-colors border border-stone-200/80 dark:border-[#2e2a26] cursor-pointer flex items-center gap-1.5 text-xs font-semibold shrink-0"
           title="Back"
         >
-          <ChevronLeft className="w-5 h-5" />
+          <ChevronLeft className="w-4 h-4" />
+          <span>{activeSubTab === 'menu' ? 'Dashboard' : 'Settings'}</span>
         </button>
 
-        <h1 className="font-serif italic font-black text-xl text-stone-800">
+        <h1 className="font-serif font-bold text-lg sm:text-xl text-stone-900 dark:text-stone-100 truncate">
           {activeSubTab === 'menu' ? 'Settings' : 
            activeSubTab === 'cycle' ? 'My Cycle' :
            activeSubTab === 'profile' ? 'My Profile' :
@@ -849,11 +861,12 @@ const Settings: React.FC<SettingsProps> = ({
         </h1>
 
         <button 
-          className="p-2.5 rounded-2xl bg-white hover:bg-pink-50/40 text-pink-400 cursor-pointer flex items-center justify-center active:scale-95 border border-pink-50"
+          type="button"
+          className="h-9 w-9 rounded-xl bg-white dark:bg-[#1a1816] hover:bg-stone-50 dark:hover:bg-[#23201d] text-stone-600 dark:text-stone-300 cursor-pointer flex items-center justify-center border border-stone-200/80 dark:border-[#2e2a26] transition-colors shrink-0"
           onClick={() => setActiveSubTab('help_support')}
           title="Help & Support"
         >
-          <HelpCircle className="w-5 h-5" />
+          <HelpCircle className="w-4 h-4" />
         </button>
       </header>
 
@@ -863,182 +876,192 @@ const Settings: React.FC<SettingsProps> = ({
       {activeSubTab === 'menu' ? (
         <div className="space-y-6 animate-fadeIn">
           {/* Header Greeting Banner */}
-          <div className="bg-gradient-to-br from-pink-500/10 via-rose-500/5 to-amber-500/10 p-6 md:p-8 rounded-[2.5rem] border border-pink-100/60 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
+          <div className="bg-white dark:bg-[#1a1816] p-6 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="space-y-1">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-pink-600">Your Wellness Space</span>
-              <h2 className="text-2xl md:text-3xl font-serif text-stone-800 font-bold tracking-tight">
-                Settings & Preferences
+              <span className="text-[11px] font-semibold tracking-wide text-pink-600 dark:text-pink-400">Your wellness space</span>
+              <h2 className="text-2xl font-serif text-stone-900 dark:text-stone-100 font-bold tracking-tight">
+                Settings &amp; Preferences
               </h2>
-              <p className="text-xs text-stone-500">Manage your cycle settings, privacy, notifications, and backups</p>
+              <p className="text-xs text-stone-600 dark:text-stone-400">Manage cycle calculations, privacy, notifications, and encrypted backups.</p>
             </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setActiveSubTab('profile')}
-                className="px-4 py-2.5 bg-white border border-pink-100 text-pink-600 font-bold text-xs rounded-2xl shadow-sm hover:bg-pink-50/40 transition-all flex items-center gap-2"
-              >
-                <UserIcon size={14} />
-                <span>{user.name ? user.name.split(' ')[0] : 'My Profile'}</span>
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => setActiveSubTab('profile')}
+              className="px-4 h-10 bg-stone-50 dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] text-stone-800 dark:text-stone-200 font-semibold text-xs rounded-xl hover:border-pink-300 transition-colors flex items-center gap-2 shrink-0 cursor-pointer self-start sm:self-center"
+            >
+              <UserIcon size={14} className="text-pink-600 dark:text-pink-400" />
+              <span>{user.name ? user.name.split(' ')[0] : 'My Profile'}</span>
+            </button>
           </div>
 
           {/* Group 1: Cycle & Body */}
           <div className="space-y-2">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-pink-500 ml-4">Cycle & Body</span>
-            <div className="bg-white/90 backdrop-blur-md rounded-[2rem] border border-pink-100/50 shadow-sm p-2 space-y-1 overflow-hidden">
+            <span className="text-[11px] font-semibold tracking-wide text-stone-500 dark:text-stone-400 ml-1">Cycle &amp; Body</span>
+            <div className="bg-white dark:bg-[#1a1816] rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-xs p-1.5 overflow-hidden">
               <button
+                type="button"
                 onClick={() => setActiveSubTab('cycle')}
-                className="w-full flex items-center justify-between p-3.5 hover:bg-pink-50/30 active:scale-[0.99] transition-all rounded-2xl text-left group"
+                className="w-full flex items-center justify-between p-3.5 hover:bg-stone-50 dark:hover:bg-[#23201d] transition-colors rounded-xl text-left group cursor-pointer"
               >
                 <div className="flex items-center gap-3.5">
-                  <div className="w-10 h-10 rounded-2xl bg-rose-50 text-pink-500 flex items-center justify-center text-lg shadow-sm shrink-0 group-hover:scale-105 transition-transform">
-                    🌸
+                  <div className="w-9 h-9 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-pink-600 dark:text-pink-400 flex items-center justify-center shrink-0">
+                    <Flower2 size={18} />
                   </div>
                   <div>
-                    <h4 className="text-sm font-semibold text-stone-800 group-hover:text-pink-600 transition-colors">My Cycle</h4>
-                    <p className="text-[11px] text-stone-600">Cycle length, period duration & pregnancy mode</p>
+                    <h4 className="text-sm font-semibold text-stone-900 dark:text-stone-100 group-hover:text-pink-600 dark:group-hover:text-pink-400 transition-colors">My Cycle</h4>
+                    <p className="text-xs text-stone-500 dark:text-stone-400">Cycle length, period duration &amp; pregnancy mode</p>
                   </div>
                 </div>
-                <ChevronRight className="w-4 h-4 text-pink-400 group-hover:text-pink-600 group-hover:translate-x-0.5 transition-all" />
+                <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-pink-600 transition-colors" />
               </button>
             </div>
           </div>
 
           {/* Group 2: Personal & Privacy */}
           <div className="space-y-2">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-pink-600 ml-4">Personal & Privacy</span>
-            <div className="bg-white/90 backdrop-blur-md rounded-[2rem] border border-pink-100/50 shadow-sm p-2 space-y-1 overflow-hidden">
+            <span className="text-[11px] font-semibold tracking-wide text-stone-500 dark:text-stone-400 ml-1">Personal &amp; Privacy</span>
+            <div className="bg-white dark:bg-[#1a1816] rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-xs p-1.5 divide-y divide-stone-100 dark:divide-[#2e2a26] overflow-hidden">
               {[
                 {
                   id: 'profile' as const,
                   label: 'My Profile',
                   desc: 'Name, age, email & account password',
-                  color: 'bg-teal-50 text-teal-600',
-                  emoji: '👤',
+                  color: 'bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400',
+                  Icon: UserIcon,
                 },
                 {
                   id: 'privacy_security' as const,
                   label: 'Privacy & Security Vault',
-                  desc: 'Privacy Dashboard, 2FA, active sessions, Face ID & PIN',
-                  color: 'bg-indigo-50 text-indigo-600',
-                  emoji: '🛡️',
+                  desc: 'Privacy Dashboard, 2FA, active sessions, biometrics & PIN',
+                  color: 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400',
+                  Icon: ShieldCheck,
                 },
                 {
                   id: 'backup_sync' as const,
                   label: 'Backup & Sync',
                   desc: 'Encrypted snapshots, cloud sync & verified recovery',
-                  color: 'bg-sky-50 text-sky-600',
-                  emoji: '☁️',
+                  color: 'bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400',
+                  Icon: UploadCloud,
                 },
-              ].map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveSubTab(item.id)}
-                  className="w-full flex items-center justify-between p-3.5 hover:bg-pink-50/30 active:scale-[0.99] transition-all rounded-2xl text-left group border-b border-pink-50/30 last:border-0"
-                >
-                  <div className="flex items-center gap-3.5">
-                    <div className={`w-10 h-10 rounded-2xl ${item.color} flex items-center justify-center text-lg shadow-sm shrink-0 group-hover:scale-105 transition-transform`}>
-                      {item.emoji}
+              ].map((item) => {
+                const Icon = item.Icon;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setActiveSubTab(item.id)}
+                    className="w-full flex items-center justify-between p-3.5 hover:bg-stone-50 dark:hover:bg-[#23201d] transition-colors rounded-xl text-left group cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3.5">
+                      <div className={`w-9 h-9 rounded-xl ${item.color} flex items-center justify-center shrink-0`}>
+                        <Icon size={18} />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-semibold text-stone-900 dark:text-stone-100 group-hover:text-pink-600 dark:group-hover:text-pink-400 transition-colors">{item.label}</h4>
+                        <p className="text-xs text-stone-500 dark:text-stone-400">{item.desc}</p>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="text-sm font-semibold text-stone-800 group-hover:text-pink-600 transition-colors">{item.label}</h4>
-                      <p className="text-[11px] text-stone-600">{item.desc}</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-pink-400 group-hover:text-pink-600 group-hover:translate-x-0.5 transition-all" />
-                </button>
-              ))}
+                    <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-pink-600 transition-colors" />
+                  </button>
+                );
+              })}
             </div>
           </div>
 
           {/* Group 3: Connected & Wellness */}
           <div className="space-y-2">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-pink-600 ml-4">Connected & Wellness</span>
-            <div className="bg-white/90 backdrop-blur-md rounded-[2rem] border border-pink-100/50 shadow-sm p-2 space-y-1 overflow-hidden">
+            <span className="text-[11px] font-semibold tracking-wide text-stone-500 dark:text-stone-400 ml-1">Connected &amp; Wellness</span>
+            <div className="bg-white dark:bg-[#1a1816] rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-xs p-1.5 divide-y divide-stone-100 dark:divide-[#2e2a26] overflow-hidden">
               {[
                 {
                   id: 'notifications' as const,
                   label: 'Reminders & Notifications',
-                  desc: 'Cycle reminders, ovulation alerts & friendly tone',
-                  color: 'bg-purple-50 text-purple-600',
-                  emoji: '🔔',
+                  desc: 'Cycle reminders, ovulation alerts & greeting tone',
+                  color: 'bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400',
+                  Icon: Bell,
                 },
                 {
                   id: 'partner' as const,
                   label: 'Partner Mode',
                   desc: 'Share supportive cycle updates with your partner',
-                  color: 'bg-rose-50 text-rose-600',
-                  emoji: '🧸',
+                  color: 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400',
+                  Icon: HeartHandshake,
                 },
                 {
                   id: 'music_sanctuary' as const,
                   label: 'Music & Sanctuary',
                   desc: 'Relaxing ambient frequencies & sound volume',
-                  color: 'bg-blue-50 text-blue-600',
-                  emoji: '🎵',
+                  color: 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400',
+                  Icon: Music,
                 },
                 {
                   id: 'invite' as const,
                   label: 'Invite Friends',
                   desc: 'Share Lumina with friends and loved ones',
-                  color: 'bg-emerald-50 text-emerald-600',
-                  emoji: '💌',
+                  color: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400',
+                  Icon: Users,
                 },
-              ].map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveSubTab(item.id)}
-                  className="w-full flex items-center justify-between p-3.5 hover:bg-pink-50/30 active:scale-[0.99] transition-all rounded-2xl text-left group border-b border-pink-50/30 last:border-0"
-                >
-                  <div className="flex items-center gap-3.5">
-                    <div className={`w-10 h-10 rounded-2xl ${item.color} flex items-center justify-center text-lg shadow-sm shrink-0 group-hover:scale-105 transition-transform`}>
-                      {item.emoji}
+              ].map((item) => {
+                const Icon = item.Icon;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setActiveSubTab(item.id)}
+                    className="w-full flex items-center justify-between p-3.5 hover:bg-stone-50 dark:hover:bg-[#23201d] transition-colors rounded-xl text-left group cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3.5">
+                      <div className={`w-9 h-9 rounded-xl ${item.color} flex items-center justify-center shrink-0`}>
+                        <Icon size={18} />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-semibold text-stone-900 dark:text-stone-100 group-hover:text-pink-600 dark:group-hover:text-pink-400 transition-colors">{item.label}</h4>
+                        <p className="text-xs text-stone-500 dark:text-stone-400">{item.desc}</p>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="text-sm font-semibold text-stone-800 group-hover:text-pink-600 transition-colors">{item.label}</h4>
-                      <p className="text-[11px] text-stone-600">{item.desc}</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-pink-400 group-hover:text-pink-600 group-hover:translate-x-0.5 transition-all" />
-                </button>
-              ))}
+                    <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-pink-600 transition-colors" />
+                  </button>
+                );
+              })}
             </div>
           </div>
 
           {/* Group 4: Support & Account */}
           <div className="space-y-2">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-pink-600 ml-4">Support & Account</span>
-            <div className="bg-white/90 backdrop-blur-md rounded-[2rem] border border-pink-100/50 shadow-sm p-2 space-y-1 overflow-hidden">
+            <span className="text-[11px] font-semibold tracking-wide text-stone-500 dark:text-stone-400 ml-1">Support &amp; Account</span>
+            <div className="bg-white dark:bg-[#1a1816] rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-xs p-1.5 divide-y divide-stone-100 dark:divide-[#2e2a26] overflow-hidden">
               <button
+                type="button"
                 onClick={() => setActiveSubTab('help_support')}
-                className="w-full flex items-center justify-between p-3.5 hover:bg-pink-50/30 active:scale-[0.99] transition-all rounded-2xl text-left group border-b border-pink-50/30"
+                className="w-full flex items-center justify-between p-3.5 hover:bg-stone-50 dark:hover:bg-[#23201d] transition-colors rounded-xl text-left group cursor-pointer"
               >
                 <div className="flex items-center gap-3.5">
-                  <div className="w-10 h-10 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center text-lg shadow-sm shrink-0 group-hover:scale-105 transition-transform">
-                    ❓
+                  <div className="w-9 h-9 rounded-xl bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
+                    <HelpCircle size={18} />
                   </div>
                   <div>
-                    <h4 className="text-sm font-semibold text-stone-800 group-hover:text-pink-600 transition-colors">Help & Support</h4>
-                    <p className="text-[11px] text-stone-600">FAQs, contact support, bug reports & suggestions</p>
+                    <h4 className="text-sm font-semibold text-stone-900 dark:text-stone-100 group-hover:text-pink-600 dark:group-hover:text-pink-400 transition-colors">Help &amp; Support</h4>
+                    <p className="text-xs text-stone-500 dark:text-stone-400">FAQs, contact support, bug reports &amp; suggestions</p>
                   </div>
                 </div>
-                <ChevronRight className="w-4 h-4 text-pink-400 group-hover:text-pink-600 group-hover:translate-x-0.5 transition-all" />
+                <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-pink-600 transition-colors" />
               </button>
 
               <button
+                type="button"
                 onClick={() => setActiveSubTab('account')}
-                className="w-full flex items-center justify-between p-3.5 hover:bg-pink-50/30 active:scale-[0.99] transition-all rounded-2xl text-left group"
+                className="w-full flex items-center justify-between p-3.5 hover:bg-stone-50 dark:hover:bg-[#23201d] transition-colors rounded-xl text-left group cursor-pointer"
               >
                 <div className="flex items-center gap-3.5">
-                  <div className="w-10 h-10 rounded-2xl bg-stone-100 text-stone-600 flex items-center justify-center text-lg shadow-sm shrink-0 group-hover:scale-105 transition-transform">
-                    ⚙️
+                  <div className="w-9 h-9 rounded-xl bg-stone-100 dark:bg-[#23201d] text-stone-600 dark:text-stone-300 flex items-center justify-center shrink-0">
+                    <SlidersHorizontal size={18} />
                   </div>
                   <div>
-                    <h4 className="text-sm font-semibold text-stone-800 group-hover:text-pink-600 transition-colors">Account</h4>
-                    <p className="text-[11px] text-stone-600">Log out & account deletion</p>
+                    <h4 className="text-sm font-semibold text-stone-900 dark:text-stone-100 group-hover:text-pink-600 dark:group-hover:text-pink-400 transition-colors">Account</h4>
+                    <p className="text-xs text-stone-500 dark:text-stone-400">Log out &amp; permanent account deletion</p>
                   </div>
                 </div>
-                <ChevronRight className="w-4 h-4 text-pink-400 group-hover:text-pink-600 group-hover:translate-x-0.5 transition-all" />
+                <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-pink-600 transition-colors" />
               </button>
             </div>
           </div>
@@ -1050,141 +1073,144 @@ const Settings: React.FC<SettingsProps> = ({
       ) : activeSubTab === 'cycle' ? (
         <div className="space-y-6 animate-fadeIn">
           {/* App Mode Switcher */}
-          <div className="bg-gradient-to-r from-pink-500 via-rose-500 to-amber-400 p-[2px] rounded-[2.5rem] shadow-lg shadow-rose-100/40">
-            <div className="bg-white p-6 rounded-[2.4rem] space-y-4">
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl">{user.isPregnancyMode ? '🤰' : '🌸'}</span>
-                    <h3 className="text-xl font-serif font-bold text-stone-800">
-                      Tracking Mode
-                    </h3>
+          <div className="bg-white dark:bg-[#1a1816] p-6 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-xs space-y-4">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-pink-50 dark:bg-pink-950/40 text-pink-600 dark:text-pink-400 flex items-center justify-center shrink-0">
+                    {user.isPregnancyMode ? <Baby size={18} /> : <Flower2 size={18} />}
                   </div>
-                  <p className="text-xs text-gray-500 leading-relaxed">
-                    Choose between standard period tracking and our dedicated pregnancy mode.
-                  </p>
+                  <h3 className="text-lg font-serif font-bold text-stone-900 dark:text-stone-100">
+                    Tracking Mode
+                  </h3>
                 </div>
-                <div className="flex bg-rose-50 p-1.5 rounded-2xl border border-rose-100/60 shadow-inner self-stretch md:self-auto">
-                  <button
-                    onClick={() => {
-                      if (user.isPregnancyMode) {
-                        const updatedUser = {
-                          ...user,
-                          isPregnancyMode: false,
-                          pregnancyStartDate: undefined,
-                          notificationSettings: {
-                            ...settings,
-                            pregnancyEnabled: false,
-                            partnerPregnancyEnabled: false,
-                            types: {
-                              ...settings.types,
-                              periodStarting: true,
-                              periodStarted: true,
-                              periodEnding: true,
-                              ovulation: true,
-                              fertileWindow: true,
-                              lutealPhase: true,
-                              pregnancyRisk: true,
-                            }
+                <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
+                  Choose between standard cycle tracking and dedicated pregnancy tracking.
+                </p>
+              </div>
+              <div className="flex bg-stone-100 dark:bg-[#23201d] p-1 rounded-xl border border-stone-200/80 dark:border-[#342f2b] self-stretch md:self-auto">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (user.isPregnancyMode) {
+                      const updatedUser = {
+                        ...user,
+                        isPregnancyMode: false,
+                        pregnancyStartDate: undefined,
+                        notificationSettings: {
+                          ...settings,
+                          pregnancyEnabled: false,
+                          partnerPregnancyEnabled: false,
+                          types: {
+                            ...settings.types,
+                            periodStarting: true,
+                            periodStarted: true,
+                            periodEnding: true,
+                            ovulation: true,
+                            fertileWindow: true,
+                            lutealPhase: true,
+                            pregnancyRisk: true,
                           }
-                        };
-                        persistUserLocally(updatedUser);
-                      }
-                    }}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      !user.isPregnancyMode
-                        ? 'bg-gradient-to-r from-pink-500 to-rose-400 text-white shadow-md shadow-pink-100'
-                        : 'text-gray-400 hover:text-pink-500'
-                    }`}
-                  >
-                    🌸 Period Tracker
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (!user.isPregnancyMode) {
-                        const updatedUser = {
-                          ...user,
-                          isPregnancyMode: true,
-                          pregnancyStartDate: user.pregnancyStartDate || new Date(Date.now() - 84 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-                          notificationSettings: {
-                            ...settings,
-                            pregnancyEnabled: true,
-                            types: {
-                              ...settings.types,
-                              periodStarting: false,
-                              periodStarted: false,
-                              periodEnding: false,
-                              ovulation: false,
-                              fertileWindow: false,
-                              lutealPhase: false,
-                              pregnancyRisk: false,
-                            }
+                        }
+                      };
+                      persistUserLocally(updatedUser);
+                    }
+                  }}
+                  className={`flex-1 md:flex-initial px-4 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
+                    !user.isPregnancyMode
+                      ? 'bg-pink-600 text-white shadow-xs'
+                      : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'
+                  }`}
+                >
+                  Period Tracker
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!user.isPregnancyMode) {
+                      const updatedUser = {
+                        ...user,
+                        isPregnancyMode: true,
+                        pregnancyStartDate: user.pregnancyStartDate || new Date(Date.now() - 84 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                        notificationSettings: {
+                          ...settings,
+                          pregnancyEnabled: true,
+                          types: {
+                            ...settings.types,
+                            periodStarting: false,
+                            periodStarted: false,
+                            periodEnding: false,
+                            ovulation: false,
+                            fertileWindow: false,
+                            lutealPhase: false,
+                            pregnancyRisk: false,
                           }
-                        };
-                        persistUserLocally(updatedUser);
-                      }
+                        }
+                      };
+                      persistUserLocally(updatedUser);
+                    }
+                  }}
+                  className={`flex-1 md:flex-initial px-4 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
+                    user.isPregnancyMode
+                      ? 'bg-amber-600 text-white shadow-xs'
+                      : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'
+                  }`}
+                >
+                  Pregnancy Mode
+                </button>
+              </div>
+            </div>
+
+            {user.isPregnancyMode && (
+              <div className="pt-4 border-t border-stone-200/80 dark:border-[#2e2a26] flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center animate-fadeIn">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/50 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                    <Baby size={20} />
+                  </div>
+                  <div className="space-y-0.5">
+                    <span className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">Pregnancy progress</span>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-bold text-stone-900 dark:text-stone-100 tabular-nums">
+                        Week {user.pregnancyStartDate ? getPregnancyStats(user).weeks : 12}
+                      </span>
+                      <span className="w-1 h-1 rounded-full bg-amber-400" />
+                      <span className="text-xs text-stone-600 dark:text-stone-400 tabular-nums">
+                        Due {user.pregnancyStartDate ? getPregnancyStats(user).dueDate : 'Dec 25, 2026'} ({user.pregnancyStartDate ? getPregnancyStats(user).weeksLeft : 28} weeks left)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1 shrink-0">
+                  <label className="text-[11px] font-semibold text-amber-800 dark:text-amber-300">Last Menstrual Period (LMP)</label>
+                  <input
+                    type="date"
+                    value={user.pregnancyStartDate || new Date(Date.now() - 84 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
+                    onChange={(e) => {
+                      const updatedUser = {
+                        ...user,
+                        pregnancyStartDate: e.target.value
+                      };
+                      persistUserLocally(updatedUser);
                     }}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      user.isPregnancyMode
-                        ? 'bg-gradient-to-r from-amber-400 to-rose-500 text-white shadow-md shadow-amber-100'
-                        : 'text-gray-400 hover:text-amber-500'
-                    }`}
-                  >
-                    🤰 Pregnancy Mode
-                  </button>
+                    className="h-10 bg-[#faf8f6] dark:bg-[#23201d] px-3 rounded-xl outline-none font-semibold text-xs text-stone-800 dark:text-stone-200 border border-stone-200 dark:border-[#342f2b] tabular-nums"
+                  />
                 </div>
               </div>
-
-              {user.isPregnancyMode && (
-                <div className="pt-3 border-t border-rose-100/50 flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center animate-fadeIn">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center text-xl shrink-0 shadow-sm animate-pulse">
-                      🌱
-                    </div>
-                    <div className="space-y-0.5">
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-amber-600">Pregnancy Progress</span>
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-xs font-bold text-gray-800">
-                          Week {user.pregnancyStartDate ? getPregnancyStats(user).weeks : 12}
-                        </span>
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-300"></span>
-                        <span className="text-[11px] font-medium text-gray-500">
-                          Due: {user.pregnancyStartDate ? getPregnancyStats(user).dueDate : 'Dec 25, 2026'} ({user.pregnancyStartDate ? getPregnancyStats(user).weeksLeft : 28} weeks remaining)
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-1 shrink-0">
-                    <label className="text-[10px] font-bold text-amber-700">Last Menstrual Period (LMP)</label>
-                    <input
-                      type="date"
-                      value={user.pregnancyStartDate || new Date(Date.now() - 84 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
-                      onChange={(e) => {
-                        const updatedUser = {
-                          ...user,
-                          pregnancyStartDate: e.target.value
-                        };
-                        persistUserLocally(updatedUser);
-                      }}
-                      className="bg-amber-50/60 px-3 py-2 rounded-xl outline-none font-bold text-xs text-amber-800 border border-amber-200/60 text-center shadow-inner"
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
+            )}
           </div>
 
-          {/* Cycle Metrics Sliders */}
           {/* Cycle Metrics Sliders & Automatic Prediction */}
-          <section className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-pink-50 space-y-6">
-            <h3 className="text-lg font-serif font-bold text-stone-800 flex items-center gap-2">
-              <Calendar size={18} className="text-pink-500" />
-              Cycle Settings
-            </h3>
-            <p className="text-xs text-stone-500 leading-relaxed">
-              Keep your cycle metrics updated to ensure accurate predictions and gentle reminders.
-            </p>
+          <section className="bg-white dark:bg-[#1a1816] p-6 rounded-2xl shadow-xs border border-stone-200/80 dark:border-[#2e2a26] space-y-5">
+            <div className="space-y-1">
+              <h3 className="text-lg font-serif font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
+                <Calendar size={18} className="text-pink-600 dark:text-pink-400" />
+                Cycle Settings
+              </h3>
+              <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
+                Keep your cycle metrics updated for accurate phase windows and reminders.
+              </p>
+            </div>
 
             {/* AUTOMATIC CYCLE PREDICTION TOGGLE */}
             {(() => {
@@ -1212,96 +1238,91 @@ const Settings: React.FC<SettingsProps> = ({
               };
 
               return (
-                <div className="bg-gradient-to-r from-pink-50/90 via-purple-50/50 to-rose-50/80 p-5 rounded-3xl border border-pink-100 flex flex-col gap-3 shadow-xs">
+                <div className="bg-[#faf8f6] dark:bg-[#23201d] p-5 rounded-xl border border-stone-200/80 dark:border-[#2e2a26] flex flex-col gap-3">
                   <div className="flex justify-between items-center gap-3">
                     <div className="flex flex-col">
-                      <span className="text-xs font-bold text-pink-700 tracking-wider flex items-center gap-1.5 uppercase">
-                        <Sparkles size={14} className="text-pink-500" />
-                        AUTOMATIC CYCLE PREDICTION
+                      <span className="text-xs font-semibold text-stone-900 dark:text-stone-100 flex items-center gap-1.5">
+                        <Sparkles size={14} className="text-pink-600 dark:text-pink-400" />
+                        Automatic cycle prediction
                       </span>
-                      <p className="text-[11px] text-stone-600 mt-0.5 leading-snug">
-                        “Let Lumina learn your cycle patterns and automatically update your predictions.”
+                      <p className="text-xs text-stone-600 dark:text-stone-400 mt-0.5 leading-snug">
+                        Learn from your logged cycle patterns and update predictions automatically.
                       </p>
                     </div>
                     <button
                       type="button"
                       onClick={handleToggleAutoPrediction}
-                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${user.automaticCyclePrediction ? 'bg-pink-500' : 'bg-stone-300'}`}
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${user.automaticCyclePrediction ? 'bg-pink-600' : 'bg-stone-300 dark:bg-stone-600'}`}
                       aria-pressed={Boolean(user.automaticCyclePrediction)}
                       title="Toggle automatic cycle prediction"
                     >
                       <span
-                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${user.automaticCyclePrediction ? 'translate-x-5' : 'translate-x-0'}`}
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${user.automaticCyclePrediction ? 'translate-x-5' : 'translate-x-0'}`}
                       />
                     </button>
                   </div>
 
                   {user.automaticCyclePrediction ? (
-                    <div className="bg-white/95 p-4 rounded-2xl border border-pink-100 text-xs space-y-2.5 mt-1">
-                      <div className="flex justify-between items-center">
-                        <span className="font-semibold text-stone-700">Estimated Cycle Length:</span>
-                        <span className="font-bold text-pink-600 bg-pink-50 px-3 py-1 rounded-full border border-pink-200 text-xs shadow-xs">
+                    <div className="bg-white dark:bg-[#1a1816] p-4 rounded-xl border border-stone-200/80 dark:border-[#342f2b] text-xs space-y-2.5 mt-1">
+                      <div className="flex justify-between items-center gap-2">
+                        <span className="font-semibold text-stone-700 dark:text-stone-300">Estimated Cycle Length</span>
+                        <span className="font-semibold text-pink-700 dark:text-pink-300 bg-pink-50 dark:bg-pink-950/40 px-2.5 py-1 rounded-lg border border-pink-200/70 dark:border-pink-800/40 text-xs tabular-nums">
                           {cycleAnalysis.cycleCount >= 1 ? `${cycleAnalysis.averageCycleLength} Days (Learned)` : `${user.cycleLength ?? 28} Days (Baseline)`}
                         </span>
                       </div>
-                      <p className="text-[11px] text-stone-500 leading-relaxed">
+                      <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
                         {cycleAnalysis.explanation}
                       </p>
                       {cycleAnalysis.cycleCount < 1 && (
-                        <div className="text-[10.5px] text-amber-800 bg-amber-50/90 p-2.5 rounded-xl border border-amber-200/60 leading-relaxed">
-                          ℹ️ <strong>Learning your rhythm:</strong> Need at least 2 recorded period start dates to calculate your personalized average cycle length. Currently using your baseline of {user.cycleLength ?? 28} days.
+                        <div className="text-xs text-amber-900 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/30 p-3 rounded-lg border border-amber-200/80 dark:border-amber-800/40 leading-relaxed">
+                          <strong>Learning your rhythm:</strong> Record at least 2 period start dates to compute your personal average. Currently using {user.cycleLength ?? 28} days.
                         </div>
                       )}
                       {cycleAnalysis.isIrregular && (
-                        <div className="text-[10.5px] text-indigo-800 bg-indigo-50/90 p-2.5 rounded-xl border border-indigo-200/60 leading-relaxed">
-                          🌙 <strong>Irregular variation detected:</strong> Your cycles have varied by {cycleAnalysis.variationDays} days. Lumina accounts for your real cycle intervals instead of assuming a standard 28-day cycle.
+                        <div className="text-xs text-indigo-900 dark:text-indigo-200 bg-indigo-50 dark:bg-indigo-950/30 p-3 rounded-lg border border-indigo-200/80 dark:border-indigo-800/40 leading-relaxed">
+                          <strong>Irregular variation noted:</strong> Your cycles varied by {cycleAnalysis.variationDays} days. Lumina adapts to your actual intervals.
                         </div>
                       )}
                     </div>
                   ) : (
-                    <div className="text-[11px] text-stone-400 italic">
-                      Manual mode active: You have manual control over your cycle length and period duration below.
+                    <div className="text-xs text-stone-500 dark:text-stone-400">
+                      Manual mode active: adjust your baseline cycle length and period duration below.
                     </div>
                   )}
                 </div>
               );
             })()}
 
-            {/* Manual Sliders: Turned off when Automatic Cycle Prediction is on */}
+            {/* Manual Sliders */}
             {user.automaticCyclePrediction ? (
-              <div className="bg-gradient-to-r from-purple-50/70 via-pink-50/50 to-rose-50/70 p-6 rounded-3xl border border-purple-150/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
-                <div className="flex items-start gap-3.5">
-                  <div className="w-10 h-10 rounded-2xl bg-white shadow-xs border border-purple-100 flex items-center justify-center text-purple-600 shrink-0 mt-0.5">
-                    <Lock size={18} />
+              <div className="bg-[#faf8f6] dark:bg-[#23201d] p-5 rounded-xl border border-stone-200/80 dark:border-[#2e2a26] flex items-start gap-3.5">
+                <div className="w-9 h-9 rounded-xl bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#342f2b] flex items-center justify-center text-stone-600 dark:text-stone-300 shrink-0 mt-0.5">
+                  <Lock size={16} />
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-stone-900 dark:text-stone-100">
+                      Manual controls inactive
+                    </span>
+                    <span className="text-[11px] font-medium bg-stone-200/70 dark:bg-[#342f2b] text-stone-700 dark:text-stone-300 px-2 py-0.5 rounded-md">
+                      Auto-managed
+                    </span>
                   </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-purple-900 tracking-wide uppercase">
-                        Manual Controls Inactive
-                      </span>
-                      <span className="text-[9px] font-bold bg-purple-100 text-purple-700 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                        Auto-Managed
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-stone-600 leading-relaxed max-w-lg">
-                      Manual cycle length and period duration sliders are turned off while <strong>Automatic Cycle Prediction</strong> is active. Lumina automatically manages and updates your cycle metrics from your logged history.
-                    </p>
-                    <p className="text-[10px] text-pink-600 font-semibold pt-0.5">
-                      💡 Manual controls can only be accessed when Automatic Cycle Prediction is turned off above.
-                    </p>
-                  </div>
+                  <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed max-w-lg">
+                    Manual sliders are paused while Automatic Cycle Prediction is active. Turn off auto-prediction above to override manually.
+                  </p>
                 </div>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fadeIn">
                 {/* Cycle Length */}
-                <div className="bg-rose-50/40 p-5 rounded-3xl border border-rose-100/40 flex flex-col gap-2">
+                <div className="bg-[#faf8f6] dark:bg-[#23201d] p-5 rounded-xl border border-stone-200/80 dark:border-[#2e2a26] flex flex-col gap-2">
                   <div className="flex justify-between items-center">
-                    <label className="text-xs font-bold text-pink-600 flex items-center gap-1.5">
-                      <Layers size={14} />
+                    <label className="text-xs font-semibold text-stone-800 dark:text-stone-200 flex items-center gap-1.5">
+                      <Layers size={14} className="text-pink-600 dark:text-pink-400" />
                       Manual Cycle Length
                     </label>
-                    <span className="text-xs font-bold text-pink-700 bg-white px-3 py-1 rounded-xl shadow-sm border border-pink-100">
+                    <span className="text-xs font-semibold text-pink-700 dark:text-pink-300 bg-white dark:bg-[#1a1816] px-2.5 py-1 rounded-lg border border-stone-200 dark:border-[#342f2b] tabular-nums">
                       {user.cycleLength ?? 28} Days
                     </span>
                   </div>
@@ -1316,19 +1337,19 @@ const Settings: React.FC<SettingsProps> = ({
                       setUser(updatedUser);
                       syncUser(updatedUser);
                     }}
-                    className="w-full accent-pink-500 h-1.5 bg-pink-100 rounded-lg cursor-pointer mt-2"
+                    className="w-full accent-pink-600 h-1.5 bg-stone-200 dark:bg-[#342f2b] rounded-lg cursor-pointer mt-2"
                   />
-                  <span className="text-[11px] text-stone-400">Number of days from the start of one period to the next (average is 28 days)</span>
+                  <span className="text-[11px] text-stone-500 dark:text-stone-400">Days from one period start to the next (typical: 28)</span>
                 </div>
 
                 {/* Period Duration */}
-                <div className="bg-rose-50/40 p-5 rounded-3xl border border-rose-100/40 flex flex-col gap-2">
+                <div className="bg-[#faf8f6] dark:bg-[#23201d] p-5 rounded-xl border border-stone-200/80 dark:border-[#2e2a26] flex flex-col gap-2">
                   <div className="flex justify-between items-center">
-                    <label className="text-xs font-bold text-pink-600 flex items-center gap-1.5">
-                      <Calendar size={14} />
+                    <label className="text-xs font-semibold text-stone-800 dark:text-stone-200 flex items-center gap-1.5">
+                      <Calendar size={14} className="text-pink-600 dark:text-pink-400" />
                       Manual Period Duration
                     </label>
-                    <span className="text-xs font-bold text-pink-700 bg-white px-3 py-1 rounded-xl shadow-sm border border-pink-100">
+                    <span className="text-xs font-semibold text-pink-700 dark:text-pink-300 bg-white dark:bg-[#1a1816] px-2.5 py-1 rounded-lg border border-stone-200 dark:border-[#342f2b] tabular-nums">
                       {user.periodLength ?? 5} Days
                     </span>
                   </div>
@@ -1343,17 +1364,17 @@ const Settings: React.FC<SettingsProps> = ({
                       setUser(updatedUser);
                       syncUser(updatedUser);
                     }}
-                    className="w-full accent-pink-500 h-1.5 bg-pink-100 rounded-lg cursor-pointer mt-2"
+                    className="w-full accent-pink-600 h-1.5 bg-stone-200 dark:bg-[#342f2b] rounded-lg cursor-pointer mt-2"
                   />
-                  <span className="text-[11px] text-stone-400">Number of days bleeding typically lasts (average is 5 days)</span>
+                  <span className="text-[11px] text-stone-500 dark:text-stone-400">Typical bleeding duration in days (typical: 5)</span>
                 </div>
               </div>
             )}
 
             {/* Last Period Start Date */}
-            <div className="bg-rose-50/20 p-5 rounded-3xl border border-rose-100/40 flex flex-col gap-2">
-              <label className="text-xs font-bold text-stone-700 flex items-center gap-1.5">
-                <Calendar size={14} className="text-pink-500" />
+            <div className="bg-[#faf8f6] dark:bg-[#23201d] p-5 rounded-xl border border-stone-200/80 dark:border-[#2e2a26] flex flex-col gap-2">
+              <label className="text-xs font-semibold text-stone-800 dark:text-stone-200 flex items-center gap-1.5">
+                <Calendar size={14} className="text-pink-600 dark:text-pink-400" />
                 Last Period Start Date
               </label>
               <input 
@@ -1365,20 +1386,20 @@ const Settings: React.FC<SettingsProps> = ({
                   setUser(updatedUser);
                   syncUser(updatedUser);
                 }}
-                className="bg-white px-4 py-3 rounded-2xl outline-none font-semibold text-xs text-pink-700 border border-pink-100 shadow-sm w-full focus:border-pink-300 transition-colors cursor-pointer"
+                className="h-11 bg-white dark:bg-[#1a1816] px-4 rounded-xl outline-none font-medium text-xs text-stone-900 dark:text-stone-100 border border-stone-200 dark:border-[#342f2b] w-full focus:border-pink-400 transition-colors cursor-pointer tabular-nums"
               />
-              <span className="text-[11px] text-stone-400">Used as the reference date for your upcoming cycle and ovulation predictions</span>
+              <span className="text-[11px] text-stone-500 dark:text-stone-400">Reference date for upcoming cycle and ovulation windows</span>
             </div>
 
             {/* Restart Setup Questions */}
-            <div className="bg-gradient-to-r from-pink-500/10 via-rose-500/5 to-indigo-500/10 p-5 rounded-3xl border border-pink-100/50 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="bg-[#faf8f6] dark:bg-[#23201d] p-5 rounded-xl border border-stone-200/80 dark:border-[#2e2a26] flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               <div className="space-y-1 text-left">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">📋</span>
-                  <h4 className="text-xs font-bold text-pink-700">Update Baseline Questions</h4>
-                </div>
-                <p className="text-xs text-stone-500">
-                  Want to re-answer the initial setup questions to update your baseline goals and wellness preferences?
+                <h4 className="text-xs font-semibold text-stone-900 dark:text-stone-100 flex items-center gap-2">
+                  <FileText size={14} className="text-pink-600 dark:text-pink-400" />
+                  Update Baseline Questions
+                </h4>
+                <p className="text-xs text-stone-600 dark:text-stone-400">
+                  Re-answer the initial setup questions to refresh your baseline goals and preferences.
                 </p>
               </div>
               <button
@@ -1389,9 +1410,9 @@ const Settings: React.FC<SettingsProps> = ({
                   syncUser(resetUser);
                   if (setActiveTab) setActiveTab('dashboard');
                 }}
-                className="px-5 py-3 bg-gradient-to-r from-pink-500 to-rose-500 text-white font-bold text-xs rounded-2xl shadow-md hover:opacity-90 active:scale-95 transition-all cursor-pointer shrink-0"
+                className="px-4 h-10 bg-pink-600 hover:bg-pink-700 text-white font-semibold text-xs rounded-xl transition-colors cursor-pointer shrink-0"
               >
-                ✨ Update Setup Questions
+                Update Setup Questions
               </button>
             </div>
           </section>
@@ -1402,20 +1423,20 @@ const Settings: React.FC<SettingsProps> = ({
       /* ========================================================================= */
       ) : activeSubTab === 'profile' ? (
         <div className="space-y-6 animate-fadeIn">
-          <section className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-pink-50 space-y-6">
+          <section className="bg-white dark:bg-[#1a1816] p-6 rounded-2xl shadow-xs border border-stone-200/80 dark:border-[#2e2a26] space-y-6">
             <div className="space-y-1">
-              <h3 className="text-xl font-serif font-bold text-stone-800 flex items-center gap-2">
-                <UserIcon size={20} className="text-pink-500" />
+              <h3 className="text-lg font-serif font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
+                <UserIcon size={18} className="text-pink-600 dark:text-pink-400" />
                 My Profile
               </h3>
-              <p className="text-xs text-stone-500">
+              <p className="text-xs text-stone-600 dark:text-stone-400">
                 Manage your name, age, email address, and account password.
               </p>
             </div>
 
             {profileFeedback && (
-              <div className={`p-4 rounded-2xl text-xs font-medium border flex items-center gap-2 ${
-                profileFeedback.type === 'success' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'
+              <div className={`p-4 rounded-xl text-xs font-medium border flex items-center gap-2 ${
+                profileFeedback.type === 'success' ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-200 border-emerald-200 dark:border-emerald-800/50' : 'bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-200 border-rose-200 dark:border-rose-800/50'
               }`}>
                 {profileFeedback.type === 'success' ? <CheckCircle2 size={16} /> : <ShieldAlert size={16} />}
                 <span>{profileFeedback.text}</span>
@@ -1425,15 +1446,15 @@ const Settings: React.FC<SettingsProps> = ({
             <form onSubmit={handleUpdateProfile} className="space-y-4">
               {/* Display Name */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-stone-700 flex items-center gap-1.5">
-                  <UserCheck size={14} className="text-pink-500" />
+                <label className="text-xs font-semibold text-stone-700 dark:text-stone-300 flex items-center gap-1.5">
+                  <UserCheck size={14} className="text-pink-600 dark:text-pink-400" />
                   Name / Nickname
                 </label>
                 <input 
                   type="text" 
                   value={profileName} 
                   onChange={(e) => setProfileName(e.target.value)}
-                  className="bg-pink-50/30 px-4 py-3 rounded-2xl outline-none font-medium text-xs text-stone-800 border border-pink-100 placeholder-stone-400 shadow-inner w-full focus:border-pink-300 transition-colors"
+                  className="h-11 bg-[#faf8f6] dark:bg-[#23201d] px-4 rounded-xl outline-none font-medium text-xs text-stone-900 dark:text-stone-100 border border-stone-200 dark:border-[#342f2b] placeholder-stone-400 w-full focus:border-pink-400 transition-colors"
                   placeholder="e.g. Sarah"
                   required
                 />
@@ -1441,15 +1462,15 @@ const Settings: React.FC<SettingsProps> = ({
 
               {/* Age */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-stone-700 flex items-center gap-1.5">
-                  <Calendar size={14} className="text-pink-500" />
+                <label className="text-xs font-semibold text-stone-700 dark:text-stone-300 flex items-center gap-1.5">
+                  <Calendar size={14} className="text-pink-600 dark:text-pink-400" />
                   Age
                 </label>
                 <input 
                   type="number" 
                   value={profileAge} 
                   onChange={(e) => setProfileAge(e.target.value)}
-                  className="bg-pink-50/30 px-4 py-3 rounded-2xl outline-none font-medium text-xs text-stone-800 border border-pink-100 placeholder-stone-400 shadow-inner w-full focus:border-pink-300 transition-colors"
+                  className="h-11 bg-[#faf8f6] dark:bg-[#23201d] px-4 rounded-xl outline-none font-medium text-xs text-stone-900 dark:text-stone-100 border border-stone-200 dark:border-[#342f2b] placeholder-stone-400 w-full focus:border-pink-400 transition-colors tabular-nums"
                   placeholder="e.g. 28"
                   min="1"
                   max="120"
@@ -1458,15 +1479,15 @@ const Settings: React.FC<SettingsProps> = ({
 
               {/* Email Address */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-stone-700 flex items-center gap-1.5">
-                  <span>✉️</span>
+                <label className="text-xs font-semibold text-stone-700 dark:text-stone-300 flex items-center gap-1.5">
+                  <Mail size={14} className="text-pink-600 dark:text-pink-400" />
                   Email Address
                 </label>
                 <input 
                   type="email" 
                   value={profileEmail} 
                   onChange={(e) => setProfileEmail(e.target.value)}
-                  className="bg-pink-50/30 px-4 py-3 rounded-2xl outline-none font-medium text-xs text-stone-800 border border-pink-100 placeholder-stone-400 shadow-inner w-full focus:border-pink-300 transition-colors"
+                  className="h-11 bg-[#faf8f6] dark:bg-[#23201d] px-4 rounded-xl outline-none font-medium text-xs text-stone-900 dark:text-stone-100 border border-stone-200 dark:border-[#342f2b] placeholder-stone-400 w-full focus:border-pink-400 transition-colors"
                   placeholder="e.g. you@example.com"
                   required
                 />
@@ -1474,8 +1495,8 @@ const Settings: React.FC<SettingsProps> = ({
 
               {/* Password */}
               <div className="space-y-1.5">
-                <label htmlFor="settings-profile-password" className="text-xs font-bold text-stone-700 flex items-center gap-1.5">
-                  <Lock size={14} className="text-pink-500" />
+                <label htmlFor="settings-profile-password" className="text-xs font-semibold text-stone-700 dark:text-stone-300 flex items-center gap-1.5">
+                  <Lock size={14} className="text-pink-600 dark:text-pink-400" />
                   Change Password
                 </label>
                 <input 
@@ -1483,8 +1504,8 @@ const Settings: React.FC<SettingsProps> = ({
                   type="password" 
                   value={profilePassword} 
                   onChange={(e) => setProfilePassword(e.target.value)}
-                  className="bg-pink-50/30 px-4 py-3 rounded-2xl outline-none font-medium text-xs text-stone-800 border border-pink-100 placeholder-stone-500 shadow-inner w-full focus:border-pink-300 transition-colors"
-                  placeholder="••••••••"
+                  className="h-11 bg-[#faf8f6] dark:bg-[#23201d] px-4 rounded-xl outline-none font-medium text-xs text-stone-900 dark:text-stone-100 border border-stone-200 dark:border-[#342f2b] placeholder-stone-400 w-full focus:border-pink-400 transition-colors"
+                  placeholder="Enter a new password"
                 />
                 {profilePassword ? (() => {
                   const pw = evaluatePasswordStrength(profilePassword);
@@ -1501,19 +1522,19 @@ const Settings: React.FC<SettingsProps> = ({
                                   : pw.score === 3
                                     ? 'bg-amber-400'
                                     : 'bg-rose-400'
-                                : 'bg-stone-200'
+                                : 'bg-stone-200 dark:bg-[#342f2b]'
                             }`}
                           />
                         ))}
-                        <span className="text-[11px] font-bold text-stone-700 ml-1">{pw.label}</span>
+                        <span className="text-[11px] font-semibold text-stone-700 dark:text-stone-300 ml-1">{pw.label}</span>
                       </div>
-                      <p className="text-[11px] text-stone-600">
+                      <p className="text-[11px] text-stone-600 dark:text-stone-400">
                         {pw.valid ? 'Strong password meets Lumina protection standards.' : pw.error}
                       </p>
                     </div>
                   );
                 })() : (
-                  <span className="text-[11px] text-stone-600 block">Leave blank to keep your current password (8+ chars, upper/lowercase, number & symbol)</span>
+                  <span className="text-[11px] text-stone-500 dark:text-stone-400 block">Leave blank to keep your current password (8+ chars, upper/lowercase, number &amp; symbol)</span>
                 )}
               </div>
 
@@ -1522,7 +1543,7 @@ const Settings: React.FC<SettingsProps> = ({
                 <button
                   type="submit"
                   disabled={profileLoading}
-                  className="w-full py-4 bg-gradient-to-r from-pink-500 to-rose-400 hover:opacity-95 active:scale-95 text-white font-bold rounded-2xl text-xs flex items-center justify-center gap-2 shadow-md cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full h-11 bg-pink-600 hover:bg-pink-700 text-white font-semibold rounded-xl text-xs flex items-center justify-center gap-2 shadow-xs cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {profileLoading ? 'Saving Changes...' : 'Save Changes'}
                 </button>
@@ -1575,37 +1596,37 @@ const Settings: React.FC<SettingsProps> = ({
           />
 
           {/* Quick Device App Lock (Real Biometrics & Salted Security PIN) */}
-          <section className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-pink-50 space-y-6">
+          <section className="bg-white dark:bg-[#1a1816] p-6 rounded-2xl shadow-xs border border-stone-200/80 dark:border-[#2e2a26] space-y-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="space-y-1">
-                <h3 className="text-xl font-serif font-bold text-stone-800 flex items-center gap-2">
-                  <Lock size={20} className="text-pink-500" />
+                <h3 className="text-lg font-serif font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
+                  <Lock size={18} className="text-pink-600 dark:text-pink-400" />
                   Device App Lock &amp; Cookie Controls
                 </h3>
-                <p className="text-xs text-stone-600 leading-relaxed">
+                <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
                   Configure native Face ID / Fingerprint / WebAuthn passkeys and your private salted diary PIN.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => window.dispatchEvent(new CustomEvent('lumina:open-cookie-settings'))}
-                className="px-3.5 py-2 rounded-xl bg-pink-50 hover:bg-pink-100 text-pink-700 border border-pink-200 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                className="px-3.5 py-2 rounded-xl bg-stone-50 dark:bg-[#23201d] hover:bg-stone-100 dark:hover:bg-[#2c2824] text-stone-800 dark:text-stone-200 border border-stone-200/80 dark:border-[#342f2b] text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
               >
-                <Cookie size={14} />
+                <Cookie size={14} className="text-pink-600 dark:text-pink-400" />
                 <span>Manage Cookie Preferences</span>
               </button>
             </div>
 
-            <div className="space-y-5">
+            <div className="space-y-4">
               {/* Genuine Biometric Enrollment Toggle */}
-              <div className="bg-rose-50/30 p-5 rounded-3xl border border-rose-100/40 flex flex-col gap-3">
+              <div className="bg-[#faf8f6] dark:bg-[#23201d] p-5 rounded-xl border border-stone-200/80 dark:border-[#2e2a26] flex flex-col gap-3">
                 <div className="flex items-center justify-between gap-4">
                   <div className="space-y-0.5">
-                    <p className="text-xs font-bold text-stone-800 flex items-center gap-1.5">
-                      <Fingerprint size={15} className="text-pink-500" />
+                    <p className="text-xs font-semibold text-stone-900 dark:text-stone-100 flex items-center gap-1.5">
+                      <Fingerprint size={15} className="text-pink-600 dark:text-pink-400" />
                       {biometricCap?.biometryLabel || 'Face ID / Fingerprint / Passkey'}
                     </p>
-                    <p className="text-[11px] text-stone-600">
+                    <p className="text-xs text-stone-600 dark:text-stone-400">
                       {biometricCap?.available
                         ? 'Requires live hardware biometric confirmation before enabling or unlocking.'
                         : biometricCap?.reason || 'No platform biometric sensor detected on this device; use a private Security PIN.'}
@@ -1731,15 +1752,15 @@ const Settings: React.FC<SettingsProps> = ({
                     setPinSaving(false);
                   }
                 }}
-                className="bg-rose-50/20 p-5 rounded-3xl border border-rose-100/40 flex flex-col gap-3"
+                    className="bg-[#faf8f6] dark:bg-[#23201d] p-5 rounded-xl border border-stone-200/80 dark:border-[#2e2a26] flex flex-col gap-3"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <label htmlFor="settings-diary-pin" className="text-xs font-bold text-stone-700 flex items-center gap-1.5">
-                    <Lock size={14} className="text-pink-500" />
+                  <label htmlFor="settings-diary-pin" className="text-xs font-semibold text-stone-800 dark:text-stone-200 flex items-center gap-1.5">
+                    <Lock size={14} className="text-pink-600 dark:text-pink-400" />
                     Private Security &amp; Diary PIN
                   </label>
-                  <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
-                    userHasConfiguredPin(user) ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
+                  <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-md ${
+                    userHasConfiguredPin(user) ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300' : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300'
                   }`}>
                     {userHasConfiguredPin(user) ? 'Configured' : 'Not Set'}
                   </span>
@@ -1748,10 +1769,10 @@ const Settings: React.FC<SettingsProps> = ({
                 {pinFeedback && (
                   <div
                     role="status"
-                    className={`p-3 rounded-2xl text-[11px] font-semibold border ${
+                    className={`p-3 rounded-xl text-xs font-medium border ${
                       pinFeedback.type === 'success'
-                        ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                        : 'bg-rose-50 text-rose-700 border-rose-200'
+                        ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-200 border-emerald-200 dark:border-emerald-800/50'
+                        : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-200 border-rose-200 dark:border-rose-800/50'
                     }`}
                   >
                     {pinFeedback.text}
@@ -1766,7 +1787,7 @@ const Settings: React.FC<SettingsProps> = ({
                     maxLength={6}
                     value={pinDraft}
                     onChange={(e) => setPinDraft(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
-                    className="bg-white px-4 py-3 rounded-2xl outline-none font-bold text-sm tracking-[0.4em] text-pink-700 border border-pink-100 shadow-sm w-full focus:border-pink-300 transition-colors text-center"
+                    className="h-11 bg-white dark:bg-[#1a1816] px-4 rounded-xl outline-none font-bold text-sm tracking-[0.35em] text-stone-900 dark:text-stone-100 border border-stone-200 dark:border-[#342f2b] w-full focus:border-pink-400 transition-colors text-center tabular-nums"
                     placeholder="New 4–6 digit PIN"
                     aria-label="New 4 to 6 digit PIN"
                   />
@@ -1777,19 +1798,19 @@ const Settings: React.FC<SettingsProps> = ({
                     maxLength={6}
                     value={pinConfirmDraft}
                     onChange={(e) => setPinConfirmDraft(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
-                    className="bg-white px-4 py-3 rounded-2xl outline-none font-bold text-sm tracking-[0.4em] text-pink-700 border border-pink-100 shadow-sm w-full focus:border-pink-300 transition-colors text-center"
+                    className="h-11 bg-white dark:bg-[#1a1816] px-4 rounded-xl outline-none font-bold text-sm tracking-[0.35em] text-stone-900 dark:text-stone-100 border border-stone-200 dark:border-[#342f2b] w-full focus:border-pink-400 transition-colors text-center tabular-nums"
                     placeholder="Confirm PIN"
                     aria-label="Confirm PIN"
                   />
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-[11px] text-stone-600">
+                  <span className="text-[11px] text-stone-500 dark:text-stone-400">
                     Stored only as a salted PBKDF2-SHA256 hash. Weak codes like 1234 are rejected.
                   </span>
                   <button
                     type="submit"
                     disabled={pinSaving || pinDraft.length < 4}
-                    className="px-4 py-2 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-xl text-xs font-bold cursor-pointer disabled:opacity-40"
+                    className="px-4 h-10 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-xs font-semibold cursor-pointer disabled:opacity-40 transition-colors"
                   >
                     {pinSaving ? 'Encrypting...' : userHasConfiguredPin(user) ? 'Update Private PIN' : 'Set Private PIN'}
                   </button>
@@ -1799,29 +1820,29 @@ const Settings: React.FC<SettingsProps> = ({
           </section>
 
           {/* Blocked Connections */}
-          <section className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-pink-50 space-y-4">
-            <h3 className="text-lg font-serif font-bold text-stone-800 flex items-center gap-2">
-              <ShieldAlert size={18} className="text-pink-500" />
+          <section className="bg-white dark:bg-[#1a1816] p-6 rounded-2xl shadow-xs border border-stone-200/80 dark:border-[#2e2a26] space-y-4">
+            <h3 className="text-base font-serif font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
+              <ShieldAlert size={18} className="text-pink-600 dark:text-pink-400" />
               Blocked Connections
             </h3>
-            <p className="text-xs text-stone-600 leading-relaxed">
-              Manage partners you have blocked. Blocked partners cannot send you requests or view your cycle updates.
+            <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
+              Manage partners you have blocked. Blocked partners cannot send requests or view cycle updates.
             </p>
 
             {user.blockedPartners && user.blockedPartners.length > 0 ? (
               <div className="space-y-2 pt-2">
                 {user.blockedPartners.map((bp) => (
-                  <div key={bp.id} className="flex items-center justify-between p-4 bg-rose-50/40 rounded-2xl border border-rose-100/50">
+                  <div key={bp.id} className="flex items-center justify-between p-4 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl border border-stone-200/80 dark:border-[#2e2a26]">
                     <div>
-                      <p className="text-xs font-bold text-gray-800">{bp.name}</p>
+                      <p className="text-xs font-semibold text-stone-900 dark:text-stone-100">{bp.name}</p>
                       {bp.dateBlocked && (
-                        <p className="text-[11px] text-gray-600">Blocked on {new Date(bp.dateBlocked).toLocaleDateString()}</p>
+                        <p className="text-[11px] text-stone-500 dark:text-stone-400 tabular-nums">Blocked on {new Date(bp.dateBlocked).toLocaleDateString()}</p>
                       )}
                     </div>
                     <button
                       type="button"
                       onClick={() => setPartnerToUnblock({ id: bp.id, name: bp.name })}
-                      className="px-4 py-2 bg-white border border-pink-200 text-pink-700 hover:bg-pink-50 text-xs font-bold rounded-xl transition-all cursor-pointer shadow-sm"
+                      className="px-3.5 py-2 bg-white dark:bg-[#1a1816] border border-stone-200 dark:border-[#342f2b] text-pink-700 dark:text-pink-400 hover:bg-stone-50 text-xs font-semibold rounded-xl transition-colors cursor-pointer"
                     >
                       Unblock
                     </button>
@@ -1829,53 +1850,53 @@ const Settings: React.FC<SettingsProps> = ({
                 ))}
               </div>
             ) : (
-              <div className="p-5 bg-rose-50/20 rounded-2xl text-center space-y-1 border border-pink-50">
-                <p className="text-xs font-semibold text-stone-700">You haven’t blocked anyone.</p>
-                <p className="text-[11px] text-stone-600">Anyone you block will appear here, and you can unblock them at any time.</p>
+              <div className="p-5 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl text-center space-y-1 border border-stone-200/80 dark:border-[#2e2a26]">
+                <p className="text-xs font-semibold text-stone-800 dark:text-stone-200">You haven’t blocked anyone.</p>
+                <p className="text-xs text-stone-500 dark:text-stone-400">Anyone you block will appear here, and you can unblock them anytime.</p>
               </div>
             )}
           </section>
 
           {/* Privacy Policy & Terms of Service */}
-          <section className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-pink-50 space-y-4">
-            <h3 className="text-lg font-serif font-bold text-stone-800 flex items-center gap-2">
-              <ShieldCheck size={18} className="text-pink-500" />
-              Your Privacy & Terms
+          <section className="bg-white dark:bg-[#1a1816] p-6 rounded-2xl shadow-xs border border-stone-200/80 dark:border-[#2e2a26] space-y-4">
+            <h3 className="text-base font-serif font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
+              <ShieldCheck size={18} className="text-pink-600 dark:text-pink-400" />
+              Your Privacy &amp; Terms
             </h3>
-            <p className="text-xs text-stone-600 leading-relaxed">
-              We believe your health data is deeply personal. Learn how Lumina protects your rights and privacy.
+            <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
+              Your health data belongs strictly to you. Review how Lumina protects your privacy and rights.
             </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
-              <div className="p-5 bg-rose-50/20 rounded-3xl border border-pink-100/40 space-y-2.5">
-                <h4 className="text-xs font-bold text-stone-800 flex items-center gap-1.5">
-                  <Shield size={14} className="text-pink-500" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+              <div className="p-5 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl border border-stone-200/80 dark:border-[#2e2a26] space-y-2.5">
+                <h4 className="text-xs font-semibold text-stone-900 dark:text-stone-100 flex items-center gap-1.5">
+                  <Shield size={14} className="text-pink-600 dark:text-pink-400" />
                   Privacy Policy
                 </h4>
-                <p className="text-xs text-stone-600 leading-relaxed">
+                <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
                   We never sell or monetize your personal cycle or health records. You own 100% of your data.
                 </p>
                 <button
                   type="button"
                   onClick={() => setShowPrivacyModal(true)}
-                  className="text-xs text-pink-700 font-bold hover:underline cursor-pointer flex items-center gap-1"
+                  className="text-xs text-pink-700 dark:text-pink-400 font-semibold hover:underline cursor-pointer flex items-center gap-1"
                 >
                   Read Privacy Policy &rarr;
                 </button>
               </div>
 
-              <div className="p-5 bg-rose-50/20 rounded-3xl border border-pink-100/40 space-y-2.5">
-                <h4 className="text-xs font-bold text-stone-800 flex items-center gap-1.5">
-                  <FileText size={14} className="text-pink-500" />
+              <div className="p-5 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl border border-stone-200/80 dark:border-[#2e2a26] space-y-2.5">
+                <h4 className="text-xs font-semibold text-stone-900 dark:text-stone-100 flex items-center gap-1.5">
+                  <FileText size={14} className="text-pink-600 dark:text-pink-400" />
                   Terms of Service
                 </h4>
-                <p className="text-xs text-stone-600 leading-relaxed">
+                <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
                   Lumina provides supportive cycle estimations and wellness insights to help you understand your body.
                 </p>
                 <button
                   type="button"
                   onClick={() => setShowTermsModal(true)}
-                  className="text-xs text-pink-700 font-bold hover:underline cursor-pointer flex items-center gap-1"
+                  className="text-xs text-pink-700 dark:text-pink-400 font-semibold hover:underline cursor-pointer flex items-center gap-1"
                 >
                   Read Terms of Service &rarr;
                 </button>
@@ -1890,26 +1911,26 @@ const Settings: React.FC<SettingsProps> = ({
       ) : activeSubTab === 'backup_sync' ? (
         <div className="space-y-6 animate-fadeIn">
           {/* Cloud Sync & Automatic Encrypted Snapshots */}
-          <section className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-pink-50 space-y-6">
+          <section className="bg-white dark:bg-[#1a1816] p-6 rounded-2xl shadow-xs border border-stone-200/80 dark:border-[#2e2a26] space-y-6">
             <div className="space-y-1">
-              <h3 className="text-xl font-serif font-bold text-stone-800 flex items-center gap-2">
-                <UploadCloud size={20} className="text-pink-500" />
-                Backup, Encryption & Recovery
+              <h3 className="text-lg font-serif font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
+                <UploadCloud size={18} className="text-pink-600 dark:text-pink-400" />
+                Backup, Encryption &amp; Recovery
               </h3>
-              <p className="text-xs text-stone-600 leading-relaxed">
+              <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
                 Keep your health logs, notes, and cycle history safe with AES-256 encrypted snapshots, cloud sync, and integrity-verified exports.
               </p>
             </div>
 
             {/* Automatic Local Encrypted Backup Snapshots */}
-            <div className="p-6 bg-indigo-50/30 rounded-3xl border border-indigo-100/60 space-y-4">
+            <div className="p-5 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl border border-stone-200/80 dark:border-[#2e2a26] space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="space-y-1">
-                  <h4 className="text-xs font-bold text-stone-800 flex items-center gap-1.5">
-                    <ShieldCheck size={15} className="text-indigo-600" />
+                  <h4 className="text-xs font-semibold text-stone-900 dark:text-stone-100 flex items-center gap-1.5">
+                    <ShieldCheck size={15} className="text-indigo-600 dark:text-indigo-400" />
                     Automatic AES-256 Encrypted Snapshots
                   </h4>
-                  <p className="text-xs text-stone-600">
+                  <p className="text-xs text-stone-600 dark:text-stone-400">
                     Automatically saves verified encrypted recovery points on your device whenever your records change.
                   </p>
                 </div>
@@ -1934,12 +1955,12 @@ const Settings: React.FC<SettingsProps> = ({
                       syncUser(nextUser);
                     }}
                   />
-                  <div className="w-10 h-6 bg-indigo-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                  <div className="w-10 h-6 bg-stone-300 dark:bg-stone-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
                 </label>
               </div>
 
               <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-                <span className="text-[11px] text-stone-600">
+                <span className="text-xs text-stone-600 dark:text-stone-400 tabular-nums">
                   {user.backupMetadata?.lastAutoBackupAt
                     ? `Last snapshot: ${new Date(user.backupMetadata.lastAutoBackupAt).toLocaleString()}`
                     : 'No snapshots saved yet in this session'}
@@ -1965,27 +1986,27 @@ const Settings: React.FC<SettingsProps> = ({
                       setLocalFeedback({ type: 'success', text: `Encrypted snapshot saved (${snap.recordCount} records, SHA-256 ${snap.checksum.slice(0, 10)}…).` });
                     }
                   }}
-                  className="px-3.5 py-2 bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50 rounded-xl text-xs font-bold cursor-pointer transition-colors"
+                  className="px-3.5 py-2 bg-white dark:bg-[#1a1816] border border-stone-200 dark:border-[#342f2b] text-indigo-700 dark:text-indigo-400 hover:bg-stone-50 rounded-xl text-xs font-semibold cursor-pointer transition-colors"
                 >
                   Save Snapshot Now
                 </button>
               </div>
 
               {autoSnapshots.length > 0 && (
-                <div className="space-y-2 pt-2 border-t border-indigo-100/60">
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-indigo-700">Recovery History (Last {autoSnapshots.length})</p>
+                <div className="space-y-2 pt-3 border-t border-stone-200/80 dark:border-[#342f2b]">
+                  <p className="text-[11px] font-semibold tracking-wide text-indigo-700 dark:text-indigo-400">Recovery History (Last {autoSnapshots.length})</p>
                   {autoSnapshots.map((snap) => (
-                    <div key={snap.id} className="flex flex-wrap items-center justify-between gap-2 p-3 bg-white rounded-2xl border border-indigo-100">
+                    <div key={snap.id} className="flex flex-wrap items-center justify-between gap-2 p-3 bg-white dark:bg-[#1a1816] rounded-xl border border-stone-200/80 dark:border-[#342f2b]">
                       <div className="space-y-0.5">
-                        <p className="text-xs font-bold text-stone-800">{new Date(snap.createdAt).toLocaleString()}</p>
-                        <p className="text-[11px] text-stone-600">
+                        <p className="text-xs font-semibold text-stone-900 dark:text-stone-100 tabular-nums">{new Date(snap.createdAt).toLocaleString()}</p>
+                        <p className="text-[11px] text-stone-600 dark:text-stone-400 tabular-nums">
                           {snap.recordCount} records • {(snap.sizeBytes / 1024).toFixed(1)} KB • SHA-256 {snap.checksum.slice(0, 8)}…
                         </p>
                       </div>
                       <button
                         type="button"
                         onClick={() => handleRestoreSnapshot(snap)}
-                        className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs rounded-xl cursor-pointer transition-colors"
+                        className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 text-indigo-700 dark:text-indigo-300 font-semibold text-xs rounded-lg cursor-pointer transition-colors"
                       >
                         Restore
                       </button>
@@ -1996,19 +2017,20 @@ const Settings: React.FC<SettingsProps> = ({
             </div>
 
             {/* Cloud Sync Card */}
-            <div className="p-6 bg-pink-50/30 rounded-3xl border border-pink-100/50 space-y-4">
+            <div className="p-5 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl border border-stone-200/80 dark:border-[#2e2a26] space-y-4">
               <div className="space-y-1">
-                <h4 className="text-xs font-bold text-stone-800 flex items-center gap-1.5">
-                  <span>☁️</span> Cloud Sync
+                <h4 className="text-xs font-semibold text-stone-900 dark:text-stone-100 flex items-center gap-1.5">
+                  <UploadCloud size={14} className="text-pink-600 dark:text-pink-400" />
+                  Cloud Sync
                 </h4>
-                <p className="text-xs text-stone-600 leading-relaxed">
+                <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
                   Your data syncs automatically when signed in, or you can manually push or restore your cloud profile anytime.
                 </p>
               </div>
 
               {cloudFeedback && (
-                <div className={`p-4 rounded-2xl text-xs font-medium border flex items-center gap-2 ${
-                  cloudFeedback.type === 'success' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'
+                <div className={`p-4 rounded-xl text-xs font-medium border flex items-center gap-2 ${
+                  cloudFeedback.type === 'success' ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-200 border-emerald-200 dark:border-emerald-800/50' : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-200 border-rose-200 dark:border-rose-800/50'
                 }`}>
                   {cloudFeedback.type === 'success' ? <CheckCircle2 size={16} /> : <ShieldAlert size={16} />}
                   <span>{cloudFeedback.text}</span>
@@ -2019,7 +2041,7 @@ const Settings: React.FC<SettingsProps> = ({
                 <button
                   type="button"
                   onClick={handleCloudBackupNow}
-                  className="py-3.5 px-4 bg-gradient-to-r from-pink-500 to-rose-400 text-white font-bold rounded-2xl text-xs flex items-center justify-center gap-2 shadow-sm hover:opacity-90 transition-all cursor-pointer"
+                  className="h-10 px-4 bg-pink-600 hover:bg-pink-700 text-white font-semibold rounded-xl text-xs flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
                 >
                   <UploadCloud size={14} />
                   <span>Sync Data Now</span>
@@ -2027,7 +2049,7 @@ const Settings: React.FC<SettingsProps> = ({
                 <button
                   type="button"
                   onClick={handleCloudRestoreNow}
-                  className="py-3.5 px-4 bg-white border border-pink-200 text-pink-700 font-bold rounded-2xl text-xs flex items-center justify-center gap-2 shadow-sm hover:bg-pink-50/50 transition-all cursor-pointer"
+                  className="h-10 px-4 bg-white dark:bg-[#1a1816] border border-stone-200 dark:border-[#342f2b] text-stone-800 dark:text-stone-200 font-semibold rounded-xl text-xs flex items-center justify-center gap-2 hover:bg-stone-50 transition-colors cursor-pointer"
                 >
                   <RefreshCw size={14} />
                   <span>Restore From Cloud</span>
@@ -2035,20 +2057,20 @@ const Settings: React.FC<SettingsProps> = ({
               </div>
             </div>
 
-            {/* Download My Data (Portable or Passphrase-Encrypted) */}
-            <div className="space-y-3 pt-2">
+            {/* Download My Data */}
+            <div className="space-y-3 pt-1">
               <div className="space-y-1">
-                <h4 className="text-xs font-bold text-stone-800 flex items-center gap-1.5">
-                  <Download size={14} className="text-pink-500" />
-                  Export & Download My Data
+                <h4 className="text-xs font-semibold text-stone-900 dark:text-stone-100 flex items-center gap-1.5">
+                  <Download size={14} className="text-pink-600 dark:text-pink-400" />
+                  Export &amp; Download My Data
                 </h4>
-                <p className="text-xs text-stone-600">
+                <p className="text-xs text-stone-600 dark:text-stone-400">
                   Save a SHA-256 verified portable copy or lock it with an AES-256-GCM passphrase before downloading.
                 </p>
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="backup-export-passphrase" className="text-xs font-semibold text-stone-700 block">
+                <label htmlFor="backup-export-passphrase" className="text-xs font-semibold text-stone-700 dark:text-stone-300 block">
                   Optional Encryption Passphrase (6+ characters for AES-256 encrypted file)
                 </label>
                 <input
@@ -2057,7 +2079,7 @@ const Settings: React.FC<SettingsProps> = ({
                   value={exportPassphrase}
                   onChange={(e) => setExportPassphrase(e.target.value)}
                   placeholder="Enter passphrase for encrypted export (optional)"
-                  className="w-full bg-pink-50/20 border border-pink-100 rounded-2xl px-4 py-2.5 text-xs text-stone-800 outline-none focus:border-pink-300"
+                  className="w-full h-11 bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200 dark:border-[#342f2b] rounded-xl px-4 text-xs text-stone-900 dark:text-stone-100 outline-none focus:border-pink-400"
                 />
               </div>
 
@@ -2065,7 +2087,7 @@ const Settings: React.FC<SettingsProps> = ({
                 <button
                   type="button"
                   onClick={() => handleExportData(false)}
-                  className="py-3.5 px-4 bg-white border border-pink-200 text-pink-700 hover:bg-pink-50 font-bold rounded-2xl text-xs flex items-center justify-center gap-2 shadow-sm cursor-pointer transition-all"
+                  className="h-10 px-4 bg-white dark:bg-[#1a1816] border border-stone-200 dark:border-[#342f2b] text-stone-800 dark:text-stone-200 hover:bg-stone-50 font-semibold rounded-xl text-xs flex items-center justify-center gap-2 cursor-pointer transition-colors"
                 >
                   <Download size={15} />
                   <span>Download Portable JSON</span>
@@ -2073,7 +2095,7 @@ const Settings: React.FC<SettingsProps> = ({
                 <button
                   type="button"
                   onClick={() => handleExportData(true)}
-                  className="py-3.5 px-4 bg-gradient-to-r from-pink-500 to-rose-400 hover:opacity-95 text-white font-bold rounded-2xl text-xs flex items-center justify-center gap-2 shadow-md cursor-pointer transition-all"
+                  className="h-10 px-4 bg-pink-600 hover:bg-pink-700 text-white font-semibold rounded-xl text-xs flex items-center justify-center gap-2 shadow-xs cursor-pointer transition-colors"
                 >
                   <KeyRound size={15} />
                   <span>Download Encrypted Backup</span>
@@ -2082,20 +2104,20 @@ const Settings: React.FC<SettingsProps> = ({
             </div>
 
             {/* Upload Backup File */}
-            <div className="pt-4 space-y-3 border-t border-pink-50">
+            <div className="pt-4 space-y-3 border-t border-stone-200/80 dark:border-[#2e2a26]">
               <div className="space-y-1">
-                <h4 className="text-xs font-bold text-stone-800 flex items-center gap-1.5">
-                  <FileText size={14} className="text-pink-500" />
+                <h4 className="text-xs font-semibold text-stone-900 dark:text-stone-100 flex items-center gap-1.5">
+                  <FileText size={14} className="text-pink-600 dark:text-pink-400" />
                   Restore From Backup File
                 </h4>
-                <p className="text-xs text-stone-600">
+                <p className="text-xs text-stone-600 dark:text-stone-400">
                   Restore your cycle history and notes from an encrypted or portable Lumina backup file. Integrity checksums are verified automatically.
                 </p>
               </div>
 
               {localFeedback && (
-                <div className={`p-4 rounded-2xl text-xs font-medium border flex items-center gap-2 ${
-                  localFeedback.type === 'success' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'
+                <div className={`p-4 rounded-xl text-xs font-medium border flex items-center gap-2 ${
+                  localFeedback.type === 'success' ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-200 border-emerald-200 dark:border-emerald-800/50' : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-200 border-rose-200 dark:border-rose-800/50'
                 }`}>
                   {localFeedback.type === 'success' ? <CheckCircle2 size={16} /> : <ShieldAlert size={16} />}
                   <span>{localFeedback.text}</span>
@@ -2103,8 +2125,8 @@ const Settings: React.FC<SettingsProps> = ({
               )}
 
               {pendingEncryptedImport && (
-                <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 space-y-3">
-                  <p className="text-xs font-bold text-amber-900">Enter Passphrase to Decrypt Backup</p>
+                <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 space-y-3">
+                  <p className="text-xs font-semibold text-amber-900 dark:text-amber-200">Enter Passphrase to Decrypt Backup</p>
                   <div className="flex flex-col sm:flex-row gap-2">
                     <input
                       type="password"
@@ -2112,19 +2134,19 @@ const Settings: React.FC<SettingsProps> = ({
                       onChange={(e) => setImportPassphrase(e.target.value)}
                       placeholder="Backup passphrase"
                       aria-label="Backup decryption passphrase"
-                      className="flex-1 bg-white border border-amber-200 rounded-xl px-3.5 py-2 text-xs text-stone-800 outline-none focus:border-amber-400"
+                      className="flex-1 h-10 bg-white dark:bg-[#1a1816] border border-amber-200 dark:border-amber-800/50 rounded-xl px-3.5 text-xs text-stone-900 dark:text-stone-100 outline-none"
                     />
                     <button
                       type="button"
                       onClick={() => parseAndImportJSON(pendingEncryptedImport, importPassphrase)}
-                      className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl cursor-pointer transition-colors"
+                      className="px-4 h-10 bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs rounded-xl cursor-pointer transition-colors"
                     >
-                      Unlock & Restore
+                      Unlock &amp; Restore
                     </button>
                     <button
                       type="button"
                       onClick={() => { setPendingEncryptedImport(null); setImportPassphrase(''); }}
-                      className="px-3 py-2 bg-white border border-amber-200 text-stone-700 font-semibold text-xs rounded-xl cursor-pointer"
+                      className="px-3 h-10 bg-white dark:bg-[#1a1816] border border-amber-200 dark:border-amber-800/50 text-stone-700 dark:text-stone-300 font-semibold text-xs rounded-xl cursor-pointer"
                     >
                       Cancel
                     </button>
@@ -2153,10 +2175,10 @@ const Settings: React.FC<SettingsProps> = ({
                     reader.readAsText(file);
                   }
                 }}
-                className={`relative border-2 border-dashed rounded-3xl p-6 text-center cursor-pointer transition-all duration-200 ${
+                className={`relative border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-colors ${
                   isImportDragging 
-                    ? 'border-pink-500 bg-pink-50/50 scale-[0.99]' 
-                    : 'border-pink-200 bg-pink-50/10 hover:border-pink-300'
+                    ? 'border-pink-500 bg-pink-50/40 dark:bg-pink-950/20' 
+                    : 'border-stone-300 dark:border-[#342f2b] bg-[#faf8f6] dark:bg-[#23201d] hover:border-pink-400'
                 }`}
               >
                 <input 
@@ -2167,22 +2189,24 @@ const Settings: React.FC<SettingsProps> = ({
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   id="import-json-picker-input"
                 />
-                <span className="text-3xl block mb-2">📁</span>
-                <p className="text-xs font-bold text-pink-700">
+                <div className="w-10 h-10 rounded-xl bg-pink-50 dark:bg-pink-950/40 text-pink-600 dark:text-pink-400 flex items-center justify-center mx-auto mb-2.5">
+                  <FolderUp size={20} />
+                </div>
+                <p className="text-xs font-semibold text-stone-900 dark:text-stone-100">
                   Upload Backup File
                 </p>
-                <p className="text-[11px] text-stone-600 mt-1">
-                  Drag & drop your backup file here, or tap to choose a file
+                <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-1">
+                  Drag &amp; drop your backup file here, or click to browse
                 </p>
               </div>
             </div>
 
             {/* Step-by-step Recovery Guide */}
-            <div className="p-5 bg-stone-50 rounded-3xl border border-stone-200/70 space-y-2">
-              <h4 className="text-xs font-bold text-stone-800">Recovery & Continuity Guide</h4>
-              <ol className="list-decimal pl-5 space-y-1 text-xs text-stone-600">
+            <div className="p-5 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl border border-stone-200/80 dark:border-[#2e2a26] space-y-2">
+              <h4 className="text-xs font-semibold text-stone-900 dark:text-stone-100">Recovery &amp; Continuity Guide</h4>
+              <ol className="list-decimal pl-5 space-y-1 text-xs text-stone-600 dark:text-stone-400">
                 <li><strong>New Phone or Browser:</strong> Sign in with your verified Lumina account and tap <em>Restore From Cloud</em>.</li>
-                <li><strong>Offline / Encrypted Recovery:</strong> Upload your saved <code className="text-[11px] bg-white px-1 rounded">lumina_encrypted_backup_*.json</code> file and enter your passphrase.</li>
+                <li><strong>Offline / Encrypted Recovery:</strong> Upload your saved <code className="text-[11px] bg-white dark:bg-[#1a1816] px-1 rounded">lumina_encrypted_backup_*.json</code> file and enter your passphrase.</li>
                 <li><strong>Accidental Change Rollback:</strong> Pick any recent timestamped entry under <em>Recovery History</em> above to restore instantaneously.</li>
               </ol>
             </div>
@@ -2195,62 +2219,65 @@ const Settings: React.FC<SettingsProps> = ({
       ) : activeSubTab === 'help_support' ? (
         <div className="space-y-6 animate-fadeIn">
           {/* Header Support Card */}
-          <section className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-pink-50 space-y-6">
+          <section className="bg-white dark:bg-[#1a1816] p-6 rounded-2xl shadow-xs border border-stone-200/80 dark:border-[#2e2a26] space-y-6">
             <div className="space-y-1">
-              <h3 className="text-xl font-serif font-bold text-stone-800 flex items-center gap-2">
-                <HelpCircle size={20} className="text-pink-500" />
-                Help & Support
+              <h3 className="text-lg font-serif font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
+                <HelpCircle size={18} className="text-pink-600 dark:text-pink-400" />
+                Help &amp; Support
               </h3>
-              <p className="text-xs text-stone-500 leading-relaxed">
-                We're here to help you get the most out of Lumina. Reach out to our team or explore common questions.
+              <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
+                Reach out to our team or explore common questions.
               </p>
             </div>
 
             {/* Quick Action Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <button
+                type="button"
                 onClick={() => setShowFeedbackModal('support')}
-                className="p-5 bg-pink-50/40 hover:bg-pink-50/80 rounded-3xl border border-pink-100/60 text-left space-y-2 transition-all group cursor-pointer"
+                className="p-5 bg-[#faf8f6] dark:bg-[#23201d] hover:border-pink-300 dark:hover:border-pink-800/60 rounded-xl border border-stone-200/80 dark:border-[#2e2a26] text-left space-y-2 transition-colors group cursor-pointer"
               >
-                <div className="w-10 h-10 rounded-2xl bg-pink-500 text-white flex items-center justify-center text-lg shadow-sm group-hover:scale-105 transition-transform">
-                  💌
+                <div className="w-9 h-9 rounded-xl bg-pink-600 text-white flex items-center justify-center shrink-0">
+                  <MessageCircle size={17} />
                 </div>
-                <h4 className="text-xs font-bold text-stone-800">Contact Support</h4>
-                <p className="text-[11px] text-stone-500 leading-snug">Get in touch with our caring support team</p>
+                <h4 className="text-xs font-semibold text-stone-900 dark:text-stone-100">Contact Support</h4>
+                <p className="text-xs text-stone-500 dark:text-stone-400 leading-snug">Get in touch with our care team</p>
               </button>
 
               <button
+                type="button"
                 onClick={() => setShowFeedbackModal('bug')}
-                className="p-5 bg-rose-50/40 hover:bg-rose-50/80 rounded-3xl border border-rose-100/60 text-left space-y-2 transition-all group cursor-pointer"
+                className="p-5 bg-[#faf8f6] dark:bg-[#23201d] hover:border-rose-300 dark:hover:border-rose-800/60 rounded-xl border border-stone-200/80 dark:border-[#2e2a26] text-left space-y-2 transition-colors group cursor-pointer"
               >
-                <div className="w-10 h-10 rounded-2xl bg-rose-500 text-white flex items-center justify-center text-lg shadow-sm group-hover:scale-105 transition-transform">
-                  <Bug size={18} />
+                <div className="w-9 h-9 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0">
+                  <Bug size={17} />
                 </div>
-                <h4 className="text-xs font-bold text-stone-800">Report a Bug</h4>
-                <p className="text-[11px] text-stone-500 leading-snug">Let us know if something isn't working right</p>
+                <h4 className="text-xs font-semibold text-stone-900 dark:text-stone-100">Report a Bug</h4>
+                <p className="text-xs text-stone-500 dark:text-stone-400 leading-snug">Let us know if something isn’t working</p>
               </button>
 
               <button
+                type="button"
                 onClick={() => setShowFeedbackModal('feature')}
-                className="p-5 bg-amber-50/40 hover:bg-amber-50/80 rounded-3xl border border-amber-100/60 text-left space-y-2 transition-all group cursor-pointer"
+                className="p-5 bg-[#faf8f6] dark:bg-[#23201d] hover:border-amber-300 dark:hover:border-amber-800/60 rounded-xl border border-stone-200/80 dark:border-[#2e2a26] text-left space-y-2 transition-colors group cursor-pointer"
               >
-                <div className="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center text-lg shadow-sm group-hover:scale-105 transition-transform">
-                  <Lightbulb size={18} />
+                <div className="w-9 h-9 rounded-xl bg-amber-600 text-white flex items-center justify-center shrink-0">
+                  <Lightbulb size={17} />
                 </div>
-                <h4 className="text-xs font-bold text-stone-800">Suggest a Feature</h4>
-                <p className="text-[11px] text-stone-500 leading-snug">Share ideas to make Lumina even better</p>
+                <h4 className="text-xs font-semibold text-stone-900 dark:text-stone-100">Suggest a Feature</h4>
+                <p className="text-xs text-stone-500 dark:text-stone-400 leading-snug">Share ideas to improve Lumina</p>
               </button>
             </div>
           </section>
 
           {/* FAQs Section */}
-          <section className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-pink-50 space-y-4">
-            <h3 className="text-lg font-serif font-bold text-stone-800 flex items-center gap-2">
-              <MessageCircle size={18} className="text-pink-500" />
+          <section className="bg-white dark:bg-[#1a1816] p-6 rounded-2xl shadow-xs border border-stone-200/80 dark:border-[#2e2a26] space-y-4">
+            <h3 className="text-base font-serif font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
+              <MessageCircle size={18} className="text-pink-600 dark:text-pink-400" />
               Frequently Asked Questions
             </h3>
 
-            <div className="space-y-3 pt-2">
+            <div className="space-y-2.5 pt-1">
               {[
                 {
                   q: "How are my cycle and ovulation dates predicted?",
@@ -2266,25 +2293,26 @@ const Settings: React.FC<SettingsProps> = ({
                 },
                 {
                   q: "Can I use Lumina during pregnancy?",
-                  a: "Yes! In Settings → My Cycle, you can turn on Pregnancy Mode. This switches the app into gestational week tracking, trimester guidance, and gentle maternal wellness."
+                  a: "Yes. In Settings -> My Cycle, you can switch to Pregnancy Mode for gestational week tracking, trimester guidance, and gentle maternal wellness."
                 },
                 {
                   q: "How do I restore my data on a new device?",
-                  a: "When you log into your Lumina account on a new device, your cloud data syncs automatically. You can also go to Settings → Backup & Sync and tap 'Restore Data' or upload a saved backup file."
+                  a: "When you log into your Lumina account on a new device, your cloud data syncs automatically. You can also go to Settings -> Backup & Sync to restore from cloud or an encrypted backup file."
                 }
               ].map((faq, idx) => {
                 const isOpen = expandedFaq === idx;
                 return (
-                  <div key={idx} className="bg-rose-50/20 rounded-2xl border border-pink-100/50 overflow-hidden transition-all">
+                  <div key={idx} className="bg-[#faf8f6] dark:bg-[#23201d] rounded-xl border border-stone-200/80 dark:border-[#2e2a26] overflow-hidden">
                     <button
+                      type="button"
                       onClick={() => setExpandedFaq(isOpen ? null : idx)}
-                      className="w-full p-4 flex items-center justify-between text-left cursor-pointer hover:bg-pink-50/30 transition-colors"
+                      className="w-full p-4 flex items-center justify-between text-left cursor-pointer hover:bg-stone-100/60 dark:hover:bg-[#2a2622] transition-colors"
                     >
-                      <span className="text-xs font-bold text-stone-800 pr-2">{faq.q}</span>
-                      <ChevronRight className={`w-4 h-4 text-pink-400 transition-transform shrink-0 ${isOpen ? 'rotate-90' : ''}`} />
+                      <span className="text-xs font-semibold text-stone-900 dark:text-stone-100 pr-2">{faq.q}</span>
+                      <ChevronRight className={`w-4 h-4 text-stone-400 transition-transform shrink-0 ${isOpen ? 'rotate-90' : ''}`} />
                     </button>
                     {isOpen && (
-                      <div className="px-4 pb-4 pt-1 text-xs text-stone-600 leading-relaxed border-t border-pink-50/60 bg-white/60">
+                      <div className="px-4 pb-4 pt-3 text-xs text-stone-600 dark:text-stone-400 leading-relaxed border-t border-stone-200/80 dark:border-[#2e2a26] bg-white dark:bg-[#1a1816]">
                         {faq.a}
                       </div>
                     )}
@@ -2296,19 +2324,21 @@ const Settings: React.FC<SettingsProps> = ({
 
           {/* App Info Footer */}
           <div className="text-center space-y-1.5 py-2">
-            <p className="text-xs font-bold text-stone-700">Lumina Wellness</p>
-            <p className="text-[11px] text-stone-400">Version 2.4.0 • Designed with love for women's health</p>
-            <div className="flex items-center justify-center gap-3 pt-2">
+            <p className="text-xs font-semibold text-stone-700 dark:text-stone-300">Lumina Wellness</p>
+            <p className="text-[11px] text-stone-500 dark:text-stone-400 tabular-nums">Version 2.4.0 • Designed for women’s health</p>
+            <div className="flex items-center justify-center gap-3 pt-1">
               <button 
+                type="button"
                 onClick={() => setShowPrivacyModal(true)} 
-                className="text-[11px] text-pink-600 hover:underline font-medium cursor-pointer"
+                className="text-xs text-pink-700 dark:text-pink-400 hover:underline font-medium cursor-pointer"
               >
                 Privacy Policy
               </button>
-              <span className="text-stone-300">•</span>
+              <span className="text-stone-300 dark:text-stone-600">•</span>
               <button 
+                type="button"
                 onClick={() => setShowTermsModal(true)} 
-                className="text-[11px] text-pink-600 hover:underline font-medium cursor-pointer"
+                className="text-xs text-pink-700 dark:text-pink-400 hover:underline font-medium cursor-pointer"
               >
                 Terms of Service
               </button>
@@ -2322,25 +2352,26 @@ const Settings: React.FC<SettingsProps> = ({
       ) : activeSubTab === 'account' ? (
         <div className="space-y-6 animate-fadeIn">
           {/* Account Profile Card */}
-          <section className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-pink-50 space-y-6">
+          <section className="bg-white dark:bg-[#1a1816] p-6 rounded-2xl shadow-xs border border-stone-200/80 dark:border-[#2e2a26] space-y-6">
             <div className="space-y-1">
-              <h3 className="text-xl font-serif font-bold text-stone-800 flex items-center gap-2">
-                <UserIcon size={20} className="text-pink-500" />
+              <h3 className="text-lg font-serif font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
+                <UserIcon size={18} className="text-pink-600 dark:text-pink-400" />
                 Account
               </h3>
-              <p className="text-xs text-stone-500 leading-relaxed">
+              <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
                 Manage your active session and account settings.
               </p>
             </div>
 
-            <div className="p-5 bg-rose-50/20 rounded-3xl border border-pink-100/40 flex items-center justify-between">
-              <div>
-                <p className="text-xs font-bold text-stone-800">{user.name || 'Lumina Member'}</p>
-                <p className="text-[11px] text-stone-500">{user.email}</p>
+            <div className="p-4 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl border border-stone-200/80 dark:border-[#2e2a26] flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-stone-900 dark:text-stone-100 truncate">{user.name || 'Lumina Member'}</p>
+                <p className="text-xs text-stone-500 dark:text-stone-400 truncate">{user.email}</p>
               </div>
               <button
+                type="button"
                 onClick={() => setActiveSubTab('profile')}
-                className="px-4 py-2 bg-white border border-pink-200 text-pink-600 font-bold text-xs rounded-xl hover:bg-pink-50 transition-all cursor-pointer shadow-sm"
+                className="px-4 py-2 bg-white dark:bg-[#1a1816] border border-stone-200 dark:border-[#342f2b] text-pink-700 dark:text-pink-400 font-semibold text-xs rounded-xl hover:bg-stone-50 transition-colors cursor-pointer shrink-0"
               >
                 Edit Profile
               </button>
@@ -2348,20 +2379,20 @@ const Settings: React.FC<SettingsProps> = ({
 
             {/* Log Out */}
             {onLogout && (
-              <div className="pt-2 space-y-3">
+              <div className="pt-2 space-y-3 border-t border-stone-100 dark:border-[#2e2a26]">
                 <div className="space-y-1">
-                  <h4 className="text-xs font-bold text-stone-800 flex items-center gap-1.5">
-                    <LogOut size={14} className="text-pink-500" />
+                  <h4 className="text-xs font-semibold text-stone-900 dark:text-stone-100 flex items-center gap-1.5">
+                    <LogOut size={14} className="text-pink-600 dark:text-pink-400" />
                     Log Out
                   </h4>
-                  <p className="text-xs text-stone-500">
-                    Safely log out of Lumina on this device. Your data will remain safe and waiting for your next login.
+                  <p className="text-xs text-stone-600 dark:text-stone-400">
+                    Safely log out of Lumina on this device. Your records remain saved for your next sign-in.
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={onLogout}
-                  className="w-full py-3.5 bg-stone-100 hover:bg-stone-200 active:scale-95 text-stone-700 font-bold rounded-2xl text-xs flex items-center justify-center gap-2 cursor-pointer transition-all"
+                  className="w-full h-11 bg-stone-100 dark:bg-[#23201d] hover:bg-stone-200 dark:hover:bg-[#2c2824] text-stone-800 dark:text-stone-200 font-semibold rounded-xl text-xs flex items-center justify-center gap-2 cursor-pointer transition-colors border border-stone-200/80 dark:border-[#342f2b]"
                 >
                   <LogOut size={14} />
                   <span>Log Out</span>
@@ -2371,20 +2402,21 @@ const Settings: React.FC<SettingsProps> = ({
           </section>
 
           {/* Delete Account (Danger Zone) */}
-          <section className="bg-rose-50/70 p-6 rounded-[2.5rem] border border-rose-200/80 space-y-4">
-            <div className="flex items-center gap-2 text-rose-700">
-              <ShieldAlert className="w-5 h-5 text-rose-600" />
+          <section className="bg-rose-50/70 dark:bg-rose-950/30 p-6 rounded-2xl border border-rose-200 dark:border-rose-800/50 space-y-4">
+            <div className="flex items-center gap-2 text-rose-800 dark:text-rose-200">
+              <ShieldAlert className="w-5 h-5 text-rose-600 dark:text-rose-400" />
               <h3 className="text-base font-serif font-bold">Delete Account</h3>
             </div>
-            <p className="text-xs text-rose-800 leading-relaxed">
+            <p className="text-xs text-rose-900 dark:text-rose-300 leading-relaxed">
               Permanently remove your Lumina account and all associated personal cycle, journal, and partner connection records.
             </p>
             <button
               type="button"
               onClick={() => setShowDeleteAccountModal(true)}
-              className="w-full py-3.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-2xl text-xs transition-all cursor-pointer shadow-md shadow-rose-200"
+              className="w-full h-11 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl text-xs transition-colors cursor-pointer shadow-xs flex items-center justify-center gap-2"
             >
-              🗑️ Delete Account
+              <Trash2 size={14} />
+              <span>Delete Account</span>
             </button>
           </section>
         </div>
@@ -2395,26 +2427,26 @@ const Settings: React.FC<SettingsProps> = ({
       ) : activeSubTab === 'notifications' ? (
         <div className="space-y-6 animate-fadeIn">
           {/* Master Notification & Companion Controls */}
-          <div className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-pink-50 space-y-5">
+          <div className="bg-white dark:bg-[#1a1816] p-6 rounded-2xl shadow-xs border border-stone-200/80 dark:border-[#2e2a26] space-y-5">
             <div className="space-y-1">
-              <h3 className="text-lg font-serif font-bold text-stone-800 flex items-center gap-2">
-                <Bell size={20} className="text-pink-500" />
-                Notification & Companion Preferences
+              <h3 className="text-lg font-serif font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
+                <Bell size={18} className="text-pink-600 dark:text-pink-400" />
+                Notification &amp; Companion Preferences
               </h3>
-              <p className="text-xs text-stone-500 leading-relaxed">
+              <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
                 Customize your daily greetings, cycle alerts, mindful affirmations, and shared partner updates.
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 pt-1">
               {/* 1. Voice Greetings ON/OFF */}
-              <div className="p-4 bg-gradient-to-br from-pink-50/50 to-rose-50/30 rounded-2xl border border-pink-100/60 flex items-center justify-between gap-3">
+              <div className="p-4 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl border border-stone-200/80 dark:border-[#2e2a26] flex items-center justify-between gap-3">
                 <div className="space-y-0.5">
-                  <p className="text-xs font-bold text-stone-800 flex items-center gap-1.5">
-                    <Volume2 size={15} className="text-pink-500" />
+                  <p className="text-xs font-semibold text-stone-900 dark:text-stone-100 flex items-center gap-1.5">
+                    <Volume2 size={14} className="text-pink-600 dark:text-pink-400" />
                     Voice Greetings
                   </p>
-                  <p className="text-[11px] text-stone-400">Time-of-day audio greeting on app launch</p>
+                  <p className="text-[11px] text-stone-500 dark:text-stone-400">Audio greeting on launch</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer shrink-0">
                   <input 
@@ -2429,18 +2461,18 @@ const Settings: React.FC<SettingsProps> = ({
                       syncUser(updatedUser);
                     }}
                   />
-                  <div className="w-11 h-6 bg-pink-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-pink-500 peer-checked:to-rose-400"></div>
+                  <div className="w-10 h-6 bg-stone-300 dark:bg-stone-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-600"></div>
                 </label>
               </div>
 
               {/* 2. Daily Affirmations ON/OFF */}
-              <div className="p-4 bg-gradient-to-br from-amber-50/40 to-pink-50/30 rounded-2xl border border-pink-100/60 flex items-center justify-between gap-3">
+              <div className="p-4 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl border border-stone-200/80 dark:border-[#2e2a26] flex items-center justify-between gap-3">
                 <div className="space-y-0.5">
-                  <p className="text-xs font-bold text-stone-800 flex items-center gap-1.5">
-                    <Sparkles size={15} className="text-amber-500" />
+                  <p className="text-xs font-semibold text-stone-900 dark:text-stone-100 flex items-center gap-1.5">
+                    <Sparkles size={14} className="text-amber-600 dark:text-amber-400" />
                     Daily Affirmations
                   </p>
-                  <p className="text-[11px] text-stone-400">Poetic, empowering mindset nudges</p>
+                  <p className="text-[11px] text-stone-500 dark:text-stone-400">Mindset &amp; phase nudges</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer shrink-0">
                   <input 
@@ -2455,18 +2487,18 @@ const Settings: React.FC<SettingsProps> = ({
                       syncUser(updatedUser);
                     }}
                   />
-                  <div className="w-11 h-6 bg-amber-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-amber-500 peer-checked:to-rose-400"></div>
+                  <div className="w-10 h-6 bg-stone-300 dark:bg-stone-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
                 </label>
               </div>
 
               {/* 3. Partner Notifications ON/OFF */}
-              <div className="p-4 bg-gradient-to-br from-purple-50/50 to-pink-50/30 rounded-2xl border border-purple-100/60 flex items-center justify-between gap-3">
+              <div className="p-4 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl border border-stone-200/80 dark:border-[#2e2a26] flex items-center justify-between gap-3">
                 <div className="space-y-0.5">
-                  <p className="text-xs font-bold text-stone-800 flex items-center gap-1.5">
-                    <Heart size={15} className="text-purple-500" />
+                  <p className="text-xs font-semibold text-stone-900 dark:text-stone-100 flex items-center gap-1.5">
+                    <Heart size={14} className="text-purple-600 dark:text-purple-400" />
                     Partner Notifications
                   </p>
-                  <p className="text-[11px] text-stone-400">Sync cycle & care alerts to linked partner</p>
+                  <p className="text-[11px] text-stone-500 dark:text-stone-400">Sync care alerts to partner</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer shrink-0">
                   <input 
@@ -2478,137 +2510,133 @@ const Settings: React.FC<SettingsProps> = ({
                       updateSettings({ partnerNotificationsEnabled: val });
                     }}
                   />
-                  <div className="w-11 h-6 bg-purple-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-purple-500 peer-checked:to-indigo-500"></div>
+                  <div className="w-10 h-6 bg-stone-300 dark:bg-stone-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
                 </label>
               </div>
             </div>
           </div>
 
           {/* Welcome Voice Greeting Card */}
-          <div className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-pink-50 space-y-6">
+          <div className="bg-white dark:bg-[#1a1816] p-6 rounded-2xl shadow-xs border border-stone-200/80 dark:border-[#2e2a26] space-y-5">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-pink-100 text-pink-500 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-xl bg-pink-50 dark:bg-pink-950/40 text-pink-600 dark:text-pink-400 flex items-center justify-center shrink-0">
                     <Volume2 className="w-4 h-4" />
                   </div>
-                  <h4 className="text-lg font-serif font-bold text-stone-800">
+                  <h4 className="text-base font-serif font-bold text-stone-900 dark:text-stone-100">
                     Avatar Companion Greetings
                   </h4>
                 </div>
-                <p className="text-xs text-stone-500 leading-relaxed">
-                  Your selected wellness companion greets you with time-aware and dynamic health reflections every time you open Lumina.
+                <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
+                  Your selected companion greets you with time-aware reflections when you open Lumina.
                 </p>
               </div>
 
-              <div className="flex items-center gap-3 shrink-0">
-                <span className={`text-xs font-bold px-3 py-1 rounded-full ${
-                  Boolean(settings.welcomeVoiceEnabled ?? user.welcomeVoiceEnabled ?? true)
-                    ? 'bg-pink-100 text-pink-700'
-                    : 'bg-stone-100 text-stone-500'
-                }`}>
-                  {Boolean(settings.welcomeVoiceEnabled ?? user.welcomeVoiceEnabled ?? true) ? 'Voice Active 🌸' : 'Muted (Banner Only)'}
-                </span>
-              </div>
+              <span className={`text-xs font-semibold px-3 py-1 rounded-lg border shrink-0 ${
+                Boolean(settings.welcomeVoiceEnabled ?? user.welcomeVoiceEnabled ?? true)
+                  ? 'bg-pink-50 dark:bg-pink-950/40 border-pink-200 dark:border-pink-800/50 text-pink-700 dark:text-pink-300'
+                  : 'bg-stone-100 dark:bg-[#23201d] border-stone-200 dark:border-[#342f2b] text-stone-600 dark:text-stone-400'
+              }`}>
+                {Boolean(settings.welcomeVoiceEnabled ?? user.welcomeVoiceEnabled ?? true) ? 'Voice Active' : 'Muted (Banner Only)'}
+              </span>
             </div>
 
             {Boolean(settings.welcomeVoiceEnabled ?? user.welcomeVoiceEnabled ?? true) ? (
               <div className="space-y-4 animate-fadeIn">
-                {/* Current Live Greeting Preview based on Time */}
-                <div className="p-4 bg-gradient-to-br from-pink-50/60 to-rose-50/40 rounded-2xl border border-pink-100/60 space-y-2">
-                  <div className="flex items-center justify-between text-[11px] font-bold text-pink-600 flex-wrap gap-1">
-                    <span className="flex items-center gap-1.5 uppercase tracking-wider text-[10px]">
-                      <span>{currentPreviewGreeting.emoji}</span>
+                <div className="p-4 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl border border-stone-200/80 dark:border-[#2e2a26] space-y-2">
+                  <div className="flex items-center justify-between text-xs font-semibold text-pink-700 dark:text-pink-400 flex-wrap gap-1">
+                    <span className="flex items-center gap-1.5">
                       <span>Current Schedule: {currentPreviewGreeting.timeLabel}</span>
                     </span>
-                    <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-pink-100/70 text-pink-700 font-semibold">
-                      Personalized for {userFirstName} 🌸
+                    <span className="text-[11px] px-2.5 py-0.5 rounded-md bg-pink-50 dark:bg-pink-950/40 text-pink-700 dark:text-pink-300 font-medium">
+                      Personalized for {userFirstName}
                     </span>
                   </div>
-                  <p className="text-xs font-serif italic text-stone-700 leading-relaxed bg-white/80 p-3 rounded-xl border border-pink-100/40">
+                  <p className="text-xs font-serif italic text-stone-700 dark:text-stone-300 leading-relaxed bg-white dark:bg-[#1a1816] p-3 rounded-lg border border-stone-200/70 dark:border-[#342f2b]">
                     “{currentPreviewGreeting.displayText}”
                   </p>
                 </div>
 
                 {/* Time-Based Schedule Table */}
                 <div className="space-y-2 pt-1">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-pink-600 block">
-                    Personalized Time-of-Day Schedule
+                  <span className="text-[11px] font-semibold tracking-wide text-stone-500 dark:text-stone-400 block">
+                    Personalized time-of-day schedule
                   </span>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    <div className="p-3.5 bg-pink-50/20 rounded-2xl border border-pink-100/40 space-y-1">
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-stone-800">
-                        <span>🌞</span>
+                    <div className="p-3.5 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl border border-stone-200/80 dark:border-[#2e2a26] space-y-1">
+                      <div className="flex items-center gap-1.5 text-xs font-semibold text-stone-900 dark:text-stone-100">
+                        <Sunrise size={14} className="text-amber-500" />
                         <span>Morning (5:00 AM – 11:59 AM)</span>
                       </div>
-                      <p className="text-[11px] text-stone-500 leading-snug">
-                        “Good morning, {userFirstName} 🌞. I hope you slept well.”
+                      <p className="text-[11px] text-stone-600 dark:text-stone-400 leading-snug">
+                        “Good morning, {userFirstName}. I hope you slept well.”
                       </p>
                     </div>
 
-                    <div className="p-3.5 bg-pink-50/20 rounded-2xl border border-pink-100/40 space-y-1">
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-stone-800">
-                        <span>🌸</span>
+                    <div className="p-3.5 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl border border-stone-200/80 dark:border-[#2e2a26] space-y-1">
+                      <div className="flex items-center gap-1.5 text-xs font-semibold text-stone-900 dark:text-stone-100">
+                        <Sun size={14} className="text-pink-500" />
                         <span>Afternoon (12:00 PM – 4:59 PM)</span>
                       </div>
-                      <p className="text-[11px] text-stone-500 leading-snug">
-                        “Good afternoon, {userFirstName} 🌸. How are you feeling today?”
+                      <p className="text-[11px] text-stone-600 dark:text-stone-400 leading-snug">
+                        “Good afternoon, {userFirstName}. How are you feeling today?”
                       </p>
                     </div>
 
-                    <div className="p-3.5 bg-pink-50/20 rounded-2xl border border-pink-100/40 space-y-1">
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-stone-800">
-                        <span>✨</span>
+                    <div className="p-3.5 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl border border-stone-200/80 dark:border-[#2e2a26] space-y-1">
+                      <div className="flex items-center gap-1.5 text-xs font-semibold text-stone-900 dark:text-stone-100">
+                        <Sunset size={14} className="text-rose-500" />
                         <span>Evening (5:00 PM – 8:59 PM)</span>
                       </div>
-                      <p className="text-[11px] text-stone-500 leading-snug">
-                        “Good evening, {userFirstName} ✨. Let’s take a moment to check in with your wellness journey.”
+                      <p className="text-[11px] text-stone-600 dark:text-stone-400 leading-snug">
+                        “Good evening, {userFirstName}. Let’s check in with your wellness journey.”
                       </p>
                     </div>
 
-                    <div className="p-3.5 bg-pink-50/20 rounded-2xl border border-pink-100/40 space-y-1">
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-stone-800">
-                        <span>🌙</span>
+                    <div className="p-3.5 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl border border-stone-200/80 dark:border-[#2e2a26] space-y-1">
+                      <div className="flex items-center gap-1.5 text-xs font-semibold text-stone-900 dark:text-stone-100">
+                        <Moon size={14} className="text-indigo-500" />
                         <span>Night (9:00 PM – 4:59 AM)</span>
                       </div>
-                      <p className="text-[11px] text-stone-500 leading-snug">
-                        “Good night, {userFirstName} 🌙. Remember to take care of yourself and get enough rest.”
+                      <p className="text-[11px] text-stone-600 dark:text-stone-400 leading-snug">
+                        “Good night, {userFirstName}. Remember to rest and recharge.”
                       </p>
                     </div>
                   </div>
                 </div>
 
                 {/* Preview Controls */}
-                <div className="pt-2 flex flex-col sm:flex-row gap-2.5">
+                <div className="pt-1 flex flex-col sm:flex-row gap-2.5">
                   <button
                     type="button"
                     onClick={() => handleTestWelcomeVoice()}
                     disabled={isPlayingVoiceTest}
-                    className="flex-1 py-3.5 bg-gradient-to-r from-pink-500 to-rose-400 text-white font-bold text-xs rounded-2xl shadow-md hover:opacity-90 active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    className="flex-1 h-11 bg-pink-600 hover:bg-pink-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                   >
-                    <Volume2 size={15} className={isPlayingVoiceTest ? 'animate-bounce' : ''} />
-                    <span>{isPlayingVoiceTest ? 'Playing Voice Greeting...' : '🔊 Test Welcome Voice Greeting'}</span>
+                    <Volume2 size={15} />
+                    <span>{isPlayingVoiceTest ? 'Playing Voice Greeting...' : 'Test Welcome Voice Greeting'}</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => handleRotatePreview()}
-                    className="px-4 py-3.5 bg-pink-50 hover:bg-pink-100 text-pink-700 font-bold text-xs rounded-2xl border border-pink-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+                    className="px-4 h-11 bg-stone-50 dark:bg-[#23201d] hover:bg-stone-100 dark:hover:bg-[#2c2824] text-stone-800 dark:text-stone-200 font-semibold text-xs rounded-xl border border-stone-200 dark:border-[#342f2b] transition-colors flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
                     title="Rotate greeting variation"
                   >
-                    <Sparkles size={14} className="text-pink-500" />
+                    <Sparkles size={14} className="text-pink-600 dark:text-pink-400" />
                     <span>Rotate Message</span>
                   </button>
                 </div>
 
-                <p className="text-[10px] text-stone-400 text-center">
-                  💡 Plays automatically on app launch. The test button is for auditioning voices and is not required for greetings to play.
+                <p className="text-[11px] text-stone-500 dark:text-stone-400 text-center">
+                  Plays automatically on app launch when sound is enabled.
                 </p>
               </div>
             ) : (
-              <div className="p-4 bg-stone-50 rounded-2xl text-center space-y-1 border border-stone-100">
-                <p className="text-xs font-semibold text-stone-600">Voice Greeting Audio is Off</p>
-                <p className="text-[11px] text-stone-400">A visual text greeting card will be shown on screen whenever you open Lumina.</p>
+              <div className="p-4 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl text-center space-y-1 border border-stone-200/80 dark:border-[#2e2a26]">
+                <p className="text-xs font-semibold text-stone-700 dark:text-stone-300">Voice Greeting Audio is Off</p>
+                <p className="text-[11px] text-stone-500 dark:text-stone-400">A visual text greeting card will be shown when you open Lumina.</p>
               </div>
             )}
           </div>
@@ -2616,43 +2644,44 @@ const Settings: React.FC<SettingsProps> = ({
           {settings.enabled && (
             <div className="space-y-6">
               {/* Notification Tone Selection */}
-              <div className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-pink-50 space-y-6">
+              <div className="bg-white dark:bg-[#1a1816] p-6 rounded-2xl shadow-xs border border-stone-200/80 dark:border-[#2e2a26] space-y-5">
                 <div className="space-y-1">
-                  <h4 className="text-lg font-serif font-bold text-stone-800 flex items-center gap-2">
-                    <Sparkles size={18} className="text-pink-500" />
-                    Reminder Tone & Personality
+                  <h4 className="text-base font-serif font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
+                    <Sparkles size={17} className="text-pink-600 dark:text-pink-400" />
+                    Reminder Tone &amp; Personality
                   </h4>
-                  <p className="text-xs text-stone-500">
-                    Choose how notifications sound. Make your cycle companion feel supportive, playful, affirming, or poetic.
+                  <p className="text-xs text-stone-600 dark:text-stone-400">
+                    Choose how reminders sound: supportive, playful, affirming, or poetic.
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {(Object.keys(tonePreviews) as Array<keyof typeof tonePreviews>).map((key) => {
                     const info = tonePreviews[key];
                     const isSelected = settings.toneStyle === key;
                     return (
                       <button
                         key={key}
+                        type="button"
                         onClick={() => updateSettings({ toneStyle: key })}
-                        className={`text-left p-5 rounded-3xl border-2 transition-all flex flex-col gap-2 group relative overflow-hidden cursor-pointer ${
+                        className={`text-left p-4 rounded-xl border transition-colors flex flex-col gap-2 relative cursor-pointer ${
                           isSelected 
-                            ? 'bg-gradient-to-br from-pink-50/50 to-rose-50/50 border-pink-300 shadow-md shadow-pink-100/50' 
-                            : 'bg-white border-pink-50 hover:border-pink-200'
+                            ? 'bg-pink-50/50 dark:bg-pink-950/30 border-pink-400 dark:border-pink-600' 
+                            : 'bg-[#faf8f6] dark:bg-[#23201d] border-stone-200/80 dark:border-[#2e2a26] hover:border-pink-300'
                         }`}
                       >
                         {isSelected && (
-                          <span className="absolute top-3 right-3 w-5 h-5 bg-pink-500 rounded-full flex items-center justify-center text-white scale-110">
-                            <Check size={10} strokeWidth={4} />
+                          <span className="absolute top-3.5 right-3.5 w-5 h-5 bg-pink-600 rounded-full flex items-center justify-center text-white">
+                            <Check size={11} strokeWidth={3} />
                           </span>
                         )}
-                        <span className="text-xs font-bold text-pink-600">
+                        <span className="text-xs font-semibold text-pink-700 dark:text-pink-400">
                           {info.label}
                         </span>
-                        <p className="text-[11px] text-stone-400 font-medium leading-relaxed">
+                        <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
                           {info.desc}
                         </p>
-                        <div className="bg-white/90 p-2.5 rounded-2xl border border-pink-100/40 text-[10px] font-medium text-pink-600 italic leading-snug mt-1">
+                        <div className="bg-white dark:bg-[#1a1816] p-2.5 rounded-lg border border-stone-200/70 dark:border-[#342f2b] text-[11px] font-medium text-stone-700 dark:text-stone-300 italic leading-snug mt-auto">
                           {info.sample}
                         </div>
                       </button>
@@ -2660,32 +2689,29 @@ const Settings: React.FC<SettingsProps> = ({
                   })}
                 </div>
 
-                {/* Instant trigger for preview */}
-                <div className="pt-2">
-                  <button
-                    type="button"
-                    onClick={() => triggerSimulation('periodStarting', false)}
-                    className="w-full py-3.5 bg-gradient-to-r from-pink-500 to-rose-400 text-white font-bold text-xs rounded-2xl shadow-md hover:opacity-90 active:scale-[0.99] transition-all flex items-center justify-center gap-2 group cursor-pointer"
-                  >
-                    <Volume2 size={15} />
-                    <span>Preview Selected Reminder Tone</span>
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => triggerSimulation('periodStarting', false)}
+                  className="w-full h-11 bg-pink-600 hover:bg-pink-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Volume2 size={15} />
+                  <span>Preview Selected Reminder Tone</span>
+                </button>
               </div>
 
               {/* Cycle Alert Toggles */}
-              <div className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-pink-50 space-y-5">
+              <div className="bg-white dark:bg-[#1a1816] p-6 rounded-2xl shadow-xs border border-stone-200/80 dark:border-[#2e2a26] space-y-4">
                 <div className="space-y-1">
-                  <h4 className="text-lg font-serif font-bold text-stone-800 flex items-center gap-2">
-                    <Bell size={18} className="text-pink-500" />
-                    Cycle & Ovulation Alerts
+                  <h4 className="text-base font-serif font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
+                    <Bell size={17} className="text-pink-600 dark:text-pink-400" />
+                    Cycle &amp; Ovulation Alerts
                   </h4>
-                  <p className="text-xs text-stone-500">
+                  <p className="text-xs text-stone-600 dark:text-stone-400">
                     Choose which notifications you would like to receive.
                   </p>
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   {[
                     { key: 'periodStarting' as const, label: 'Period Approaching', desc: 'Gentle heads up 2 days before your expected start' },
                     { key: 'periodStarted' as const, label: 'Period Day 1 Check-In', desc: 'A warm greeting on the expected start of your period' },
@@ -2694,64 +2720,62 @@ const Settings: React.FC<SettingsProps> = ({
                     { key: 'periodEnding' as const, label: 'Period Ending & Transition', desc: 'Gentle check-in as your bleeding wraps up' },
                     { key: 'lutealPhase' as const, label: 'Luteal Phase & Self-Care', desc: 'Mindful reminders for rest and hydration before your next cycle' },
                   ].map((item) => (
-                    <div key={item.key} className="flex items-center justify-between p-3.5 bg-rose-50/25 rounded-2xl border border-rose-100/30">
-                      <div className="space-y-0.5">
-                        <p className="text-xs font-bold text-stone-800">{item.label}</p>
-                        <p className="text-[11px] text-stone-400">{item.desc}</p>
+                    <div key={item.key} className="flex items-center justify-between p-3.5 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl border border-stone-200/80 dark:border-[#2e2a26]">
+                      <div className="space-y-0.5 pr-3">
+                        <p className="text-xs font-semibold text-stone-900 dark:text-stone-100">{item.label}</p>
+                        <p className="text-[11px] text-stone-500 dark:text-stone-400">{item.desc}</p>
                       </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
+                      <label className="relative inline-flex items-center cursor-pointer shrink-0">
                         <input 
                           type="checkbox" 
                           className="sr-only peer"
                           checked={settings.types[item.key]}
                           onChange={(e) => updateTypes(item.key, e.target.checked)}
                         />
-                        <div className="w-9 h-5 bg-pink-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-pink-500 peer-checked:to-rose-400"></div>
+                        <div className="w-9 h-5 bg-stone-300 dark:bg-stone-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-pink-600"></div>
                       </label>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Choose which notifications you would like your partner to receive */}
-              <div className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-purple-100/80 space-y-6">
+              {/* Partner Notification Controls */}
+              <div className="bg-white dark:bg-[#1a1816] p-6 rounded-2xl shadow-xs border border-stone-200/80 dark:border-[#2e2a26] space-y-5">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-xl bg-purple-100/70 text-purple-600 flex items-center justify-center text-base">
-                        <Heart className="w-4 h-4 fill-purple-400 text-purple-500" />
+                      <div className="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+                        <Heart className="w-4 h-4" />
                       </div>
-                      <h4 className="text-lg font-serif font-bold text-stone-800">
-                        Choose which notifications you would like your partner to receive
+                      <h4 className="text-base font-serif font-bold text-stone-900 dark:text-stone-100">
+                        Partner Notification Preferences
                       </h4>
                     </div>
-                    <p className="text-xs text-stone-500 leading-relaxed">
-                      Select which cycle updates, fertile windows, and gentle care nudges are shared with your partner.
+                    <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
+                      Select which cycle updates, fertile windows, and care nudges are shared with your partner.
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-3 shrink-0">
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        className="sr-only peer"
-                        checked={Boolean(settings.partnerNotificationsEnabled)}
-                        onChange={(e) => updateSettings({ partnerNotificationsEnabled: e.target.checked })}
-                      />
-                      <div className="w-12 h-6 bg-purple-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-purple-500 peer-checked:to-indigo-500"></div>
-                    </label>
-                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                    <input 
+                      type="checkbox" 
+                      className="sr-only peer"
+                      checked={Boolean(settings.partnerNotificationsEnabled)}
+                      onChange={(e) => updateSettings({ partnerNotificationsEnabled: e.target.checked })}
+                    />
+                    <div className="w-11 h-6 bg-stone-300 dark:bg-stone-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                  </label>
                 </div>
 
                 {/* Partner status banner */}
-                <div className="p-3.5 bg-purple-50/40 rounded-2xl border border-purple-100/60 flex items-center justify-between gap-2 text-xs">
-                  <div className="flex items-center gap-2 text-purple-900 font-medium">
-                    <Users className="w-4 h-4 text-purple-500" />
+                <div className="p-3.5 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl border border-stone-200/80 dark:border-[#2e2a26] flex items-center justify-between gap-2 text-xs">
+                  <div className="flex items-center gap-2 text-stone-700 dark:text-stone-300 font-medium">
+                    <Users className="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0" />
                     <span>
                       {user.partnerName || user.isPartnerLinked ? (
-                        <>Connected Partner: <strong className="font-bold text-purple-700">{user.partnerName || 'Partner'}</strong></>
+                        <>Connected Partner: <strong className="font-semibold text-purple-700 dark:text-purple-300">{user.partnerName || 'Partner'}</strong></>
                       ) : (
-                        <>No partner linked yet — preferences will automatically apply once linked in Partner Mode.</>
+                        <>No partner linked yet — preferences apply automatically once linked in Partner Mode.</>
                       )}
                     </span>
                   </div>
@@ -2759,7 +2783,7 @@ const Settings: React.FC<SettingsProps> = ({
                     <button
                       type="button"
                       onClick={() => setActiveSubTab('partner')}
-                      className="text-[11px] font-bold text-purple-600 hover:text-purple-800 underline shrink-0 cursor-pointer"
+                      className="text-xs font-semibold text-purple-700 dark:text-purple-400 hover:underline shrink-0 cursor-pointer"
                     >
                       Connect &rarr;
                     </button>
@@ -2769,44 +2793,20 @@ const Settings: React.FC<SettingsProps> = ({
                 {settings.partnerNotificationsEnabled ? (
                   <div className="space-y-4 animate-fadeIn">
                     <div className="space-y-2.5">
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-purple-600 block">Cycle & Fertility Alerts</span>
-                      <div className="space-y-2.5">
+                      <span className="text-[11px] font-semibold tracking-wide text-purple-700 dark:text-purple-400 block">Cycle &amp; fertility alerts</span>
+                      <div className="space-y-2">
                         {[
-                          { 
-                            key: 'periodStarting' as const, 
-                            label: 'Period Approaching', 
-                            desc: 'Gentle heads up 2 days before your period so your partner can prepare extra comfort and care' 
-                          },
-                          { 
-                            key: 'periodStarted' as const, 
-                            label: 'Period Day 1 Check-In', 
-                            desc: 'Notifies your partner when your period begins' 
-                          },
-                          { 
-                            key: 'fertileWindow' as const, 
-                            label: 'Fertile Window Begins', 
-                            desc: 'Alerts your partner when your estimated fertile window starts' 
-                          },
-                          { 
-                            key: 'ovulation' as const, 
-                            label: 'Peak Ovulation Day', 
-                            desc: 'Shared reminder on your estimated peak ovulation day' 
-                          },
-                          { 
-                            key: 'periodEnding' as const, 
-                            label: 'Period Ending', 
-                            desc: 'Updates your partner as your bleeding concludes' 
-                          },
-                          { 
-                            key: 'pregnancyRisk' as const, 
-                            label: 'Luteal Phase & Wellness Nudges', 
-                            desc: 'Supportive suggestions for rest, comfort foods, and hydration during the luteal phase' 
-                          },
+                          { key: 'periodStarting' as const, label: 'Period Approaching', desc: 'Gentle heads up 2 days before your period so your partner can offer care' },
+                          { key: 'periodStarted' as const, label: 'Period Day 1 Check-In', desc: 'Notifies your partner when your period begins' },
+                          { key: 'fertileWindow' as const, label: 'Fertile Window Begins', desc: 'Alerts your partner when your estimated fertile window starts' },
+                          { key: 'ovulation' as const, label: 'Peak Ovulation Day', desc: 'Shared reminder on your estimated peak ovulation day' },
+                          { key: 'periodEnding' as const, label: 'Period Ending', desc: 'Updates your partner as your bleeding concludes' },
+                          { key: 'pregnancyRisk' as const, label: 'Luteal Phase & Wellness Nudges', desc: 'Supportive suggestions for rest, comfort, and hydration during the luteal phase' },
                         ].map((item) => (
-                          <div key={item.key} className="flex items-center justify-between p-3.5 bg-purple-50/20 hover:bg-purple-50/40 rounded-2xl border border-purple-100/50 transition-all">
+                          <div key={item.key} className="flex items-center justify-between p-3.5 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl border border-stone-200/80 dark:border-[#2e2a26]">
                             <div className="space-y-0.5 pr-3">
-                              <p className="text-xs font-bold text-stone-800">{item.label}</p>
-                              <p className="text-[11px] text-stone-400 leading-snug">{item.desc}</p>
+                              <p className="text-xs font-semibold text-stone-900 dark:text-stone-100">{item.label}</p>
+                              <p className="text-[11px] text-stone-500 dark:text-stone-400 leading-snug">{item.desc}</p>
                             </div>
                             <label className="relative inline-flex items-center cursor-pointer shrink-0">
                               <input 
@@ -2815,38 +2815,25 @@ const Settings: React.FC<SettingsProps> = ({
                                 checked={Boolean(settings.partnerReceiveTypes?.[item.key] ?? true)}
                                 onChange={(e) => updatePartnerReceiveTypes(item.key, e.target.checked)}
                               />
-                              <div className="w-9 h-5 bg-purple-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-purple-500 peer-checked:to-indigo-500"></div>
+                              <div className="w-9 h-5 bg-stone-300 dark:bg-stone-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
                             </label>
                           </div>
                         ))}
                       </div>
                     </div>
 
-                    {/* Mood & Support preferences */}
                     <div className="space-y-2.5 pt-2">
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-purple-600 block">Support & Mood Updates</span>
-                      <div className="space-y-2.5">
+                      <span className="text-[11px] font-semibold tracking-wide text-purple-700 dark:text-purple-400 block">Support &amp; mood updates</span>
+                      <div className="space-y-2">
                         {[
-                          {
-                            key: 'moodUpdates',
-                            label: 'Mood & Energy Updates',
-                            desc: 'Notify partner when you share a mood check-in or low energy state so they can support you'
-                          },
-                          {
-                            key: 'supportReminders',
-                            label: 'Comfort & Care Reminders',
-                            desc: 'Gentle ideas for your partner to bring warm tea, snacks, or run a soothing bath'
-                          },
-                          {
-                            key: 'educationalInsights',
-                            label: 'Cycle & Educational Tips',
-                            desc: 'Bite-sized cycle facts and empathy tips to help your partner better understand your rhythm'
-                          }
+                          { key: 'moodUpdates', label: 'Mood & Energy Updates', desc: 'Notify partner when you share a mood check-in or low energy state' },
+                          { key: 'supportReminders', label: 'Comfort & Care Reminders', desc: 'Gentle ideas for your partner to bring warm tea, snacks, or rest' },
+                          { key: 'educationalInsights', label: 'Cycle & Educational Tips', desc: 'Bite-sized cycle facts and empathy tips to help your partner understand your rhythm' }
                         ].map((item) => (
-                          <div key={item.key} className="flex items-center justify-between p-3.5 bg-purple-50/20 hover:bg-purple-50/40 rounded-2xl border border-purple-100/50 transition-all">
+                          <div key={item.key} className="flex items-center justify-between p-3.5 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl border border-stone-200/80 dark:border-[#2e2a26]">
                             <div className="space-y-0.5 pr-3">
-                              <p className="text-xs font-bold text-stone-800">{item.label}</p>
-                              <p className="text-[11px] text-stone-400 leading-snug">{item.desc}</p>
+                              <p className="text-xs font-semibold text-stone-900 dark:text-stone-100">{item.label}</p>
+                              <p className="text-[11px] text-stone-500 dark:text-stone-400 leading-snug">{item.desc}</p>
                             </div>
                             <label className="relative inline-flex items-center cursor-pointer shrink-0">
                               <input 
@@ -2855,23 +2842,22 @@ const Settings: React.FC<SettingsProps> = ({
                                 checked={Boolean(user.partnerNotificationPreferences?.[item.key as keyof typeof user.partnerNotificationPreferences] ?? true)}
                                 onChange={(e) => updatePartnerPref(item.key, e.target.checked)}
                               />
-                              <div className="w-9 h-5 bg-purple-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-purple-500 peer-checked:to-indigo-500"></div>
+                              <div className="w-9 h-5 bg-stone-300 dark:bg-stone-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
                             </label>
                           </div>
                         ))}
                       </div>
                     </div>
 
-                    {/* Pregnancy Companion Alerts for Partner if in pregnancy mode */}
                     {user.isPregnancyMode && (
-                      <div className="space-y-3 pt-3 border-t border-purple-100/60">
+                      <div className="space-y-3 pt-3 border-t border-stone-200/80 dark:border-[#2e2a26]">
                         <div className="flex items-center justify-between">
                           <div className="space-y-0.5">
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-amber-600 flex items-center gap-1">
+                            <span className="text-xs font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-1">
                               <Baby className="w-3.5 h-3.5" />
                               Pregnancy Companion Alerts
                             </span>
-                            <p className="text-[11px] text-stone-400">Share gestational progress and doctor check-ins</p>
+                            <p className="text-[11px] text-stone-500 dark:text-stone-400">Share gestational progress and doctor check-ins</p>
                           </div>
                           <label className="relative inline-flex items-center cursor-pointer">
                             <input 
@@ -2880,7 +2866,7 @@ const Settings: React.FC<SettingsProps> = ({
                               checked={Boolean(settings.partnerPregnancyEnabled)}
                               onChange={(e) => updateSettings({ partnerPregnancyEnabled: e.target.checked })}
                             />
-                            <div className="w-9 h-5 bg-amber-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-amber-400 peer-checked:to-rose-400"></div>
+                            <div className="w-9 h-5 bg-stone-300 dark:bg-stone-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-600"></div>
                           </label>
                         </div>
 
@@ -2893,13 +2879,13 @@ const Settings: React.FC<SettingsProps> = ({
                               { key: 'dueDateCountdown' as const, label: 'Due Date Countdown & Trimester Updates' },
                               { key: 'laborNear' as const, label: 'Labor & Hospital Bag Readiness' },
                             ].map((pItem) => (
-                              <div key={pItem.key} className="flex items-center justify-between p-3 bg-amber-50/20 rounded-xl border border-amber-100/40">
-                                <span className="text-xs font-semibold text-stone-700">{pItem.label}</span>
+                              <div key={pItem.key} className="flex items-center justify-between p-3 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl border border-stone-200/80 dark:border-[#2e2a26]">
+                                <span className="text-xs font-medium text-stone-800 dark:text-stone-200">{pItem.label}</span>
                                 <input 
                                   type="checkbox"
                                   checked={Boolean(settings.partnerPregnancyReceiveTypes?.[pItem.key] ?? true)}
                                   onChange={(e) => updatePartnerPregnancyReceiveTypes(pItem.key, e.target.checked)}
-                                  className="w-4 h-4 text-amber-500 rounded border-amber-200 accent-amber-500 cursor-pointer"
+                                  className="w-4 h-4 rounded accent-amber-600 cursor-pointer"
                                 />
                               </div>
                             ))}
@@ -2908,22 +2894,19 @@ const Settings: React.FC<SettingsProps> = ({
                       </div>
                     )}
 
-                    {/* Preview Partner Notification Button */}
-                    <div className="pt-2">
-                      <button
-                        type="button"
-                        onClick={() => triggerSimulation('periodStarting', true)}
-                        className="w-full py-3.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold text-xs rounded-2xl shadow-md hover:opacity-90 active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer"
-                      >
-                        <HeartHandshake size={15} />
-                        <span>Preview What Partner Sees 💕</span>
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => triggerSimulation('periodStarting', true)}
+                      className="w-full h-11 bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <HeartHandshake size={15} />
+                      <span>Preview What Partner Sees</span>
+                    </button>
                   </div>
                 ) : (
-                  <div className="p-4 bg-stone-50 rounded-2xl text-center space-y-1 border border-stone-100">
-                    <p className="text-xs font-semibold text-stone-600">Partner notifications are paused</p>
-                    <p className="text-[11px] text-stone-400">Toggle the switch above on to choose which reminders your partner receives.</p>
+                  <div className="p-4 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl text-center space-y-1 border border-stone-200/80 dark:border-[#2e2a26]">
+                    <p className="text-xs font-semibold text-stone-700 dark:text-stone-300">Partner notifications are paused</p>
+                    <p className="text-[11px] text-stone-500 dark:text-stone-400">Turn on the switch above to choose which reminders your partner receives.</p>
                   </div>
                 )}
               </div>
@@ -2944,91 +2927,91 @@ const Settings: React.FC<SettingsProps> = ({
       /* ========================================================================= */
       ) : activeSubTab === 'music_sanctuary' ? (
         <div className="space-y-6 animate-fadeIn">
-          <section className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-pink-50 space-y-6">
+          <section className="bg-white dark:bg-[#1a1816] p-6 md:p-8 rounded-2xl shadow-xs border border-stone-200/80 dark:border-[#2e2a26] space-y-6">
             <div className="space-y-1">
-              <h3 className="text-xl font-serif font-bold text-stone-800 flex items-center gap-2">
-                <Volume2 size={20} className="text-pink-500" />
+              <h3 className="text-xl font-serif font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
+                <Music size={20} className="text-pink-600 dark:text-pink-400" />
                 Music & Sanctuary
               </h3>
-              <p className="text-xs text-stone-500 leading-relaxed">
+              <p className="text-xs text-stone-500 dark:text-stone-400 leading-relaxed">
                 Immerse yourself in calming soundscapes designed to ease menstrual discomfort, calm the mind, and support restful sleep.
               </p>
             </div>
 
             <div className="space-y-5">
               {/* Playback Control HUD */}
-              <div className="bg-gradient-to-r from-pink-500/10 to-rose-500/5 p-6 rounded-3xl border border-pink-100/40 flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="bg-[#faf8f6] dark:bg-[#23201d] p-5 sm:p-6 rounded-xl border border-stone-200/80 dark:border-[#342f2b] flex flex-col md:flex-row items-center justify-between gap-4">
                 <div className="space-y-1 text-center md:text-left">
-                  <h4 className="text-xs font-bold text-stone-800">
+                  <h4 className="text-xs font-bold text-stone-800 dark:text-stone-100">
                     Ambient Audio Player
                   </h4>
-                  <p className="text-[11px] text-stone-500">
-                    {isMusicPlaying ? "🎶 Playing soft restorative frequencies" : "🔇 Soundscape is currently paused"}
+                  <p className="text-[11px] text-stone-500 dark:text-stone-400">
+                    {isMusicPlaying ? 'Playing restorative soundscape' : 'Soundscape is currently paused'}
                   </p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5">
                   <button
                     type="button"
                     onClick={toggleMusicActive}
-                    className={`py-2 px-4 rounded-xl text-xs font-bold border cursor-pointer transition-all ${
-                      isMusicActive 
-                        ? 'bg-pink-500 text-white border-pink-400 shadow-md' 
-                        : 'bg-white text-pink-500 border-pink-200 hover:bg-pink-50/40'
+                    className={`py-2 px-4 rounded-xl text-xs font-semibold border cursor-pointer transition-colors ${
+                      isMusicActive
+                        ? 'bg-pink-600 text-white border-pink-600'
+                        : 'bg-white dark:bg-[#1a1816] text-stone-700 dark:text-stone-200 border-stone-200/80 dark:border-[#342f2b] hover:bg-stone-50 dark:hover:bg-[#2b2724]'
                     }`}
                   >
-                    {isMusicActive ? "Sound Enabled 🔊" : "Muted 🔇"}
+                    {isMusicActive ? 'Sound Enabled' : 'Muted'}
                   </button>
                   <button
                     type="button"
                     onClick={toggleMusic}
-                    className="py-2.5 px-5 bg-gradient-to-r from-pink-500 to-rose-400 hover:opacity-90 text-white font-bold rounded-xl text-xs shadow-md cursor-pointer transition-all"
+                    className="py-2.5 px-5 bg-pink-600 hover:bg-pink-700 text-white font-semibold rounded-xl text-xs shadow-xs cursor-pointer transition-colors"
                   >
-                    {isMusicPlaying ? "Pause ⏸" : "Play Ambient ▶"}
+                    {isMusicPlaying ? 'Pause' : 'Play Ambient'}
                   </button>
                 </div>
               </div>
 
               {/* Volume Slider */}
-              <div className="bg-rose-50/30 p-5 rounded-3xl border border-rose-100/30 flex flex-col gap-2">
+              <div className="bg-[#faf8f6] dark:bg-[#23201d] p-5 rounded-xl border border-stone-200/80 dark:border-[#342f2b] flex flex-col gap-2">
                 <div className="flex justify-between items-center">
-                  <label className="text-xs font-bold text-pink-600 flex items-center gap-1.5">
-                    <span>🔊</span> Volume
+                  <label className="text-xs font-semibold text-stone-800 dark:text-stone-200 flex items-center gap-1.5">
+                    <Volume2 size={14} className="text-pink-600 dark:text-pink-400" /> Volume
                   </label>
-                  <span className="text-xs font-bold text-pink-700">{Math.round(volume * 100)}%</span>
+                  <span className="text-xs font-bold text-pink-600 dark:text-pink-400 tabular-nums">{Math.round(volume * 100)}%</span>
                 </div>
-                <input 
-                  type="range" 
-                  min="0" 
-                  max="1" 
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
                   step="0.05"
-                  value={volume} 
+                  value={volume}
                   onChange={(e) => setVolume(parseFloat(e.target.value))}
-                  className="w-full accent-pink-500 h-1.5 bg-pink-100 rounded-lg cursor-pointer mt-1"
+                  className="w-full accent-pink-600 h-1.5 bg-stone-200 dark:bg-[#342f2b] rounded-lg cursor-pointer mt-1"
                 />
               </div>
 
               {/* Meditation Sounds Selection */}
-              <div className="bg-rose-50/30 p-5 rounded-3xl border border-rose-100/30 flex flex-col gap-3">
-                <label className="text-xs font-bold text-pink-700 flex items-center gap-1.5">
-                  <span>🧘</span> Calming Frequencies
+              <div className="bg-[#faf8f6] dark:bg-[#23201d] p-5 rounded-xl border border-stone-200/80 dark:border-[#342f2b] flex flex-col gap-3">
+                <label className="text-xs font-semibold text-stone-800 dark:text-stone-200 flex items-center gap-1.5">
+                  <SlidersHorizontal size={14} className="text-pink-600 dark:text-pink-400" /> Calming Frequencies
                 </label>
                 {musicNotice && (
-                  <p role="status" className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-2 rounded-xl">
+                  <p role="status" className="text-xs font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-900/50 px-3 py-2 rounded-xl">
                     {musicNotice}
                   </p>
                 )}
-                <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
                   {[
-                    { id: 'rain', label: '🌧️ Forest Rain' },
-                    { id: 'bowls', label: '🥣 Zen Tibetan Bowls' },
-                    { id: 'solfeggio', label: '🧬 Solfeggio 528Hz' },
-                    { id: 'ocean', label: '🌊 Soft Ocean Waves' },
+                    { id: 'rain', label: 'Forest Rain' },
+                    { id: 'bowls', label: 'Tibetan Singing Bowls' },
+                    { id: 'solfeggio', label: 'Solfeggio 528Hz' },
+                    { id: 'ocean', label: 'Soft Ocean Waves' },
                   ].map((sound) => (
                     <button
                       key={sound.id}
                       type="button"
-                      onClick={() => setMusicNotice(`Activated ${sound.label}!`)}
-                      className="p-3 rounded-xl border border-pink-100 bg-white text-left font-bold text-stone-700 hover:bg-pink-50/50 transition-all flex items-center justify-between text-xs cursor-pointer"
+                      onClick={() => setMusicNotice(`Activated ${sound.label}.`)}
+                      className="p-3.5 rounded-xl border border-stone-200/80 dark:border-[#342f2b] bg-white dark:bg-[#1a1816] text-left font-semibold text-stone-700 dark:text-stone-200 hover:border-pink-300 dark:hover:border-pink-800 transition-colors flex items-center justify-between text-xs cursor-pointer"
                     >
                       <span>{sound.label}</span>
                       <span className="w-2 h-2 rounded-full bg-pink-500"></span>
@@ -3053,33 +3036,37 @@ const Settings: React.FC<SettingsProps> = ({
       /* ========================================================================= */
       ) : activeSubTab === 'premium' ? (
         <div className="space-y-6 animate-fadeIn">
-          <div className="bg-white p-6 md:p-8 rounded-[2.5rem] border border-pink-100 shadow-sm space-y-5 max-w-2xl mx-auto text-center">
-            <span className="text-4xl inline-block">👑</span>
-            <h3 className="text-2xl font-serif font-bold text-stone-800">Lumina Premium</h3>
-            {user.isPremium ? (
-              <div className="space-y-2">
-                <span className="inline-block px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold uppercase tracking-wider">
-                  Active Subscription {user.subscriptionPlan ? `(${user.subscriptionPlan})` : ''}
-                </span>
-                <p className="text-xs text-stone-600">
-                  {user.subscriptionEnd
-                    ? `Verified through ${new Date(user.subscriptionEnd).toLocaleDateString()}.`
-                    : 'All Lumina Premium features are active on your account.'}
+          <div className="bg-white dark:bg-[#1a1816] p-6 md:p-8 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-xs space-y-6 max-w-2xl mx-auto text-center">
+            <div className="w-12 h-12 rounded-2xl bg-pink-50 dark:bg-pink-950/40 border border-pink-100 dark:border-pink-900/40 text-pink-600 dark:text-pink-400 flex items-center justify-center mx-auto">
+              <Crown size={24} />
+            </div>
+            <div className="space-y-1.5">
+              <h3 className="text-2xl font-serif font-bold text-stone-900 dark:text-stone-100">Lumina Premium</h3>
+              {user.isPremium ? (
+                <div className="space-y-2 pt-1">
+                  <span className="inline-block px-3 py-1 rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-900/50 text-xs font-semibold">
+                    Active Subscription {user.subscriptionPlan ? `(${user.subscriptionPlan})` : ''}
+                  </span>
+                  <p className="text-xs text-stone-600 dark:text-stone-400">
+                    {user.subscriptionEnd
+                      ? `Verified through ${new Date(user.subscriptionEnd).toLocaleDateString()}.`
+                      : 'All Lumina Premium features are active on your account.'}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-xs text-stone-600 dark:text-stone-400 max-w-md mx-auto leading-relaxed">
+                  Upgrade with verified in-app billing (App Store / Google Play via RevenueCat or verified Paystack checkout) to unlock AI Doctor Reports, deep cycle trends, and full soundscapes.
                 </p>
-              </div>
-            ) : (
-              <p className="text-xs text-stone-600 max-w-md mx-auto leading-relaxed">
-                Upgrade with verified in-app billing (App Store / Google Play via RevenueCat or verified Paystack checkout) to unlock AI Doctor Reports, deep cycle trends, and full soundscapes.
-              </p>
-            )}
+              )}
+            </div>
 
             {billingError && (
-              <div role="alert" className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-700 font-medium">
+              <div role="alert" className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200/80 dark:border-rose-900/50 text-xs text-rose-700 dark:text-rose-300 font-medium">
                 {billingError}
               </div>
             )}
             {billingSuccess && (
-              <div role="status" className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 font-medium">
+              <div role="status" className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-900/50 text-xs text-emerald-800 dark:text-emerald-300 font-medium">
                 {billingSuccess}
               </div>
             )}
@@ -3090,20 +3077,20 @@ const Settings: React.FC<SettingsProps> = ({
                   key={plan.id}
                   type="button"
                   onClick={() => setSelectedPlanId(plan.id)}
-                  className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+                  className={`p-4 rounded-xl border transition-colors cursor-pointer ${
                     selectedPlanId === plan.id
-                      ? 'border-pink-500 bg-pink-50/70 shadow-sm'
-                      : 'border-pink-100 bg-white hover:border-pink-200'
+                      ? 'border-pink-600 bg-pink-50/70 dark:bg-pink-950/30 dark:border-pink-500 shadow-xs'
+                      : 'border-stone-200/80 dark:border-[#342f2b] bg-[#faf8f6] dark:bg-[#23201d] hover:border-pink-300 dark:hover:border-pink-800'
                   }`}
                 >
-                  <p className="text-xs font-bold text-stone-800">{plan.name}</p>
-                  <p className="text-lg font-serif font-extrabold text-pink-600 mt-1">{plan.priceFormatted}</p>
-                  <p className="text-[11px] text-stone-500 mt-0.5">{plan.description}</p>
+                  <p className="text-xs font-bold text-stone-900 dark:text-stone-100">{plan.name}</p>
+                  <p className="text-lg font-serif font-extrabold text-pink-600 dark:text-pink-400 mt-1 tabular-nums">{plan.priceFormatted}</p>
+                  <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-0.5">{plan.description}</p>
                 </button>
               ))}
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+            <div className="flex flex-col sm:flex-row gap-3 justify-center pt-1">
               <button
                 type="button"
                 onClick={async () => {
@@ -3123,7 +3110,7 @@ const Settings: React.FC<SettingsProps> = ({
                   }
                 }}
                 disabled={Boolean(billingProgress)}
-                className="px-6 py-3.5 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl text-xs font-bold uppercase tracking-widest shadow-md cursor-pointer disabled:opacity-50"
+                className="px-6 py-3 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-xs font-semibold shadow-xs cursor-pointer disabled:opacity-50 transition-colors"
               >
                 {billingProgress || 'Upgrade / Subscribe'}
               </button>
@@ -3141,7 +3128,7 @@ const Settings: React.FC<SettingsProps> = ({
                     setBillingError(res.error || 'Restore check failed.');
                   }
                 }}
-                className="px-6 py-3.5 bg-white border border-pink-200 text-pink-700 rounded-2xl text-xs font-bold uppercase tracking-widest cursor-pointer hover:bg-pink-50"
+                className="px-6 py-3 bg-white dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] text-stone-700 dark:text-stone-200 rounded-xl text-xs font-semibold cursor-pointer hover:bg-stone-50 dark:hover:bg-[#2b2724] transition-colors"
               >
                 Restore Purchases
               </button>
@@ -3156,39 +3143,40 @@ const Settings: React.FC<SettingsProps> = ({
 
       {/* PRIVACY POLICY MODAL */}
       {showPrivacyModal && (
-        <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-[2.5rem] p-6 max-w-lg w-full space-y-5 border border-pink-100 shadow-2xl max-h-[85vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-pink-50 pb-3">
-              <div className="flex items-center gap-2 text-pink-600">
-                <ShieldCheck size={22} />
-                <h3 className="font-serif font-bold text-lg text-stone-800">Lumina Privacy Promise</h3>
+        <div className="fixed inset-0 bg-stone-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white dark:bg-[#1a1816] rounded-2xl p-6 max-w-lg w-full space-y-5 border border-stone-200/80 dark:border-[#2e2a26] shadow-2xl max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-stone-100 dark:border-[#2e2a26] pb-3.5">
+              <div className="flex items-center gap-2 text-pink-600 dark:text-pink-400">
+                <ShieldCheck size={20} />
+                <h3 className="font-serif font-bold text-lg text-stone-900 dark:text-stone-100">Lumina Privacy Promise</h3>
               </div>
-              <button 
+              <button
+                type="button"
                 onClick={() => setShowPrivacyModal(false)}
-                className="p-1.5 rounded-full hover:bg-stone-100 text-stone-400 hover:text-stone-600 transition-all cursor-pointer"
+                className="p-1.5 rounded-lg hover:bg-stone-100 dark:hover:bg-[#23201d] text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 transition-colors cursor-pointer"
               >
                 <X size={18} />
               </button>
             </div>
 
-            <div className="space-y-4 text-xs text-stone-600 leading-relaxed">
-              <div className="bg-pink-50/50 p-4 rounded-2xl border border-pink-100/60">
-                <h4 className="font-bold text-pink-700 text-xs mb-1">1. We Never Sell Your Data</h4>
+            <div className="space-y-3 text-xs text-stone-600 dark:text-stone-300 leading-relaxed">
+              <div className="bg-[#faf8f6] dark:bg-[#23201d] p-4 rounded-xl border border-stone-200/80 dark:border-[#342f2b]">
+                <h4 className="font-bold text-stone-900 dark:text-stone-100 text-xs mb-1">1. We Never Sell Your Data</h4>
                 <p>Your intimate health, menstrual flow, moods, and private notes are never sold, rented, or monetized for advertising. You are the sole owner of your health journey.</p>
               </div>
 
-              <div className="bg-pink-50/50 p-4 rounded-2xl border border-pink-100/60">
-                <h4 className="font-bold text-pink-700 text-xs mb-1">2. Private & Encrypted</h4>
+              <div className="bg-[#faf8f6] dark:bg-[#23201d] p-4 rounded-xl border border-stone-200/80 dark:border-[#342f2b]">
+                <h4 className="font-bold text-stone-900 dark:text-stone-100 text-xs mb-1">2. Private & Encrypted</h4>
                 <p>Your logs and account credentials are secure in transit and storage. You can enable biometric locks (Face ID / Fingerprint) or a 4-digit PIN for device security.</p>
               </div>
 
-              <div className="bg-pink-50/50 p-4 rounded-2xl border border-pink-100/60">
-                <h4 className="font-bold text-pink-700 text-xs mb-1">3. Transparent Partner Sharing</h4>
+              <div className="bg-[#faf8f6] dark:bg-[#23201d] p-4 rounded-xl border border-stone-200/80 dark:border-[#342f2b]">
+                <h4 className="font-bold text-stone-900 dark:text-stone-100 text-xs mb-1">3. Transparent Partner Sharing</h4>
                 <p>Partner Mode is completely optional. You choose exactly which cycle highlights to share, and you can disconnect or block a partner at any moment.</p>
               </div>
 
-              <div className="bg-pink-50/50 p-4 rounded-2xl border border-pink-100/60">
-                <h4 className="font-bold text-pink-700 text-xs mb-1">4. You Own Your Data</h4>
+              <div className="bg-[#faf8f6] dark:bg-[#23201d] p-4 rounded-xl border border-stone-200/80 dark:border-[#342f2b]">
+                <h4 className="font-bold text-stone-900 dark:text-stone-100 text-xs mb-1">4. You Own Your Data</h4>
                 <p>Download a complete private copy of your data or delete your account anytime with a single tap in Settings.</p>
               </div>
             </div>
@@ -3196,7 +3184,7 @@ const Settings: React.FC<SettingsProps> = ({
             <button
               type="button"
               onClick={() => setShowPrivacyModal(false)}
-              className="w-full py-3 bg-gradient-to-r from-pink-500 to-rose-400 text-white font-bold text-xs rounded-xl shadow-md cursor-pointer transition-all"
+              className="w-full py-3 bg-pink-600 hover:bg-pink-700 text-white font-semibold text-xs rounded-xl shadow-xs cursor-pointer transition-colors"
             >
               Close
             </button>
@@ -3206,34 +3194,35 @@ const Settings: React.FC<SettingsProps> = ({
 
       {/* TERMS OF SERVICE MODAL */}
       {showTermsModal && (
-        <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-[2.5rem] p-6 max-w-lg w-full space-y-5 border border-pink-100 shadow-2xl max-h-[85vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-pink-50 pb-3">
-              <div className="flex items-center gap-2 text-pink-600">
-                <FileText size={22} />
-                <h3 className="font-serif font-bold text-lg text-stone-800">Terms of Service</h3>
+        <div className="fixed inset-0 bg-stone-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white dark:bg-[#1a1816] rounded-2xl p-6 max-w-lg w-full space-y-5 border border-stone-200/80 dark:border-[#2e2a26] shadow-2xl max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-stone-100 dark:border-[#2e2a26] pb-3.5">
+              <div className="flex items-center gap-2 text-pink-600 dark:text-pink-400">
+                <FileText size={20} />
+                <h3 className="font-serif font-bold text-lg text-stone-900 dark:text-stone-100">Terms of Service</h3>
               </div>
-              <button 
+              <button
+                type="button"
                 onClick={() => setShowTermsModal(false)}
-                className="p-1.5 rounded-full hover:bg-stone-100 text-stone-400 hover:text-stone-600 transition-all cursor-pointer"
+                className="p-1.5 rounded-lg hover:bg-stone-100 dark:hover:bg-[#23201d] text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 transition-colors cursor-pointer"
               >
                 <X size={18} />
               </button>
             </div>
 
-            <div className="space-y-4 text-xs text-stone-600 leading-relaxed">
-              <div className="bg-stone-50 p-4 rounded-2xl border border-stone-100">
-                <h4 className="font-bold text-stone-800 text-xs mb-1">Wellness & Educational Support</h4>
+            <div className="space-y-3 text-xs text-stone-600 dark:text-stone-300 leading-relaxed">
+              <div className="bg-[#faf8f6] dark:bg-[#23201d] p-4 rounded-xl border border-stone-200/80 dark:border-[#342f2b]">
+                <h4 className="font-bold text-stone-900 dark:text-stone-100 text-xs mb-1">Wellness & Educational Support</h4>
                 <p>Lumina provides cycle calculations and supportive wellness insights. These calculations are estimated tools and do not substitute for professional medical advice, clinical diagnosis, or contraception.</p>
               </div>
 
-              <div className="bg-stone-50 p-4 rounded-2xl border border-stone-100">
-                <h4 className="font-bold text-stone-800 text-xs mb-1">Account Responsibility</h4>
+              <div className="bg-[#faf8f6] dark:bg-[#23201d] p-4 rounded-xl border border-stone-200/80 dark:border-[#342f2b]">
+                <h4 className="font-bold text-stone-900 dark:text-stone-100 text-xs mb-1">Account Responsibility</h4>
                 <p>You are responsible for keeping your login credentials and security PIN secure. Lumina provides tools like biometric locks to help safeguard access on your personal device.</p>
               </div>
 
-              <div className="bg-stone-50 p-4 rounded-2xl border border-stone-100">
-                <h4 className="font-bold text-stone-800 text-xs mb-1">Respectful Companion Sharing</h4>
+              <div className="bg-[#faf8f6] dark:bg-[#23201d] p-4 rounded-xl border border-stone-200/80 dark:border-[#342f2b]">
+                <h4 className="font-bold text-stone-900 dark:text-stone-100 text-xs mb-1">Respectful Companion Sharing</h4>
                 <p>When using Partner Mode, both partners agree to respect mutual privacy boundaries and communication preferences.</p>
               </div>
             </div>
@@ -3241,7 +3230,7 @@ const Settings: React.FC<SettingsProps> = ({
             <button
               type="button"
               onClick={() => setShowTermsModal(false)}
-              className="w-full py-3 bg-gradient-to-r from-pink-500 to-rose-400 text-white font-bold text-xs rounded-xl shadow-md cursor-pointer transition-all"
+              className="w-full py-3 bg-pink-600 hover:bg-pink-700 text-white font-semibold text-xs rounded-xl shadow-xs cursor-pointer transition-colors"
             >
               Close
             </button>
@@ -3251,20 +3240,21 @@ const Settings: React.FC<SettingsProps> = ({
 
       {/* FEEDBACK & SUPPORT MODAL */}
       {showFeedbackModal && (
-        <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-[2.5rem] p-6 max-w-md w-full space-y-5 border border-pink-100 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-pink-50 pb-3">
-              <div className="flex items-center gap-2 text-pink-600">
-                {showFeedbackModal === 'support' ? <MessageCircle size={20} /> :
-                 showFeedbackModal === 'bug' ? <Bug size={20} /> : <Lightbulb size={20} />}
-                <h3 className="font-serif font-bold text-lg text-stone-800">
+        <div className="fixed inset-0 bg-stone-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white dark:bg-[#1a1816] rounded-2xl p-6 max-w-md w-full space-y-5 border border-stone-200/80 dark:border-[#2e2a26] shadow-2xl">
+            <div className="flex items-center justify-between border-b border-stone-100 dark:border-[#2e2a26] pb-3.5">
+              <div className="flex items-center gap-2 text-pink-600 dark:text-pink-400">
+                {showFeedbackModal === 'support' ? <MessageCircle size={19} /> :
+                 showFeedbackModal === 'bug' ? <Bug size={19} /> : <Lightbulb size={19} />}
+                <h3 className="font-serif font-bold text-lg text-stone-900 dark:text-stone-100">
                   {showFeedbackModal === 'support' ? 'Contact Support' :
                    showFeedbackModal === 'bug' ? 'Report an Issue' : 'Suggest a Feature'}
                 </h3>
               </div>
-              <button 
+              <button
+                type="button"
                 onClick={() => setShowFeedbackModal(null)}
-                className="p-1.5 rounded-full hover:bg-stone-100 text-stone-400 hover:text-stone-600 transition-all cursor-pointer"
+                className="p-1.5 rounded-lg hover:bg-stone-100 dark:hover:bg-[#23201d] text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 transition-colors cursor-pointer"
               >
                 <X size={18} />
               </button>
@@ -3272,13 +3262,15 @@ const Settings: React.FC<SettingsProps> = ({
 
             {feedbackSubmitted ? (
               <div className="py-8 text-center space-y-3">
-                <span className="text-4xl">🌸</span>
-                <h4 className="text-sm font-bold text-stone-800">Thank you for reaching out!</h4>
-                <p className="text-xs text-stone-600 max-w-xs mx-auto">
+                <div className="w-12 h-12 rounded-2xl bg-pink-50 dark:bg-pink-950/40 border border-pink-100 dark:border-pink-900/40 text-pink-600 dark:text-pink-400 flex items-center justify-center mx-auto">
+                  <Flower2 size={24} />
+                </div>
+                <h4 className="text-sm font-bold text-stone-900 dark:text-stone-100">Thank you for reaching out</h4>
+                <p className="text-xs text-stone-600 dark:text-stone-400 max-w-xs mx-auto">
                   Our care team has received your message and will review it carefully.
                 </p>
                 {feedbackTicketId && (
-                  <p className="inline-block px-3 py-1 rounded-full bg-pink-50 border border-pink-200 text-[11px] font-mono font-bold text-pink-700">
+                  <p className="inline-block px-3 py-1 rounded-md bg-pink-50 dark:bg-pink-950/40 border border-pink-200/80 dark:border-pink-900/40 text-[11px] font-mono font-bold text-pink-700 dark:text-pink-300 tabular-nums">
                     Reference: {feedbackTicketId}
                   </p>
                 )}
@@ -3300,26 +3292,26 @@ const Settings: React.FC<SettingsProps> = ({
                 </div>
 
                 {feedbackError && (
-                  <div role="alert" className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs font-semibold text-rose-700">
+                  <div role="alert" className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200/80 dark:border-rose-900/50 text-xs font-semibold text-rose-700 dark:text-rose-300">
                     {feedbackError}
                   </div>
                 )}
 
                 <div className="space-y-1.5">
-                  <label htmlFor="support-feedback-email" className="text-xs font-bold text-stone-700">Your Email</label>
+                  <label htmlFor="support-feedback-email" className="text-xs font-semibold text-stone-700 dark:text-stone-300">Your Email</label>
                   <input
                     id="support-feedback-email"
                     type="email"
                     value={feedbackEmail}
                     onChange={(e) => setFeedbackEmail(e.target.value)}
                     required
-                    className="w-full bg-pink-50/30 border border-pink-100 rounded-2xl px-4 py-2.5 text-xs text-stone-800 outline-none focus:border-pink-300"
+                    className="w-full h-11 bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] rounded-xl px-4 text-xs text-stone-900 dark:text-stone-100 outline-none focus:border-pink-400"
                     placeholder="you@example.com"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label htmlFor="support-feedback-message" className="text-xs font-bold text-stone-700">
+                  <label htmlFor="support-feedback-message" className="text-xs font-semibold text-stone-700 dark:text-stone-300">
                     {showFeedbackModal === 'support' ? 'How can we help you?' :
                      showFeedbackModal === 'bug' ? 'Describe what happened:' : 'What feature would you love to see?'}
                   </label>
@@ -3331,7 +3323,7 @@ const Settings: React.FC<SettingsProps> = ({
                     required
                     minLength={10}
                     maxLength={2000}
-                    className="w-full bg-pink-50/30 border border-pink-100 rounded-2xl p-4 text-xs text-stone-800 outline-none focus:border-pink-300 resize-none"
+                    className="w-full bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] rounded-xl p-4 text-xs text-stone-900 dark:text-stone-100 outline-none focus:border-pink-400 resize-none"
                     placeholder={
                       showFeedbackModal === 'support' ? 'Write your question or request here (min 10 chars)...' :
                       showFeedbackModal === 'bug' ? 'Tell us what went wrong and where...' : 'Share your idea with us...'
@@ -3343,14 +3335,14 @@ const Settings: React.FC<SettingsProps> = ({
                   <button
                     type="button"
                     onClick={() => { setShowFeedbackModal(null); setFeedbackError(null); }}
-                    className="flex-1 py-3 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs rounded-xl transition-all cursor-pointer"
+                    className="flex-1 py-3 bg-stone-100 dark:bg-[#23201d] hover:bg-stone-200 dark:hover:bg-[#2b2724] text-stone-700 dark:text-stone-200 font-semibold text-xs rounded-xl transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={feedbackLoading}
-                    className="flex-1 py-3 bg-gradient-to-r from-pink-500 to-rose-400 text-white font-bold text-xs rounded-xl shadow-md hover:opacity-90 disabled:opacity-60 transition-all cursor-pointer"
+                    className="flex-1 py-3 bg-pink-600 hover:bg-pink-700 text-white font-semibold text-xs rounded-xl shadow-xs disabled:opacity-60 transition-colors cursor-pointer"
                   >
                     {feedbackLoading ? 'Sending...' : 'Send Message'}
                   </button>
@@ -3375,24 +3367,24 @@ const Settings: React.FC<SettingsProps> = ({
 
       {/* BLOCK PARTNER MODAL */}
       {partnerToBlock && (
-        <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-[2.5rem] p-6 max-w-sm w-full space-y-4 border border-rose-100 shadow-2xl">
-            <h3 className="font-serif font-bold text-lg text-stone-800">Block {partnerToBlock.name}?</h3>
-            <p className="text-xs text-stone-600 leading-relaxed">
+        <div className="fixed inset-0 bg-stone-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white dark:bg-[#1a1816] rounded-2xl p-6 max-w-sm w-full space-y-4 border border-stone-200/80 dark:border-[#2e2a26] shadow-2xl">
+            <h3 className="font-serif font-bold text-lg text-stone-900 dark:text-stone-100">Block {partnerToBlock.name}?</h3>
+            <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
               Blocking this partner will disconnect sharing and prevent them from sending you new connection requests.
             </p>
             <div className="flex gap-3 pt-2">
               <button
                 type="button"
                 onClick={() => setPartnerToBlock(null)}
-                className="flex-1 py-3 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs rounded-xl transition-all cursor-pointer"
+                className="flex-1 py-3 bg-stone-100 dark:bg-[#23201d] hover:bg-stone-200 dark:hover:bg-[#2b2724] text-stone-700 dark:text-stone-200 font-semibold text-xs rounded-xl transition-colors cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleBlockPartnerConfirm}
-                className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-md"
+                className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs rounded-xl transition-colors cursor-pointer shadow-xs"
               >
                 Block Partner
               </button>
@@ -3403,24 +3395,24 @@ const Settings: React.FC<SettingsProps> = ({
 
       {/* UNBLOCK PARTNER MODAL */}
       {partnerToUnblock && (
-        <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-[2.5rem] p-6 max-w-sm w-full space-y-4 border border-pink-100 shadow-2xl">
-            <h3 className="font-serif font-bold text-lg text-stone-800">Unblock {partnerToUnblock.name}?</h3>
-            <p className="text-xs text-stone-600 leading-relaxed">
+        <div className="fixed inset-0 bg-stone-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white dark:bg-[#1a1816] rounded-2xl p-6 max-w-sm w-full space-y-4 border border-stone-200/80 dark:border-[#2e2a26] shadow-2xl">
+            <h3 className="font-serif font-bold text-lg text-stone-900 dark:text-stone-100">Unblock {partnerToUnblock.name}?</h3>
+            <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
               Unblocking {partnerToUnblock.name} will allow them to send you partner connection requests again.
             </p>
             <div className="flex gap-3 pt-2">
               <button
                 type="button"
                 onClick={() => setPartnerToUnblock(null)}
-                className="flex-1 py-3 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs rounded-xl transition-all cursor-pointer"
+                className="flex-1 py-3 bg-stone-100 dark:bg-[#23201d] hover:bg-stone-200 dark:hover:bg-[#2b2724] text-stone-700 dark:text-stone-200 font-semibold text-xs rounded-xl transition-colors cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleUnblockPartnerConfirm}
-                className="flex-1 py-3 bg-pink-500 hover:bg-pink-600 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-md"
+                className="flex-1 py-3 bg-pink-600 hover:bg-pink-700 text-white font-semibold text-xs rounded-xl transition-colors cursor-pointer shadow-xs"
               >
                 Unblock Partner
               </button>

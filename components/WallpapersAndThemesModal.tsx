@@ -114,7 +114,7 @@ export const WALLPAPER_LIST: WallpaperItem[] = [
     id: 'lavender_connection',
     name: 'Lavender Connection',
     category: 'partner',
-    gradient: 'from-purple-150/70 via-indigo-50 to-fuchsia-100/60',
+    gradient: 'from-purple-100/70 via-indigo-50 to-fuchsia-100/60',
     theme: 'lavender',
     icon: '🪻',
     description: 'Deep soothing lavender field symbolizing mutual understanding and care.',
@@ -254,7 +254,7 @@ export const CYCLE_WALLPAPERS = [
     name: 'Purple & Midnight Blue',
     emoji: '🌙',
     desc: 'Progesterone shift & PMS sensitivity. Grounding royal purple and twilight blue shield your peace.',
-    gradient: 'from-purple-150 via-indigo-100 to-slate-200/60',
+    gradient: 'from-purple-100 via-indigo-100 to-slate-200/60',
     theme: 'lavender' as AppTheme
   }
 ];
@@ -313,75 +313,77 @@ export const WallpapersAndThemesModal: React.FC<WallpapersAndThemesModalProps> =
         <div className="absolute inset-0" onClick={onClose} />
 
         <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 15 }}
+          initial={{ opacity: 0, scale: 0.96, y: 12 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 15 }}
-          className="bg-white/95 dark:bg-stone-900/95 backdrop-blur-2xl border border-white/80 dark:border-stone-800 rounded-[3rem] shadow-[0_25px_60px_rgba(244,114,182,0.12)] w-full max-w-4xl relative z-10 overflow-hidden my-auto max-h-[90vh] flex flex-col"
+          exit={{ opacity: 0, scale: 0.96, y: 12 }}
+          className="bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] rounded-2xl shadow-xl w-full max-w-4xl relative z-10 overflow-hidden my-auto max-h-[90vh] flex flex-col"
         >
           {/* Top Header */}
-          <div className="px-6 py-5 md:px-8 md:py-6 border-b border-pink-100/40 dark:border-stone-800/80 bg-gradient-to-r from-pink-50/50 via-purple-50/30 to-indigo-50/40 flex items-center justify-between shrink-0">
+          <div className="px-6 py-5 border-b border-stone-200/70 dark:border-[#2e2a26] bg-[#faf8f6] dark:bg-[#151311] flex items-center justify-between shrink-0">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-pink-400 to-rose-500 text-white flex items-center justify-center text-xl shadow-md">
+              <div className="w-10 h-10 rounded-xl bg-pink-600 text-white flex items-center justify-center text-lg">
                 🎨
               </div>
               <div>
-                <div className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-pink-500">
-                  <Sparkles size={11} className="animate-pulse" />
+                <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-pink-600 dark:text-pink-400">
+                  <Sparkles size={12} />
                   Personalization Sanctuary
                 </div>
-                <h2 className="text-2xl font-serif italic text-stone-900 dark:text-stone-100 font-bold">
-                  Wallpapers & Themes
+                <h2 className="text-xl sm:text-2xl font-serif text-stone-900 dark:text-stone-100 font-semibold">
+                  Wallpapers &amp; Themes
                 </h2>
               </div>
             </div>
 
             <button
+              type="button"
               onClick={onClose}
-              className="p-2.5 rounded-2xl bg-white dark:bg-stone-800 text-stone-500 hover:text-pink-600 hover:bg-pink-50 transition-all cursor-pointer border border-stone-200/60 dark:border-stone-700 shadow-sm"
+              className="p-2 rounded-xl bg-white dark:bg-[#23201d] text-stone-500 dark:text-stone-300 hover:text-stone-900 dark:hover:text-stone-100 transition-colors cursor-pointer border border-stone-200/80 dark:border-[#342f2b]"
             >
               <X size={18} />
             </button>
           </div>
 
           {/* Current Active Wallpaper Banner */}
-          <div className="px-6 py-3 bg-gradient-to-r from-rose-500/10 via-purple-500/10 to-indigo-500/10 border-b border-pink-100/30 dark:border-stone-800 flex flex-wrap items-center justify-between gap-3 shrink-0">
+          <div className="px-6 py-3 bg-[#faf8f6] dark:bg-[#23201d] border-b border-stone-200/70 dark:border-[#2e2a26] flex flex-wrap items-center justify-between gap-3 shrink-0">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-stone-600 dark:text-stone-300">Active Wallpaper:</span>
+              <span className="text-xs font-semibold text-stone-600 dark:text-stone-300">Active wallpaper:</span>
               {isDynamicActive ? (
-                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white text-[10px] font-black uppercase tracking-wider shadow-sm">
-                  ✨ Dynamic Cycle Wallpapers Active
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-pink-600 text-white text-xs font-semibold">
+                  Dynamic Cycle Wallpapers Active
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white dark:bg-stone-800 text-stone-800 dark:text-stone-100 text-[10px] font-bold border border-pink-200/60 shadow-sm">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white dark:bg-[#1a1816] text-stone-800 dark:text-stone-100 text-xs font-semibold border border-stone-200/80 dark:border-[#342f2b]">
                   <span>{selectedWallpaperObj.icon}</span>
                   <span>{selectedWallpaperObj.name}</span>
-                  <span className="text-pink-500 font-black">({selectedWallpaperObj.badge})</span>
+                  <span className="text-pink-600 dark:text-pink-400">· {selectedWallpaperObj.badge}</span>
                 </span>
               )}
             </div>
 
-            <p className="text-[10px] text-stone-400 italic">
-              Changes apply instantly across your whole app experience.
+            <p className="text-xs text-stone-500 dark:text-stone-400">
+              Changes apply across your sanctuary.
             </p>
           </div>
 
           {/* Category Tabs */}
-          <div className="px-6 pt-4 pb-2 border-b border-stone-100 dark:border-stone-800 bg-white/50 dark:bg-stone-900/50 flex gap-2 overflow-x-auto scrollbar-none shrink-0">
+          <div className="px-6 py-3 border-b border-stone-200/70 dark:border-[#2e2a26] bg-white dark:bg-[#1a1816] flex gap-2 overflow-x-auto scrollbar-none shrink-0">
             {[
-              { id: 'lumina', label: '🌸 Lumina Wallpapers' },
-              { id: 'partner', label: '💜 Partner Wallpapers' },
-              { id: 'sanctuary', label: '🌙 Sanctuary Wallpapers' },
-              { id: 'dynamic', label: '✨ Dynamic Wallpapers' },
+              { id: 'lumina', label: 'Lumina Wallpapers' },
+              { id: 'partner', label: 'Partner Wallpapers' },
+              { id: 'sanctuary', label: 'Sanctuary Wallpapers' },
+              { id: 'dynamic', label: 'Dynamic Wallpapers' },
             ].map((tab) => {
               const isActive = activeTab === tab.id;
               return (
                 <button
                   key={tab.id}
+                  type="button"
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer shrink-0 border ${
+                  className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-colors cursor-pointer shrink-0 border whitespace-nowrap ${
                     isActive
-                      ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white border-transparent shadow-md font-extrabold'
-                      : 'bg-stone-50 dark:bg-stone-800/60 text-stone-600 dark:text-stone-300 border-stone-200/60 dark:border-stone-700 hover:bg-pink-50/50 hover:text-pink-600'
+                      ? 'bg-pink-600 text-white border-pink-600'
+                      : 'bg-[#faf8f6] dark:bg-[#23201d] text-stone-600 dark:text-stone-300 border-stone-200/80 dark:border-[#342f2b] hover:border-pink-400'
                   }`}
                 >
                   {tab.label}
@@ -393,14 +395,14 @@ export const WallpapersAndThemesModal: React.FC<WallpapersAndThemesModalProps> =
           {/* Scrollable Content Body */}
           <div className="p-6 md:p-8 overflow-y-auto flex-grow space-y-6">
 
-            {/* STATIC WALLPAPERS TABS (Lumina, Partner, Sanctuary) */}
+            {/* STATIC WALLPAPERS TABS */}
             {activeTab !== 'dynamic' && (
-              <div className="space-y-6">
+              <div className="space-y-5">
                 <div className="space-y-1">
-                  <h3 className="text-lg font-serif italic text-stone-900 dark:text-stone-100 font-bold">
-                    {activeTab === 'lumina' && '🌸 Lumina Wallpapers'}
-                    {activeTab === 'partner' && '💜 Partner Wallpapers'}
-                    {activeTab === 'sanctuary' && '🌙 Sanctuary Wallpapers'}
+                  <h3 className="text-lg font-serif text-stone-900 dark:text-stone-100 font-semibold">
+                    {activeTab === 'lumina' && 'Lumina Wallpapers'}
+                    {activeTab === 'partner' && 'Partner Wallpapers'}
+                    {activeTab === 'sanctuary' && 'Sanctuary Wallpapers'}
                   </h3>
                   <p className="text-xs text-stone-500 dark:text-stone-400">
                     {activeTab === 'lumina' && 'Soft pastel gradients and calming floral tones crafted for daily wellness.'}
@@ -409,68 +411,64 @@ export const WallpapersAndThemesModal: React.FC<WallpapersAndThemesModalProps> =
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {WALLPAPER_LIST.filter(w => w.category === activeTab).map((wp) => {
                     const isSelected = !isDynamicActive && currentWallpaperId === wp.id;
                     return (
                       <div
                         key={wp.id}
                         onClick={() => handleSelectWallpaper(wp)}
-                        className={`group relative rounded-[2.2rem] p-5 border transition-all duration-300 cursor-pointer overflow-hidden flex flex-col justify-between min-h-[200px] ${
+                        className={`group relative rounded-2xl p-4 border transition-colors cursor-pointer overflow-hidden flex flex-col justify-between min-h-[190px] ${
                           isSelected
-                            ? 'border-pink-500 ring-2 ring-pink-400/40 shadow-lg scale-[1.02]'
-                            : 'border-stone-200/70 dark:border-stone-800 hover:border-pink-300 hover:shadow-md'
+                            ? 'border-pink-600 ring-1 ring-pink-500/40'
+                            : 'border-stone-200/80 dark:border-[#342f2b] hover:border-pink-400'
                         }`}
                       >
-                        {/* Wallpaper Gradient Preview Canvas */}
-                        <div className={`absolute inset-0 bg-gradient-to-br ${wp.gradient} opacity-80 group-hover:opacity-100 transition-opacity`} />
+                        <div className={`absolute inset-0 bg-gradient-to-br ${wp.gradient} opacity-80`} />
+                        <div className="absolute inset-0 bg-white/50 dark:bg-[#1a1816]/75" />
 
-                        {/* Claymorphism overlay tint */}
-                        <div className="absolute inset-0 bg-white/40 dark:bg-stone-950/40 backdrop-blur-[2px]" />
-
-                        <div className="relative z-10 space-y-3">
+                        <div className="relative z-10 space-y-2.5">
                           <div className="flex items-center justify-between">
-                            <span className="text-3xl p-2 rounded-2xl bg-white/80 dark:bg-stone-800/80 shadow-sm border border-white/60">
+                            <span className="text-2xl p-2 rounded-xl bg-white/90 dark:bg-[#23201d] border border-stone-200/70 dark:border-[#342f2b]">
                               {wp.icon}
                             </span>
 
                             <div className="flex items-center gap-1.5">
-                              <span className="px-2.5 py-1 rounded-full bg-white/90 dark:bg-stone-800/90 text-stone-700 dark:text-stone-200 text-[9px] font-black uppercase tracking-wider border border-white/80 shadow-xs">
+                              <span className="px-2 py-0.5 rounded-lg bg-white/90 dark:bg-[#23201d] text-stone-700 dark:text-stone-200 text-[11px] font-medium border border-stone-200/70 dark:border-[#342f2b]">
                                 {wp.badge}
                               </span>
                               {isSelected && (
-                                <span className="w-7 h-7 rounded-full bg-pink-500 text-white flex items-center justify-center shadow-md">
-                                  <Check size={14} strokeWidth={3} />
+                                <span className="w-6 h-6 rounded-lg bg-pink-600 text-white flex items-center justify-center">
+                                  <Check size={13} strokeWidth={3} />
                                 </span>
                               )}
                             </div>
                           </div>
 
                           <div>
-                            <h4 className="text-base font-serif font-bold text-stone-900 dark:text-stone-100">
+                            <h4 className="text-base font-serif font-semibold text-stone-900 dark:text-stone-100">
                               {wp.name}
                             </h4>
-                            <p className="text-[11px] text-stone-600 dark:text-stone-300 mt-1 leading-snug">
+                            <p className="text-xs text-stone-600 dark:text-stone-300 mt-1 leading-snug">
                               {wp.description}
                             </p>
                           </div>
                         </div>
 
-                        <div className="relative z-10 pt-3 flex items-center justify-between border-t border-stone-900/5">
-                          <span className="text-[10px] font-bold uppercase tracking-widest text-stone-500">
-                            Theme: <span className="text-pink-600 font-extrabold capitalize">{wp.theme}</span>
+                        <div className="relative z-10 pt-3 flex items-center justify-between border-t border-stone-900/10 dark:border-white/10">
+                          <span className="text-xs font-medium text-stone-600 dark:text-stone-300">
+                            Theme: <span className="text-pink-600 dark:text-pink-400 font-semibold capitalize">{wp.theme}</span>
                           </span>
 
-                          <button
-                            type="button"
-                            className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+                          <span
+                            className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
                               isSelected
-                                ? 'bg-pink-600 text-white shadow-sm'
-                                : 'bg-white/80 dark:bg-stone-800/80 text-stone-700 dark:text-stone-200 group-hover:bg-pink-500 group-hover:text-white'
+                                ? 'bg-pink-600 text-white'
+                                : 'bg-white dark:bg-[#23201d] text-stone-700 dark:text-stone-200'
                             }`}
                           >
-                            {isSelected ? 'Applied ✨' : 'Apply Wallpaper'}
-                          </button>
+                            {isSelected ? 'Applied' : 'Apply'}
+                          </span>
                         </div>
                       </div>
                     );
@@ -482,108 +480,91 @@ export const WallpapersAndThemesModal: React.FC<WallpapersAndThemesModalProps> =
             {/* DYNAMIC WALLPAPERS TAB */}
             {activeTab === 'dynamic' && (
               <div className="space-y-6">
-                
-                {/* Main Toggle Banner */}
-                <div className="bg-gradient-to-br from-purple-600 via-indigo-600 to-pink-600 p-6 md:p-8 rounded-[2.5rem] text-white shadow-xl relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-                  <div className="space-y-2 max-w-xl z-10">
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-[10px] font-black uppercase tracking-widest border border-white/20">
-                      <Sparkles size={12} className="text-pink-200" />
-                      AUTOMATIC ATMOSPHERE SHIFT
+                <div className="bg-indigo-600 p-6 rounded-2xl text-white flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                  <div className="space-y-2 max-w-xl">
+                    <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-100">
+                      <Sparkles size={13} />
+                      Automatic atmosphere shift
                     </div>
-                    <h3 className="text-2xl md:text-3xl font-serif italic font-bold">
+                    <h3 className="text-2xl font-serif font-semibold">
                       Use Cycle-Based Wallpapers
                     </h3>
-                    <p className="text-xs text-white/90 leading-relaxed font-serif italic">
-                      Allow Lumina to adapt its background colors automatically as your body transitions through the 4 menstrual cycle phases.
+                    <p className="text-xs text-indigo-100 leading-relaxed">
+                      Allow Lumina to adapt its palette gently as you move through your four cycle phases.
                     </p>
                   </div>
 
-                  <div className="z-10 shrink-0 bg-white/10 backdrop-blur-md p-4 rounded-3xl border border-white/20 flex flex-col items-center gap-2">
+                  <div className="shrink-0 bg-white/15 p-4 rounded-xl border border-white/20 flex flex-col items-center gap-2">
                     <button
                       type="button"
                       onClick={() => handleToggleDynamic(!isDynamicActive)}
-                      className={`w-16 h-9 rounded-full p-1 transition-colors duration-300 ease-in-out flex items-center cursor-pointer shadow-inner ${
+                      className={`w-14 h-8 rounded-full p-1 transition-colors flex items-center cursor-pointer ${
                         isDynamicActive ? 'bg-emerald-400 justify-end' : 'bg-white/30 justify-start'
                       }`}
                     >
-                      <motion.span
-                        layout
-                        className="w-7 h-7 rounded-full bg-white shadow-md flex items-center justify-center text-xs"
-                      >
-                        {isDynamicActive ? '✨' : '⚪'}
-                      </motion.span>
+                      <span className="w-6 h-6 rounded-full bg-white shadow-xs" />
                     </button>
-                    <span className="text-[10px] font-black uppercase tracking-wider text-pink-100">
-                      {isDynamicActive ? 'Enabled ✨' : 'Disabled'}
+                    <span className="text-xs font-semibold text-white">
+                      {isDynamicActive ? 'Enabled' : 'Disabled'}
                     </span>
                   </div>
                 </div>
 
-                {/* 4 Phases List */}
-                <div className="space-y-4 pt-2">
-                  <h4 className="text-xs font-black text-indigo-400 uppercase tracking-widest px-1">
-                    Cycle Phase Wallpaper Palette
+                <div className="space-y-3">
+                  <h4 className="text-xs font-semibold text-stone-500 dark:text-stone-400 px-1">
+                    Cycle phase wallpaper palette
                   </h4>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {CYCLE_WALLPAPERS.map((phase) => (
                       <div
                         key={phase.phase}
-                        className={`p-5 rounded-[2rem] border relative overflow-hidden bg-white dark:bg-stone-900 shadow-xs flex flex-col justify-between gap-4 transition-all ${
-                          isDynamicActive ? 'border-purple-200 dark:border-purple-950' : 'border-stone-200/70 dark:border-stone-800'
+                        className={`p-5 rounded-2xl border bg-[#faf8f6] dark:bg-[#23201d] flex flex-col justify-between gap-3 ${
+                          isDynamicActive ? 'border-indigo-400' : 'border-stone-200/80 dark:border-[#342f2b]'
                         }`}
                       >
-                        {/* Soft Gradient background slice */}
-                        <div className={`absolute top-0 right-0 w-32 h-32 rounded-full bg-gradient-to-br ${phase.gradient} opacity-40 blur-2xl pointer-events-none`} />
-
-                        <div className="flex items-start justify-between relative z-10">
+                        <div className="flex items-start justify-between">
                           <div className="flex items-center gap-3">
-                            <span className="text-3xl p-2.5 rounded-2xl bg-stone-50 dark:bg-stone-800 shadow-xs border border-stone-100 dark:border-stone-700">
+                            <span className="text-2xl p-2 rounded-xl bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#342f2b]">
                               {phase.emoji}
                             </span>
                             <div>
-                              <p className="text-[10px] font-black text-purple-600 dark:text-purple-400 uppercase tracking-widest">
+                              <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
                                 {phase.phase}
                               </p>
-                              <h5 className="text-lg font-serif italic text-stone-900 dark:text-stone-100 font-bold">
+                              <h5 className="text-base font-serif text-stone-900 dark:text-stone-100 font-semibold">
                                 {phase.name}
                               </h5>
                             </div>
                           </div>
 
-                          <span className="px-2.5 py-1 rounded-full bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 text-[9px] font-black uppercase tracking-wider border border-purple-100">
-                            {phase.theme} theme
+                          <span className="px-2.5 py-0.5 rounded-lg bg-white dark:bg-[#1a1816] text-stone-700 dark:text-stone-300 text-xs font-medium border border-stone-200/80 dark:border-[#342f2b]">
+                            {phase.theme}
                           </span>
                         </div>
 
-                        <p className="text-xs text-stone-600 dark:text-stone-300 leading-relaxed relative z-10 italic">
+                        <p className="text-xs text-stone-600 dark:text-stone-300 leading-relaxed">
                           {phase.desc}
                         </p>
-
-                        <div className="pt-2 border-t border-stone-100 dark:border-stone-800 flex items-center justify-between text-[10px] text-stone-400">
-                          <span>Automatic color matching</span>
-                          <span className={`w-4 h-4 rounded-full bg-gradient-to-br ${phase.gradient} border border-white shadow-xs`} />
-                        </div>
                       </div>
                     ))}
                   </div>
                 </div>
-
               </div>
             )}
 
           </div>
 
           {/* Footer Close */}
-          <div className="px-6 py-4 border-t border-stone-100 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-900/50 flex justify-end shrink-0">
+          <div className="px-6 py-4 border-t border-stone-200/70 dark:border-[#2e2a26] bg-[#faf8f6] dark:bg-[#151311] flex justify-end shrink-0">
             <button
+              type="button"
               onClick={onClose}
-              className="px-6 py-2.5 bg-stone-900 hover:bg-stone-800 dark:bg-stone-100 dark:hover:bg-white text-white dark:text-stone-900 rounded-2xl text-xs font-black uppercase tracking-widest shadow-md transition-all cursor-pointer"
+              className="px-5 py-2.5 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-xs font-semibold transition-colors cursor-pointer"
             >
-              Done Customizing ✨
+              Done
             </button>
           </div>
-
         </motion.div>
       </div>
     </AnimatePresence>

@@ -296,7 +296,7 @@ const YogaTutorials: React.FC<YogaTutorialsProps> = ({ user, setUser, todaysSymp
       // Perfect Offline Fallbacks based on pose
       setTimeout(() => {
         if (poseName.includes("Child's")) {
-          setAiAdvice(`* **Widen Your Knees**: Create a loving space for your abdomen and uterine region to breathe fully without pressure.\n* **Support Your Third Eye**: Rest your forehead on a folded blanket or block to calm your pituitary gland and drop your cortisol levels.\n* **Lower Back Breath**: Direct your warm inhales specifically to your lower hips and lumbar zone where pelvic pressure aggregates.\n\nFlow with gentle ease, darling! ✨`);
+          setAiAdvice(`* **Widen Your Knees**: Create comfortable space for your abdomen and pelvic area to breathe fully without pressure.\n* **Support Your Forehead**: Rest your forehead on a folded blanket or block to ease tension and encourage deep relaxation.\n* **Lower Back Breath**: Direct your warm inhales toward your lower hips and lumbar region where pelvic pressure accumulates.\n\nFlow with gentle ease! ✨`);
         } else if (poseName.includes("Cat-Cow")) {
           setAiAdvice(`* **Soften the Arch**: Avoid over-extending your back or over-compressing your belly during the Cow phase.\n* **Match with Breath**: Slowly rise into Cat as you exhale, creating a light contraction that relieves abdominal bloating.\n* **Sway the Hips**: Add gentle lateral swaying to loosen the sacroiliac joints and pelvic girdle.\n\nNurture your temple beautifully! 🌸`);
         } else {
@@ -460,9 +460,9 @@ const YogaTutorials: React.FC<YogaTutorialsProps> = ({ user, setUser, todaysSymp
 
           {/* Core Energy Center Accent */}
           <g transform={`translate(${hipsX - 25}, ${hipsY - 10})`}>
-            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" 
-                  fill="#f472b6" 
-                  className="opacity-70 animate-pulse" 
+            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+                  fill="#f472b6"
+                  className="opacity-70"
                   transform="scale(0.8)"
             />
           </g>
@@ -616,8 +616,8 @@ const YogaTutorials: React.FC<YogaTutorialsProps> = ({ user, setUser, todaysSymp
           {/* LOGGING SUCCESS FULLSCREEN CELEBRATION */}
           {loggedSuccessfully ? (
             <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6 max-w-lg mx-auto animate-zoomIn py-12">
-              <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-emerald-400 to-teal-500 flex items-center justify-center text-white text-5xl shadow-2xl animate-bounce">
-                ✨
+              <div className="w-20 h-20 rounded-2xl bg-emerald-500 flex items-center justify-center text-white shadow-lg">
+                <Sparkles size={36} />
               </div>
               
               <div className="space-y-2">
@@ -696,37 +696,37 @@ const YogaTutorials: React.FC<YogaTutorialsProps> = ({ user, setUser, todaysSymp
               {/* Main Studio Body Grid */}
               <main className="w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 my-6 flex-1 items-stretch">
                 {/* LEFT COLUMN: Video / Animation Player Canvas (7 cols) */}
-                <section className="lg:col-span-7 bg-stone-900 border border-white/10 rounded-[2.5rem] p-5 md:p-6 flex flex-col justify-between relative overflow-hidden min-h-[420px] md:min-h-[500px] shadow-2xl">
-                  
+                <section className="lg:col-span-7 bg-stone-900 border border-white/10 rounded-2xl p-5 md:p-6 flex flex-col justify-between relative overflow-hidden min-h-[420px] md:min-h-[500px] shadow-2xl">
+
                   {/* Top Mode Switcher & Breath stage */}
                   <div className="flex justify-between items-center w-full relative z-10 flex-wrap gap-2">
-                    <div className="flex items-center gap-1 bg-black/60 p-1 rounded-full border border-white/10">
-                      <button 
+                    <div className="flex items-center gap-1 bg-black/60 p-1 rounded-xl border border-white/10">
+                      <button
                         type="button"
                         onClick={() => setPlayerMode('video')}
-                        className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer ${
-                          playerMode === 'video' ? 'bg-pink-500 text-white shadow-md' : 'text-stone-400 hover:text-white'
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                          playerMode === 'video' ? 'bg-pink-600 text-white' : 'text-stone-400 hover:text-white'
                         }`}
                       >
-                        📹 HD Workout Video
+                        HD Video
                       </button>
-                      <button 
+                      <button
                         type="button"
                         onClick={() => setPlayerMode('animation')}
-                        className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer ${
-                          playerMode === 'animation' ? 'bg-pink-500 text-white shadow-md' : 'text-stone-400 hover:text-white'
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                          playerMode === 'animation' ? 'bg-pink-600 text-white' : 'text-stone-400 hover:text-white'
                         }`}
                       >
-                        ✨ Motion Coach
+                        Motion Coach
                       </button>
                     </div>
 
-                    <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                    <div className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold ${
                       breathState === 'Inhale' ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' :
                       breathState === 'Hold' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' :
                       'bg-pink-500/20 text-pink-300 border border-pink-500/30'
-                    } transition-all duration-300 animate-pulse`}>
-                      💨 {breathState}...
+                    } transition-colors`}>
+                      {breathState}
                     </div>
                   </div>
 
@@ -858,8 +858,8 @@ const YogaTutorials: React.FC<YogaTutorialsProps> = ({ user, setUser, todaysSymp
                 <section className="lg:col-span-5 flex flex-col gap-5 min-h-[380px] lg:min-h-0">
                   
                   {/* AI PERSONALIZED CARD */}
-                  <div className="bg-gradient-to-br from-indigo-950/70 to-purple-950/70 border border-indigo-500/20 p-6 md:p-8 rounded-[2.5rem] shadow-xl flex flex-col justify-between flex-1 relative overflow-hidden text-white">
-                    
+                  <div className="bg-indigo-950/80 border border-indigo-500/20 p-6 rounded-2xl shadow-xl flex flex-col justify-between flex-1 relative overflow-hidden text-white">
+
                     <div className="space-y-4 relative z-10">
                       <div className="flex justify-between items-start">
                         <div className="flex items-center gap-2">
@@ -867,39 +867,40 @@ const YogaTutorials: React.FC<YogaTutorialsProps> = ({ user, setUser, todaysSymp
                             <Sparkles size={14} />
                           </div>
                           <div>
-                            <h4 className="text-xs font-bold uppercase tracking-widest text-indigo-300">Lumina Pose Coach</h4>
-                            <p className="text-[8px] text-indigo-200 uppercase tracking-widest">Generative Cycle Tuning</p>
+                            <h4 className="text-xs font-bold text-indigo-200">Lumina Pose Coach</h4>
+                            <p className="text-[11px] text-indigo-300/80">Cycle-aware alignment</p>
                           </div>
                         </div>
 
-                        <span className="bg-indigo-500/30 text-indigo-200 text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full">
+                        <span className="bg-indigo-500/30 text-indigo-200 text-[10px] font-semibold px-2.5 py-0.5 rounded-md">
                           Phase Active
                         </span>
                       </div>
 
-                      <div className="border-t border-indigo-500/10 pt-3">
+                      <div className="border-t border-indigo-500/15 pt-3">
                         {aiLoading ? (
                           <div className="py-8 text-center space-y-3">
-                            <div className="w-8 h-8 border-2 border-dashed border-indigo-400 rounded-full animate-spin mx-auto" />
-                            <p className="text-[10px] text-indigo-300 uppercase font-black tracking-widest animate-pulse">Personalizing for {currentPhase}...</p>
+                            <div className="w-7 h-7 border-2 border-dashed border-indigo-400 rounded-full animate-spin mx-auto" />
+                            <p className="text-xs text-indigo-300 font-medium">Personalizing for {currentPhase}...</p>
                           </div>
                         ) : aiAdvice ? (
-                          <div className="space-y-3 max-h-[220px] overflow-y-auto scrollbar-none pr-1">
-                            <p className="text-[9px] font-extrabold uppercase tracking-widest text-indigo-400">Adjustments for {currentPhase}:</p>
-                            <div className="text-xs leading-relaxed text-indigo-100/90 font-serif space-y-2 whitespace-pre-wrap">
+                          <div className="space-y-2.5 max-h-[220px] overflow-y-auto scrollbar-none pr-1">
+                            <p className="text-xs font-semibold text-indigo-300">Adjustments for {currentPhase}</p>
+                            <div className="text-xs leading-relaxed text-indigo-100/90 space-y-2 whitespace-pre-wrap">
                               {aiAdvice}
                             </div>
                           </div>
                         ) : (
                           <div className="text-center py-6 space-y-4">
-                            <p className="text-xs font-serif italic text-indigo-200 leading-relaxed">
-                              "Tap to let Lumina AI dynamically align this pose to help relieve your cycle symptoms."
+                            <p className="text-xs text-indigo-200 leading-relaxed">
+                              Let Lumina dynamically align this pose to support your current cycle symptoms.
                             </p>
-                            <button 
+                            <button
+                              type="button"
                               onClick={() => fetchPersonalizedAdvice(selectedPose.name)}
-                              className="px-6 py-2.5 bg-gradient-to-r from-pink-400 to-indigo-500 text-white font-extrabold uppercase text-[9px] tracking-widest rounded-full shadow-lg border border-white/10 hover:scale-[1.02] transition-transform cursor-pointer"
+                              className="px-5 py-2.5 bg-pink-600 hover:bg-pink-700 text-white font-semibold text-xs rounded-xl transition-colors cursor-pointer"
                             >
-                              ✨ Personalize Pose Adjustments
+                              Personalize Pose Adjustments
                             </button>
                           </div>
                         )}
@@ -907,15 +908,13 @@ const YogaTutorials: React.FC<YogaTutorialsProps> = ({ user, setUser, todaysSymp
                     </div>
 
                     {/* Small disclaimer footer inside AI Box */}
-                    <div className="text-[8px] opacity-40 italic mt-3 pt-2 border-t border-indigo-500/10 shrink-0">
-                      ⚠️ Generative advice. Honor your body. Consult physical therapist if feeling acute lumbar pressure.
+                    <div className="text-[10px] text-indigo-200/60 mt-3 pt-2 border-t border-indigo-500/15 shrink-0">
+                      Generative guidance. Honor your body and stop if you feel acute discomfort.
                     </div>
-
-                    <span className="absolute bottom-[-10%] right-[-10%] text-[8rem] opacity-5 pointer-events-none select-none font-black text-indigo-500 font-serif">AI</span>
                   </div>
 
                   {/* CLASSIC INSTRUCTIONAL STEPS */}
-                  <div className="bg-stone-900 border border-white/5 p-6 rounded-[2.5rem] flex flex-col justify-between text-white shrink-0">
+                  <div className="bg-stone-900 border border-white/10 p-6 rounded-2xl flex flex-col justify-between text-white shrink-0">
                     <div className="space-y-3">
                       <div className="flex items-center gap-2">
                         <div className="w-6 h-6 rounded-lg bg-white/5 flex items-center justify-center text-xs text-stone-400">ℹ️</div>
@@ -954,100 +953,99 @@ const YogaTutorials: React.FC<YogaTutorialsProps> = ({ user, setUser, todaysSymp
       {!selectedPose && (
         <div className="space-y-8 animate-fadeIn">
           
-          {/* Girly Header */}
-          <header className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 text-center md:text-left bg-gradient-to-br from-pink-50/60 to-rose-50/40 p-8 rounded-[2.5rem] border border-white/60 shadow-[inset_0_2px_4px_rgba(255,255,255,0.6),_0_12px_36px_rgba(244,114,182,0.03)]">
+          {/* Header */}
+          <header className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 text-center md:text-left bg-white dark:bg-[#1a1816] p-6 sm:p-7 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-xs">
             <div className="space-y-1">
-              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-pink-400 block">Flow & Glow Sanctuary</span>
-              <h3 className="text-2xl font-serif text-pink-600 font-bold italic">Animated Yoga Guide</h3>
-              <p className="text-xs text-stone-500 leading-relaxed font-serif italic">
-                Replacing missing YouTube tutorials with high-fidelity, procedurally-animated, and AI-personalized interactive posture controllers.
+              <span className="text-xs font-semibold text-pink-600 dark:text-pink-400 block">Flow & Glow Sanctuary</span>
+              <h3 className="text-2xl font-serif text-stone-900 dark:text-stone-100 font-bold">Animated Yoga Guide</h3>
+              <p className="text-xs text-stone-500 dark:text-stone-400 leading-relaxed">
+                Cycle-synced restorative posture coaching with real-time breath pacing and guided video routines.
               </p>
             </div>
 
-            <div className="bg-white/80 backdrop-blur-md px-4 py-3 rounded-2xl border border-pink-100 flex items-center gap-2.5 shadow-sm text-left shrink-0">
-              <div className="w-8 h-8 rounded-full bg-pink-50 text-pink-500 flex items-center justify-center text-lg animate-pulse">🧘‍♀️</div>
+            <div className="bg-[#faf8f6] dark:bg-[#23201d] px-4 py-3 rounded-xl border border-stone-200/80 dark:border-[#342f2b] flex items-center gap-3 text-left shrink-0">
+              <div className="w-9 h-9 rounded-xl bg-pink-50 dark:bg-pink-950/40 text-pink-600 dark:text-pink-400 flex items-center justify-center">
+                <Activity size={18} />
+              </div>
               <div>
-                <p className="text-[8px] font-black text-pink-400 uppercase tracking-widest leading-none">Your Cycle Today</p>
-                <p className="text-xs font-serif italic text-pink-700 font-bold pt-0.5 leading-none">{currentPhase} Phase</p>
+                <p className="text-[11px] font-medium text-stone-500 dark:text-stone-400 leading-none">Your Cycle Today</p>
+                <p className="text-xs font-bold text-stone-900 dark:text-stone-100 pt-1 leading-none">{currentPhase} Phase</p>
               </div>
             </div>
           </header>
 
-          {/* NEW MODULE: WEEKLY CONSISTENCY & PROGRESS BADGES DASHBOARD */}
-          <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 bg-white/40 border border-pink-100/50 p-6 md:p-8 rounded-[2.5rem] shadow-sm">
-            
+          {/* WEEKLY CONSISTENCY & PROGRESS BADGES DASHBOARD */}
+          <section className="grid grid-cols-1 lg:grid-cols-12 gap-5 bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] p-5 sm:p-6 rounded-2xl shadow-xs">
+
             {/* Left Card: Consistency Trophy & Badge */}
-            <div className="lg:col-span-5 bg-gradient-to-br from-pink-50 to-pink-100/30 border border-pink-100 p-6 rounded-[2rem] flex flex-col justify-between relative overflow-hidden">
+            <div className="lg:col-span-5 bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] p-5 rounded-xl flex flex-col justify-between relative overflow-hidden">
               <div className="space-y-3 relative z-10">
                 <div className="flex items-center gap-2">
-                  <Trophy size={16} className="text-pink-500" />
-                  <span className="text-[9px] font-black uppercase tracking-widest text-pink-500">Weekly Consistency</span>
+                  <Trophy size={16} className="text-pink-600 dark:text-pink-400" />
+                  <span className="text-xs font-semibold text-stone-700 dark:text-stone-200">Weekly Consistency</span>
                 </div>
 
                 <div className="flex items-center gap-3 pt-1">
-                  <div className={`w-16 h-16 rounded-2xl bg-gradient-to-tr ${currentBadge.color} flex items-center justify-center text-3xl shadow-md border border-white/20 shrink-0 transform hover:scale-110 transition-transform`}>
+                  <div className={`w-14 h-14 rounded-xl bg-gradient-to-tr ${currentBadge.color} flex items-center justify-center text-2xl shadow-xs border border-white/20 shrink-0`}>
                     {currentBadge.icon}
                   </div>
                   <div>
-                    <h4 className="text-md font-serif text-pink-900 italic font-bold leading-none">{currentBadge.name}</h4>
-                    <span className="text-[9px] font-black uppercase text-pink-400 tracking-wider block mt-1">Level {activeDaysCount === 0 ? 0 : activeDaysCount <= 2 ? 1 : activeDaysCount <= 4 ? 2 : 3} Badge</span>
+                    <h4 className="text-base font-serif text-stone-900 dark:text-stone-100 font-bold leading-none">{currentBadge.name}</h4>
+                    <span className="text-xs font-semibold text-pink-600 dark:text-pink-400 block mt-1 tabular-nums">Level {activeDaysCount === 0 ? 0 : activeDaysCount <= 2 ? 1 : activeDaysCount <= 4 ? 2 : 3} Badge</span>
                   </div>
                 </div>
 
-                <p className="text-xs text-stone-500 font-serif italic leading-relaxed pt-1">
-                  "{currentBadge.description}"
+                <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed pt-1">
+                  {currentBadge.description}
                 </p>
               </div>
 
               {/* Progress bar inside left card */}
-              <div className="pt-4 mt-4 border-t border-pink-100 relative z-10">
-                <div className="flex justify-between text-[10px] text-pink-800 font-black uppercase tracking-wider mb-1.5">
+              <div className="pt-4 mt-4 border-t border-stone-200/80 dark:border-[#342f2b] relative z-10">
+                <div className="flex justify-between text-xs text-stone-700 dark:text-stone-300 font-semibold mb-1.5 tabular-nums">
                   <span>Weekly Commitment</span>
-                  <span>{activeDaysCount} / 7 Days Active</span>
+                  <span>{activeDaysCount} / 7 Days</span>
                 </div>
-                <div className="w-full bg-pink-100/60 h-2.5 rounded-full overflow-hidden border border-pink-200/20">
-                  <div 
-                    className="bg-gradient-to-r from-pink-400 to-rose-400 h-full rounded-full transition-all duration-1000" 
+                <div className="w-full bg-stone-200/70 dark:bg-[#1a1816] h-2 rounded-full overflow-hidden">
+                  <div
+                    className="bg-pink-600 h-full rounded-full transition-all duration-700"
                     style={{ width: `${Math.round((activeDaysCount / 7) * 100)}%` }}
                   />
                 </div>
               </div>
-
-              {/* Decorative background watermark */}
-              <span className="absolute right-[-10px] bottom-[-20px] text-[6.5rem] opacity-5 pointer-events-none select-none font-bold text-pink-500">🧘</span>
             </div>
 
             {/* Middle Card: 7-Day Interactive Progress Checkbox track */}
-            <div className="lg:col-span-4 bg-white/70 border border-pink-50 p-6 rounded-[2rem] flex flex-col justify-between">
-              <div className="space-y-3">
+            <div className="lg:col-span-4 bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] p-5 rounded-xl flex flex-col justify-between">
+              <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <Calendar size={16} className="text-pink-400" />
-                  <span className="text-[9px] font-black uppercase tracking-widest text-pink-400">Activity Calendar</span>
+                  <Calendar size={16} className="text-pink-600 dark:text-pink-400" />
+                  <span className="text-xs font-semibold text-stone-700 dark:text-stone-200">Activity Calendar</span>
                 </div>
-                <h5 className="text-xs font-serif text-pink-900 font-bold italic">Last 7 Days Journey</h5>
-                <p className="text-[10px] text-gray-400 font-serif italic">Days marked with checks represent logged self-care somatic flows.</p>
+                <h5 className="text-sm font-serif text-stone-900 dark:text-stone-100 font-bold">Last 7 Days</h5>
+                <p className="text-xs text-stone-500 dark:text-stone-400">Days marked with checks represent completed restorative flows.</p>
               </div>
 
               {/* 7 Days circles list */}
-              <div className="grid grid-cols-7 gap-2 pt-4">
+              <div className="grid grid-cols-7 gap-1.5 pt-4">
                 {calendarChecklist.map((day, idx) => (
-                  <div 
-                    key={idx} 
-                    className={`flex flex-col items-center p-2 rounded-xl border transition-all ${
-                      day.isToday 
-                        ? 'bg-pink-500/5 border-pink-500/30 shadow-[0_0_10px_rgba(244,114,182,0.1)]' 
+                  <div
+                    key={idx}
+                    className={`flex flex-col items-center p-1.5 rounded-xl border transition-colors ${
+                      day.isToday
+                        ? 'bg-pink-50 dark:bg-pink-950/30 border-pink-300 dark:border-pink-800'
                         : 'border-transparent'
                     }`}
                   >
-                    <span className="text-[8px] font-black uppercase text-stone-400 tracking-wider block">{day.name}</span>
-                    <span className={`text-[10px] font-mono font-bold block mt-1 ${day.isToday ? 'text-pink-600' : 'text-stone-500'}`}>{day.dateNum}</span>
-                    
-                    <div className={`mt-2 w-6 h-6 rounded-full border flex items-center justify-center text-xs transition-all ${
-                      day.hasPracticed 
-                        ? 'bg-emerald-50 text-emerald-500 border-emerald-200 shadow-sm animate-pulse' 
-                        : 'bg-stone-50 text-stone-300 border-stone-200/50'
+                    <span className="text-[10px] font-semibold text-stone-500 dark:text-stone-400 block">{day.name}</span>
+                    <span className={`text-[11px] font-mono font-bold block mt-1 tabular-nums ${day.isToday ? 'text-pink-600 dark:text-pink-400' : 'text-stone-700 dark:text-stone-300'}`}>{day.dateNum}</span>
+
+                    <div className={`mt-2 w-6 h-6 rounded-full border flex items-center justify-center text-xs transition-colors ${
+                      day.hasPracticed
+                        ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
+                        : 'bg-white dark:bg-[#1a1816] text-stone-300 dark:text-stone-600 border-stone-200/80 dark:border-[#342f2b]'
                     }`}>
-                      {day.hasPracticed ? <Check size={10} strokeWidth={4} /> : <div className="w-1.5 h-1.5 rounded-full bg-stone-300" />}
+                      {day.hasPracticed ? <Check size={11} strokeWidth={3} /> : <div className="w-1.5 h-1.5 rounded-full bg-stone-300 dark:bg-stone-600" />}
                     </div>
                   </div>
                 ))}
@@ -1055,33 +1053,34 @@ const YogaTutorials: React.FC<YogaTutorialsProps> = ({ user, setUser, todaysSymp
             </div>
 
             {/* Right Card: Quick Logs Stats & sliding history button */}
-            <div className="lg:col-span-3 bg-white/70 border border-pink-50 p-6 rounded-[2rem] flex flex-col justify-between">
+            <div className="lg:col-span-3 bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] p-5 rounded-xl flex flex-col justify-between">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <History size={16} className="text-pink-400" />
-                  <span className="text-[9px] font-black uppercase tracking-widest text-pink-400">Total Practice</span>
-                </div>
-                
-                <div className="pt-2">
-                  <span className="text-3xl font-mono font-black text-pink-600 block leading-none">
-                    {yogaLogs.length}
-                  </span>
-                  <span className="text-[9px] font-black uppercase text-stone-400 tracking-widest block mt-1">Sessions Logged</span>
+                  <History size={16} className="text-pink-600 dark:text-pink-400" />
+                  <span className="text-xs font-semibold text-stone-700 dark:text-stone-200">Total Practice</span>
                 </div>
 
-                <div className="pt-2 border-t border-pink-50">
-                  <p className="text-[10px] text-gray-500 font-serif italic leading-relaxed">
-                    Total somatic relaxation time: <span className="text-pink-500 font-bold">{yogaLogs.length * 10} minutes</span> of pelvic and endocrine recovery flow.
+                <div className="pt-2">
+                  <span className="text-3xl font-mono font-bold text-pink-600 dark:text-pink-400 block leading-none tabular-nums">
+                    {yogaLogs.length}
+                  </span>
+                  <span className="text-xs font-medium text-stone-500 dark:text-stone-400 block mt-1.5">Sessions Logged</span>
+                </div>
+
+                <div className="pt-2 border-t border-stone-200/80 dark:border-[#342f2b]">
+                  <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed tabular-nums">
+                    Total relaxation time: <span className="text-pink-600 dark:text-pink-400 font-semibold">{yogaLogs.length * 10} minutes</span>
                   </p>
                 </div>
               </div>
 
-              <button 
+              <button
+                type="button"
                 onClick={() => setShowHistoryModal(true)}
-                className="w-full mt-4 py-2.5 bg-pink-50/80 hover:bg-pink-100 text-pink-600 font-extrabold uppercase text-[9px] tracking-widest rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer border border-pink-100"
+                className="w-full mt-4 py-2.5 bg-white dark:bg-[#1a1816] hover:border-pink-300 text-stone-700 dark:text-stone-200 font-semibold text-xs rounded-xl transition-colors flex items-center justify-center gap-1.5 cursor-pointer border border-stone-200/80 dark:border-[#342f2b]"
               >
-                <span>📁</span>
-                <span>View Practice History</span>
+                <History size={14} className="text-pink-600 dark:text-pink-400" />
+                <span>Practice History</span>
               </button>
             </div>
 
@@ -1089,54 +1088,50 @@ const YogaTutorials: React.FC<YogaTutorialsProps> = ({ user, setUser, todaysSymp
 
           {/* Active symptoms matching notice */}
           {todaysSymptoms.length > 0 && (
-            <div className="bg-amber-50/40 border border-amber-200/50 p-4 rounded-3xl flex items-center gap-3 animate-fadeIn text-gray-700">
-              <span className="text-xl shrink-0">🩹</span>
+            <div className="bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/50 p-4 rounded-xl flex items-center gap-3 animate-fadeIn text-stone-700 dark:text-amber-100">
+              <Heart size={18} className="text-amber-600 dark:text-amber-400 shrink-0" />
               <div className="min-w-0">
-                <p className="text-[9px] font-black text-amber-500 uppercase tracking-widest leading-none">Symptom Mitigation Activated</p>
-                <p className="text-xs leading-snug font-serif italic text-stone-600 mt-0.5 truncate">
-                  Tailoring yoga guides to soothe your active {todaysSymptoms.join(', ')} symptoms with Lumina Pose personalization.
+                <p className="text-xs font-bold text-amber-800 dark:text-amber-300 leading-none">Symptom Mitigation Active</p>
+                <p className="text-xs text-stone-600 dark:text-amber-200/80 mt-1 truncate">
+                  Tailoring yoga guides to soothe {todaysSymptoms.join(', ')}.
                 </p>
               </div>
             </div>
           )}
 
           {/* Poses Cards Grid */}
-          <div className="space-y-6">
+          <div className="space-y-4">
             {YOGA_POSES.map((pose: any, i) => (
-              <div 
-                key={i} 
+              <div
+                key={i}
                 onClick={() => {
                   setPlayerMode('video');
                   handleStartPractice(pose);
                 }}
-                className="bg-white/90 hover:bg-white border border-pink-100 hover:border-pink-300 p-5 md:p-6 rounded-[2.5rem] shadow-sm hover:shadow-md transition-all duration-300 flex flex-col md:flex-row items-center gap-6 group w-full cursor-pointer"
+                className="bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] hover:border-pink-300 dark:hover:border-pink-800 p-5 rounded-2xl shadow-xs transition-colors flex flex-col md:flex-row items-center gap-5 group w-full cursor-pointer"
               >
                 {/* Visual Thumbnail & Play Badge Preview */}
-                <div className="w-full md:w-64 h-48 sm:h-52 bg-gradient-to-br from-pink-900 via-stone-900 to-rose-950 rounded-[2rem] border border-pink-100/20 overflow-hidden relative shrink-0 flex items-center justify-center shadow-md group-hover:scale-[1.01] transition-transform">
-                  {/* Subtle poster background image or fallback gradient */}
-                  <img 
-                    src={pose.image || "/assets/yoga/childs-pose.svg"} 
+                <div className="w-full md:w-60 h-44 sm:h-48 bg-stone-900 rounded-xl border border-stone-200/20 overflow-hidden relative shrink-0 flex items-center justify-center">
+                  <img
+                    src={pose.image || "/assets/yoga/childs-pose.svg"}
                     alt={`${pose.name} yoga posture guide`}
                     loading="lazy"
-                    className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-75 transition-opacity"
+                    className="absolute inset-0 w-full h-full object-cover opacity-65 group-hover:opacity-80 transition-opacity"
                   />
-                  
-                  {/* Overlay gradient mask */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/40 to-transparent" />
 
-                  {/* Play Button Badge */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-stone-950/90 via-stone-950/30 to-transparent" />
+
                   <div className="relative z-10 flex flex-col items-center gap-2 text-center p-3">
-                    <div className="w-12 h-12 rounded-full bg-pink-500/90 text-white flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform border border-white/30 backdrop-blur-md">
-                      <Play size={20} fill="currentColor" className="ml-1" />
+                    <div className="w-11 h-11 rounded-full bg-pink-600 text-white flex items-center justify-center shadow-md group-hover:scale-105 transition-transform">
+                      <Play size={18} fill="currentColor" className="ml-0.5" />
                     </div>
-                    <span className="text-[9px] font-black uppercase tracking-widest text-white bg-black/50 px-3 py-1 rounded-full border border-white/20 backdrop-blur-sm">
-                      ▶ Watch HD Tutorial
+                    <span className="text-xs font-semibold text-white bg-black/55 px-3 py-1 rounded-lg border border-white/15 backdrop-blur-sm">
+                      Watch Tutorial
                     </span>
                   </div>
 
-                  {/* Top Duration Badge */}
-                  <div className="absolute top-3 right-3 z-10 bg-black/60 backdrop-blur-md border border-white/20 text-pink-300 text-[8px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full">
-                    ⏱️ {pose.duration || "10 mins"}
+                  <div className="absolute top-3 right-3 z-10 bg-black/65 backdrop-blur-sm border border-white/15 text-stone-100 text-[11px] font-semibold px-2.5 py-0.5 rounded-md tabular-nums">
+                    {pose.duration || "10 mins"}
                   </div>
                 </div>
 
@@ -1144,37 +1139,37 @@ const YogaTutorials: React.FC<YogaTutorialsProps> = ({ user, setUser, todaysSymp
                 <div className="flex-1 space-y-3 text-center md:text-left min-w-0 w-full">
                   <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-2">
                     <div>
-                      <h4 className="text-xl font-serif text-pink-600 font-bold italic group-hover:text-pink-700 transition-colors">{pose.name}</h4>
-                      <p className="text-[9px] font-black uppercase tracking-widest text-pink-400 mt-0.5">
-                        {pose.category || "Full Workout Video"} • {pose.duration || "10 mins"}
+                      <h4 className="text-lg sm:text-xl font-serif text-stone-900 dark:text-stone-100 font-bold group-hover:text-pink-600 dark:group-hover:text-pink-400 transition-colors">{pose.name}</h4>
+                      <p className="text-xs font-medium text-stone-500 dark:text-stone-400 mt-0.5">
+                        {pose.category || "Guided Workout"} · {pose.duration || "10 mins"}
                       </p>
                     </div>
-                    <span className="bg-pink-50/80 border border-pink-100 text-pink-600 text-[9px] font-extrabold px-3 py-1.5 rounded-full uppercase shrink-0 mx-auto md:mx-0">
-                      ✨ {pose.duration || "10 mins"}
+                    <span className="bg-pink-50 dark:bg-pink-950/40 border border-pink-200/70 dark:border-pink-900/40 text-pink-700 dark:text-pink-300 text-xs font-semibold px-3 py-1 rounded-md shrink-0 mx-auto md:mx-0 tabular-nums">
+                      {pose.duration || "10 mins"}
                     </span>
                   </div>
 
-                  <p className="text-xs text-stone-600 leading-relaxed font-serif italic">
+                  <p className="text-xs text-stone-600 dark:text-stone-300 leading-relaxed">
                     {pose.description}
                   </p>
 
-                  <div className="pt-2 border-t border-pink-50 flex flex-wrap gap-4 justify-center md:justify-start items-center">
+                  <div className="pt-2 border-t border-stone-100 dark:border-[#2e2a26] flex flex-wrap gap-4 justify-center md:justify-start items-center">
                     <div>
-                      <span className="text-[8px] font-black text-pink-300 uppercase tracking-widest block leading-none">Primary Benefit</span>
-                      <span className="text-xs font-serif italic text-pink-600 block mt-0.5">✨ {pose.benefit}</span>
+                      <span className="text-[11px] font-medium text-stone-400 block leading-none">Primary Benefit</span>
+                      <span className="text-xs font-semibold text-pink-600 dark:text-pink-400 block mt-1">{pose.benefit}</span>
                     </div>
-                    
-                    <button 
+
+                    <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         setPlayerMode('video');
                         handleStartPractice(pose);
                       }}
-                      className="ml-auto px-6 py-3 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white font-extrabold uppercase text-[9px] tracking-widest rounded-full shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
+                      className="md:ml-auto px-5 py-2.5 bg-pink-600 hover:bg-pink-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
                     >
-                      <span>▶️</span>
-                      <span>Enter Studio & Practice</span>
+                      <Play size={13} fill="currentColor" />
+                      <span>Enter Practice Studio</span>
                     </button>
                   </div>
                 </div>
@@ -1184,25 +1179,27 @@ const YogaTutorials: React.FC<YogaTutorialsProps> = ({ user, setUser, todaysSymp
           </div>
 
           {/* Guided Meditation Prompt Banner */}
-          <div className="bg-gradient-to-r from-pink-400 via-rose-400 to-indigo-500 p-8 rounded-[2.5rem] text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-lg shadow-pink-100">
-             <div className="space-y-1.5 text-center md:text-left">
-                <p className="text-xl font-serif italic font-bold">Need a guided meditation?</p>
-                <p className="text-xs opacity-90 font-serif italic">Let Lumina's beautiful therapeutic voice coach guide your body posture on standard cycles.</p>
-             </div>
-             <button 
-               onClick={() => {
-                 if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-                   window.speechSynthesis.cancel();
-                   const text = "Sit back, close your eyes, and allow your beautiful body to rest. Inhale love, hold peace, exhale all your concerns.";
-                   const utterance = new SpeechSynthesisUtterance(text);
-                   utterance.rate = 0.85;
-                   window.speechSynthesis.speak(utterance);
-                 }
-               }}
-               className="bg-white text-pink-500 px-6 py-3.5 rounded-full font-black text-[10px] uppercase shadow-lg hover:scale-105 active:scale-95 transition-all shrink-0 cursor-pointer"
-             >
-               🎙️ Listen to Chime Guide
-             </button>
+          <div className="bg-stone-900 dark:bg-[#1a1816] border border-stone-800 dark:border-[#2e2a26] p-6 sm:p-7 rounded-2xl text-white flex flex-col md:flex-row items-center justify-between gap-5">
+            <div className="space-y-1 text-center md:text-left">
+              <p className="text-lg font-serif font-bold">Need a guided meditation?</p>
+              <p className="text-xs text-stone-300">Let Lumina's therapeutic voice coach guide your breath and posture.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+                  window.speechSynthesis.cancel();
+                  const text = "Sit back, close your eyes, and allow your beautiful body to rest. Inhale love, hold peace, exhale all your concerns.";
+                  const utterance = new SpeechSynthesisUtterance(text);
+                  utterance.rate = 0.85;
+                  window.speechSynthesis.speak(utterance);
+                }
+              }}
+              className="bg-pink-600 hover:bg-pink-700 text-white px-5 py-2.5 rounded-xl font-semibold text-xs transition-colors shrink-0 cursor-pointer flex items-center gap-2"
+            >
+              <Volume2 size={15} />
+              <span>Listen to Chime Guide</span>
+            </button>
           </div>
 
         </div>
@@ -1211,59 +1208,61 @@ const YogaTutorials: React.FC<YogaTutorialsProps> = ({ user, setUser, todaysSymp
       {/* PRACTICE HISTORY SLIDING OVERLAY SHEET (MODAL) */}
       {showHistoryModal && (
         <div className="fixed inset-0 z-[110] bg-stone-950/60 backdrop-blur-sm flex items-center justify-end animate-fadeIn">
-          <div className="bg-white w-full max-w-md h-full shadow-2xl p-6 md:p-8 flex flex-col justify-between overflow-y-auto animate-slideIn">
+          <div className="bg-white dark:bg-[#1a1816] border-l border-stone-200/80 dark:border-[#2e2a26] w-full max-w-md h-full shadow-2xl p-6 md:p-7 flex flex-col justify-between overflow-y-auto animate-slideIn">
             
             <div className="space-y-6">
               {/* Header */}
-              <div className="flex justify-between items-center border-b border-pink-50 pb-4">
+              <div className="flex justify-between items-center border-b border-stone-200/80 dark:border-[#2e2a26] pb-4">
                 <div className="flex items-center gap-2.5">
-                  <span className="text-xl">📁</span>
+                  <span className="text-xl" aria-hidden="true">📁</span>
                   <div>
-                    <h4 className="text-lg font-serif text-pink-900 font-bold italic">Practice Records</h4>
-                    <p className="text-[8px] font-black uppercase tracking-widest text-pink-400">Somatic Care Logs</p>
+                    <h4 className="text-lg font-serif text-stone-900 dark:text-stone-100 font-bold">Practice Records</h4>
+                    <p className="text-xs font-medium text-pink-600 dark:text-pink-400">Somatic care logs</p>
                   </div>
                 </div>
 
                 <button 
                   onClick={() => setShowHistoryModal(false)}
-                  className="w-8 h-8 rounded-full bg-stone-100 hover:bg-stone-200 flex items-center justify-center text-stone-500 transition-colors cursor-pointer"
+                  aria-label="Close practice records"
+                  className="w-9 h-9 rounded-xl bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] hover:border-pink-300 flex items-center justify-center text-stone-500 dark:text-stone-400 transition-colors cursor-pointer"
                 >
                   <X size={16} />
                 </button>
               </div>
 
               {/* History checklist logs list */}
-              <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+              <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
                 {yogaLogs.length === 0 ? (
-                  <div className="text-center py-12 space-y-3">
-                    <span className="text-4xl block opacity-35">🧘‍♀️</span>
-                    <p className="text-xs text-stone-400 font-serif italic">Your practice record book is empty, darling.</p>
-                    <p className="text-[9px] text-pink-400 uppercase tracking-widest font-bold">Start a pose to log consistency</p>
+                  <div className="text-center py-12 space-y-2.5 bg-[#faf8f6] dark:bg-[#23201d] rounded-2xl border border-stone-200/70 dark:border-[#342f2b] p-6">
+                    <span className="text-4xl block opacity-50" aria-hidden="true">🧘‍♀️</span>
+                    <p className="text-sm font-semibold text-stone-700 dark:text-stone-200">Your practice log is empty.</p>
+                    <p className="text-xs text-stone-500 dark:text-stone-400">Start a pose to record your consistency.</p>
                   </div>
                 ) : (
                   yogaLogs.map((log) => (
                     <div 
                       key={log.id} 
-                      className="bg-pink-50/30 border border-pink-100/50 p-4 rounded-2xl flex justify-between items-center group relative hover:border-pink-200 transition-all"
+                      className="bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] p-4 rounded-xl flex justify-between items-center group relative hover:border-pink-300 dark:hover:border-pink-800/70 transition-all"
                     >
-                      <div className="space-y-1 pr-6">
-                        <span className="text-[8px] font-mono font-bold text-pink-400 uppercase tracking-wide block">
+                      <div className="space-y-1 pr-4">
+                        <span className="text-[11px] font-mono font-semibold text-pink-600 dark:text-pink-400 block tabular-nums">
                           {new Date(log.date).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </span>
-                        <h5 className="text-sm font-serif font-bold text-stone-800 italic leading-none">{log.poseName}</h5>
-                        <p className="text-[10px] text-gray-500 leading-tight pt-0.5">{log.benefit}</p>
-                        <span className="text-[9px] text-emerald-600 font-black uppercase tracking-widest bg-emerald-50 px-2 py-0.5 rounded-full inline-block mt-1">
-                          ⏱️ {log.duration} Mins Logged
+                        <h5 className="text-sm font-serif font-bold text-stone-900 dark:text-stone-100 leading-snug">{log.poseName}</h5>
+                        <p className="text-xs text-stone-500 dark:text-stone-400 leading-snug">{log.benefit}</p>
+                        <span className="text-[11px] text-emerald-700 dark:text-emerald-300 font-semibold bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200/60 dark:border-emerald-800/60 px-2.5 py-0.5 rounded-lg inline-block mt-1 tabular-nums">
+                          ⏱️ {log.duration} mins logged
                         </span>
                       </div>
 
                       {/* Delete action */}
                       <button 
                         onClick={() => handleDeleteLog(log.id)}
-                        className="w-8 h-8 rounded-full bg-rose-50 text-rose-500 hover:bg-rose-100 hover:text-rose-600 flex items-center justify-center transition-all opacity-80 group-hover:opacity-100 cursor-pointer"
+                        className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-950/70 flex items-center justify-center transition-all cursor-pointer shrink-0"
                         title="Delete this record"
+                        aria-label="Delete practice record"
                       >
-                        <Trash2 size={13} />
+                        <Trash2 size={14} />
                       </button>
                     </div>
                   ))
@@ -1272,12 +1271,12 @@ const YogaTutorials: React.FC<YogaTutorialsProps> = ({ user, setUser, todaysSymp
             </div>
 
             {/* Bottom Actions */}
-            <div className="border-t border-pink-50 pt-4 mt-6">
+            <div className="border-t border-stone-200/80 dark:border-[#2e2a26] pt-4 mt-6">
               <button 
                 onClick={() => setShowHistoryModal(false)}
-                className="w-full py-3 bg-pink-500 hover:bg-pink-600 text-white font-extrabold uppercase text-[10px] tracking-widest rounded-full shadow-md transition-all cursor-pointer"
+                className="w-full py-3 bg-pink-600 hover:bg-pink-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
               >
-                Return to Flow Sanctuary
+                Return to flow sanctuary
               </button>
             </div>
 

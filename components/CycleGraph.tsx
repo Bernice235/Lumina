@@ -270,7 +270,7 @@ export const CycleGraph: React.FC<CycleGraphProps> = ({ user, setUser, symptoms 
   const barColors = ['#f472b6', '#f43f5e', '#fda4af', '#fbcfe8', '#db2777', '#f472b6'];
 
   return (
-    <div className="space-y-8 select-none animate-fadeIn text-left font-sans">
+    <div className="space-y-6 select-none animate-fadeIn text-left font-sans">
       
       {/* Clinical Trend Notice (if repeated significant shifts occur) */}
       {analytics.hasSignificantTrendAlert && !isAlertDismissed && (
@@ -278,32 +278,33 @@ export const CycleGraph: React.FC<CycleGraphProps> = ({ user, setUser, symptoms 
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
-          className="bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-200/90 p-5 rounded-[2rem] shadow-sm relative overflow-hidden"
+          className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 p-5 rounded-2xl shadow-xs relative overflow-hidden"
         >
           <div className="flex items-start gap-4">
-            <div className="w-11 h-11 bg-amber-500 text-white rounded-2xl flex items-center justify-center text-xl shrink-0 shadow-sm">
+            <div className="w-11 h-11 bg-amber-600 text-white rounded-xl flex items-center justify-center text-xl shrink-0 shadow-xs">
               🩺
             </div>
-            <div className="flex-1 pr-6 space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-extrabold uppercase tracking-widest text-amber-800 bg-amber-200/60 px-2.5 py-0.5 rounded-full">
-                  Clinical Trend Notice
+            <div className="flex-1 pr-6 space-y-1.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[11px] font-semibold text-amber-800 dark:text-amber-300 bg-amber-200/70 dark:bg-amber-900/50 px-2.5 py-0.5 rounded-lg">
+                  Clinical trend notice
                 </span>
-                <span className="text-xs text-amber-700/80 font-bold">Repeated Shifts Detected</span>
+                <span className="text-xs text-amber-800 dark:text-amber-300 font-semibold">Repeated shifts detected</span>
               </div>
-              <p className="text-xs sm:text-sm font-serif italic text-amber-950 font-bold leading-relaxed">
+              <p className="text-sm font-serif text-amber-950 dark:text-amber-100 font-semibold leading-relaxed">
                 "{analytics.significantTrendMessage}"
               </p>
-              <p className="text-[10px] text-amber-800/80 font-medium pt-1">
-                Lumina detected repeated significant deviations (6+ days) over consecutive cycles. Monitoring patterns with a healthcare provider helps optimize reproductive well-being.
+              <p className="text-xs text-amber-800/90 dark:text-amber-200/80 leading-relaxed">
+                Lumina detected repeated shifts (6+ days) over consecutive cycles. Monitoring patterns with a healthcare provider helps optimize reproductive well-being.
               </p>
             </div>
             <button
               onClick={handleDismissAlert}
-              className="w-7 h-7 rounded-full bg-amber-100/80 hover:bg-amber-200 text-amber-700 flex items-center justify-center transition-colors cursor-pointer shrink-0"
+              className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-900/40 hover:bg-amber-200 dark:hover:bg-amber-900/70 text-amber-800 dark:text-amber-300 flex items-center justify-center transition-colors cursor-pointer shrink-0"
               title="Dismiss notification"
+              aria-label="Dismiss clinical trend notice"
             >
-              <X size={14} />
+              <X size={15} />
             </button>
           </div>
         </motion.div>
@@ -312,94 +313,94 @@ export const CycleGraph: React.FC<CycleGraphProps> = ({ user, setUser, symptoms 
       {/* ========================================================================= */}
       {/* SECTION A: CYCLE OVERVIEW (4 PRIMARY METRIC CARDS)                       */}
       {/* ========================================================================= */}
-      <section className="space-y-3">
-        <div className="flex items-center justify-between px-1">
+      <section className="space-y-3.5">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-1">
           <div>
-            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-pink-500 flex items-center gap-1.5">
-              <span>🌸</span> Section A: Cycle Overview
+            <h3 className="text-sm font-semibold text-pink-600 dark:text-pink-400 flex items-center gap-1.5">
+              <span>🌸</span> Cycle overview
             </h3>
-            <p className="text-[11px] text-stone-400 italic">
+            <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
               Computed from completed cycle logs and biological telemetry.
             </p>
           </div>
-          <span className="text-[9px] font-bold text-pink-600 bg-pink-50 border border-pink-100 px-3 py-1 rounded-full uppercase tracking-wider">
-            {analytics.totalLoggedCycles} {analytics.totalLoggedCycles === 1 ? 'Cycle Logged' : 'Cycles Logged'}
+          <span className="text-xs font-semibold text-pink-700 dark:text-pink-300 bg-pink-50 dark:bg-pink-950/40 border border-pink-200/70 dark:border-pink-800/60 px-3 py-1 rounded-xl tabular-nums whitespace-nowrap shrink-0">
+            {analytics.totalLoggedCycles} {analytics.totalLoggedCycles === 1 ? 'cycle logged' : 'cycles logged'}
           </span>
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           
           {/* Card 1: Average Cycle Length */}
-          <div className="bg-white border border-pink-100/80 p-4 sm:p-5 rounded-3xl shadow-xs flex flex-col justify-between hover:border-pink-200 transition-all">
+          <div className="bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] p-4 sm:p-5 rounded-2xl shadow-xs flex flex-col justify-between hover:border-pink-300 dark:hover:border-pink-800/70 transition-all">
             <div className="flex items-center justify-between">
-              <span className="text-[9px] font-black uppercase tracking-wider text-pink-500">
-                Average Cycle Length
+              <span className="text-xs font-semibold text-pink-600 dark:text-pink-400">
+                Average cycle length
               </span>
-              <span className="text-base">🔄</span>
+              <span className="text-base" aria-hidden="true">🔄</span>
             </div>
-            <div className="my-2">
-              <h4 className="text-2xl sm:text-3xl font-serif font-black text-stone-800 tracking-tight">
+            <div className="my-2.5">
+              <h4 className="text-2xl sm:text-3xl font-serif font-bold text-stone-900 dark:text-stone-100 tracking-tight tabular-nums">
                 {analytics.averageCycleDisplay}
               </h4>
             </div>
-            <p className="text-[9.5px] text-stone-400 italic">
+            <p className="text-[11px] text-stone-500 dark:text-stone-400">
               {analytics.hasRealCompletedCycles ? 'Based on completed cycles' : 'Configured user baseline'}
             </p>
           </div>
 
           {/* Card 2: Average Period Length */}
-          <div className="bg-white border border-pink-100/80 p-4 sm:p-5 rounded-3xl shadow-xs flex flex-col justify-between hover:border-pink-200 transition-all">
+          <div className="bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] p-4 sm:p-5 rounded-2xl shadow-xs flex flex-col justify-between hover:border-pink-300 dark:hover:border-pink-800/70 transition-all">
             <div className="flex items-center justify-between">
-              <span className="text-[9px] font-black uppercase tracking-wider text-rose-500">
-                Average Period Length
+              <span className="text-xs font-semibold text-rose-600 dark:text-rose-400">
+                Average period length
               </span>
-              <span className="text-base">🩸</span>
+              <span className="text-base" aria-hidden="true">🩸</span>
             </div>
-            <div className="my-2">
-              <h4 className="text-2xl sm:text-3xl font-serif font-black text-rose-700 tracking-tight">
+            <div className="my-2.5">
+              <h4 className="text-2xl sm:text-3xl font-serif font-bold text-rose-700 dark:text-rose-300 tracking-tight tabular-nums">
                 {analytics.averagePeriodDisplay}
               </h4>
             </div>
-            <p className="text-[9.5px] text-stone-400 italic">
+            <p className="text-[11px] text-stone-500 dark:text-stone-400">
               Bleeding duration per period
             </p>
           </div>
 
           {/* Card 3: Cycle Regularity */}
-          <div className="bg-white border border-pink-100/80 p-4 sm:p-5 rounded-3xl shadow-xs flex flex-col justify-between hover:border-pink-200 transition-all">
+          <div className="bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] p-4 sm:p-5 rounded-2xl shadow-xs flex flex-col justify-between hover:border-pink-300 dark:hover:border-pink-800/70 transition-all">
             <div className="flex items-center justify-between">
-              <span className="text-[9px] font-black uppercase tracking-wider text-teal-600">
-                Cycle Regularity
+              <span className="text-xs font-semibold text-teal-700 dark:text-teal-400">
+                Cycle regularity
               </span>
-              <span className="text-base">✨</span>
+              <span className="text-base" aria-hidden="true">✨</span>
             </div>
-            <div className="my-2 space-y-1">
-              <h4 className="text-xl sm:text-2xl font-serif font-black text-stone-800 leading-tight">
+            <div className="my-2.5 space-y-1.5">
+              <h4 className="text-xl sm:text-2xl font-serif font-bold text-stone-900 dark:text-stone-100 leading-tight">
                 {analytics.cycleRegularity}
               </h4>
-              <span className={`inline-block text-[9.5px] font-bold px-2 py-0.5 rounded-md border ${analytics.regularityBadgeClass}`}>
+              <span className={`inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded-lg border ${analytics.regularityBadgeClass}`}>
                 {analytics.cycleRegularity}
               </span>
             </div>
-            <p className="text-[9.5px] text-stone-400 italic leading-snug">
+            <p className="text-[11px] text-stone-500 dark:text-stone-400 leading-snug">
               {analytics.regularityDescription}
             </p>
           </div>
 
           {/* Card 4: Average Cycle Variation */}
-          <div className="bg-white border border-pink-100/80 p-4 sm:p-5 rounded-3xl shadow-xs flex flex-col justify-between hover:border-pink-200 transition-all">
+          <div className="bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] p-4 sm:p-5 rounded-2xl shadow-xs flex flex-col justify-between hover:border-pink-300 dark:hover:border-pink-800/70 transition-all">
             <div className="flex items-center justify-between">
-              <span className="text-[9px] font-black uppercase tracking-wider text-purple-600">
-                Cycle Variation
+              <span className="text-xs font-semibold text-purple-600 dark:text-purple-400">
+                Cycle variation
               </span>
-              <span className="text-base">📊</span>
+              <span className="text-base" aria-hidden="true">📊</span>
             </div>
-            <div className="my-2">
-              <h4 className="text-2xl sm:text-3xl font-serif font-black text-purple-900 tracking-tight">
+            <div className="my-2.5">
+              <h4 className="text-2xl sm:text-3xl font-serif font-bold text-purple-900 dark:text-purple-200 tracking-tight tabular-nums">
                 {analytics.averageVariationDisplay}
               </h4>
             </div>
-            <p className="text-[9.5px] text-stone-400 italic">
+            <p className="text-[11px] text-stone-500 dark:text-stone-400">
               Mean absolute deviation across cycles
             </p>
           </div>
@@ -410,26 +411,22 @@ export const CycleGraph: React.FC<CycleGraphProps> = ({ user, setUser, symptoms 
       {/* ========================================================================= */}
       {/* SECTION B: CYCLE TREND (HISTORICAL GRAPH & PREV VS CURRENT DELTA)        */}
       {/* ========================================================================= */}
-      <section className="bg-gradient-to-br from-pink-500 via-rose-500 to-pink-600 rounded-[2.5rem] p-6 sm:p-8 text-white shadow-lg shadow-pink-200/50 relative overflow-hidden">
-        <div className="absolute -right-6 -bottom-6 text-white/10 text-9xl font-black pointer-events-none select-none">
-          📈
-        </div>
-
+      <section className="bg-gradient-to-br from-pink-600 via-rose-500 to-pink-600 rounded-2xl p-6 sm:p-8 text-white shadow-md relative overflow-hidden">
         <div className="relative z-10 space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/20 pb-4">
             <div>
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-pink-100 flex items-center gap-1.5">
-                <Activity size={12} />
-                <span>Section B: Cycle Trend Analysis</span>
+              <span className="text-xs font-semibold text-pink-100 flex items-center gap-1.5">
+                <Activity size={14} />
+                <span>Cycle trend analysis</span>
               </span>
-              <h3 className="text-2xl font-serif font-black italic text-white tracking-tight mt-1">
+              <h3 className="text-2xl font-serif font-bold text-white tracking-tight mt-1">
                 Previous vs. Current Cycle Trend
               </h3>
             </div>
             
             <div className="flex items-center gap-2">
-              <span className="px-3.5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-xs bg-white/20 backdrop-blur-md text-white border border-white/30">
-                <span className="text-xs">{analytics.trendDirectionIcon}</span>
+              <span className="px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 bg-white/15 text-white border border-white/25 whitespace-nowrap shrink-0">
+                <span>{analytics.trendDirectionIcon}</span>
                 <span>{analytics.trendDirectionLabel}</span>
               </span>
             </div>
@@ -438,17 +435,17 @@ export const CycleGraph: React.FC<CycleGraphProps> = ({ user, setUser, symptoms 
           {/* Previous vs Current Cycle Length & Change Metrics */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-1">
             {/* Previous Cycle Length */}
-            <div className="bg-white/15 backdrop-blur-md border border-white/25 rounded-2xl p-4 space-y-1">
-              <span className="text-[9.5px] font-extrabold uppercase tracking-widest text-pink-100 block">
-                Previous Cycle Length
+            <div className="bg-white/15 border border-white/20 rounded-xl p-4 space-y-1">
+              <span className="text-xs font-semibold text-pink-100 block">
+                Previous cycle length
               </span>
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-3xl font-serif font-black tracking-tight text-white">
+              <div className="flex items-baseline gap-1.5 tabular-nums">
+                <span className="text-3xl font-serif font-bold tracking-tight text-white">
                   {analytics.previousCycleLength}
                 </span>
-                <span className="text-xs font-sans font-bold text-pink-100">days</span>
+                <span className="text-xs font-sans font-semibold text-pink-100">days</span>
               </div>
-              <p className="text-[9px] text-pink-100/80 italic">
+              <p className="text-[11px] text-pink-100/90">
                 {analytics.totalLoggedCycles >= 2 
                   ? `Cycle ${analytics.totalLoggedCycles - 1} length`
                   : 'Configured reference baseline'}
@@ -456,17 +453,17 @@ export const CycleGraph: React.FC<CycleGraphProps> = ({ user, setUser, symptoms 
             </div>
 
             {/* Current Cycle Length */}
-            <div className="bg-white/25 backdrop-blur-md border border-white/40 rounded-2xl p-4 space-y-1 shadow-xs">
-              <span className="text-[9.5px] font-extrabold uppercase tracking-widest text-pink-100 block">
-                Current Cycle Length
+            <div className="bg-white/20 border border-white/35 rounded-xl p-4 space-y-1 shadow-xs">
+              <span className="text-xs font-semibold text-pink-50 block">
+                Current cycle length
               </span>
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-3xl font-serif font-black tracking-tight text-white">
+              <div className="flex items-baseline gap-1.5 tabular-nums">
+                <span className="text-3xl font-serif font-bold tracking-tight text-white">
                   {analytics.currentCycleLength}
                 </span>
-                <span className="text-xs font-sans font-bold text-pink-100">days</span>
+                <span className="text-xs font-sans font-semibold text-pink-100">days</span>
               </div>
-              <p className="text-[9px] text-pink-100/90 italic">
+              <p className="text-[11px] text-pink-50/90">
                 {analytics.totalLoggedCycles >= 1 
                   ? `Cycle ${analytics.totalLoggedCycles} length`
                   : 'Current configured cycle length'}
@@ -474,16 +471,16 @@ export const CycleGraph: React.FC<CycleGraphProps> = ({ user, setUser, symptoms 
             </div>
 
             {/* Change / Difference */}
-            <div className="bg-white/15 backdrop-blur-md border border-white/25 rounded-2xl p-4 space-y-1">
-              <span className="text-[9.5px] font-extrabold uppercase tracking-widest text-pink-100 block">
-                Change from Previous
+            <div className="bg-white/15 border border-white/20 rounded-xl p-4 space-y-1">
+              <span className="text-xs font-semibold text-pink-100 block">
+                Change from previous
               </span>
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-3xl font-serif font-black tracking-tight text-white">
+              <div className="flex items-baseline gap-1.5 tabular-nums">
+                <span className="text-3xl font-serif font-bold tracking-tight text-white">
                   {analytics.cycleChangeFormatted}
                 </span>
               </div>
-              <p className="text-[9px] text-pink-100/80 italic">
+              <p className="text-[11px] text-pink-100/90">
                 {analytics.cycleChange > 0 
                   ? 'Lengthened from previous cycle'
                   : analytics.cycleChange < 0
@@ -498,53 +495,53 @@ export const CycleGraph: React.FC<CycleGraphProps> = ({ user, setUser, symptoms 
       {/* ========================================================================= */}
       {/* SECTION C: REGULARITY ANALYSIS (SHORTEST, LONGEST, VARIATION & TIER)     */}
       {/* ========================================================================= */}
-      <section className="bg-white p-6 sm:p-7 rounded-[2.5rem] border border-pink-100/80 shadow-xs space-y-4">
-        <div className="flex items-center justify-between border-b border-pink-50 pb-3">
+      <section className="bg-white dark:bg-[#1a1816] p-6 sm:p-7 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-xs space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-100 dark:border-[#2e2a26] pb-3.5">
           <div>
-            <span className="text-[9.5px] font-black uppercase tracking-[0.2em] text-pink-500">
-              Section C: Clinical Regularity Analysis
+            <span className="text-xs font-semibold text-pink-600 dark:text-pink-400">
+              Clinical regularity analysis
             </span>
-            <h4 className="text-lg font-serif font-bold text-stone-800 italic mt-0.5">
+            <h4 className="text-lg font-serif font-bold text-stone-900 dark:text-stone-100 mt-0.5">
               Cycle Regularity Classification & Boundary Range
             </h4>
           </div>
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-50 border border-teal-100 text-teal-700 text-xs font-bold">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-50 dark:bg-teal-950/40 border border-teal-200/70 dark:border-teal-800/60 text-teal-800 dark:text-teal-300 text-xs font-semibold whitespace-nowrap shrink-0">
             <ShieldCheck size={14} />
             <span>{analytics.cycleRegularity}</span>
           </div>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-          <div className="p-4 rounded-2xl bg-pink-50/40 border border-pink-100/60 space-y-1">
-            <span className="text-[9px] font-bold text-stone-400 uppercase tracking-wider block">Shortest Cycle</span>
-            <p className="text-2xl font-serif font-black text-pink-600">
-              {analytics.shortestCycle} <span className="text-xs font-sans not-italic text-stone-400">days</span>
+          <div className="p-4 rounded-xl bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/70 dark:border-[#342f2b] space-y-1">
+            <span className="text-xs font-semibold text-stone-500 dark:text-stone-400 block">Shortest cycle</span>
+            <p className="text-2xl font-serif font-bold text-pink-600 dark:text-pink-400 tabular-nums">
+              {analytics.shortestCycle} <span className="text-xs font-sans font-medium text-stone-500 dark:text-stone-400">days</span>
             </p>
-            <p className="text-[9px] text-stone-400 italic">Minimum recorded interval</p>
+            <p className="text-[11px] text-stone-500 dark:text-stone-400">Minimum recorded interval</p>
           </div>
 
-          <div className="p-4 rounded-2xl bg-pink-50/40 border border-pink-100/60 space-y-1">
-            <span className="text-[9px] font-bold text-stone-400 uppercase tracking-wider block">Longest Cycle</span>
-            <p className="text-2xl font-serif font-black text-rose-600">
-              {analytics.longestCycle} <span className="text-xs font-sans not-italic text-stone-400">days</span>
+          <div className="p-4 rounded-xl bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/70 dark:border-[#342f2b] space-y-1">
+            <span className="text-xs font-semibold text-stone-500 dark:text-stone-400 block">Longest cycle</span>
+            <p className="text-2xl font-serif font-bold text-rose-600 dark:text-rose-400 tabular-nums">
+              {analytics.longestCycle} <span className="text-xs font-sans font-medium text-stone-500 dark:text-stone-400">days</span>
             </p>
-            <p className="text-[9px] text-stone-400 italic">Maximum recorded interval</p>
+            <p className="text-[11px] text-stone-500 dark:text-stone-400">Maximum recorded interval</p>
           </div>
 
-          <div className="p-4 rounded-2xl bg-purple-50/40 border border-purple-100/60 space-y-1">
-            <span className="text-[9px] font-bold text-stone-400 uppercase tracking-wider block">Cycle Variation</span>
-            <p className="text-2xl font-serif font-black text-purple-700">
+          <div className="p-4 rounded-xl bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/70 dark:border-[#342f2b] space-y-1">
+            <span className="text-xs font-semibold text-stone-500 dark:text-stone-400 block">Cycle variation</span>
+            <p className="text-2xl font-serif font-bold text-purple-700 dark:text-purple-300 tabular-nums">
               {analytics.averageVariationDisplay}
             </p>
-            <p className="text-[9px] text-stone-400 italic">Normal benchmark is &lt; 5 days</p>
+            <p className="text-[11px] text-stone-500 dark:text-stone-400">Normal benchmark is &lt; 5 days</p>
           </div>
 
-          <div className="p-4 rounded-2xl bg-teal-50/40 border border-teal-100/60 space-y-1">
-            <span className="text-[9px] font-bold text-stone-400 uppercase tracking-wider block">Clinical Classification</span>
-            <p className="text-base font-serif font-bold text-teal-800 pt-1">
+          <div className="p-4 rounded-xl bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/70 dark:border-[#342f2b] space-y-1">
+            <span className="text-xs font-semibold text-stone-500 dark:text-stone-400 block">Clinical classification</span>
+            <p className="text-base font-serif font-bold text-teal-800 dark:text-teal-300 pt-1">
               {analytics.cycleRegularity}
             </p>
-            <p className="text-[9px] text-stone-400 italic">FIGO Menstrual Criteria</p>
+            <p className="text-[11px] text-stone-500 dark:text-stone-400">FIGO menstrual criteria</p>
           </div>
         </div>
       </section>
@@ -552,40 +549,40 @@ export const CycleGraph: React.FC<CycleGraphProps> = ({ user, setUser, symptoms 
       {/* ========================================================================= */}
       {/* SECTION E: NEW CYCLE COMPARISON FEATURE                                  */}
       {/* ========================================================================= */}
-      <section className="bg-gradient-to-br from-white via-pink-50/20 to-purple-50/20 p-6 sm:p-8 rounded-[2.5rem] border border-pink-100/80 shadow-xs space-y-6">
+      <section className="bg-white dark:bg-[#1a1816] p-6 sm:p-8 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-xs space-y-6">
         
         {/* Header & Cohort Selection Tabs */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-pink-100/60 pb-5">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-stone-100 dark:border-[#2e2a26] pb-5">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className="text-xl">📊</span>
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-pink-500">
-                Section E: Cycle Comparison
+              <span className="text-lg" aria-hidden="true">📊</span>
+              <span className="text-xs font-semibold text-pink-600 dark:text-pink-400">
+                Cycle comparison
               </span>
             </div>
-            <h3 className="text-xl sm:text-2xl font-serif font-bold text-stone-800 italic">
+            <h3 className="text-xl sm:text-2xl font-serif font-bold text-stone-900 dark:text-stone-100">
               Comparative Cycle Analysis & Cohorts
             </h3>
-            <p className="text-xs text-stone-500 font-serif italic">
+            <p className="text-xs text-stone-500 dark:text-stone-400">
               Compare your cycle trends across distinct historical cohorts.
             </p>
           </div>
 
           {/* Cohort Selectors: Last 3, Last 6, Last 12, All */}
-          <div className="flex items-center gap-1.5 p-1 bg-white rounded-full border border-pink-100 shadow-2xs self-start md:self-auto">
+          <div className="flex flex-wrap items-center gap-1 p-1 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl border border-stone-200/80 dark:border-[#342f2b] self-start md:self-auto">
             {[
-              { id: '3', label: 'Last 3 Cycles' },
-              { id: '6', label: 'Last 6 Cycles' },
-              { id: '12', label: 'Last 12 Cycles' },
-              { id: 'all', label: 'All Cycles' }
+              { id: '3', label: 'Last 3' },
+              { id: '6', label: 'Last 6' },
+              { id: '12', label: 'Last 12' },
+              { id: 'all', label: 'All cycles' }
             ].map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setComparisonRange(tab.id as ComparisonRange)}
-                className={`px-3.5 py-1.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                   comparisonRange === tab.id
-                    ? 'bg-gradient-to-r from-pink-500 to-rose-400 text-white shadow-2xs'
-                    : 'text-stone-500 hover:text-pink-600 hover:bg-pink-50/50'
+                    ? 'bg-pink-600 text-white shadow-xs'
+                    : 'text-stone-600 dark:text-stone-300 hover:text-pink-600 dark:hover:text-pink-400'
                 }`}
               >
                 {tab.label}
@@ -598,20 +595,22 @@ export const CycleGraph: React.FC<CycleGraphProps> = ({ user, setUser, symptoms 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
           
           {/* Cohort Avg Cycle Length */}
-          <div className="bg-white p-4 rounded-2xl border border-pink-100/70 shadow-2xs space-y-1">
+          <div className="bg-[#faf8f6] dark:bg-[#23201d] p-4 rounded-xl border border-stone-200/70 dark:border-[#342f2b] space-y-1">
             <div className="flex items-center justify-between">
-              <span className="text-[9px] font-bold text-stone-400 uppercase tracking-wider">Cohort Avg Cycle</span>
-              <span className="text-xs">🔄</span>
+              <span className="text-xs font-semibold text-stone-500 dark:text-stone-400">Cohort avg cycle</span>
+              <span className="text-xs" aria-hidden="true">🔄</span>
             </div>
-            <p className="text-2xl font-serif font-black text-pink-600">
+            <p className="text-2xl font-serif font-bold text-pink-600 dark:text-pink-400 tabular-nums">
               {formatDayDisplay(comparisonData.cohortAvgCycle)}
             </p>
-            <div className="flex items-center gap-1 text-[9px] font-bold">
-              <span className="text-stone-400">Overall:</span>
-              <span className="text-stone-600">{analytics.averageCycleDisplay}</span>
+            <div className="flex flex-wrap items-center gap-1 text-[11px] font-semibold tabular-nums">
+              <span className="text-stone-500 dark:text-stone-400">Overall:</span>
+              <span className="text-stone-700 dark:text-stone-200">{analytics.averageCycleDisplay}</span>
               {comparisonData.diffFromOverall !== 0 && (
-                <span className={`px-1.5 py-0.2 rounded font-extrabold ${
-                  comparisonData.diffFromOverall > 0 ? 'bg-amber-50 text-amber-600' : 'bg-sky-50 text-sky-600'
+                <span className={`px-1.5 py-0.5 rounded font-semibold ${
+                  comparisonData.diffFromOverall > 0
+                    ? 'bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300'
+                    : 'bg-sky-100 dark:bg-sky-950/50 text-sky-800 dark:text-sky-300'
                 }`}>
                   {comparisonData.diffFromOverall > 0 ? `+${comparisonData.diffFromOverall}d` : `${comparisonData.diffFromOverall}d`}
                 </span>
@@ -620,74 +619,78 @@ export const CycleGraph: React.FC<CycleGraphProps> = ({ user, setUser, symptoms 
           </div>
 
           {/* Cohort Period Duration */}
-          <div className="bg-white p-4 rounded-2xl border border-pink-100/70 shadow-2xs space-y-1">
+          <div className="bg-[#faf8f6] dark:bg-[#23201d] p-4 rounded-xl border border-stone-200/70 dark:border-[#342f2b] space-y-1">
             <div className="flex items-center justify-between">
-              <span className="text-[9px] font-bold text-stone-400 uppercase tracking-wider">Cohort Period Duration</span>
-              <span className="text-xs">🩸</span>
+              <span className="text-xs font-semibold text-stone-500 dark:text-stone-400">Cohort period duration</span>
+              <span className="text-xs" aria-hidden="true">🩸</span>
             </div>
-            <p className="text-2xl font-serif font-black text-rose-600">
+            <p className="text-2xl font-serif font-bold text-rose-600 dark:text-rose-400 tabular-nums">
               {formatDayDisplay(comparisonData.cohortAvgPeriod)}
             </p>
-            <p className="text-[9px] text-stone-400 italic">
+            <p className="text-[11px] text-stone-500 dark:text-stone-400">
               Bleeding duration per cycle
             </p>
           </div>
 
           {/* Cohort Regularity */}
-          <div className="bg-white p-4 rounded-2xl border border-pink-100/70 shadow-2xs space-y-1">
+          <div className="bg-[#faf8f6] dark:bg-[#23201d] p-4 rounded-xl border border-stone-200/70 dark:border-[#342f2b] space-y-1">
             <div className="flex items-center justify-between">
-              <span className="text-[9px] font-bold text-stone-400 uppercase tracking-wider">Cohort Regularity</span>
-              <span className="text-xs">✨</span>
+              <span className="text-xs font-semibold text-stone-500 dark:text-stone-400">Cohort regularity</span>
+              <span className="text-xs" aria-hidden="true">✨</span>
             </div>
-            <p className="text-lg font-serif font-bold text-teal-700">
+            <p className="text-lg font-serif font-bold text-teal-800 dark:text-teal-300">
               {comparisonData.cohortRegularity}
             </p>
-            <p className="text-[9px] text-teal-600 font-medium">
+            <p className="text-[11px] text-teal-700 dark:text-teal-400 font-medium tabular-nums">
               Variation: ±{comparisonData.cohortVariation} days
             </p>
           </div>
 
           {/* Flow Distribution */}
-          <div className="bg-white p-4 rounded-2xl border border-pink-100/70 shadow-2xs space-y-1.5">
+          <div className="bg-[#faf8f6] dark:bg-[#23201d] p-4 rounded-xl border border-stone-200/70 dark:border-[#342f2b] space-y-1.5">
             <div className="flex items-center justify-between">
-              <span className="text-[9px] font-bold text-stone-400 uppercase tracking-wider">Flow Breakdown</span>
-              <Droplet size={13} className="text-rose-400" />
+              <span className="text-xs font-semibold text-stone-500 dark:text-stone-400">Flow breakdown</span>
+              <Droplet size={14} className="text-rose-500 dark:text-rose-400" />
             </div>
-            <div className="grid grid-cols-2 gap-1 text-[9.5px]">
-              <span className="text-stone-600">Med: <strong className="text-rose-600">{comparisonData.flowCounts.medium}</strong></span>
-              <span className="text-stone-600">Hvy: <strong className="text-rose-700">{comparisonData.flowCounts.heavy}</strong></span>
-              <span className="text-stone-600">Lgt: <strong className="text-rose-400">{comparisonData.flowCounts.light}</strong></span>
-              <span className="text-stone-600">Spot: <strong className="text-rose-300">{comparisonData.flowCounts.spotting}</strong></span>
+            <div className="grid grid-cols-2 gap-1 text-[11px] tabular-nums">
+              <span className="text-stone-600 dark:text-stone-300">Med: <strong className="text-rose-600 dark:text-rose-400">{comparisonData.flowCounts.medium}</strong></span>
+              <span className="text-stone-600 dark:text-stone-300">Hvy: <strong className="text-rose-700 dark:text-rose-300">{comparisonData.flowCounts.heavy}</strong></span>
+              <span className="text-stone-600 dark:text-stone-300">Lgt: <strong className="text-rose-500 dark:text-rose-400">{comparisonData.flowCounts.light}</strong></span>
+              <span className="text-stone-600 dark:text-stone-300">Spot: <strong className="text-rose-400 dark:text-rose-300">{comparisonData.flowCounts.spotting}</strong></span>
             </div>
           </div>
 
         </div>
 
         {/* Interactive Comparison Chart Card */}
-        <div className="bg-white p-5 sm:p-6 rounded-3xl border border-pink-100/80 shadow-2xs space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-pink-50 pb-3">
+        <div className="bg-[#faf8f6] dark:bg-[#23201d] p-5 sm:p-6 rounded-2xl border border-stone-200/80 dark:border-[#342f2b] space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-stone-200/70 dark:border-[#342f2b] pb-3.5">
             <div>
-              <h4 className="text-sm font-serif font-bold text-stone-800 italic">
+              <h4 className="text-base font-serif font-bold text-stone-900 dark:text-stone-100">
                 Cycle Progression Across Cohort ({comparisonRange === 'all' ? 'All Recorded Cycles' : `Last ${comparisonData.count} Cycles`})
               </h4>
-              <p className="text-[10px] text-stone-400 italic">
+              <p className="text-xs text-stone-500 dark:text-stone-400">
                 Compare individual cycle lengths with bleeding durations and the cohort average benchmark.
               </p>
             </div>
 
-            <div className="flex items-center gap-1.5 p-1 bg-pink-50/60 rounded-full border border-pink-100 self-start sm:self-auto">
+            <div className="flex items-center gap-1 p-1 bg-white dark:bg-[#1a1816] rounded-xl border border-stone-200/80 dark:border-[#2e2a26] self-start sm:self-auto">
               <button
                 onClick={() => setComparisonChartType('cycle-length')}
-                className={`px-3 py-1 rounded-full text-[9px] font-bold uppercase transition-all ${
-                  comparisonChartType === 'cycle-length' ? 'bg-pink-500 text-white shadow-2xs' : 'text-stone-500 hover:text-pink-600'
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                  comparisonChartType === 'cycle-length'
+                    ? 'bg-pink-600 text-white shadow-xs'
+                    : 'text-stone-600 dark:text-stone-300 hover:text-pink-600 dark:hover:text-pink-400'
                 }`}
               >
                 Cycle & Period
               </button>
               <button
                 onClick={() => setComparisonChartType('period-length')}
-                className={`px-3 py-1 rounded-full text-[9px] font-bold uppercase transition-all ${
-                  comparisonChartType === 'period-length' ? 'bg-pink-500 text-white shadow-2xs' : 'text-stone-500 hover:text-pink-600'
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                  comparisonChartType === 'period-length'
+                    ? 'bg-pink-600 text-white shadow-xs'
+                    : 'text-stone-600 dark:text-stone-300 hover:text-pink-600 dark:hover:text-pink-400'
                 }`}
               >
                 Deviation (±Days)
@@ -699,15 +702,15 @@ export const CycleGraph: React.FC<CycleGraphProps> = ({ user, setUser, symptoms 
             <ResponsiveContainer width="100%" height="100%">
               {comparisonChartType === 'cycle-length' ? (
                 <BarChart data={comparisonData.chartList} margin={{ top: 15, right: 15, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#fdf2f8" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" opacity={0.45} vertical={false} />
                   <XAxis 
                     dataKey="name" 
-                    tick={{ fill: '#f43f5e', fontSize: 10, fontWeight: 'bold' }} 
+                    tick={{ fill: '#e11d48', fontSize: 11, fontWeight: 600 }} 
                     axisLine={false} 
                     tickLine={false} 
                   />
                   <YAxis 
-                    tick={{ fill: '#f43f5e', fontSize: 10 }} 
+                    tick={{ fill: '#e11d48', fontSize: 11 }} 
                     axisLine={false} 
                     tickLine={false} 
                     domain={[0, 'dataMax + 8']}
@@ -715,17 +718,18 @@ export const CycleGraph: React.FC<CycleGraphProps> = ({ user, setUser, symptoms 
                   <Tooltip 
                     contentStyle={{ 
                       backgroundColor: '#fff', 
-                      borderRadius: '1.25rem', 
+                      borderRadius: '0.75rem', 
                       borderColor: '#fbcfe8',
-                      boxShadow: '0 4px 12px rgba(244,114,182,0.08)' 
+                      color: '#1c1917',
+                      boxShadow: '0 4px 12px rgba(244,114,182,0.12)' 
                     }}
-                    labelStyle={{ fontWeight: 'extrabold', color: '#db2777', fontSize: '11px' }}
+                    labelStyle={{ fontWeight: 'bold', color: '#be185d', fontSize: '12px' }}
                     formatter={(val: any, name: string) => [`${val} days`, name]}
                   />
                   <Legend 
                     verticalAlign="top" 
                     height={32} 
-                    wrapperStyle={{ fontSize: '9px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em' }}
+                    wrapperStyle={{ fontSize: '11px', fontWeight: 600 }}
                   />
                   <ReferenceLine 
                     y={comparisonData.cohortAvgCycle} 
@@ -734,7 +738,7 @@ export const CycleGraph: React.FC<CycleGraphProps> = ({ user, setUser, symptoms 
                     label={{ 
                       value: `Cohort Avg (${comparisonData.cohortAvgCycle}d)`, 
                       fill: '#db2777', 
-                      fontSize: 9, 
+                      fontSize: 10, 
                       position: 'insideTopRight' 
                     }} 
                   />
@@ -742,37 +746,38 @@ export const CycleGraph: React.FC<CycleGraphProps> = ({ user, setUser, symptoms 
                     dataKey="periodLength" 
                     name="Bleeding Duration (Days)" 
                     fill="#f43f5e" 
-                    radius={[8, 8, 0, 0]} 
+                    radius={[6, 6, 0, 0]} 
                     maxBarSize={32} 
                   />
                   <Bar 
                     dataKey="cycleLength" 
                     name="Total Cycle Length (Days)" 
                     fill="#fbcfe8" 
-                    radius={[8, 8, 0, 0]} 
+                    radius={[6, 6, 0, 0]} 
                     maxBarSize={32} 
                   />
                 </BarChart>
               ) : (
                 <BarChart data={comparisonData.chartList} margin={{ top: 15, right: 15, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#fdf2f8" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" opacity={0.45} vertical={false} />
                   <XAxis 
                     dataKey="name" 
-                    tick={{ fill: '#f43f5e', fontSize: 10, fontWeight: 'bold' }} 
+                    tick={{ fill: '#e11d48', fontSize: 11, fontWeight: 600 }} 
                     axisLine={false} 
                     tickLine={false} 
                   />
                   <YAxis 
-                    tick={{ fill: '#f43f5e', fontSize: 10 }} 
+                    tick={{ fill: '#e11d48', fontSize: 11 }} 
                     axisLine={false} 
                     tickLine={false} 
                   />
                   <Tooltip 
                     contentStyle={{ 
                       backgroundColor: '#fff', 
-                      borderRadius: '1.25rem', 
+                      borderRadius: '0.75rem', 
                       borderColor: '#fbcfe8',
-                      boxShadow: '0 4px 12px rgba(244,114,182,0.08)' 
+                      color: '#1c1917',
+                      boxShadow: '0 4px 12px rgba(244,114,182,0.12)' 
                     }}
                     formatter={(val: any) => [`${val > 0 ? `+${val}` : val} days from average`, 'Deviation']}
                   />
@@ -791,15 +796,15 @@ export const CycleGraph: React.FC<CycleGraphProps> = ({ user, setUser, symptoms 
         </div>
 
         {/* Natural Language Personalized Narrative Insight Card */}
-        <div className="bg-gradient-to-r from-pink-50/80 via-purple-50/50 to-white p-5 sm:p-6 rounded-3xl border border-pink-100/80 shadow-2xs flex items-start gap-3.5">
-          <div className="w-10 h-10 rounded-2xl bg-white shadow-xs border border-pink-100 flex items-center justify-center text-xl shrink-0 mt-0.5">
+        <div className="bg-pink-50/60 dark:bg-pink-950/20 p-5 sm:p-6 rounded-2xl border border-pink-200/70 dark:border-pink-900/50 flex items-start gap-3.5">
+          <div className="w-10 h-10 rounded-xl bg-white dark:bg-[#1a1816] shadow-xs border border-pink-200/70 dark:border-pink-900/50 flex items-center justify-center text-lg shrink-0 mt-0.5">
             💬
           </div>
           <div className="space-y-1">
-            <span className="text-[9.5px] font-black uppercase tracking-widest text-pink-600 block">
-              Personalized Cycle Intelligence Narrative
+            <span className="text-xs font-semibold text-pink-700 dark:text-pink-400 block">
+              Personalized cycle intelligence narrative
             </span>
-            <p className="text-xs sm:text-sm font-serif italic text-stone-700 leading-relaxed">
+            <p className="text-xs sm:text-sm text-stone-700 dark:text-stone-300 leading-relaxed">
               "{comparisonData.narrativeInsight}"
             </p>
           </div>
@@ -810,33 +815,33 @@ export const CycleGraph: React.FC<CycleGraphProps> = ({ user, setUser, symptoms 
       {/* ========================================================================= */}
       {/* SECTION D: ADVANCED INSIGHTS (COLLAPSIBLE: SYMPTOMS & BBT TRENDS)        */}
       {/* ========================================================================= */}
-      <section className="bg-white rounded-[2.5rem] border border-pink-100/80 shadow-xs overflow-hidden">
+      <section className="bg-white dark:bg-[#1a1816] rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-xs overflow-hidden">
         <button
           onClick={() => setIsAdvancedInsightsOpen(!isAdvancedInsightsOpen)}
-          className="w-full p-6 flex items-center justify-between text-left hover:bg-pink-50/20 transition-colors cursor-pointer"
+          className="w-full p-6 flex items-center justify-between text-left hover:bg-[#faf8f6] dark:hover:bg-[#23201d] transition-colors cursor-pointer"
         >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-pink-50 text-pink-500 flex items-center justify-center text-lg shadow-2xs">
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-pink-50 dark:bg-pink-950/40 text-pink-600 dark:text-pink-400 flex items-center justify-center text-lg border border-pink-200/60 dark:border-pink-900/50">
               🔬
             </div>
             <div>
-              <span className="text-[9.5px] font-black uppercase tracking-[0.2em] text-pink-500 block">
-                Section D: Advanced Insights
+              <span className="text-xs font-semibold text-pink-600 dark:text-pink-400 block">
+                Advanced insights
               </span>
-              <h4 className="text-base font-serif font-bold text-stone-800 italic">
+              <h4 className="text-base font-serif font-bold text-stone-900 dark:text-stone-100">
                 Symptom Trends & Basal Body Temperature (BBT) Analysis
               </h4>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-serif italic text-pink-500">
-              {isAdvancedInsightsOpen ? 'Collapse' : 'Expand Insights'}
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-xs font-semibold text-pink-600 dark:text-pink-400">
+              {isAdvancedInsightsOpen ? 'Collapse' : 'Expand insights'}
             </span>
             {isAdvancedInsightsOpen ? (
-              <ChevronDown size={18} className="text-pink-400" />
+              <ChevronDown size={18} className="text-pink-500 dark:text-pink-400" />
             ) : (
-              <ChevronRight size={18} className="text-pink-400" />
+              <ChevronRight size={18} className="text-pink-500 dark:text-pink-400" />
             )}
           </div>
         </button>
@@ -848,62 +853,63 @@ export const CycleGraph: React.FC<CycleGraphProps> = ({ user, setUser, symptoms 
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.3 }}
-              className="border-t border-pink-100/70 p-6 space-y-6"
+              className="border-t border-stone-100 dark:border-[#2e2a26] p-6 space-y-6"
             >
               {/* Tabs for Symptoms vs BBT */}
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={() => setAdvancedTab('symptoms')}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-[9px] font-extrabold uppercase tracking-widest transition-all cursor-pointer ${
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                     advancedTab === 'symptoms'
-                      ? 'bg-gradient-to-r from-pink-500 to-rose-400 text-white shadow-2xs'
-                      : 'bg-stone-50 text-stone-600 hover:bg-pink-50'
+                      ? 'bg-pink-600 text-white shadow-xs'
+                      : 'bg-[#faf8f6] dark:bg-[#23201d] text-stone-700 dark:text-stone-300 border border-stone-200/70 dark:border-[#342f2b] hover:border-pink-300'
                   }`}
                 >
-                  <Sparkles size={12} />
-                  <span>Symptom Frequency</span>
+                  <Sparkles size={13} />
+                  <span>Symptom frequency</span>
                 </button>
                 <button
                   onClick={() => setAdvancedTab('temperature')}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-[9px] font-extrabold uppercase tracking-widest transition-all cursor-pointer ${
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                     advancedTab === 'temperature'
-                      ? 'bg-gradient-to-r from-pink-500 to-rose-400 text-white shadow-2xs'
-                      : 'bg-stone-50 text-stone-600 hover:bg-pink-50'
+                      ? 'bg-pink-600 text-white shadow-xs'
+                      : 'bg-[#faf8f6] dark:bg-[#23201d] text-stone-700 dark:text-stone-300 border border-stone-200/70 dark:border-[#342f2b] hover:border-pink-300'
                   }`}
                 >
-                  <Thermometer size={12} />
-                  <span>Basal Body Temperature</span>
+                  <Thermometer size={13} />
+                  <span>Basal body temperature</span>
                 </button>
               </div>
 
               {advancedTab === 'symptoms' ? (
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-stone-500 font-serif italic">Most frequently logged symptoms across recorded cycles:</span>
-                    <span className="text-pink-600 font-bold">{analytics.totalSymptomsCount} symptoms logged</span>
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <span className="text-stone-500 dark:text-stone-400">Most frequently logged symptoms across recorded cycles:</span>
+                    <span className="text-pink-600 dark:text-pink-400 font-semibold tabular-nums">{analytics.totalSymptomsCount} symptoms logged</span>
                   </div>
 
                   <div className="h-64 w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={symptomData} layout="vertical" margin={{ top: 10, right: 15, left: 20, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#fdf2f8" horizontal={false} />
-                        <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: '#f472b6', fontSize: 10 }} />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" opacity={0.45} horizontal={false} />
+                        <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: '#ec4899', fontSize: 11 }} />
                         <YAxis 
                           dataKey="symptom" 
                           type="category" 
                           axisLine={false} 
                           tickLine={false} 
-                          tick={{ fill: '#881337', fontSize: 10, fontWeight: 'bold' }} 
+                          tick={{ fill: '#db2777', fontSize: 11, fontWeight: 600 }} 
                         />
                         <Tooltip 
                           contentStyle={{ 
                             backgroundColor: '#fff', 
-                            borderRadius: '1.25rem', 
+                            borderRadius: '0.75rem', 
                             borderColor: '#fbcfe8',
-                            boxShadow: '0 4px 12px rgba(244,114,182,0.08)' 
+                            color: '#1c1917',
+                            boxShadow: '0 4px 12px rgba(244,114,182,0.12)' 
                           }}
                         />
-                        <Bar dataKey="count" name="Times Logged" radius={[0, 8, 8, 0]} barSize={16}>
+                        <Bar dataKey="count" name="Times Logged" radius={[0, 6, 6, 0]} barSize={16}>
                           {symptomData.map((_, index) => (
                             <Cell key={`cell-${index}`} fill={barColors[index % barColors.length]} />
                           ))}
@@ -914,9 +920,9 @@ export const CycleGraph: React.FC<CycleGraphProps> = ({ user, setUser, symptoms 
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-stone-500 font-serif italic">Biphasic follicular-to-luteal temperature shift:</span>
-                    <span className="text-pink-600 font-bold">{user.tempUnit === 'F' ? '°F Scale' : '°C Scale'}</span>
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <span className="text-stone-500 dark:text-stone-400">Biphasic follicular-to-luteal temperature shift:</span>
+                    <span className="text-pink-600 dark:text-pink-400 font-semibold">{user.tempUnit === 'F' ? '°F scale' : '°C scale'}</span>
                   </div>
 
                   <div className="h-64 w-full">
@@ -928,25 +934,26 @@ export const CycleGraph: React.FC<CycleGraphProps> = ({ user, setUser, symptoms 
                             <stop offset="95%" stopColor="#f472b6" stopOpacity={0} />
                           </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#fdf2f8" vertical={false} />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" opacity={0.45} vertical={false} />
                         <XAxis 
                           dataKey="date" 
-                          tick={{ fill: '#f472b6', fontSize: 10, fontWeight: 'bold' }} 
+                          tick={{ fill: '#ec4899', fontSize: 11, fontWeight: 600 }} 
                           axisLine={false} 
                           tickLine={false} 
                         />
                         <YAxis 
                           domain={['dataMin - 0.2', 'dataMax + 0.2']} 
-                          tick={{ fill: '#f472b6', fontSize: 10 }} 
+                          tick={{ fill: '#ec4899', fontSize: 11 }} 
                           axisLine={false} 
                           tickLine={false} 
                         />
                         <Tooltip 
                           contentStyle={{ 
                             backgroundColor: '#fff', 
-                            borderRadius: '1.25rem', 
+                            borderRadius: '0.75rem', 
                             borderColor: '#fbcfe8',
-                            boxShadow: '0 4px 12px rgba(244,114,182,0.08)' 
+                            color: '#1c1917',
+                            boxShadow: '0 4px 12px rgba(244,114,182,0.12)' 
                           }}
                         />
                         <Area 

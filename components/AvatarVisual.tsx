@@ -159,26 +159,26 @@ export const AvatarVisual: React.FC<AvatarVisualProps> = ({
         {/* Soft background radial shine */}
         <div className="absolute inset-0 bg-gradient-to-b from-white/90 via-pink-50/50 to-rose-100/40" />
         {isSpeaking && (
-          <div className="absolute inset-0 bg-pink-400/15 animate-ping opacity-75 rounded-full" />
+          <div className="absolute inset-0 bg-pink-400/15 opacity-75 rounded-full transition-opacity" />
         )}
       </div>
 
       {/* Level 4 & 5 Golden Celestial Radiant Halo Ring behind hair */}
       {isLevel4Plus && (
         <div 
-          className="absolute -top-2 inset-x-3 h-5 rounded-full border-2 border-amber-300/80 bg-amber-200/20 blur-[0.6px] pointer-events-none z-0 animate-pulse"
+          className="absolute -top-2 inset-x-3 h-5 rounded-full border-2 border-amber-300/80 bg-amber-200/20 blur-[0.6px] pointer-events-none z-0"
           style={{ transform: 'rotate(-6deg)' }}
         />
       )}
 
-      {/* Level 3+ Floating Botanical Petals / Sparkles */}
+      {/* Level 3+ Floating Botanical Petals */}
       {isLevel3Plus && (
         <div className="absolute -top-1.5 -left-1 text-[10px] pointer-events-none animate-float-petal z-20">
           🌸
         </div>
       )}
       {isLevel5Plus && (
-        <div className="absolute -bottom-1 -left-1.5 text-[9px] pointer-events-none animate-bounce z-20">
+        <div className="absolute -bottom-1 -left-1.5 text-[9px] pointer-events-none z-20">
           ✨
         </div>
       )}
@@ -488,7 +488,7 @@ export const AvatarVisual: React.FC<AvatarVisualProps> = ({
 
         {/* ================= 8. Level 5+ Celestial Star Crown ================= */}
         {isLevel5Plus && (
-          <g filter="drop-shadow(0 2px 5px rgba(251,191,36,0.75))" className="animate-pulse">
+          <g filter="drop-shadow(0 2px 5px rgba(251,191,36,0.75))">
             <path d="M 38,9 L 43,15 L 50,4 L 57,15 L 62,9 L 58,17 L 42,17 Z" fill="#fbbf24" stroke="#fef08a" strokeWidth="0.9" />
             <circle cx="50" cy="4" r="1.6" fill="#ffffff" />
             <circle cx="38" cy="9" r="1.3" fill="#ffffff" />
@@ -499,10 +499,10 @@ export const AvatarVisual: React.FC<AvatarVisualProps> = ({
 
       {/* Floating Active Voice Waves when Speaking */}
       {isSpeaking && (
-        <div className="absolute -top-1 -right-1 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-pink-500 text-white shadow-sm z-20 animate-pulse">
-          <span className="w-1 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-          <span className="w-1 h-3 bg-white rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-          <span className="w-1 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+        <div className="absolute -top-1 -right-1 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-pink-600 text-white shadow-xs z-20">
+          <span className="w-1 h-2 bg-white rounded-full" />
+          <span className="w-1 h-3 bg-white rounded-full" />
+          <span className="w-1 h-2 bg-white rounded-full" />
         </div>
       )}
 

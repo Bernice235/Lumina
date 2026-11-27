@@ -226,38 +226,38 @@ export const ExpectedPeriodCheckInCard: React.FC<ExpectedPeriodCheckInCardProps>
       {/* Toast Notification */}
       <AnimatePresence>
         {toastMessage && (
-          <motion.div 
-            initial={{ opacity: 0, y: -10 }} 
-            animate={{ opacity: 1, y: 0 }} 
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="mb-3 p-3 bg-pink-900 text-white text-xs font-semibold rounded-2xl text-center shadow-lg flex items-center justify-center gap-2 border border-pink-400/30"
+            className="mb-3 p-3 bg-stone-900 dark:bg-[#23201d] text-white text-xs font-medium rounded-xl text-center shadow-md flex items-center justify-center gap-2 border border-stone-700 dark:border-[#342f2b]"
           >
-            <Sparkles size={16} className="text-pink-300 animate-pulse" />
+            <Sparkles size={15} className="text-pink-400 shrink-0" />
             <span>{toastMessage}</span>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.98 }}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.99 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="overflow-hidden bg-gradient-to-br from-rose-50/95 via-pink-50/90 to-purple-50/80 rounded-[2.5rem] border border-pink-200/80 shadow-[0_12px_28px_rgba(244,114,182,0.12)] p-6 md:p-8 backdrop-blur-xl transition-all"
+        className="overflow-hidden bg-white dark:bg-[#1a1816] rounded-2xl border border-pink-200/80 dark:border-pink-900/50 shadow-xs p-5 sm:p-7 transition-colors"
       >
         {/* Header Ribbon */}
-        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-pink-400 to-rose-400 text-white flex items-center justify-center shadow-md shadow-pink-200 shrink-0">
-              <Calendar size={20} />
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-pink-600 text-white flex items-center justify-center shrink-0">
+              <Calendar size={18} />
             </div>
             <div>
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-pink-500 block">
-                Expected Period Check-In 🌸
+              <span className="text-xs font-semibold text-pink-600 dark:text-pink-400 block">
+                Expected Period Check-In
               </span>
-              <h3 className="text-lg md:text-xl font-serif italic font-bold text-rose-950">
+              <h3 className="text-lg sm:text-xl font-serif font-semibold text-stone-900 dark:text-stone-100">
                 {daysLate === 0 ? (
-                  <span>Period expected <span className="text-rose-600">today</span></span>
+                  <span>Period expected <span className="text-rose-600 dark:text-rose-400">today</span></span>
                 ) : (
-                  <span>Period expected on <span className="text-rose-600">{formattedExpectedDate}</span></span>
+                  <span>Period expected on <span className="text-rose-600 dark:text-rose-400">{formattedExpectedDate}</span></span>
                 )}
               </h3>
             </div>
@@ -265,15 +265,16 @@ export const ExpectedPeriodCheckInCard: React.FC<ExpectedPeriodCheckInCardProps>
 
           <div className="flex items-center gap-2">
             {daysLate > 0 && (
-              <span className="px-3.5 py-1 bg-amber-100/90 text-amber-900 border border-amber-300 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
-                <Clock size={12} className="text-amber-600" />
+              <span className="px-3 py-1 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-900/50 rounded-lg text-xs font-semibold flex items-center gap-1.5 tabular-nums">
+                <Clock size={12} className="text-amber-600 dark:text-amber-400" />
                 <span>Day {daysLate} Late</span>
               </span>
             )}
             <button
+              type="button"
               onClick={handleSnoozeToday}
               title="Dismiss check-in for today"
-              className="p-1.5 rounded-full hover:bg-pink-100 text-rose-400 hover:text-rose-600 transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg hover:bg-stone-100 dark:hover:bg-[#23201d] text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 transition-colors cursor-pointer"
             >
               <X size={18} />
             </button>
@@ -282,33 +283,36 @@ export const ExpectedPeriodCheckInCard: React.FC<ExpectedPeriodCheckInCardProps>
 
         {/* MODE: INITIAL QUESTION */}
         {(mode === 'initial' || (mode as string) === 'question') && (
-          <div className="space-y-5">
-            <p className="text-sm font-sans text-stone-700 leading-relaxed font-bold">
-              Your period was expected on <span className="text-rose-800 underline decoration-rose-300 decoration-2">{formattedExpectedDate}</span>. Has your period started?
+          <div className="space-y-4">
+            <p className="text-sm text-stone-700 dark:text-stone-300 leading-relaxed">
+              Your period was expected on <span className="font-semibold text-stone-900 dark:text-stone-100 underline decoration-rose-400 decoration-2">{formattedExpectedDate}</span>. Has your period started?
             </p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
               <button
+                type="button"
                 onClick={() => setMode('quick_log')}
-                className="py-3.5 px-4 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-2xl font-black text-xs uppercase tracking-wider shadow-md shadow-pink-200 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="py-3 px-4 bg-pink-600 hover:bg-pink-700 text-white rounded-xl font-semibold text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
               >
-                <CheckCircle2 size={16} />
+                <CheckCircle2 size={15} />
                 <span>Yes, it started</span>
               </button>
 
               <button
+                type="button"
                 onClick={handleNotYet}
-                className="py-3.5 px-4 bg-white/90 hover:bg-white text-rose-700 border border-pink-200 rounded-2xl font-black text-xs uppercase tracking-wider shadow-sm hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="py-3 px-4 bg-[#faf8f6] dark:bg-[#23201d] hover:bg-stone-100 dark:hover:bg-[#2c2824] text-stone-800 dark:text-stone-200 border border-stone-200/80 dark:border-[#342f2b] rounded-xl font-semibold text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
               >
-                <Clock size={16} className="text-rose-400" />
+                <Clock size={15} className="text-rose-500" />
                 <span>Not yet</span>
               </button>
 
               <button
+                type="button"
                 onClick={() => setMode('edit_prediction')}
-                className="py-3.5 px-4 bg-stone-100/80 hover:bg-stone-200/80 text-stone-700 border border-stone-200/60 rounded-2xl font-black text-xs uppercase tracking-wider shadow-sm hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="py-3 px-4 bg-[#faf8f6] dark:bg-[#23201d] hover:bg-stone-100 dark:hover:bg-[#2c2824] text-stone-700 dark:text-stone-300 border border-stone-200/80 dark:border-[#342f2b] rounded-xl font-semibold text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
               >
-                <Edit3 size={16} className="text-stone-500" />
+                <Edit3 size={15} className="text-stone-500" />
                 <span>Edit prediction</span>
               </button>
             </div>
@@ -318,14 +322,15 @@ export const ExpectedPeriodCheckInCard: React.FC<ExpectedPeriodCheckInCardProps>
         {/* MODE: QUICK PERIOD LOGGING FLOW */}
         {mode === 'quick_log' && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-5 pt-2">
-            <div className="flex items-center justify-between border-b border-pink-100 pb-2">
-              <h4 className="text-sm font-serif italic font-bold text-rose-900 flex items-center gap-2">
-                <Droplet size={16} className="text-rose-500" />
+            <div className="flex items-center justify-between border-b border-stone-200/70 dark:border-[#2e2a26] pb-2.5">
+              <h4 className="text-sm font-serif font-semibold text-stone-900 dark:text-stone-100 flex items-center gap-2">
+                <Droplet size={15} className="text-rose-500" />
                 <span>Log Period Start Date</span>
               </h4>
-              <button 
+              <button
+                type="button"
                 onClick={() => setMode('initial')}
-                className="text-xs font-bold text-rose-400 hover:text-rose-600"
+                className="text-xs font-semibold text-rose-600 dark:text-rose-400 hover:underline cursor-pointer"
               >
                 Back
               </button>
@@ -333,7 +338,7 @@ export const ExpectedPeriodCheckInCard: React.FC<ExpectedPeriodCheckInCardProps>
 
             {/* Quick Date Selector Chips */}
             <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-wider text-rose-400 block">
+              <label className="text-xs font-semibold text-stone-600 dark:text-stone-300 block">
                 When did it start?
               </label>
               <div className="grid grid-cols-3 gap-2">
@@ -344,15 +349,16 @@ export const ExpectedPeriodCheckInCard: React.FC<ExpectedPeriodCheckInCardProps>
                 ].map((opt) => (
                   <button
                     key={opt.id}
+                    type="button"
                     onClick={() => setSelectedDateOption(opt.id as any)}
-                    className={`p-3 rounded-2xl text-left border transition-all cursor-pointer ${
+                    className={`p-3 rounded-xl text-left border transition-colors cursor-pointer ${
                       selectedDateOption === opt.id
-                        ? 'bg-rose-500 text-white border-rose-500 shadow-md shadow-rose-200'
-                        : 'bg-white/80 text-stone-700 border-pink-200/80 hover:bg-white'
+                        ? 'bg-rose-600 text-white border-rose-600'
+                        : 'bg-[#faf8f6] dark:bg-[#23201d] text-stone-800 dark:text-stone-200 border-stone-200/80 dark:border-[#342f2b] hover:border-rose-300'
                     }`}
                   >
-                    <p className="text-xs font-bold">{opt.label}</p>
-                    <p className={`text-[10px] font-medium ${selectedDateOption === opt.id ? 'text-pink-100' : 'text-stone-400'}`}>
+                    <p className="text-xs font-semibold">{opt.label}</p>
+                    <p className={`text-[11px] font-medium tabular-nums ${selectedDateOption === opt.id ? 'text-rose-100' : 'text-stone-500 dark:text-stone-400'}`}>
                       {opt.sub}
                     </p>
                   </button>
@@ -365,7 +371,7 @@ export const ExpectedPeriodCheckInCard: React.FC<ExpectedPeriodCheckInCardProps>
                     type="date"
                     value={customDateVal}
                     onChange={(e) => setCustomDateVal(e.target.value)}
-                    className="w-full p-3 bg-white border border-pink-200 rounded-2xl text-xs font-bold text-stone-800 focus:outline-none focus:border-rose-400"
+                    className="w-full h-11 px-3.5 bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] rounded-xl text-xs font-medium text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-rose-500/30"
                   />
                 </div>
               )}
@@ -373,7 +379,7 @@ export const ExpectedPeriodCheckInCard: React.FC<ExpectedPeriodCheckInCardProps>
 
             {/* Flow Intensity Selection */}
             <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-wider text-rose-400 block">
+              <label className="text-xs font-semibold text-stone-600 dark:text-stone-300 block">
                 Flow Intensity
               </label>
               <div className="grid grid-cols-4 gap-2">
@@ -385,27 +391,29 @@ export const ExpectedPeriodCheckInCard: React.FC<ExpectedPeriodCheckInCardProps>
                 ].map((flow) => (
                   <button
                     key={flow.id}
+                    type="button"
                     onClick={() => setSelectedIntensity(flow.id as any)}
-                    className={`p-2.5 rounded-2xl text-center border transition-all cursor-pointer ${
+                    className={`p-2.5 rounded-xl text-center border transition-colors cursor-pointer ${
                       selectedIntensity === flow.id
-                        ? 'bg-rose-100 border-rose-400 text-rose-900 font-bold shadow-sm'
-                        : 'bg-white/80 border-pink-100 text-stone-600 hover:bg-white'
+                        ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-500 text-rose-800 dark:text-rose-200 font-semibold'
+                        : 'bg-[#faf8f6] dark:bg-[#23201d] border-stone-200/80 dark:border-[#342f2b] text-stone-700 dark:text-stone-300 hover:border-rose-300'
                     }`}
                   >
-                    <span className="text-base block mb-0.5">{flow.icon}</span>
-                    <span className="text-[10px] font-bold block">{flow.label}</span>
+                    <span className="text-sm block mb-0.5">{flow.icon}</span>
+                    <span className="text-xs font-medium block">{flow.label}</span>
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="flex items-center gap-3 pt-2">
+            <div className="flex items-center gap-3 pt-1">
               <button
+                type="button"
                 onClick={handleConfirmPeriodLog}
-                className="flex-1 py-3.5 bg-gradient-to-r from-rose-500 to-pink-500 text-white rounded-2xl font-bold text-xs uppercase tracking-wider shadow-md hover:scale-[1.01] active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2"
+                className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-semibold text-xs transition-colors cursor-pointer flex items-center justify-center gap-2"
               >
-                <Sparkles size={16} />
-                <span>Confirm & Update Cycle 🌸</span>
+                <Sparkles size={15} />
+                <span>Confirm & Update Cycle</span>
               </button>
             </div>
           </motion.div>
@@ -414,38 +422,39 @@ export const ExpectedPeriodCheckInCard: React.FC<ExpectedPeriodCheckInCardProps>
         {/* MODE: NOT YET ACKNOWLEDGED LATE STATE */}
         {mode === 'not_yet_acknowledged' && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 pt-1">
-            <div className="p-4 bg-amber-50/90 rounded-2xl border border-amber-200/80 space-y-2">
-              <div className="flex items-center gap-2 text-amber-900 font-bold text-xs">
-                <AlertCircle size={16} className="text-amber-600" />
+            <div className="p-4 bg-amber-50 dark:bg-amber-950/30 rounded-xl border border-amber-200/80 dark:border-amber-900/50 space-y-1.5">
+              <div className="flex items-center gap-2 text-amber-900 dark:text-amber-300 font-semibold text-xs tabular-nums">
+                <AlertCircle size={15} className="text-amber-600 dark:text-amber-400" />
                 <span>Recorded as late ({daysLate} {daysLate === 1 ? 'day' : 'days'} late)</span>
               </div>
-              <p className="text-xs text-amber-800/90 leading-relaxed font-sans">
-                Cycle lengths can naturally vary due to stress, changes in sleep, travel, or hormone shifts. 
-                Lumina will keep tracking for you without disturbing your routines.
+              <p className="text-xs text-amber-800 dark:text-amber-200/90 leading-relaxed">
+                Cycle lengths naturally vary due to stress, sleep shifts, travel, or hormonal changes. Lumina continues tracking without disrupting your history.
               </p>
             </div>
 
             {/* Smart Cycle Length Recommendation if late >= 2 */}
             {daysLate >= 2 && (
-              <div className="p-4 bg-white/90 rounded-2xl border border-pink-200/80 space-y-3 shadow-sm">
-                <div className="flex items-center gap-2 text-rose-900 font-bold text-xs">
-                  <Sparkles size={16} className="text-pink-500" />
+              <div className="p-4 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl border border-stone-200/80 dark:border-[#342f2b] space-y-3">
+                <div className="flex items-center gap-2 text-stone-900 dark:text-stone-100 font-semibold text-xs">
+                  <Sparkles size={15} className="text-pink-600 dark:text-pink-400" />
                   <span>Cycle Length Recommendation</span>
                 </div>
-                <p className="text-xs text-stone-600 leading-relaxed">
-                  Your current expected cycle is set to <strong className="text-rose-700">{user.cycleLength || 28} days</strong>. 
-                  Since your period is {daysLate} days late, would you like to adjust your average cycle length to <strong className="text-rose-700">{suggestedCycleLength} days</strong>?
+                <p className="text-xs text-stone-600 dark:text-stone-300 leading-relaxed tabular-nums">
+                  Your current expected cycle is set to <strong className="text-stone-900 dark:text-stone-100">{user.cycleLength || 28} days</strong>.
+                  Since your period is {daysLate} days late, would you like to adjust your average cycle length to <strong className="text-stone-900 dark:text-stone-100">{suggestedCycleLength} days</strong>?
                 </p>
-                <div className="flex gap-2 pt-1">
+                <div className="flex flex-wrap gap-2 pt-1">
                   <button
+                    type="button"
                     onClick={() => handleUpdateCycleLength(suggestedCycleLength)}
-                    className="flex-1 py-2.5 bg-rose-500 text-white rounded-xl font-bold text-[10px] uppercase tracking-wider shadow-sm hover:bg-rose-600 transition-all cursor-pointer"
+                    className="flex-1 py-2.5 px-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-semibold text-xs transition-colors cursor-pointer whitespace-nowrap"
                   >
-                    Update to {suggestedCycleLength} Days 🔄
+                    Update to {suggestedCycleLength} Days
                   </button>
                   <button
+                    type="button"
                     onClick={() => setMode('initial')}
-                    className="px-4 py-2.5 bg-stone-100 text-stone-600 rounded-xl font-bold text-[10px] uppercase tracking-wider hover:bg-stone-200 transition-all cursor-pointer"
+                    className="px-4 py-2.5 bg-white dark:bg-[#1a1816] text-stone-700 dark:text-stone-200 border border-stone-200/80 dark:border-[#342f2b] rounded-xl font-semibold text-xs hover:bg-stone-100 dark:hover:bg-[#2c2824] transition-colors cursor-pointer whitespace-nowrap"
                   >
                     Keep {user.cycleLength || 28} Days
                   </button>
@@ -453,17 +462,19 @@ export const ExpectedPeriodCheckInCard: React.FC<ExpectedPeriodCheckInCardProps>
               </div>
             )}
 
-            <div className="flex items-center gap-3 pt-2">
+            <div className="flex items-center gap-2.5 pt-1">
               <button
+                type="button"
                 onClick={() => setMode('quick_log')}
-                className="flex-1 py-3 bg-rose-500 text-white rounded-2xl font-bold text-xs uppercase tracking-wider shadow-sm hover:bg-rose-600 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-semibold text-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5"
               >
                 <Droplet size={14} />
                 <span>Log Period Now</span>
               </button>
               <button
+                type="button"
                 onClick={() => setMode('edit_prediction')}
-                className="py-3 px-4 bg-white border border-pink-200 text-stone-700 rounded-2xl font-bold text-xs uppercase tracking-wider hover:bg-stone-50 transition-all cursor-pointer"
+                className="py-2.5 px-4 bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] text-stone-700 dark:text-stone-200 rounded-xl font-semibold text-xs hover:bg-stone-100 dark:hover:bg-[#2c2824] transition-colors cursor-pointer"
               >
                 Edit Prediction
               </button>
@@ -474,30 +485,31 @@ export const ExpectedPeriodCheckInCard: React.FC<ExpectedPeriodCheckInCardProps>
         {/* MODE: EDIT PREDICTION */}
         {mode === 'edit_prediction' && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 pt-1">
-            <div className="flex items-center justify-between border-b border-pink-100 pb-2">
-              <h4 className="text-sm font-serif italic font-bold text-rose-900 flex items-center gap-2">
-                <Edit3 size={16} className="text-rose-500" />
+            <div className="flex items-center justify-between border-b border-stone-200/70 dark:border-[#2e2a26] pb-2.5">
+              <h4 className="text-sm font-serif font-semibold text-stone-900 dark:text-stone-100 flex items-center gap-2">
+                <Edit3 size={15} className="text-rose-500" />
                 <span>Adjust Predictions & Settings</span>
               </h4>
-              <button 
+              <button
+                type="button"
                 onClick={() => setMode('initial')}
-                className="text-xs font-bold text-rose-400 hover:text-rose-600"
+                className="text-xs font-semibold text-rose-600 dark:text-rose-400 hover:underline cursor-pointer"
               >
                 Back
               </button>
             </div>
 
-            <div className="space-y-4 text-xs font-sans">
+            <div className="space-y-4 text-xs">
               {user.automaticCyclePrediction ? (
-                <div className="bg-purple-50/70 p-3.5 rounded-2xl border border-purple-100 flex items-center gap-2.5">
-                  <Sparkles size={16} className="text-purple-600 shrink-0" />
-                  <div className="text-[11px] text-purple-950 leading-snug">
-                    <strong>Automatic Cycle Prediction is Active:</strong> Lumina is managing your cycle length automatically ({user.cycleLength || 28} days). Manual cycle adjustment can only be accessed when Automatic Cycle Prediction is turned off in Settings.
+                <div className="bg-purple-50 dark:bg-purple-950/30 p-3.5 rounded-xl border border-purple-200/70 dark:border-purple-900/50 flex items-center gap-2.5">
+                  <Sparkles size={16} className="text-purple-600 dark:text-purple-400 shrink-0" />
+                  <div className="text-xs text-stone-700 dark:text-stone-200 leading-snug">
+                    <strong>Automatic Cycle Prediction is Active:</strong> Lumina is managing your cycle length automatically ({user.cycleLength || 28} days). Manual cycle adjustment is available when Automatic Prediction is disabled in Settings.
                   </div>
                 </div>
               ) : (
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-wider text-rose-400 block">
+                  <label className="text-xs font-semibold text-stone-600 dark:text-stone-300 block">
                     Average Cycle Length (Days)
                   </label>
                   <div className="flex items-center gap-3">
@@ -507,32 +519,33 @@ export const ExpectedPeriodCheckInCard: React.FC<ExpectedPeriodCheckInCardProps>
                       max={45}
                       value={editCycleLenInput}
                       onChange={(e) => setEditCycleLenInput(parseInt(e.target.value) || 28)}
-                      className="w-24 p-3 bg-white border border-pink-200 rounded-2xl text-sm font-bold text-rose-900 text-center focus:outline-none focus:border-rose-400"
+                      className="w-24 h-11 px-3 bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] rounded-xl text-sm font-semibold text-stone-900 dark:text-stone-100 text-center focus:outline-none focus:ring-2 focus:ring-rose-500/30 tabular-nums"
                     />
-                    <p className="text-stone-500 text-[11px] leading-snug">
-                      Standard cycles range between 21 and 35 days.
+                    <p className="text-stone-500 dark:text-stone-400 text-xs leading-snug">
+                      Typical cycles range between 21 and 35 days.
                     </p>
                   </div>
                 </div>
               )}
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-wider text-rose-400 block">
+                <label className="text-xs font-semibold text-stone-600 dark:text-stone-300 block">
                   New Predicted Period Start Date
                 </label>
                 <input
                   type="date"
                   value={newPredictedDateInput}
                   onChange={(e) => setNewPredictedDateInput(e.target.value)}
-                  className="w-full p-3 bg-white border border-pink-200 rounded-2xl text-xs font-bold text-stone-800 focus:outline-none focus:border-rose-400"
+                  className="w-full h-11 px-3.5 bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] rounded-xl text-xs font-medium text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-rose-500/30"
                 />
               </div>
             </div>
 
-            <div className="flex items-center gap-3 pt-2">
+            <div className="flex items-center gap-3 pt-1">
               <button
+                type="button"
                 onClick={handleSavePredictionEdit}
-                className="flex-1 py-3 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl font-bold text-xs uppercase tracking-wider shadow-sm hover:scale-[1.01] transition-all cursor-pointer flex items-center justify-center gap-2"
+                className="flex-1 py-3 bg-pink-600 hover:bg-pink-700 text-white rounded-xl font-semibold text-xs transition-colors cursor-pointer flex items-center justify-center gap-2"
               >
                 <RefreshCw size={14} />
                 <span>Save & Adjust Predictions</span>

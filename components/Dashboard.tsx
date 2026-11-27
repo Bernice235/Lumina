@@ -50,7 +50,15 @@ import {
   LogOut,
   Volume2,
   VolumeX,
-  MessageCircle
+  MessageCircle,
+  Flower2,
+  Moon,
+  ArrowRight,
+  Palette,
+  Lightbulb,
+  HeartHandshake,
+  Check,
+  BarChart3
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -264,11 +272,17 @@ const Dashboard: React.FC<DashboardProps> = ({
       }, 5000);
     };
 
+    const handleToggleMenuEvent = () => {
+      setIsMenuOpen(prev => !prev);
+    };
+
     window.addEventListener('lumina:symptom-logged', handleSymptomEvent);
     window.addEventListener('lumina:checkin-completed', handleCheckinEvent);
+    window.addEventListener('lumina:toggle-dashboard-menu', handleToggleMenuEvent);
     return () => {
       window.removeEventListener('lumina:symptom-logged', handleSymptomEvent);
       window.removeEventListener('lumina:checkin-completed', handleCheckinEvent);
+      window.removeEventListener('lumina:toggle-dashboard-menu', handleToggleMenuEvent);
     };
   }, [currentAvatar.name]);
 
@@ -819,7 +833,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             <line x1="205" y1="140" x2="205" y2="168" stroke="url(#dbBodyGrad)" strokeWidth="5" />
             {/* Core energy baby glow */}
             <circle cx="145" cy={curveY + 12} r={18} fill="url(#dbGlowGrad)" className="opacity-80" />
-            <circle cx="145" cy={curveY + 12} r="6" fill="#fb923c" className="animate-ping" />
+            <circle cx="145" cy={curveY + 12} r="6" fill="#fb923c" />
           </svg>
         );
       } else {
@@ -915,7 +929,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         <line x1="160" y1="160" x2="160" y2="90" stroke="url(#dbBodyGrad)" strokeWidth="6" strokeLinecap="round" filter="url(#dbGlow)" />
         <circle cx="160" cy="72" r="11" fill="#f472b6" filter="url(#dbGlow)" />
         <path d={`M 120 160 L 160 120 L 200 160`} fill="none" stroke="url(#dbBodyGrad)" strokeWidth="5" strokeLinecap="round" />
-        <circle cx="160" cy="115" r={6 + osc * 6} fill="#fb923c" className="opacity-70 animate-pulse" />
+        <circle cx="160" cy="115" r={6 + osc * 6} fill="#fb923c" className="opacity-70" />
       </svg>
     );
   };
@@ -1286,52 +1300,61 @@ const Dashboard: React.FC<DashboardProps> = ({
     const edWeek = weeklyEducationContent[selectedWeekTab] || weeklyEducationContent[12];
 
     return (
-      <div className="space-y-8 animate-fadeIn">
+      <div className="space-y-6">
         {/* Header Hero */}
-        <section className="bg-gradient-to-br from-indigo-500 via-indigo-400 to-purple-400 p-8 rounded-[3rem] text-white shadow-xl shadow-indigo-100/50 relative overflow-hidden">
-          <div className="relative z-10 space-y-4">
-            <span className="px-3.5 py-1.5 bg-white/20 backdrop-blur-md rounded-full text-[10px] font-black tracking-widest uppercase border border-white/25">Pregnancy Sanctuary ON</span>
+        <section className="bg-gradient-to-br from-indigo-600 via-indigo-500 to-purple-600 p-6 sm:p-8 rounded-2xl text-white shadow-sm border border-indigo-400/30 relative overflow-hidden">
+          <div className="relative z-10 space-y-5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-xs font-semibold text-indigo-100">Pregnancy Sanctuary</span>
+              <span className="text-xs font-medium text-indigo-100 tabular-nums">Week {weeks}</span>
+            </div>
             <div className="space-y-2">
-              <h2 className="text-3xl md:text-5xl font-serif italic text-white font-thin">Hey mama, welcome 💗</h2>
-              <p className="text-sm opacity-90 max-w-xl font-serif italic">“{affirmation}”</p>
+              <h2 className="text-2xl sm:text-4xl font-serif text-white font-normal tracking-tight">
+                Welcome, {user.firstName || user.name || 'Mama'}
+              </h2>
+              <p className="text-sm text-indigo-100/95 max-w-xl leading-relaxed">“{affirmation}”</p>
             </div>
             
-            <div className="pt-4 flex flex-col md:flex-row gap-6 justify-between items-stretch md:items-center border-t border-white/10">
+            <div className="pt-4 flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center border-t border-white/15">
               <div className="flex items-center gap-4">
-                <div className="text-5xl">{currentBaby.fruit}</div>
+                <div className="w-12 h-12 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center text-2xl shrink-0">
+                  {currentBaby.fruit}
+                </div>
                 <div>
-                  <p className="text-lg font-bold font-serif italic">Week {weeks} Pregnancy</p>
-                  <p className="text-xs opacity-75">Baby size of a <span className="underline font-bold">{currentBaby.size}</span></p>
+                  <p className="text-base font-serif font-semibold tabular-nums">Week {weeks} Pregnancy</p>
+                  <p className="text-xs text-indigo-100">Baby is the size of a <span className="font-semibold underline underline-offset-2">{currentBaby.size}</span></p>
                 </div>
               </div>
 
               <button 
+                type="button"
                 onClick={() => setIsDeliveredModalOpen(true)}
-                className="px-6 py-3.5 bg-yellow-400 text-indigo-950 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:scale-[1.03] transition-transform flex items-center justify-center gap-2 border-2 border-white"
+                className="h-11 px-5 bg-amber-300 hover:bg-amber-200 text-indigo-950 rounded-xl font-semibold text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
               >
-                <span>👶</span> Baby is Delivered! 🎉
+                <Baby className="w-4 h-4" />
+                <span>Mark Baby as Delivered</span>
               </button>
             </div>
           </div>
-          <span className="absolute -bottom-12 -right-12 text-[14rem] opacity-5 select-none pointer-events-none">🤰</span>
         </section>
 
         {/* Exercises Section */}
-        <section className="bg-white p-8 rounded-[3rem] border border-indigo-50 shadow-sm space-y-6">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
+        <section className="bg-white dark:bg-[#1a1816] p-6 sm:p-8 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-sm space-y-6">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
             <div className="space-y-1">
-              <span className="px-3 py-1 bg-indigo-50 text-indigo-500 rounded-full text-[9px] font-black uppercase tracking-wider">trimester movement</span>
-              <h3 className="text-2xl font-serif italic text-indigo-600">Pregnancy-Safe Exercises</h3>
+              <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">Trimester Movement</span>
+              <h3 className="text-2xl font-serif text-stone-900 dark:text-stone-100 font-normal">Pregnancy-Safe Exercises</h3>
             </div>
             {/* Trimester switcher */}
-            <div className="flex bg-indigo-50/50 p-1.5 rounded-2xl border border-indigo-100/40">
+            <div className="flex bg-stone-100 dark:bg-[#23201d] p-1 rounded-xl border border-stone-200/80 dark:border-[#2e2a26]">
               {([1, 2, 3] as const).map(tri => (
                 <button
                   key={tri}
+                  type="button"
                   onClick={() => setExerciseTrimester(tri)}
-                  className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wide transition-all ${exerciseTrimester === tri ? 'bg-indigo-500 text-white shadow-md' : 'text-indigo-400 hover:text-indigo-600'}`}
+                  className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${exerciseTrimester === tri ? 'bg-indigo-600 text-white shadow-xs' : 'text-stone-600 dark:text-stone-300 hover:text-stone-900'}`}
                 >
-                  Tri {tri}
+                  Trimester {tri}
                 </button>
               ))}
             </div>
@@ -1339,156 +1362,169 @@ const Dashboard: React.FC<DashboardProps> = ({
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {exerciseCategories[exerciseTrimester].map((ex, i) => (
-              <div key={i} className="p-5 bg-indigo-50/20 border border-indigo-50/50 rounded-2xl space-y-3 flex flex-col justify-between hover:border-indigo-200 transition-colors">
+              <div key={i} className="p-5 bg-stone-50/70 dark:bg-[#23201d] border border-stone-200/70 dark:border-[#2e2a26] rounded-xl space-y-3 flex flex-col justify-between hover:border-indigo-200 transition-colors">
                 <div className="space-y-2">
-                  <div className="flex justify-between items-start">
-                    <span className="text-xs font-serif italic font-bold text-indigo-600">{ex.name}</span>
-                    <span className="text-[9px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-500 px-2.5 py-1 rounded-full">{ex.duration}</span>
+                  <div className="flex justify-between items-start gap-2">
+                    <span className="text-sm font-serif font-semibold text-stone-900 dark:text-stone-100">{ex.name}</span>
+                    <span className="text-xs font-medium text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 rounded-lg shrink-0 tabular-nums">{ex.duration}</span>
                   </div>
-                  <p className="text-[11px] text-gray-500 leading-relaxed font-medium">{ex.desc}</p>
+                  <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">{ex.desc}</p>
                 </div>
-                <div className="pt-2.5 border-t border-indigo-50">
-                  <p className="text-[8px] font-black uppercase tracking-widest text-indigo-400">safety check</p>
-                  <p className="text-[9px] text-indigo-800 italic font-semibold">{ex.note}</p>
+                <div className="pt-3 border-t border-stone-200/60 dark:border-[#2e2a26]">
+                  <p className="text-[11px] font-semibold text-stone-500 dark:text-stone-400">Safety note</p>
+                  <p className="text-xs text-stone-700 dark:text-stone-300 mt-0.5">{ex.note}</p>
                   <button
+                    type="button"
                     onClick={() => startVideoSimulation(ex.name, ex.duration)}
-                    className="mt-3.5 w-full py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-600 font-bold uppercase text-[9px] tracking-widest rounded-xl flex items-center justify-center gap-1.5 transition-all"
+                    className="mt-3.5 w-full h-10 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                   >
-                    <Video size={11} /> Play tutorial video
+                    <Video className="w-3.5 h-3.5" />
+                    <span>Play Tutorial Video</span>
                   </button>
                 </div>
               </div>
             ))}
           </div>
 
-          <div className="bg-amber-50 p-4 rounded-2xl border border-amber-200/50 flex gap-3 items-center">
+          <div className="bg-amber-50 dark:bg-amber-950/30 p-4 rounded-xl border border-amber-200/70 dark:border-amber-900/40 flex gap-3 items-center">
             <AlertCircle size={18} className="text-amber-600 shrink-0" />
-            <p className="text-[10px] text-amber-950 font-semibold leading-relaxed">
-              <strong>Check with your doctor first:</strong> Standard pregnancy exercises list represents educational guidelines. Discontinue any pose causing tight pulls, twinges, or shortness of breath.
+            <p className="text-xs text-amber-950 dark:text-amber-200 leading-relaxed">
+              <strong>Check with your doctor first:</strong> These exercise lists are educational guidelines. Stop any movement that causes pain, cramping, or shortness of breath.
             </p>
           </div>
         </section>
 
         {/* Nutrition and Skincare Infusion */}
         <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white p-8 rounded-[2.5rem] border border-indigo-50 shadow-sm space-y-4">
-            <h4 className="text-lg font-serif text-indigo-600 italic flex items-center gap-2.5">
-              <Utensils size={18} className="text-indigo-400" /> Healthy meals & Infusions
+          <div className="bg-white dark:bg-[#1a1816] p-6 sm:p-7 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-sm space-y-4">
+            <h4 className="text-lg font-serif text-stone-900 dark:text-stone-100 flex items-center gap-2.5">
+              <Utensils size={18} className="text-indigo-600 dark:text-indigo-400" />
+              <span>Healthy Meals &amp; Infusions</span>
             </h4>
-            <div className="space-y-3.5 pt-2">
-              <div className="p-4 bg-indigo-50/10 border border-indigo-50/50 rounded-2xl flex items-start gap-3">
-                <span className="text-2xl mt-0.5">🥑</span>
+            <div className="space-y-3 pt-1">
+              <div className="p-4 bg-stone-50/70 dark:bg-[#23201d] border border-stone-200/70 dark:border-[#2e2a26] rounded-xl flex items-start gap-3">
+                <div className="w-9 h-9 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+                  <Utensils className="w-4 h-4" />
+                </div>
                 <div>
-                  <span className="text-[10px] font-black uppercase text-indigo-400 tracking-wider">Nutrition Highlights</span>
-                  <p className="text-xs text-indigo-950 font-serif italic font-bold">Folate, Iron, Protein boosts</p>
-                  <p className="text-[10px] text-gray-400 font-medium leading-relaxed">Eat slow-broth local soups, baked avocado frittatas, or sesame greens.</p>
+                  <span className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">Nutrition Highlights</span>
+                  <p className="text-sm text-stone-900 dark:text-stone-100 font-semibold mt-0.5">Folate, Iron, Protein</p>
+                  <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed mt-0.5">Include slow-simmered broths, baked avocado eggs, and dark leafy greens.</p>
                 </div>
               </div>
               
-              <div className="p-4 bg-amber-50/30 border border-amber-100/40 rounded-2xl flex items-start gap-3">
-                <span className="text-2xl mt-0.5">🍵</span>
+              <div className="p-4 bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-900/30 rounded-xl flex items-start gap-3">
+                <div className="w-9 h-9 rounded-lg bg-amber-100/80 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 flex items-center justify-center shrink-0">
+                  <Coffee className="w-4 h-4" />
+                </div>
                 <div>
-                  <span className="text-[10px] font-black uppercase text-amber-600 tracking-wider">Pregnancy-safe Teas</span>
-                  <p className="text-xs text-amber-950 font-serif italic font-bold">Ginger, Peppermint, Red Raspberry</p>
-                  <p className="text-[10px] text-amber-900 leading-relaxed font-semibold">
-                    Ginger infusion targets fatigue; Peppermint releases gas. Red Raspberry is *only* recommended for uterine stamina in Trimester 3—consult obstetrician first!
+                  <span className="text-xs font-semibold text-amber-700 dark:text-amber-300">Pregnancy-Safe Teas</span>
+                  <p className="text-sm text-stone-900 dark:text-stone-100 font-semibold mt-0.5">Ginger, Peppermint, Red Raspberry</p>
+                  <p className="text-xs text-stone-700 dark:text-stone-300 leading-relaxed mt-0.5">
+                    Ginger helps ease nausea; peppermint aids digestion. Red raspberry leaf is advised only in Trimester 3 with clinician approval.
                   </p>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="bg-white p-8 rounded-[2.5rem] border border-indigo-50 shadow-sm space-y-4">
-            <h4 className="text-lg font-serif text-indigo-600 italic flex items-center gap-2.5">
-              <Sparkles size={18} className="text-indigo-400" /> Skincare Pregnancy-Safe Rituals
+          <div className="bg-white dark:bg-[#1a1816] p-6 sm:p-7 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-sm space-y-4">
+            <h4 className="text-lg font-serif text-stone-900 dark:text-stone-100 flex items-center gap-2.5">
+              <Sparkles size={18} className="text-indigo-600 dark:text-indigo-400" />
+              <span>Pregnancy-Safe Skincare</span>
             </h4>
-            <ul className="space-y-3 text-sm text-gray-500 font-serif italic pt-2">
-              <li className="flex gap-2.5">
-                <span className="text-indigo-300 mt-1">•</span>
-                Use rich biological cocoa or whipped shea fat butter to lock belly layers.
+            <ul className="space-y-3 text-sm text-stone-600 dark:text-stone-300 pt-1">
+              <li className="flex gap-2.5 items-start">
+                <Check className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                <span>Use rich cocoa or whipped shea butter to hydrate stretching skin comfortably.</span>
               </li>
-              <li className="flex gap-2.5">
-                <span className="text-indigo-300 mt-1">•</span>
-                Ensure 100% avoidance of chemical retinoids, hydroquinone, or chemical exfoliants.
+              <li className="flex gap-2.5 items-start">
+                <Check className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                <span>Avoid chemical retinoids, hydroquinone, and harsh salicylic exfoliants.</span>
               </li>
-              <li className="flex gap-2.5">
-                <span className="text-indigo-300 mt-1">•</span>
-                Stay hydrated to maintain dermal fiber elasticity naturally from within.
+              <li className="flex gap-2.5 items-start">
+                <Check className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                <span>Stay consistently hydrated to support skin elasticity from within.</span>
               </li>
             </ul>
           </div>
         </section>
 
         {/* Weekly Education Hub */}
-        <section className="bg-white p-8 rounded-[3rem] border border-indigo-50 shadow-sm space-y-6">
+        <section className="bg-white dark:bg-[#1a1816] p-6 sm:p-8 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-sm space-y-6">
           <div className="space-y-1">
-            <span className="px-3 py-1 bg-indigo-50 text-indigo-500 rounded-full text-[9px] font-black uppercase tracking-wider">Maternal Study corner</span>
-            <h3 className="text-2xl font-serif italic text-indigo-600">Weekly Pregnancy Education Hub</h3>
-            <p className="text-xs text-gray-400">Track and study baby's details, maternal structural edits, skincare advice, and recipes week-by-week.</p>
+            <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">Maternal Study Guide</span>
+            <h3 className="text-2xl font-serif text-stone-900 dark:text-stone-100 font-normal">Weekly Pregnancy Education Hub</h3>
+            <p className="text-xs text-stone-500 dark:text-stone-400">Explore fetal development, maternal changes, skincare guidance, and nutrition week by week.</p>
           </div>
 
           {/* Quick weeks toggler slider */}
-          <div className="flex gap-2 overflow-x-auto pb-4 pt-1 scrollbar-hide">
+          <div className="flex gap-2 overflow-x-auto pb-2 pt-1 scrollbar-hide">
             {(Object.keys(weeklyEducationContent).map(Number).sort((a,b)=>a-b)).map(wk => (
               <button
                 key={wk}
+                type="button"
                 onClick={() => setSelectedWeekTab(wk)}
-                className={`flex-shrink-0 px-4 py-2.5 rounded-xl text-xs font-bold transition-all relative ${selectedWeekTab === wk ? 'bg-indigo-500 text-white shadow-md font-extrabold scale-105' : 'bg-indigo-50/40 text-indigo-400 hover:bg-indigo-50 border border-indigo-50'}`}
+                className={`flex-shrink-0 px-3.5 py-2 rounded-xl text-xs font-semibold transition-colors relative cursor-pointer tabular-nums ${
+                  selectedWeekTab === wk 
+                    ? 'bg-indigo-600 text-white' 
+                    : 'bg-stone-100 dark:bg-[#23201d] text-stone-600 dark:text-stone-300 hover:bg-stone-200 border border-stone-200/60 dark:border-[#2e2a26]'
+                }`}
               >
-                Week {wk} 
-                {wk === weeks && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-yellow-400 border border-white rounded-full animate-ping"></span>}
+                Week {wk}
+                {wk === weeks && <span className="ml-1.5 inline-block w-1.5 h-1.5 bg-amber-300 rounded-full align-middle" />}
               </button>
             ))}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-            <div className="p-5.5 bg-indigo-50/30 rounded-2xl border border-indigo-100/30 space-y-2">
-              <span className="text-xs font-black uppercase tracking-wider text-indigo-500 flex items-center gap-1.5"><Baby size={13} /> Baby's Progress</span>
-              <p className="text-sm text-gray-600 leading-relaxed font-serif italic">"{edWeek.baby}"</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+            <div className="p-5 bg-indigo-50/40 dark:bg-indigo-950/20 rounded-xl border border-indigo-100/80 dark:border-indigo-900/30 space-y-2">
+              <span className="text-xs font-semibold text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5"><Baby size={14} /> Baby&apos;s Progress</span>
+              <p className="text-sm text-stone-700 dark:text-stone-300 leading-relaxed">{edWeek.baby}</p>
             </div>
             
-            <div className="p-5.5 bg-purple-50/30 rounded-2xl border border-purple-100/30 space-y-2">
-              <span className="text-xs font-black uppercase tracking-wider text-purple-500 flex items-center gap-1.5"><Compass size={13} /> Mama's Body & Skin Shifts</span>
-              <p className="text-sm text-gray-600 leading-relaxed font-serif italic">"{edWeek.body}" <br/><span className="text-[10px] text-purple-400 font-sans font-black block mt-2 uppercase tracking-widest">skin care advice:</span> "{edWeek.skin}"</p>
+            <div className="p-5 bg-purple-50/40 dark:bg-purple-950/20 rounded-xl border border-purple-100/80 dark:border-purple-900/30 space-y-2">
+              <span className="text-xs font-semibold text-purple-700 dark:text-purple-300 flex items-center gap-1.5"><Compass size={14} /> Body &amp; Skin Changes</span>
+              <p className="text-sm text-stone-700 dark:text-stone-300 leading-relaxed">{edWeek.body}</p>
+              <p className="text-xs text-purple-700 dark:text-purple-300 pt-1"><strong>Skincare:</strong> {edWeek.skin}</p>
             </div>
 
-            <div className="p-5.5 bg-amber-50/20 rounded-2xl border border-amber-100/20 space-y-2">
-              <span className="text-xs font-black uppercase tracking-wider text-amber-600 flex items-center gap-1.5"><Utensils size={13} /> Nutritional Additions</span>
-              <p className="text-sm text-gray-600 leading-relaxed font-serif italic">"{edWeek.nutrition}"</p>
+            <div className="p-5 bg-amber-50/40 dark:bg-amber-950/20 rounded-xl border border-amber-100/80 dark:border-amber-900/30 space-y-2">
+              <span className="text-xs font-semibold text-amber-700 dark:text-amber-300 flex items-center gap-1.5"><Utensils size={14} /> Nutritional Focus</span>
+              <p className="text-sm text-stone-700 dark:text-stone-300 leading-relaxed">{edWeek.nutrition}</p>
             </div>
 
-            <div className="p-5.5 bg-teal-50/20 rounded-2xl border border-teal-100/25 space-y-2">
-              <span className="text-xs font-black uppercase tracking-wider text-teal-600 flex items-center gap-1.5"><Activity size={13} /> Active Movement Focus</span>
-              <p className="text-sm text-gray-600 leading-relaxed font-serif italic">"{edWeek.exercise}"</p>
+            <div className="p-5 bg-teal-50/40 dark:bg-teal-950/20 rounded-xl border border-teal-100/80 dark:border-teal-900/30 space-y-2">
+              <span className="text-xs font-semibold text-teal-700 dark:text-teal-300 flex items-center gap-1.5"><Activity size={14} /> Movement Focus</span>
+              <p className="text-sm text-stone-700 dark:text-stone-300 leading-relaxed">{edWeek.exercise}</p>
             </div>
           </div>
         </section>
 
         {/* Connected Partner Pregnancy notifications widget */}
         {user.isPartnerLinked && (
-          <section className="bg-indigo-950 text-white p-8 rounded-[3.5rem] relative overflow-hidden space-y-4">
-             <div className="relative z-10 space-y-2">
-                <span className="px-3 py-1 bg-indigo-800 text-indigo-200 rounded-full text-[8px] font-black uppercase tracking-widest">Linked partner support sync</span>
-                <h4 className="text-xl font-serif italic text-indigo-200">Shared Pregnancy Companion Reminders</h4>
-                <p className="text-xs opacity-80 leading-relaxed max-w-xl font-serif italic">
-                  Since you enabled shared notifications, your connected partner ({user.partnerName}) receives real-time assistance tips on their device, like:
+          <section className="bg-indigo-950 text-white p-6 sm:p-8 rounded-2xl border border-indigo-900 space-y-4">
+             <div className="space-y-2">
+                <span className="text-xs font-semibold text-indigo-300">Partner Support Sync</span>
+                <h4 className="text-xl font-serif text-white">Shared Pregnancy Companion Reminders</h4>
+                <p className="text-xs text-indigo-200 leading-relaxed max-w-xl">
+                  Since shared notifications are enabled, {user.partnerName || 'your partner'} receives gentle care prompts such as:
                 </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3">
-                  <div className="p-4 bg-white/5 border border-white/10 rounded-2xl italic text-[11px] opacity-90 font-serif leading-relaxed">
-                    “She may need extra support today 💗 check in on her and maybe surprise her with comforting snacks or tea 🌸”
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                  <div className="p-4 bg-white/5 border border-white/10 rounded-xl text-xs text-indigo-100 leading-relaxed">
+                    “She may appreciate extra comfort today. Check in and offer tea or a nourishing snack.”
                   </div>
-                  <div className="p-4 bg-white/5 border border-white/10 rounded-2xl italic text-[11px] opacity-90 font-serif leading-relaxed">
-                     “She has an appointment this week 🩺 maybe help pack her maternity notebook and offer to drive 💕”
+                  <div className="p-4 bg-white/5 border border-white/10 rounded-xl text-xs text-indigo-100 leading-relaxed">
+                     “She has a prenatal appointment this week. Offer to help organize notes or handle travel.”
                   </div>
-                  <div className="p-4 bg-white/5 border border-white/10 rounded-2xl italic text-[11px] opacity-90 font-serif leading-relaxed">
-                     “Your little sprout is going fast this week 👶 check up on her fatigue and offer a cozy foot backrub 💗”
+                  <div className="p-4 bg-white/5 border border-white/10 rounded-xl text-xs text-indigo-100 leading-relaxed">
+                     “Baby is growing quickly this week. Check in on her energy and offer quiet rest time.”
                   </div>
-                  <div className="p-4 bg-white/5 border border-white/10 rounded-2xl italic text-[11px] opacity-90 font-serif leading-relaxed">
-                     “Check in on her hydration levels 💧 keep her custom pastel water flask locked and chilled today 💕”
+                  <div className="p-4 bg-white/5 border border-white/10 rounded-xl text-xs text-indigo-100 leading-relaxed">
+                     “Help keep her water bottle filled and chilled throughout the day.”
                   </div>
                 </div>
              </div>
-             <span className="absolute bottom-[-10%] left-[-5%] text-[10rem] opacity-5 select-none pointer-events-none">💞</span>
           </section>
         )}
       </div>
@@ -1533,152 +1569,153 @@ const Dashboard: React.FC<DashboardProps> = ({
     ];
 
     return (
-      <div className="space-y-8 animate-fadeIn">
+      <div className="space-y-6">
         {/* Header Hero */}
-        <section className="bg-gradient-to-br from-[#4f46e5] via-[#4338ca] to-[#312e81] p-8 rounded-[3rem] text-white shadow-xl relative overflow-hidden">
-          <div className="relative z-10 space-y-4">
-            <span className="px-3.5 py-1.5 bg-pink-500 text-white rounded-full text-[9px] font-black tracking-widest uppercase border border-pink-400">Postpartum recovery Mode ON</span>
+        <section className="bg-gradient-to-br from-indigo-600 via-indigo-700 to-slate-900 p-6 sm:p-8 rounded-2xl text-white shadow-sm border border-indigo-500/30">
+          <div className="space-y-4">
+            <span className="text-xs font-semibold text-indigo-200">Postpartum Recovery Mode</span>
             <div className="space-y-2">
-              <h2 className="text-3xl md:text-5xl font-serif italic text-white font-thin">Sanctuary Healing, {user.name} 💗</h2>
-              <p className="text-sm opacity-90 max-w-xl font-serif italic">“{affirmation}”</p>
+              <h2 className="text-2xl sm:text-4xl font-serif text-white font-normal tracking-tight">Sanctuary Healing, {user.firstName || user.name}</h2>
+              <p className="text-sm text-indigo-100/95 max-w-xl">“{affirmation}”</p>
             </div>
             
-            <div className="pt-4 flex flex-col md:flex-row gap-6 justify-between items-stretch md:items-center border-t border-white/10">
+            <div className="pt-4 flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center border-t border-white/15">
               <div className="flex items-center gap-3">
-                <span className="text-3xl">🌿</span>
-                <p className="text-xs text-indigo-200">Focus: Gentle organ recovery, pelvic tissue closing, nesting comfort, lactation rhythm.</p>
+                <Flower2 className="w-5 h-5 text-pink-300 shrink-0" />
+                <p className="text-xs text-indigo-100">Focus: Gentle physical recovery, pelvic floor care, rest, and nourishment.</p>
               </div>
 
               <button 
+                type="button"
                 onClick={handleExitPostpartum}
-                className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-2xl font-black uppercase text-[9px] tracking-widest shadow-lg flex items-center justify-center gap-1.5 transition-transform"
+                className="h-10 px-4 bg-white/15 hover:bg-white/25 border border-white/25 text-white rounded-xl font-semibold text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
               >
-                <span>🌸</span> Exit Postpartum and resume classical Period Tracker
+                <span>Resume Classical Period Tracker</span>
               </button>
             </div>
           </div>
-          <span className="absolute -bottom-12 -right-12 text-[14rem] opacity-5 select-none pointer-events-none">🍼</span>
         </section>
 
         {/* Daily Healing Logging Check-in Form */}
-        <section className="bg-white p-8 rounded-[3rem] border border-pink-100 shadow-sm space-y-6">
+        <section className="bg-white dark:bg-[#1a1816] p-6 sm:p-8 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-sm space-y-6">
           <div className="space-y-1">
-             <span className="px-3 py-1 bg-pink-50 text-pink-500 rounded-full text-[9px] font-black uppercase tracking-wider">daily healing monitor</span>
-             <h3 className="text-2xl font-serif italic text-slate-800">Postpartum Healing Check-in</h3>
-             <p className="text-xs text-gray-400">A compassionate logs tracking physical and emotional healing steps day-by-day.</p>
+             <span className="text-xs font-semibold text-pink-700 dark:text-pink-400">Daily Healing Monitor</span>
+             <h3 className="text-2xl font-serif text-stone-900 dark:text-stone-100 font-normal">Postpartum Healing Check-in</h3>
+             <p className="text-xs text-stone-500 dark:text-stone-400">Track your physical recovery, rest, hydration, and emotional wellbeing day by day.</p>
           </div>
 
           {checkinSuccess && (
-            <div className="p-4 bg-teal-50 border border-teal-200 text-teal-800 rounded-2xl flex items-center gap-2 animate-fadeIn">
-              <CheckCircle size={18} className="text-teal-600" />
-              <p className="text-xs font-bold font-serif italic">Sanctuary Healing Logged! Breathe deep, you are recovering beautifully 🌸</p>
+            <div className="p-4 bg-teal-50 dark:bg-teal-950/30 border border-teal-200 dark:border-teal-900/40 text-teal-800 dark:text-teal-200 rounded-xl flex items-center gap-2">
+              <CheckCircle size={18} className="text-teal-600 shrink-0" />
+              <p className="text-xs font-medium">Healing check-in saved to your sanctuary.</p>
             </div>
           )}
 
-          <form onSubmit={handlePostpartumCheckin} className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+          <form onSubmit={handlePostpartumCheckin} className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-1">
              <div className="space-y-4">
-                {/* 1. Mood slider/buttons */}
                 <div className="space-y-2">
-                   <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Healing Emotional Mood</label>
-                   <div className="grid grid-cols-5 gap-1 pt-1">
+                   <label className="text-xs font-semibold text-stone-700 dark:text-stone-300">Healing Emotional Mood</label>
+                   <div className="grid grid-cols-5 gap-1.5 pt-1">
                      {(['happy', 'calm', 'sensitive', 'tired', 'overwhelmed'] as const).map(md => (
                        <button
                          key={md}
                          type="button"
                          onClick={() => setPostpartumMood(md)}
-                         className={`py-2 px-1 rounded-xl text-xs font-bold border transition-all ${postpartumMood === md ? 'bg-pink-100 border-pink-400 text-pink-600 scale-105 font-black' : 'bg-white border-gray-100 text-gray-500 hover:border-pink-200'}`}
+                         className={`py-2.5 px-1 rounded-xl text-xs font-medium border transition-colors capitalize cursor-pointer ${
+                           postpartumMood === md 
+                             ? 'bg-pink-50 dark:bg-pink-950/40 border-pink-500 text-pink-700 dark:text-pink-300 font-semibold' 
+                             : 'bg-white dark:bg-[#23201d] border-stone-200 dark:border-[#2e2a26] text-stone-600 dark:text-stone-300 hover:border-pink-300'
+                         }`}
                        >
-                         <span className="block text-lg">{md === 'happy' ? '😊' : md === 'calm' ? '😌' : md === 'sensitive' ? '🥺' : md === 'overwhelmed' ? '🌪️' : '🥱'}</span>
-                         <span className="text-[8px] uppercase">{md}</span>
+                         {md}
                        </button>
                      ))}
                    </div>
                 </div>
 
-                {/* 2. Sleep interval tracking */}
                 <div className="space-y-2">
                    <div className="flex justify-between items-center">
-                     <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Aggregate Sleep Hours (Cumulative)</label>
-                     <span className="text-xs font-serif italic font-bold text-pink-500">{postpartumSleep} hours</span>
+                     <label className="text-xs font-semibold text-stone-700 dark:text-stone-300">Cumulative Sleep</label>
+                     <span className="text-xs font-semibold text-pink-700 dark:text-pink-400 tabular-nums">{postpartumSleep} hours</span>
                    </div>
                    <input
                      type="range" min="3" max="12" step="0.5"
                      value={postpartumSleep}
                      onChange={(e) => setPostpartumSleep(parseFloat(e.target.value))}
-                     className="w-full accent-pink-500"
+                     className="w-full accent-pink-600"
                    />
                 </div>
 
-                {/* 3. Hydration check */}
                 <div className="space-y-2">
-                   <div className="flex justify-between items-center2">
-                     <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Hydration Intake (Liters)</label>
-                     <span className="text-xs font-serif italic font-bold text-pink-500">{postpartumHydration} L</span>
+                   <div className="flex justify-between items-center">
+                     <label className="text-xs font-semibold text-stone-700 dark:text-stone-300">Hydration Intake</label>
+                     <span className="text-xs font-semibold text-pink-700 dark:text-pink-400 tabular-nums">{postpartumHydration} L</span>
                    </div>
                    <input
                      type="range" min="1" max="6" step="0.5"
                      value={postpartumHydration}
                      onChange={(e) => setPostpartumHydration(parseFloat(e.target.value))}
-                     className="w-full accent-pink-500"
+                     className="w-full accent-pink-600"
                    />
                 </div>
              </div>
 
              <div className="space-y-4">
-                {/* 4. Lochia / bleeding log */}
                 <div className="space-y-2">
-                   <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Bleeding / Lochia Intensity</label>
-                   <div className="grid grid-cols-5 gap-1">
+                   <label className="text-xs font-semibold text-stone-700 dark:text-stone-300">Bleeding / Lochia Intensity</label>
+                   <div className="grid grid-cols-5 gap-1.5">
                      {(['none', 'spotting', 'light', 'medium', 'heavy'] as const).map(bl => (
                        <button
                          key={bl}
                          type="button"
                          onClick={() => setPostpartumBleeding(bl)}
-                         className={`py-2 px-1 rounded-xl text-[9px] font-bold border transition-all capitalize ${postpartumBleeding === bl ? 'bg-red-50 border-red-400 text-red-600 scale-105 font-black' : 'bg-white border-gray-100 text-gray-500 hover:border-red-200'}`}
+                         className={`py-2 px-1 rounded-xl text-xs font-medium border transition-colors capitalize cursor-pointer ${
+                           postpartumBleeding === bl 
+                             ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-500 text-rose-700 dark:text-rose-300 font-semibold' 
+                             : 'bg-white dark:bg-[#23201d] border-stone-200 dark:border-[#2e2a26] text-stone-600 dark:text-stone-300 hover:border-rose-300'
+                         }`}
                        >
                          {bl}
                        </button>
                      ))}
                    </div>
                    {postpartumBleeding === 'heavy' && (
-                     <p className="text-[9px] text-red-500 font-semibold italic">⚠️ Inform your midwife or physician if bleeding persists or clots are large.</p>
+                     <p className="text-xs text-rose-600 font-medium">Inform your midwife or physician if heavy bleeding persists or clots are large.</p>
                    )}
                 </div>
 
-                {/* 5. breastfeeding helper */}
                 <div className="space-y-2">
                    <div className="flex justify-between items-center">
-                     <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Breastfeeding feeds logs (Duration)</label>
-                     <span className="text-xs font-serif italic font-bold text-indigo-500">{breastfeedingMinutes} Mins</span>
+                     <label className="text-xs font-semibold text-stone-700 dark:text-stone-300">Breastfeeding Session Duration</label>
+                     <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 tabular-nums">{breastfeedingMinutes} mins</span>
                    </div>
                    <input
                      type="range" min="5" max="60" step="5"
                      value={breastfeedingMinutes}
                      onChange={(e) => setBreastfeedingMinutes(parseInt(e.target.value))}
-                     className="w-full accent-indigo-500"
+                     className="w-full accent-indigo-600"
                    />
                 </div>
 
-                {/* 6. Self care checkbox list */}
                 <div className="space-y-2">
-                   <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Completed Core Self-Care Tasks</label>
-                   <div className="grid grid-cols-2 gap-2 pt-1 font-sans">
+                   <label className="text-xs font-semibold text-stone-700 dark:text-stone-300">Completed Self-Care Tasks</label>
+                   <div className="grid grid-cols-2 gap-2 pt-1">
                      {[
-                       { key: 'pelvicFloor', label: 'Pelvic breathe rehab' },
-                       { key: 'napTaken', label: 'Sunset nap taken 🛌' },
-                       { key: 'healingBalm', label: 'Witch hazel comforts' },
-                       { key: 'nutritiousSoup', label: 'Warm recovery soup 🍵' }
+                       { key: 'pelvicFloor', label: 'Pelvic breath rehab' },
+                       { key: 'napTaken', label: 'Restorative nap' },
+                       { key: 'healingBalm', label: 'Soothing care' },
+                       { key: 'nutritiousSoup', label: 'Warm recovery meal' }
                      ].map(sc => (
-                       <label key={sc.key} className="flex items-center gap-2 bg-pink-50/15 border border-pink-100/10 p-2.5 rounded-xl cursor-pointer">
+                       <label key={sc.key} className="flex items-center gap-2 bg-stone-50 dark:bg-[#23201d] border border-stone-200/70 dark:border-[#2e2a26] p-2.5 rounded-xl cursor-pointer">
                          <input
                            type="checkbox"
                            checked={selfCareCheck[sc.key as keyof typeof selfCareCheck]}
                            onChange={(e) => {
                              setSelfCareCheck(prev => ({ ...prev, [sc.key]: e.target.checked }));
                            }}
-                           className="accent-pink-500 w-3.5 h-3.5"
+                           className="accent-pink-600 w-4 h-4"
                          />
-                         <span className="text-[10px] text-gray-600 font-bold">{sc.label}</span>
+                         <span className="text-xs text-stone-700 dark:text-stone-300 font-medium">{sc.label}</span>
                        </label>
                      ))}
                    </div>
@@ -1688,98 +1725,100 @@ const Dashboard: React.FC<DashboardProps> = ({
              <div className="md:col-span-2 pt-2">
                 <button
                   type="submit"
-                  className="w-full py-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-pink-100 hover:scale-[1.01] active:scale-[0.99] transition-all"
+                  className="w-full h-11 bg-pink-600 hover:bg-pink-700 text-white rounded-xl font-semibold text-sm transition-colors cursor-pointer"
                 >
-                   ✨ Save Healing Logs to Sanctuary &rarr;
+                   Save Healing Check-in
                 </button>
              </div>
           </form>
         </section>
 
         {/* Traditional Cultural Recovery Meals */}
-        <section className="bg-white p-8 rounded-[3rem] border border-pink-100 shadow-sm space-y-6">
+        <section className="bg-white dark:bg-[#1a1816] p-6 sm:p-8 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-sm space-y-6">
           <div className="space-y-1">
-             <span className="px-3 py-1 bg-pink-50 text-pink-500 rounded-full text-[9px] font-black uppercase tracking-wider">healing diet corner</span>
-             <h3 className="text-2xl font-serif italic text-slate-800">Postpartum Traditional Recovery Nutrition</h3>
-             <p className="text-xs text-gray-400">Warm, mineral-dense meals meant to close the body, stimulate lactation, and replace hydration elements.</p>
+             <span className="text-xs font-semibold text-pink-700 dark:text-pink-400">Nourishment Guide</span>
+             <h3 className="text-2xl font-serif text-stone-900 dark:text-stone-100 font-normal">Postpartum Recovery Nutrition</h3>
+             <p className="text-xs text-stone-500 dark:text-stone-400">Warm, mineral-rich traditional meals to support tissue recovery and hydration.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
              {traditionalRecipes.map((rc, i) => (
-               <div key={i} className="p-5.5 bg-pink-50/10 border border-pink-50/50 rounded-2xl flex flex-col justify-between hover:border-pink-200 transition-all">
+               <div key={i} className="p-5 bg-stone-50/70 dark:bg-[#23201d] border border-stone-200/70 dark:border-[#2e2a26] rounded-xl flex flex-col justify-between">
                   <div className="space-y-3">
-                     <div className="space-y-0.5">
-                       <span className="text-[8px] tracking-[0.15em] font-black uppercase text-pink-400 block">{rc.culture}</span>
-                       <span className="text-sm font-serif font-black text-slate-800 leading-snug block">{rc.name}</span>
+                     <div className="space-y-1">
+                       <span className="text-[11px] font-semibold text-pink-700 dark:text-pink-400 block">{rc.culture}</span>
+                       <span className="text-base font-serif text-stone-900 dark:text-stone-100 leading-snug block">{rc.name}</span>
                      </div>
                      
-                     <div className="p-2 bg-pink-50/20 border border-pink-50/30 rounded-xl text-[9px] text-pink-600 italic font-semibold leading-relaxed">
-                        <strong>Lactation/Recovery:</strong> {rc.purpose}
+                     <div className="p-2.5 bg-white dark:bg-[#1a1816] border border-stone-200/60 dark:border-[#2e2a26] rounded-lg text-xs text-stone-700 dark:text-stone-300 leading-relaxed">
+                        <strong>Focus:</strong> {rc.purpose}
                      </div>
 
-                     <div className="text-[10px] leading-relaxed">
-                        <span className="font-bold text-gray-600 block mb-0.5">Ingredients:</span>
-                        <p className="text-gray-400 italic font-serif">{rc.ingredients.join(", ")}</p>
+                     <div className="text-xs leading-relaxed">
+                        <span className="font-semibold text-stone-700 dark:text-stone-300 block mb-0.5">Ingredients:</span>
+                        <p className="text-stone-500 dark:text-stone-400">{rc.ingredients.join(", ")}</p>
                      </div>
                   </div>
 
-                  <div className="mt-4 pt-4 border-t border-dashed border-pink-100">
-                     <span className="text-[9px] font-black uppercase text-slate-500 block mb-1">Preparation steps</span>
-                     <p className="text-[10px] text-gray-500 leading-relaxed font-serif italic truncate-3-lines mb-0.5">{rc.prep}</p>
+                  <div className="mt-4 pt-3 border-t border-stone-200/70 dark:border-[#2e2a26]">
+                     <span className="text-xs font-semibold text-stone-700 dark:text-stone-300 block mb-1">Preparation</span>
+                     <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed line-clamp-3">{rc.prep}</p>
                   </div>
                </div>
              ))}
           </div>
 
-          <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200/50 flex gap-2.5 items-start">
+          <div className="p-4 bg-amber-50 dark:bg-amber-950/30 rounded-xl border border-amber-200/70 dark:border-amber-900/40 flex gap-2.5 items-start">
              <AlertCircle size={16} className="text-amber-600 shrink-0 mt-0.5" />
              <div className="space-y-0.5">
-               <span className="text-[9px] font-black uppercase text-amber-700 tracking-widest block">Educational Purpose Disclaimer</span>
-               <p className="text-[9px] text-amber-900 leading-relaxed font-semibold">
-                  Traditional dietary remedies represent historical self-care wisdom and support rituals. They are NOT clinical medical treatments, diagnosis, or medication. Always get qualified medical evaluation for custom supplementation or pain reliefs.
+               <span className="text-xs font-semibold text-amber-900 dark:text-amber-300 block">Educational Purpose Notice</span>
+               <p className="text-xs text-amber-900/90 dark:text-amber-200 leading-relaxed">
+                  Traditional dietary suggestions are self-care support rituals and not medical treatments. Consult a clinician for personalized postnatal care.
                </p>
              </div>
           </div>
         </section>
 
         {/* Postpartum recovery wellness guided videos */}
-        <section className="bg-white p-8 rounded-[3rem] border border-pink-100 shadow-sm space-y-6">
+        <section className="bg-white dark:bg-[#1a1816] p-6 sm:p-8 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-sm space-y-6">
           <div className="space-y-1">
-             <span className="px-3 py-1 bg-pink-50 text-pink-500 rounded-full text-[9px] font-black uppercase tracking-wider">guided rehab</span>
-             <h3 className="text-2xl font-serif italic text-slate-800">Postpartum Gentle Wellness Exercises</h3>
-             <p className="text-xs text-gray-400">Rehabilitating movements aimed at pelvic and posture decompression safely.</p>
+             <span className="text-xs font-semibold text-pink-700 dark:text-pink-400">Guided Rehabilitation</span>
+             <h3 className="text-2xl font-serif text-stone-900 dark:text-stone-100 font-normal">Postpartum Gentle Wellness Exercises</h3>
+             <p className="text-xs text-stone-500 dark:text-stone-400">Gentle movements for pelvic and posture recovery.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {postpartumGentlyYoga.map((ex, i) => (
-              <div key={i} className="p-4 bg-pink-50/5 border border-pink-100/20 rounded-2xl flex flex-col justify-between hover:border-pink-200 transition-colors">
-                 <div className="space-y-1.5">
-                   <div className="flex justify-between items-start">
-                      <span className="text-xs font-serif font-black text-slate-800 italic leading-snug">{ex.name}</span>
-                      <span className="text-[8px] font-black uppercase tracking-wider bg-pink-100 text-pink-600 px-2 py-0.5 rounded-full">{ex.duration}</span>
+              <div key={i} className="p-4 bg-stone-50/70 dark:bg-[#23201d] border border-stone-200/70 dark:border-[#2e2a26] rounded-xl flex flex-col justify-between">
+                 <div className="space-y-2">
+                   <div className="flex justify-between items-start gap-2">
+                      <span className="text-sm font-serif text-stone-900 dark:text-stone-100 leading-snug">{ex.name}</span>
+                      <span className="text-[11px] font-semibold bg-pink-50 dark:bg-pink-950/40 text-pink-700 dark:text-pink-300 px-2 py-0.5 rounded-lg shrink-0 tabular-nums">{ex.duration}</span>
                    </div>
-                   <p className="text-[10px] text-gray-400 leading-normal">{ex.desc}</p>
+                   <p className="text-xs text-stone-600 dark:text-stone-400 leading-normal">{ex.desc}</p>
                  </div>
-                 <div className="mt-3 pt-3 border-t border-pink-50">
-                    <span className="text-[8px] text-red-400 font-bold block">safety details:</span>
-                    <p className="text-[9px] text-red-500 font-semibold italic">{ex.warning}</p>
+                 <div className="mt-3 pt-3 border-t border-stone-200/70 dark:border-[#2e2a26]">
+                    <span className="text-[11px] text-rose-700 dark:text-rose-400 font-semibold block">Safety note:</span>
+                    <p className="text-xs text-stone-600 dark:text-stone-400 mt-0.5">{ex.warning}</p>
                     <button
+                      type="button"
                       onClick={() => startVideoSimulation(ex.name, ex.duration)}
-                      className="mt-3.5 w-full py-2 bg-pink-50 hover:bg-pink-100 text-pink-600 font-bold uppercase text-[8px] tracking-widest rounded-xl flex items-center justify-center gap-1.5 transition-all mb-0.5"
+                      className="mt-3 w-full h-9 bg-pink-600 hover:bg-pink-700 text-white font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                     >
-                      <Video size={11} /> Play tutorial video
+                      <Video size={13} />
+                      <span>Play Tutorial</span>
                     </button>
                  </div>
               </div>
             ))}
           </div>
 
-          <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200/50 flex gap-2.5 items-start">
+          <div className="p-4 bg-amber-50 dark:bg-amber-950/30 rounded-xl border border-amber-200/70 dark:border-amber-900/40 flex gap-2.5 items-start">
              <AlertCircle size={16} className="text-amber-600 shrink-0 mt-0.5" />
              <div className="space-y-0.5">
-               <span className="text-[9px] font-black uppercase text-amber-700 tracking-widest block">Pelvic safety caution notice</span>
-               <p className="text-[9px] text-amber-900 leading-relaxed font-semibold">
-                  Always seek explicit clearance from your obstetrician or midwife (typically structured at the 6-week postnatal postpartum mark, or longer for cesarean surgery) before engaging in core rehabilitation.
+               <span className="text-xs font-semibold text-amber-900 dark:text-amber-300 block">Pelvic Safety Notice</span>
+               <p className="text-xs text-amber-900/90 dark:text-amber-200 leading-relaxed">
+                  Always obtain clearance from your obstetrician or midwife (often around 6 weeks postpartum, or longer following cesarean delivery) before starting core rehabilitation.
                </p>
              </div>
           </div>
@@ -1787,29 +1826,28 @@ const Dashboard: React.FC<DashboardProps> = ({
 
         {/* Connected Partner Postpartum sync reminders */}
         {user.isPartnerLinked && (
-          <section className="bg-slate-900 text-white p-8 rounded-[3.5rem] relative overflow-hidden space-y-4">
-             <div className="relative z-10 space-y-2">
-                <span className="px-3 py-1 bg-slate-800 text-pink-200 rounded-full text-[8px] font-black uppercase tracking-widest">Linked partner support sync</span>
-                <h4 className="text-xl font-serif italic text-pink-200">Shared Postpartum Recovery Reminders</h4>
-                <p className="text-xs opacity-80 leading-relaxed max-w-xl font-serif italic">
-                  Since you enabled shared notifications, your connected partner ({user.partnerName}) receives real-time supportive alerts on their device, like:
+          <section className="bg-stone-900 text-white p-6 sm:p-8 rounded-2xl border border-stone-800 space-y-4">
+             <div className="space-y-2">
+                <span className="text-xs font-semibold text-pink-300">Partner Support Sync</span>
+                <h4 className="text-xl font-serif text-white">Shared Postpartum Recovery Reminders</h4>
+                <p className="text-xs text-stone-300 leading-relaxed max-w-xl">
+                  Since shared notifications are enabled, {user.partnerName || 'your partner'} receives gentle support reminders such as:
                 </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3">
-                  <div className="p-4 bg-white/5 border border-white/10 rounded-2xl italic text-[11px] opacity-90 font-serif leading-relaxed">
-                    “She is in postpartum recovery right now 💗 be patient, support her selfare routines and protect her quiet sanctuary hour 💕”
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                  <div className="p-4 bg-white/5 border border-white/10 rounded-xl text-xs text-stone-200 leading-relaxed">
+                    “She is in postpartum recovery. Support her rest routines and protect quiet recovery hours.”
                   </div>
-                  <div className="p-4 bg-white/5 border border-white/10 rounded-2xl italic text-[11px] opacity-90 font-serif leading-relaxed">
-                    “She may need help resting today 💕 offer to watch babies/tasks so she can have deep restorative snooze naps 🛌”
+                  <div className="p-4 bg-white/5 border border-white/10 rounded-xl text-xs text-stone-200 leading-relaxed">
+                    “Offer to handle household tasks or caregiving so she can take an uninterrupted nap.”
                   </div>
-                  <div className="p-4 bg-white/5 border border-white/10 rounded-2xl italic text-[11px] opacity-90 font-serif leading-relaxed">
-                     “Check up on her emotional wellbeing today 🌸 take time to listen, hold space, and support her post-birth fatigue 💕”
+                  <div className="p-4 bg-white/5 border border-white/10 rounded-xl text-xs text-stone-200 leading-relaxed">
+                     “Check in on her emotional wellbeing today and listen with patience.”
                   </div>
-                  <div className="p-4 bg-white/5 border border-white/10 rounded-2xl italic text-[11px] opacity-90 font-serif leading-relaxed">
-                     “She may need helper hydration, nutrition prep support today. Cook her warming seaweed recovery broth or prepare water 💗”
+                  <div className="p-4 bg-white/5 border border-white/10 rounded-xl text-xs text-stone-200 leading-relaxed">
+                     “Support her hydration and prepare a warm, nourishing meal.”
                   </div>
                 </div>
              </div>
-             <span className="absolute bottom-[-10%] left-[-5%] text-[10rem] opacity-5 select-none pointer-events-none">💞</span>
           </section>
         )}
       </div>
@@ -1872,22 +1910,100 @@ const Dashboard: React.FC<DashboardProps> = ({
             ? '#f59e0b' // Golden yellow
             : '#a855f7'; // Lavender
 
+    const renderCompanionCard = () => (
+      <section className="bg-white dark:bg-[#1a1816] p-6 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-sm flex flex-col justify-between h-full">
+        <div className="flex flex-col items-center text-center space-y-4">
+          <div className="w-full flex items-center justify-between text-xs">
+            <span className="font-semibold text-pink-700 dark:text-pink-400">Wellness Companion</span>
+            <span className="text-stone-500 dark:text-stone-400 tabular-nums font-medium">
+              Lvl {avatarProgression.level} · {avatarProgression.relationshipStage}
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleAvatarTap}
+            className="relative cursor-pointer group shrink-0 pt-1"
+            title={`Talk with ${currentAvatar.name || 'Amara'} in Companion Chat`}
+          >
+            <div className="w-28 h-28 rounded-full bg-pink-50/80 dark:bg-pink-950/30 border border-pink-100 dark:border-pink-900/40 flex items-end justify-center relative overflow-visible">
+              <div className="relative -top-2 z-10 overflow-visible transition-transform duration-200 group-hover:scale-105">
+                <AvatarVisual 
+                  avatar={{
+                    ...currentAvatar,
+                    mood: avatarMood.mood
+                  }} 
+                  size="md" 
+                  level={avatarProgression.level}
+                  showTierBadge={false}
+                  showMoodBadge={false}
+                  isSpeaking={isCompanionSpeaking}
+                  isWaving={isCompanionWaving}
+                  interactive={false}
+                  animated={true}
+                  className="overflow-visible"
+                />
+              </div>
+            </div>
+          </button>
+
+          <div className="space-y-0.5">
+            <h3 className="font-serif text-lg text-stone-900 dark:text-stone-100">{currentAvatar.name || 'Amara'}</h3>
+            <p className="text-xs text-stone-500 dark:text-stone-400">{avatarMood.label}</p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleAvatarTap}
+            className="w-full text-left bg-stone-50 dark:bg-[#23201d] hover:bg-pink-50/50 dark:hover:bg-stone-800 px-4 py-3 rounded-xl border border-stone-200/70 dark:border-[#2e2a26] cursor-pointer transition-colors"
+            title={`Tap to chat with ${currentAvatar.name || 'Amara'}`}
+          >
+            <p className="text-xs sm:text-sm font-serif text-stone-800 dark:text-stone-200 leading-snug">
+              {companionReaction ? `"${companionReaction.message}"` : `"${companionPrompts[promptIndex] || companionPrompts[0]}"`}
+            </p>
+            <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-1">
+              {avatarSpeech.cycleStatusText}
+            </p>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 pt-4 mt-4 border-t border-stone-100 dark:border-[#2e2a26]">
+          <button
+            type="button"
+            onClick={handleOpenCompanionChat}
+            className="h-9 rounded-xl bg-pink-600 hover:bg-pink-700 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+          >
+            <MessageCircle className="w-3.5 h-3.5" />
+            <span>Open Chat</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsAvatarModalOpen(true)}
+            className="h-9 rounded-xl bg-stone-50 dark:bg-[#23201d] hover:bg-stone-100 dark:hover:bg-stone-800 border border-stone-200/80 dark:border-[#2e2a26] text-stone-700 dark:text-stone-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+          >
+            <Palette className="w-3.5 h-3.5" />
+            <span>Studio</span>
+          </button>
+        </div>
+      </section>
+    );
+
     return (
-      <div className="space-y-6 animate-fadeIn pb-8 text-stone-800">
+      <div className="space-y-6 pb-8 text-stone-800 dark:text-stone-200">
         {/* Dynamic Gift / Comfort Alerts from Partner */}
         {receivedGifts.length > 0 && (
           <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide">
             {receivedGifts.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).map((gift) => (
               <div 
                 key={gift.id}
-                className="shrink-0 bg-white/90 backdrop-blur-md px-4 py-2.5 rounded-2xl shadow-xs border border-pink-100 flex items-center gap-3"
+                className="shrink-0 bg-white dark:bg-[#1a1816] px-4 py-2.5 rounded-xl shadow-xs border border-stone-200/80 dark:border-[#2e2a26] flex items-center gap-3"
               >
-                <div className="w-8 h-8 bg-pink-50 rounded-xl flex items-center justify-center text-lg shrink-0">
-                  {gift.type === 'hug' ? '🌸' : gift.type === 'tea' ? '🍵' : gift.type === 'flower' ? '💐' : gift.type === 'chocolate' ? '🍫' : '✨'}
+                <div className="w-8 h-8 bg-pink-50 dark:bg-pink-950/40 text-pink-600 dark:text-pink-400 rounded-lg flex items-center justify-center shrink-0">
+                  <Heart className="w-4 h-4" />
                 </div>
                 <div>
-                  <p className="text-[9px] font-bold text-pink-400 uppercase tracking-wider">{gift.senderName} sent a {gift.type}</p>
-                  <p className="text-xs font-serif italic text-pink-700">Digital Comfort Gift</p>
+                  <p className="text-xs font-semibold text-stone-800 dark:text-stone-200">{gift.senderName} sent a {gift.type}</p>
+                  <p className="text-[11px] text-stone-500 dark:text-stone-400">Partner Comfort Gift</p>
                 </div>
               </div>
             ))}
@@ -1903,145 +2019,155 @@ const Dashboard: React.FC<DashboardProps> = ({
           />
         )}
 
-        {/* ======================================================== */}
-        {/* SECTION 3: CURRENT CYCLE OVERVIEW (PRIMARY FEATURE)       */}
-        {/* ======================================================== */}
-        <section className="bg-white p-6 md:p-8 rounded-[2.5rem] border border-pink-100/80 shadow-[0_4px_24px_rgba(244,114,182,0.06)] relative overflow-hidden space-y-6">
-          <div className="flex items-center justify-between pb-3 border-b border-pink-50">
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-pink-500 block">
-                Primary Tracker
-              </span>
-              <h2 className="text-xl sm:text-2xl font-serif italic text-stone-800 font-bold">
-                Cycle Overview
-              </h2>
-            </div>
-            <button
-              onClick={() => setActiveTab('cycle')}
-              className="text-xs font-bold text-pink-600 hover:text-pink-700 bg-pink-50 hover:bg-pink-100/70 px-3.5 py-1.5 rounded-full transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
-            >
-              <span>View Calendar</span>
-              <ChevronRight size={13} />
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-            {/* Attractive Circular Cycle Progress Indicator */}
-            <div className="md:col-span-5 flex flex-col items-center justify-center">
-              <div className="relative w-44 h-44 sm:w-48 sm:h-48 flex items-center justify-center">
-                <svg className="w-full h-full -rotate-90 transform">
-                  <circle 
-                    cx="96" 
-                    cy="96" 
-                    r="80" 
-                    fill="none" 
-                    stroke="#fdf2f8" 
-                    strokeWidth="11" 
-                  />
-                  <circle
-                    cx="96" 
-                    cy="96" 
-                    r="80" 
-                    fill="none" 
-                    stroke={phaseStrokeColor} 
-                    strokeWidth="11"
-                    strokeDasharray={2 * Math.PI * 80}
-                    strokeDashoffset={2 * Math.PI * 80 * (1 - cycleProgress / 100)}
-                    strokeLinecap="round"
-                    className="transition-all duration-1000 ease-out"
-                  />
-                </svg>
-
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-3">
-                  <span className="text-3xl mb-0.5 select-none">
-                    {isLatePeriodMode ? '⏳' :
-                     currentPhase === 'Menstrual' ? '🩸' :
-                     currentPhase === 'Follicular' ? '🌱' :
-                     currentPhase === 'Ovulatory' ? '✨' : '🌙'}
-                  </span>
-                  <span className="text-2xl font-serif italic font-bold text-stone-800 leading-tight">
-                    {isLatePeriodMode ? `Day ${daysLate} Late` : `Day ${cycleDay}`}
-                  </span>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400 mt-0.5">
-                    of {cycleLen}-Day Cycle
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Structured Predictions & Phase Details */}
-            <div className="md:col-span-7 space-y-3.5">
-              {/* Phase Banner with Exact Requested Colors */}
-              <div className="flex items-center justify-between p-3 rounded-2xl bg-gradient-to-r from-pink-50/40 via-white to-purple-50/40 border border-pink-100/70">
-                <div className="space-y-0.5">
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-stone-400 block">Menstrual Phase</span>
-                  <span className="text-xs font-bold text-stone-800">{currentPhase} Phase</span>
-                </div>
-                <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-                  currentPhase === 'Menstrual' ? 'bg-pink-100 text-pink-700 border border-pink-200' :
-                  currentPhase === 'Follicular' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' :
-                  currentPhase === 'Ovulatory' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
-                  'bg-purple-100 text-purple-800 border border-purple-200'
-                }`}>
-                  {currentPhase}
+        {/* HERO BENTO ROW: PRIMARY CYCLE OVERVIEW (8 COLS) + COMPANION SANCTUARY (4 COLS) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+          <section className="lg:col-span-8 bg-white dark:bg-[#1a1816] p-6 sm:p-7 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-sm flex flex-col justify-between space-y-6">
+            <div className="flex items-center justify-between pb-3 border-b border-stone-100 dark:border-[#2e2a26]">
+              <div>
+                <span className="text-xs font-semibold text-pink-700 dark:text-pink-400 block">
+                  Primary Tracker
                 </span>
+                <h2 className="text-xl sm:text-2xl font-serif text-stone-900 dark:text-stone-100 font-normal">
+                  Cycle Overview
+                </h2>
               </div>
-
-              {/* 4-Item Metric Grid */}
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="p-3 rounded-2xl bg-stone-50/70 border border-stone-150/60 space-y-0.5">
-                  <span className="text-[9.5px] font-bold text-stone-400 uppercase tracking-wider block">Average Cycle</span>
-                  <span className="font-bold text-stone-700">{cycleLen} Days</span>
-                </div>
-                <div className="p-3 rounded-2xl bg-pink-50/40 border border-pink-100/70 space-y-0.5">
-                  <span className="text-[9.5px] font-bold text-pink-500 uppercase tracking-wider block">Next Expected Period</span>
-                  <span className="font-bold text-pink-700">{cycleSync.nextExpectedPeriodFormatted}</span>
-                </div>
-                <div className="p-3 rounded-2xl bg-amber-50/50 border border-amber-200/60 space-y-0.5">
-                  <span className="text-[9.5px] font-bold text-amber-600 uppercase tracking-wider block">Estimated Ovulation</span>
-                  <span className="font-bold text-amber-800">{cycleSync.estimatedOvulationDateFormatted}</span>
-                </div>
-                <div className="p-3 rounded-2xl bg-sky-50/50 border border-sky-200/60 space-y-0.5">
-                  <span className="text-[9.5px] font-bold text-sky-600 uppercase tracking-wider block">Fertile Window (5 Days)</span>
-                  <span className="font-bold text-sky-800 truncate block">{cycleSync.estimatedFertileRangeFormatted || 'Pending history'}</span>
-                </div>
-              </div>
-
-              {/* Link to Full Cycle Calendar */}
               <button
+                type="button"
                 onClick={() => setActiveTab('cycle')}
-                className="w-full py-2.5 px-4 rounded-xl text-center text-xs font-bold text-pink-600 bg-pink-50/60 hover:bg-pink-100/80 transition-colors border border-pink-100 cursor-pointer flex items-center justify-center gap-1.5"
+                className="text-xs font-semibold text-pink-700 dark:text-pink-300 hover:bg-pink-100/70 bg-pink-50 dark:bg-pink-950/30 border border-pink-100 dark:border-pink-900/40 px-3.5 py-2 rounded-xl transition-colors cursor-pointer flex items-center gap-1"
               >
-                <span>View Complete Cycle Calendar</span>
-                <ChevronRight size={13} />
+                <span>View Calendar</span>
+                <ChevronRight size={14} />
               </button>
             </div>
-          </div>
-        </section>
 
-        {/* ======================================================== */}
-        {/* SECTION 4: QUICK ACTIONS (COMPACT 4-ITEM GRID)           */}
-        {/* ======================================================== */}
-        <section className="space-y-2">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400 block px-1">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+              {/* Circular Cycle Progress Indicator */}
+              <div className="md:col-span-5 flex flex-col items-center justify-center">
+                <div className="relative w-44 h-44 sm:w-48 sm:h-48 flex items-center justify-center">
+                  <svg viewBox="0 0 192 192" className="w-full h-full -rotate-90 transform">
+                    <circle 
+                      cx="96" 
+                      cy="96" 
+                      r="80" 
+                      fill="none" 
+                      stroke="currentColor"
+                      className="text-stone-100 dark:text-[#23201d]"
+                      strokeWidth="10" 
+                    />
+                    <circle
+                      cx="96" 
+                      cy="96" 
+                      r="80" 
+                      fill="none" 
+                      stroke={phaseStrokeColor} 
+                      strokeWidth="10"
+                      strokeDasharray={2 * Math.PI * 80}
+                      strokeDashoffset={2 * Math.PI * 80 * (1 - cycleProgress / 100)}
+                      strokeLinecap="round"
+                      className="transition-all duration-700 ease-out"
+                    />
+                  </svg>
+
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                    <div className="mb-1 text-pink-600 dark:text-pink-400">
+                      {isLatePeriodMode ? (
+                        <Clock className="w-5 h-5" />
+                      ) : currentPhase === 'Menstrual' ? (
+                        <Droplet className="w-5 h-5" />
+                      ) : currentPhase === 'Follicular' ? (
+                        <Flower2 className="w-5 h-5 text-emerald-600" />
+                      ) : currentPhase === 'Ovulatory' ? (
+                        <Sparkles className="w-5 h-5 text-amber-500" />
+                      ) : (
+                        <Moon className="w-5 h-5 text-purple-600" />
+                      )}
+                    </div>
+                    <span className="text-2xl sm:text-3xl font-serif font-normal text-stone-900 dark:text-stone-100 leading-tight tabular-nums">
+                      {isLatePeriodMode ? `${daysLate}d Late` : `Day ${cycleDay}`}
+                    </span>
+                    <span className="text-xs font-medium text-stone-500 dark:text-stone-400 mt-0.5 tabular-nums">
+                      of {cycleLen}-day cycle
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Structured Predictions & Phase Details */}
+              <div className="md:col-span-7 space-y-3.5">
+                <div className="flex items-center justify-between p-3.5 rounded-xl bg-stone-50/80 dark:bg-[#23201d] border border-stone-200/70 dark:border-[#2e2a26]">
+                  <div className="space-y-0.5">
+                    <span className="text-[11px] font-medium text-stone-500 dark:text-stone-400 block">Current Phase</span>
+                    <span className="text-sm font-semibold text-stone-900 dark:text-stone-100">{currentPhase} Phase</span>
+                  </div>
+                  <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold border ${
+                    currentPhase === 'Menstrual' ? 'bg-pink-50 text-pink-700 border-pink-200 dark:bg-pink-950/40 dark:text-pink-300 dark:border-pink-900/40' :
+                    currentPhase === 'Follicular' ? 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900/40' :
+                    currentPhase === 'Ovulatory' ? 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900/40' :
+                    'bg-purple-50 text-purple-800 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-900/40'
+                  }`}>
+                    {currentPhase}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2.5 text-xs">
+                  <div className="p-3 rounded-xl bg-stone-50/70 dark:bg-[#23201d] border border-stone-200/70 dark:border-[#2e2a26] space-y-0.5">
+                    <span className="text-[11px] font-medium text-stone-500 dark:text-stone-400 block">Average Cycle</span>
+                    <span className="text-sm font-semibold text-stone-900 dark:text-stone-100 tabular-nums">{cycleLen} Days</span>
+                  </div>
+                  <div className="p-3 rounded-xl bg-pink-50/50 dark:bg-pink-950/20 border border-pink-200/60 dark:border-pink-900/30 space-y-0.5">
+                    <span className="text-[11px] font-medium text-pink-700 dark:text-pink-400 block">Next Expected Period</span>
+                    <span className="text-sm font-semibold text-stone-900 dark:text-stone-100 tabular-nums">{cycleSync.nextExpectedPeriodFormatted}</span>
+                  </div>
+                  <div className="p-3 rounded-xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-900/30 space-y-0.5">
+                    <span className="text-[11px] font-medium text-amber-700 dark:text-amber-400 block">Estimated Ovulation</span>
+                    <span className="text-sm font-semibold text-stone-900 dark:text-stone-100 tabular-nums">{cycleSync.estimatedOvulationDateFormatted}</span>
+                  </div>
+                  <div className="p-3 rounded-xl bg-sky-50/50 dark:bg-sky-950/20 border border-sky-200/60 dark:border-sky-900/30 space-y-0.5">
+                    <span className="text-[11px] font-medium text-sky-700 dark:text-sky-400 block">Fertile Window</span>
+                    <span className="text-sm font-semibold text-stone-900 dark:text-stone-100 truncate block tabular-nums">{cycleSync.estimatedFertileRangeFormatted || 'Pending history'}</span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('cycle')}
+                  className="w-full h-10 px-4 rounded-xl text-center text-xs font-semibold text-pink-700 dark:text-pink-300 bg-pink-50/70 dark:bg-pink-950/30 hover:bg-pink-100/80 transition-colors border border-pink-200/60 dark:border-pink-900/40 cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <span>Open Full Cycle Calendar</span>
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <div className="lg:col-span-4">
+            {renderCompanionCard()}
+          </div>
+        </div>
+
+        {/* SECTION 4: QUICK ACTIONS (COMPACT 4-ITEM GRID) */}
+        <section className="space-y-2.5">
+          <h3 className="text-xs font-semibold text-stone-500 dark:text-stone-400 px-1">
             Quick Actions
-          </span>
-          <div className="grid grid-cols-4 gap-2.5 sm:gap-3">
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
-              { id: 'symptoms', label: 'Symptoms', icon: '💖', action: onOpenLogModal },
-              { id: 'mood', label: 'Mood', icon: '😊', action: onOpenLogModal },
-              { id: 'calendar', label: 'Calendar', icon: '📅', action: () => setActiveTab('cycle') },
-              { id: 'insights', label: 'Insights', icon: '📊', action: () => setActiveTab('wellness') }
+              { id: 'symptoms', label: 'Log Symptoms', icon: <Activity className="w-4 h-4 text-rose-600 dark:text-rose-400" />, action: onOpenLogModal },
+              { id: 'mood', label: 'Mood Check-in', icon: <Smile className="w-4 h-4 text-amber-600 dark:text-amber-400" />, action: onOpenLogModal },
+              { id: 'calendar', label: 'Cycle Calendar', icon: <Calendar className="w-4 h-4 text-pink-600 dark:text-pink-400" />, action: () => setActiveTab('cycle') },
+              { id: 'insights', label: 'Wellness Insights', icon: <BarChart3 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />, action: () => setActiveTab('wellness') }
             ].map((act) => (
               <button
                 key={act.id}
+                type="button"
                 onClick={act.action}
-                className="bg-white hover:bg-pink-50/30 p-3.5 sm:p-4 rounded-2xl border border-pink-100/70 shadow-xs hover:shadow-sm transition-all duration-200 flex flex-col items-center justify-center gap-1.5 cursor-pointer group active:scale-95"
+                className="bg-white dark:bg-[#1a1816] hover:bg-stone-50 dark:hover:bg-[#23201d] p-4 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-xs transition-colors flex items-center gap-3 cursor-pointer text-left"
               >
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-50 to-rose-50 flex items-center justify-center text-lg group-hover:scale-110 transition-transform">
+                <div className="w-10 h-10 rounded-xl bg-stone-50 dark:bg-[#23201d] border border-stone-200/70 dark:border-[#2e2a26] flex items-center justify-center shrink-0">
                   {act.icon}
                 </div>
-                <span className="text-[10.5px] font-bold text-stone-600 group-hover:text-pink-600 transition-colors">
+                <span className="text-xs sm:text-sm font-semibold text-stone-800 dark:text-stone-200">
                   {act.label}
                 </span>
               </button>
@@ -2049,87 +2175,80 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </section>
 
-        {/* ======================================================== */}
-        {/* TWO-COLUMN LAYOUT: TODAY'S SUMMARY & HYDRATION TRACKER   */}
-        {/* ======================================================== */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
-          {/* ======================================================== */}
-          {/* SECTION 5: TODAY'S HEALTH SUMMARY                        */}
-          {/* ======================================================== */}
-          <section className="bg-white p-6 rounded-3xl border border-pink-100/70 shadow-xs space-y-4">
-            <div className="flex justify-between items-center pb-2.5 border-b border-pink-50">
-              <h3 className="font-serif text-base text-stone-800 italic font-bold">
-                Today's Health Summary
+        {/* TWO-COLUMN LAYOUT: TODAY'S SUMMARY & HYDRATION TRACKER */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-stretch">
+          <section className="bg-white dark:bg-[#1a1816] p-6 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-sm space-y-4">
+            <div className="flex justify-between items-center pb-2.5 border-b border-stone-100 dark:border-[#2e2a26]">
+              <h3 className="font-serif text-lg text-stone-900 dark:text-stone-100">
+                Today&apos;s Health Summary
               </h3>
               <button 
+                type="button"
                 onClick={onOpenLogModal}
-                className="text-[10px] font-bold text-pink-500 hover:text-pink-600 uppercase tracking-wider cursor-pointer"
+                className="text-xs font-semibold text-pink-700 dark:text-pink-400 hover:underline cursor-pointer"
               >
                 Update Logs
               </button>
             </div>
 
-            <div className="divide-y divide-pink-50/60">
+            <div className="divide-y divide-stone-100 dark:divide-[#2e2a26]">
               {[
-                { label: 'Menstrual Flow', value: flowToday, icon: '🩸' },
-                { label: 'Mood', value: moodToday, icon: '😊' },
-                { label: 'Energy', value: energyToday, icon: '⚡' },
-                { label: 'Sleep', value: sleepToday, icon: '🌙' },
-                { label: 'Water Intake', value: `${waterIntake} of ${waterGoal || 8} glasses`, icon: '💧' }
+                { label: 'Menstrual Flow', value: flowToday, icon: <Droplet className="w-4 h-4 text-rose-500" /> },
+                { label: 'Mood', value: moodToday, icon: <Smile className="w-4 h-4 text-amber-500" /> },
+                { label: 'Energy', value: energyToday, icon: <Zap className="w-4 h-4 text-emerald-600" /> },
+                { label: 'Sleep', value: sleepToday, icon: <Moon className="w-4 h-4 text-indigo-500" /> },
+                { label: 'Water Intake', value: `${waterIntake} of ${waterGoal || 8} glasses`, icon: <Droplet className="w-4 h-4 text-sky-500" /> }
               ].map((item, index) => (
                 <div 
                   key={index} 
                   onClick={onOpenLogModal}
-                  className="py-2.5 flex items-center justify-between text-xs cursor-pointer hover:bg-pink-50/30 px-2 rounded-xl transition-colors"
+                  className="py-2.5 flex items-center justify-between text-xs cursor-pointer hover:bg-stone-50 dark:hover:bg-[#23201d] px-2 rounded-xl transition-colors"
                 >
                   <div className="flex items-center gap-2.5">
-                    <span className="text-base">{item.icon}</span>
-                    <span className="font-semibold text-stone-600 text-xs">{item.label}</span>
+                    {item.icon}
+                    <span className="font-medium text-stone-600 dark:text-stone-300 text-xs">{item.label}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="font-serif italic font-bold text-pink-600">{item.value}</span>
-                    <ChevronRight size={12} className="text-pink-300" />
+                    <span className="font-semibold text-stone-900 dark:text-stone-100 tabular-nums">{item.value}</span>
+                    <ChevronRight size={13} className="text-stone-400" />
                   </div>
                 </div>
               ))}
             </div>
           </section>
 
-          {/* ======================================================== */}
-          {/* SECTION 6: COMPACT HYDRATION TRACKER                     */}
-          {/* ======================================================== */}
-          <section className="bg-white p-6 rounded-3xl border border-pink-100/70 shadow-xs space-y-4">
-            <div className="flex justify-between items-center pb-2.5 border-b border-pink-50">
+          <section className="bg-white dark:bg-[#1a1816] p-6 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-sm flex flex-col justify-between space-y-4">
+            <div className="flex justify-between items-center pb-2.5 border-b border-stone-100 dark:border-[#2e2a26]">
               <div>
-                <h3 className="font-serif text-base text-stone-800 italic font-bold">
+                <h3 className="font-serif text-lg text-stone-900 dark:text-stone-100">
                   Hydration Tracker
                 </h3>
-                <p className="text-[10px] text-stone-400">Daily goal: {waterGoal || 8} glasses ({((waterGoal || 8) * 250)}ml)</p>
+                <p className="text-xs text-stone-500 dark:text-stone-400 tabular-nums">Daily goal: {waterGoal || 8} glasses ({((waterGoal || 8) * 250)}ml)</p>
               </div>
-              <span className="text-xs font-bold text-sky-600 bg-sky-50 px-2.5 py-1 rounded-full border border-sky-100">
+              <span className="text-xs font-semibold text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/40 px-2.5 py-1 rounded-lg border border-sky-200/70 dark:border-sky-900/40 tabular-nums">
                 {Math.round((waterIntake / (waterGoal || 8)) * 100)}% Goal
               </span>
             </div>
 
-            {/* Small visual glass indicators */}
             <div className="grid grid-cols-8 gap-1.5 py-1">
               {Array.from({ length: 8 }).map((_, idx) => {
                 const isFilled = idx < waterIntake;
                 return (
                   <button
                     key={idx}
+                    type="button"
                     onClick={() => setWaterIntake(idx + 1)}
-                    className={`h-11 rounded-xl border transition-all relative flex items-end justify-center overflow-hidden cursor-pointer ${
+                    className={`h-11 rounded-xl border transition-colors relative flex items-end justify-center overflow-hidden cursor-pointer ${
                       isFilled
-                        ? 'border-sky-300 bg-sky-50 text-sky-600 shadow-2xs'
-                        : 'border-pink-100 bg-pink-50/20 hover:border-pink-300 text-stone-400'
+                        ? 'border-sky-400 bg-sky-50 dark:bg-sky-950/30 text-sky-700 dark:text-sky-200'
+                        : 'border-stone-200 dark:border-[#2e2a26] bg-stone-50/70 dark:bg-[#23201d] hover:border-sky-300 text-stone-500'
                     }`}
                     title={`Glass ${idx + 1}`}
                   >
                     {isFilled && (
-                      <div className="absolute inset-x-0 bottom-0 top-[20%] bg-gradient-to-t from-sky-400 to-sky-300 rounded-b-[10px]" />
+                      <div className="absolute inset-x-0 bottom-0 top-[22%] bg-sky-400/80 rounded-b-lg" />
                     )}
-                    <span className="text-[9px] font-bold pb-1 z-10 select-none">
+                    <span className="text-[11px] font-semibold pb-1 z-10 select-none tabular-nums">
                       {idx + 1}
                     </span>
                   </button>
@@ -2137,25 +2256,28 @@ const Dashboard: React.FC<DashboardProps> = ({
               })}
             </div>
 
-            {/* Controls & summary */}
             <div className="flex items-center justify-between pt-1">
               <div className="text-left">
-                <p className="text-[9.5px] font-bold text-stone-400 uppercase tracking-wider">Consumed</p>
-                <p className="text-sm font-serif italic text-stone-800 font-bold">{waterIntake} of {waterGoal || 8} glasses</p>
+                <p className="text-[11px] font-medium text-stone-500 dark:text-stone-400">Consumed</p>
+                <p className="text-sm font-semibold text-stone-900 dark:text-stone-100 tabular-nums">{waterIntake} of {waterGoal || 8} glasses</p>
               </div>
 
               <div className="flex gap-2">
                 <button
+                  type="button"
                   onClick={() => setWaterIntake(Math.max(0, waterIntake - 1))}
-                  className="w-8 h-8 rounded-full bg-white border border-pink-100 hover:bg-pink-50 text-pink-500 flex items-center justify-center font-bold text-sm shadow-2xs active:scale-90 transition-transform cursor-pointer"
+                  className="w-9 h-9 rounded-xl bg-stone-50 dark:bg-[#23201d] border border-stone-200 dark:border-[#2e2a26] hover:bg-stone-100 text-stone-700 dark:text-stone-200 flex items-center justify-center font-semibold text-sm active:scale-95 transition-all cursor-pointer"
                   title="Remove 1 glass"
+                  aria-label="Remove 1 glass of water"
                 >
-                  -
+                  −
                 </button>
                 <button
+                  type="button"
                   onClick={() => setWaterIntake(Math.min(waterGoal || 8, waterIntake + 1))}
-                  className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-400 to-rose-400 text-white flex items-center justify-center font-bold text-sm shadow-2xs hover:scale-105 active:scale-90 transition-transform cursor-pointer"
+                  className="w-9 h-9 rounded-xl bg-pink-600 hover:bg-pink-700 text-white flex items-center justify-center font-semibold text-sm active:scale-95 transition-all cursor-pointer"
                   title="Add 1 glass"
+                  aria-label="Add 1 glass of water"
                 >
                   +
                 </button>
@@ -2164,19 +2286,17 @@ const Dashboard: React.FC<DashboardProps> = ({
           </section>
         </div>
 
-        {/* ======================================================== */}
-        {/* SECTION 7: ONE PERSONALISED WELLNESS RECOMMENDATION      */}
-        {/* ======================================================== */}
-        <section className="bg-gradient-to-br from-pink-50/60 via-purple-50/30 to-white p-5 sm:p-6 rounded-3xl border border-pink-100/80 shadow-xs flex items-start gap-3.5">
-          <div className="w-10 h-10 rounded-2xl bg-white shadow-xs border border-pink-100 flex items-center justify-center text-xl shrink-0 mt-0.5">
-            🌸
+        {/* SECTION 7: PERSONALISED WELLNESS GUIDANCE */}
+        <section className="bg-white dark:bg-[#1a1816] p-5 sm:p-6 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-sm flex items-start gap-4">
+          <div className="w-10 h-10 rounded-xl bg-pink-50 dark:bg-pink-950/40 text-pink-600 dark:text-pink-400 border border-pink-100 dark:border-pink-900/40 flex items-center justify-center shrink-0 mt-0.5">
+            <Flower2 className="w-5 h-5" />
           </div>
           <div className="space-y-1">
-            <span className="text-[9.5px] font-bold text-pink-500 uppercase tracking-widest block">
+            <span className="text-xs font-semibold text-pink-700 dark:text-pink-400 block">
               Personalised Wellness Guidance
             </span>
-            <p className="text-xs sm:text-sm font-serif italic text-stone-700 leading-relaxed">
-              "{getWellnessRecommendation()}"
+            <p className="text-sm text-stone-700 dark:text-stone-300 leading-relaxed">
+              “{getWellnessRecommendation()}”
             </p>
           </div>
         </section>
@@ -2185,294 +2305,231 @@ const Dashboard: React.FC<DashboardProps> = ({
   };
 
   return (
-    <div className="space-y-8 pb-12">
-      {/* Top Header Section with Hamburger (left), Logo (center), Notification (right) */}
-      <header className="flex items-center justify-between px-4 py-3 bg-white/40 backdrop-blur-2xl border border-white/60 shadow-[inset_0_2px_4px_rgba(255,255,255,0.6),_0_8px_32px_rgba(244,114,182,0.03)] rounded-3xl sticky top-2 z-40">
-        <button 
-          onClick={() => setIsMenuOpen(true)}
-          className="p-2.5 rounded-2xl bg-white/60 hover:bg-white/90 text-pink-600 transition-all duration-300 shadow-[inset_0_1.5px_2.5px_rgba(255,255,255,0.7),_0_4px_12px_rgba(244,114,182,0.05)] border border-pink-50/50 cursor-pointer flex items-center justify-center active:scale-90"
-        >
-          <Menu className="w-5 h-5" />
-        </button>
-
-        <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => setActiveTab('dashboard')}>
-          <span className="text-xl animate-pulse">🌸</span>
-          <span className="font-serif italic font-black text-2xl bg-gradient-to-r from-pink-500 to-rose-400 bg-clip-text text-transparent drop-shadow-sm">
-            Lumina
-          </span>
+    <div className="space-y-6 pb-8">
+      {/* Contextual Greeting Strip */}
+      <div className="flex flex-wrap items-end justify-between gap-3 pb-1">
+        <div>
+          <p className="text-xs font-medium text-stone-500 dark:text-stone-400">
+            {today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+          </p>
+          <h1 className="text-2xl sm:text-3xl font-serif text-stone-900 dark:text-stone-100 font-normal tracking-tight">
+            {getGreeting()}, {user.firstName || user.name || 'Friend'}
+          </h1>
         </div>
-
-        <button 
-          onClick={() => {
-            if (onOpenNotificationCenter) {
-              onOpenNotificationCenter(null);
-            } else {
-              setIsNotificationsOpen(true);
-            }
-          }}
-          className="p-2.5 rounded-2xl bg-white/60 hover:bg-white/90 text-pink-600 transition-all duration-300 shadow-[inset_0_1.5px_2.5px_rgba(255,255,255,0.7),_0_4px_12px_rgba(244,114,182,0.05)] border border-pink-50/50 cursor-pointer flex items-center justify-center relative active:scale-90"
-          id="dashboard-header-notification-bell"
-          title="Notification Center"
-        >
-          <Bell className={`w-5 h-5 ${hasUnreadAlerts ? 'animate-shake' : ''}`} />
-          {/* Active Notifications dot if any partner requests or alerts are active */}
-          {hasUnreadAlerts && (
-            <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-gradient-to-r from-rose-500 to-pink-500 rounded-full border-2 border-white animate-pulse" />
-          )}
-        </button>
-      </header>
-
-      {/* SECTION 2: AI COMPANION (Living Companion Sanctuary) */}
-      <section className="bg-gradient-to-br from-white/95 via-pink-50/50 to-rose-50/30 backdrop-blur-md p-5 sm:p-6 rounded-[2.5rem] border border-white/95 shadow-[inset_0_3px_5px_rgba(255,255,255,0.9),_0_12px_36px_rgba(244,114,182,0.06)] relative overflow-visible transition-all duration-500">
-        {/* Soft fluid glowing aura */}
-        <div className="absolute -top-8 -left-8 w-40 h-40 bg-gradient-to-tr from-pink-300/20 via-rose-300/20 to-amber-200/20 rounded-full blur-2xl pointer-events-none" />
-        <div className="absolute -bottom-8 -right-8 w-44 h-44 bg-gradient-to-tr from-amber-200/20 to-pink-300/20 rounded-full blur-2xl pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col items-center text-center space-y-3 max-w-md mx-auto">
-          
-          {/* Prominent Avatar extending slightly outside its circular pedestal */}
-          <div 
-            onClick={handleAvatarTap}
-            className="relative cursor-pointer group shrink-0 transition-transform duration-300 hover:scale-105 active:scale-95 pt-2"
-            title={`Tap to talk with ${currentAvatar.name || 'Amara'} in AI Companion Chat`}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsWallpapersOpen(true)}
+            className="h-9 px-3 rounded-xl bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] hover:bg-stone-50 text-stone-700 dark:text-stone-300 text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
           >
-            {/* Circular frame / pedestal */}
-            <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-gradient-to-tr from-pink-200/50 via-rose-100/60 to-purple-100/40 border-2 border-white/95 shadow-md flex items-end justify-center relative overflow-visible">
-              {/* Soft floor glow under companion */}
-              <div className="absolute bottom-1 inset-x-3 h-3 bg-pink-400/25 rounded-full blur-sm" />
-
-              {/* Avatar visually extending slightly outside circular frame with breathing & floating animations */}
-              <div className="relative -top-3 z-10 animate-companion-breathe animate-companion-float overflow-visible">
-                <AvatarVisual 
-                  avatar={{
-                    ...currentAvatar,
-                    mood: avatarMood.mood
-                  }} 
-                  size="md" 
-                  level={avatarProgression.level}
-                  showTierBadge={false}
-                  showMoodBadge={false}
-                  isSpeaking={isCompanionSpeaking}
-                  isWaving={isCompanionWaving}
-                  interactive={false}
-                  animated={true}
-                  className="overflow-visible filter drop-shadow-sm"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Companion Name and Relationship Level */}
-          <div className="flex items-center justify-center gap-2 flex-wrap">
-            <div
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-pink-500/10 via-rose-500/10 to-amber-500/10 text-pink-700 text-[10.5px] font-black uppercase tracking-wider border border-pink-200/60 shadow-xs"
-            >
-              <span>🌸</span>
-              <span>{currentAvatar.name || 'Amara'}</span>
-              <span className="text-[9px] font-extrabold text-pink-500">• Lvl {avatarProgression.level} ({avatarProgression.relationshipStage})</span>
-            </div>
-
-            <span 
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/80 text-stone-600 text-[10px] font-bold border border-pink-100 shadow-xs"
-            >
-              <span>{avatarMood.emoji}</span>
-              <span>{avatarMood.label}</span>
-            </span>
-          </div>
-
-          {/* Compact Speech Bubble with Personalised Greeting (Clickable to open AI Companion Chat) */}
-          <div 
-            onClick={handleAvatarTap}
-            className="relative inline-block text-center w-full bg-white/90 hover:bg-white backdrop-blur-md px-4 py-3 rounded-2xl border border-pink-200/70 shadow-[0_4px_16px_rgba(244,114,182,0.06)] cursor-pointer group transition-all duration-300 hover:shadow-md animate-speech-bubble"
-            title={`Tap to chat with ${currentAvatar.name || 'Amara'}`}
+            <Palette className="w-3.5 h-3.5 text-pink-600 dark:text-pink-400" />
+            <span>Themes</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleOpenCompanionChat}
+            className="h-9 px-3.5 rounded-xl bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] hover:bg-stone-50 text-stone-800 dark:text-stone-200 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
           >
-            {/* Speech bubble tail pointing up to avatar */}
-            <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[8px] border-b-white/95" />
-
-            <div className="space-y-0.5">
-              <p className="text-xs sm:text-sm font-serif italic text-stone-800 font-bold leading-snug group-hover:text-pink-700 transition-colors">
-                {companionReaction ? (
-                  <span className="flex items-center justify-center gap-1.5 text-pink-600">
-                    <span>{companionReaction.emoji}</span>
-                    <span>"{companionReaction.message}"</span>
-                  </span>
-                ) : (
-                  `"${companionPrompts[promptIndex] || companionPrompts[0]}"`
-                )}
-              </p>
-              
-              {/* Context line */}
-              <p className="text-[10px] text-stone-500 font-medium">
-                {avatarSpeech.cycleStatusText}
-              </p>
-            </div>
-          </div>
-
+            <MessageCircle className="w-3.5 h-3.5 text-pink-600 dark:text-pink-400" />
+            <span>Ask {currentAvatar.name || 'Amara'}</span>
+          </button>
         </div>
-      </section>
+      </div>
+
+      {/* Compact Companion Card above Pregnancy/Postpartum views */}
+      {(user.isPregnancyMode || user.isPostpartumMode) && (
+        <section className="bg-white dark:bg-[#1a1816] p-5 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-sm flex flex-col sm:flex-row items-center gap-4">
+          <button
+            type="button"
+            onClick={handleAvatarTap}
+            className="w-16 h-16 rounded-full bg-pink-50 dark:bg-pink-950/30 border border-pink-100 dark:border-pink-900/40 flex items-end justify-center shrink-0 overflow-visible cursor-pointer"
+            title={`Talk with ${currentAvatar.name || 'Amara'}`}
+          >
+            <AvatarVisual 
+              avatar={{ ...currentAvatar, mood: avatarMood.mood }} 
+              size="sm" 
+              level={avatarProgression.level}
+              showTierBadge={false}
+              showMoodBadge={false}
+              isSpeaking={isCompanionSpeaking}
+              isWaving={isCompanionWaving}
+              interactive={false}
+              animated={true}
+            />
+          </button>
+          <div className="flex-1 min-w-0 text-center sm:text-left">
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+              <span className="text-sm font-semibold text-stone-900 dark:text-stone-100">{currentAvatar.name || 'Amara'}</span>
+              <span className="text-xs text-stone-500 dark:text-stone-400 tabular-nums">Lvl {avatarProgression.level} · {avatarMood.label}</span>
+            </div>
+            <p className="text-sm font-serif text-stone-700 dark:text-stone-300 mt-1">
+              {companionReaction ? `"${companionReaction.message}"` : `"${companionPrompts[promptIndex] || companionPrompts[0]}"`}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleOpenCompanionChat}
+            className="h-9 px-4 rounded-xl bg-pink-600 hover:bg-pink-700 text-white text-xs font-semibold shrink-0 transition-colors cursor-pointer"
+          >
+            Open Chat
+          </button>
+        </section>
+      )}
 
       {/* Slide-out side menu (Hamburger drawer) */}
       {isMenuOpen && (
         <>
-          <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-[150] transition-opacity" onClick={() => setIsMenuOpen(false)} />
-          <div className="fixed inset-y-0 left-0 top-0 bottom-0 h-[100dvh] max-h-[100dvh] max-w-xs w-full bg-[#fffafb] shadow-2xl z-[160] flex flex-col border-r border-pink-100/40 animate-slideRight text-left overflow-hidden">
-            {/* Title Header with Close (Pinned top inside drawer) */}
-            <div className="shrink-0 bg-[#fffafb] px-6 py-4 border-b border-pink-100/30 flex items-center justify-between z-20 shadow-xs">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xl">🌸</span>
-                <span className="font-serif italic font-black text-xl text-pink-600">Lumina Menu</span>
+          <div className="fixed inset-0 bg-stone-950/45 backdrop-blur-xs z-[150] transition-opacity" onClick={() => setIsMenuOpen(false)} />
+          <div className="fixed inset-y-0 left-0 top-0 bottom-0 h-[100dvh] max-h-[100dvh] max-w-xs w-full bg-[#faf8f6] dark:bg-[#1a1816] shadow-2xl z-[160] flex flex-col border-r border-stone-200/80 dark:border-[#2e2a26] animate-slideRight text-left overflow-hidden">
+            {/* Title Header with Close */}
+            <div className="shrink-0 bg-[#faf8f6] dark:bg-[#1a1816] px-5 py-4 border-b border-stone-200/80 dark:border-[#2e2a26] flex items-center justify-between z-20">
+              <div className="flex items-center gap-2">
+                <Flower2 className="w-5 h-5 text-pink-600 dark:text-pink-400" />
+                <span className="font-serif text-xl text-stone-900 dark:text-stone-100">Lumina Menu</span>
               </div>
               <button 
+                type="button"
                 onClick={() => setIsMenuOpen(false)}
-                className="p-1.5 rounded-xl bg-pink-50 text-pink-500 hover:bg-pink-100 transition-colors cursor-pointer"
+                className="w-8 h-8 rounded-xl bg-white dark:bg-[#23201d] border border-stone-200 dark:border-[#2e2a26] text-stone-600 dark:text-stone-300 hover:bg-stone-100 flex items-center justify-center transition-colors cursor-pointer"
                 title="Close Menu"
+                aria-label="Close Menu"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Scrollable Content List */}
-            <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-6 py-4 space-y-4 lumina-menu-scroll overscroll-contain touch-pan-y">
-              {/* Lumina Avatar Companion Sanctuary */}
-              <div className="bg-gradient-to-br from-pink-500/15 via-rose-400/15 to-amber-400/15 p-4 rounded-3xl border border-pink-200/60 shadow-[0_4px_15px_rgba(244,114,182,0.06)] space-y-2">
+            <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-5 py-4 space-y-3.5 lumina-menu-scroll overscroll-contain touch-pan-y">
+              <div className="bg-white dark:bg-[#23201d] p-4 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-[9px] font-black uppercase tracking-wider text-pink-600">Wellness Companion</p>
-                  <span className="text-[8px] font-black px-2 py-0.5 rounded-full bg-pink-100 text-pink-700 uppercase">
+                  <p className="text-xs font-semibold text-pink-700 dark:text-pink-400">Wellness Companion</p>
+                  <span className="text-xs font-medium text-stone-500 dark:text-stone-400 tabular-nums">
                     Lvl {avatarProgression.level}
                   </span>
                 </div>
                 <div className="flex gap-2">
                   <button 
+                    type="button"
                     onClick={() => {
                       handleOpenCompanionChat();
                       setIsMenuOpen(false);
                     }}
-                    className="flex-1 py-2.5 px-3 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-wider transition-all active:scale-[0.98] shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="flex-1 h-10 px-3 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <AvatarVisual avatar={{ ...currentAvatar, mood: avatarMood.mood }} size="xs" />
                     <span className="truncate">Chat with {currentAvatar.name || 'Amara'}</span>
                   </button>
                   <button 
+                    type="button"
                     onClick={() => {
                       setIsAvatarModalOpen(true);
                       setIsMenuOpen(false);
                     }}
-                    className="py-2.5 px-3 bg-white hover:bg-pink-50/70 border border-pink-200/60 rounded-2xl text-[10px] font-black uppercase tracking-wider text-pink-600 transition-all active:scale-[0.98] shadow-sm flex items-center justify-center cursor-pointer"
+                    className="h-10 px-3 bg-stone-50 dark:bg-[#1a1816] hover:bg-stone-100 border border-stone-200 dark:border-[#2e2a26] rounded-xl text-xs font-semibold text-stone-700 dark:text-stone-200 transition-colors flex items-center justify-center cursor-pointer"
                     title="Studio & Customization"
                   >
                     <span>Studio</span>
                   </button>
                 </div>
-                <p className="text-[8.5px] text-gray-500 italic text-center">
-                  Dashboard, customizations, styles & rewards
-                </p>
               </div>
 
-              {/* Learn & Education Sanctuary (Put back learn feature) */}
-              <div className="bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-pink-500/10 p-4 rounded-3xl border border-indigo-100 shadow-[0_4px_15px_rgba(99,102,241,0.05)]">
-                <p className="text-[9px] font-black uppercase tracking-wider text-indigo-600 mb-2">Education & Wisdom</p>
+              <div className="bg-white dark:bg-[#23201d] rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] divide-y divide-stone-100 dark:divide-[#2e2a26] overflow-hidden">
                 <button 
+                  type="button"
                   onClick={() => {
                     onTabChange?.('edu');
                     setIsMenuOpen(false);
                   }}
-                  className="w-full py-2.5 px-4 bg-white hover:bg-indigo-50/50 border border-indigo-200/50 rounded-2xl text-[10px] font-black uppercase tracking-widest text-indigo-600 transition-all active:scale-[0.98] shadow-sm flex items-center justify-between cursor-pointer"
+                  className="w-full px-4 py-3.5 hover:bg-stone-50 dark:hover:bg-stone-800 text-sm font-medium text-stone-800 dark:text-stone-200 transition-colors flex items-center justify-between cursor-pointer"
                 >
-                  <span className="flex items-center gap-2">
-                    <span className="text-sm">📚</span>
-                    <span>Learn & Guides Hub</span>
+                  <span className="flex items-center gap-2.5">
+                    <BookOpen className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                    <span>Learn &amp; Guides Hub</span>
                   </span>
-                  <span className="text-xs">➔</span>
+                  <ChevronRight className="w-4 h-4 text-stone-400" />
                 </button>
-              </div>
 
-              {/* Personal Diary Card */}
-              <div className="bg-gradient-to-br from-amber-500/10 via-rose-500/10 to-pink-500/10 p-4 rounded-3xl border border-pink-100 shadow-[0_4px_15px_rgba(244,114,182,0.04)]">
-                <p className="text-[9px] font-black uppercase tracking-wider text-rose-600 mb-2">Personal Sanctuary</p>
                 <button 
+                  type="button"
                   onClick={() => {
                     onTabChange?.('diary');
                     setIsMenuOpen(false);
                   }}
-                  className="w-full py-2.5 px-4 bg-white hover:bg-pink-50/50 border border-pink-200/50 rounded-2xl text-[10px] font-black uppercase tracking-widest text-rose-600 transition-all active:scale-[0.98] shadow-sm flex items-center justify-between cursor-pointer"
+                  className="w-full px-4 py-3.5 hover:bg-stone-50 dark:hover:bg-stone-800 text-sm font-medium text-stone-800 dark:text-stone-200 transition-colors flex items-center justify-between cursor-pointer"
                 >
-                  <span className="flex items-center gap-2">
-                    <span className="text-sm">📖</span>
+                  <span className="flex items-center gap-2.5">
+                    <Heart className="w-4 h-4 text-rose-600 dark:text-rose-400" />
                     <span>Personal Diary</span>
                   </span>
-                  <span className="text-xs">➔</span>
+                  <ChevronRight className="w-4 h-4 text-stone-400" />
                 </button>
-              </div>
 
-              {/* Music Sanctuary Quick Access */}
-              <div className="bg-gradient-to-br from-pink-500/10 to-rose-400/10 p-4 rounded-3xl border border-pink-100 shadow-[0_4px_15px_rgba(244,114,182,0.04)]">
-                <p className="text-[9px] font-black uppercase tracking-wider text-pink-500 mb-2">Sound & Serenity</p>
                 <button 
+                  type="button"
                   onClick={() => {
                     onTabChange?.('music');
                     setIsMenuOpen(false);
                   }}
-                  className="w-full py-2.5 px-4 bg-white hover:bg-pink-50/50 border border-pink-200/50 rounded-2xl text-[10px] font-black uppercase tracking-widest text-pink-600 transition-all active:scale-[0.98] shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full px-4 py-3.5 hover:bg-stone-50 dark:hover:bg-stone-800 text-sm font-medium text-stone-800 dark:text-stone-200 transition-colors flex items-center justify-between cursor-pointer"
                 >
-                  <span>🎵 Enter Music Sanctuary</span>
-                  <span className="text-xs">➔</span>
+                  <span className="flex items-center gap-2.5">
+                    <Music className="w-4 h-4 text-pink-600 dark:text-pink-400" />
+                    <span>Music Sanctuary</span>
+                  </span>
+                  <ChevronRight className="w-4 h-4 text-stone-400" />
                 </button>
-              </div>
 
-              {/* Mode Select Card with Claymorphic style */}
-              <div className="bg-white/80 backdrop-blur-md p-4 rounded-3xl border border-pink-100/50 shadow-[inset_0_2px_4px_rgba(255,255,255,0.8),_0_6px_15px_rgba(244,114,182,0.03)]">
-                <p className="text-[9px] font-black uppercase tracking-wider text-pink-400 mb-2">Sanctuary Mode</p>
-                <div className="flex flex-col gap-2">
-                  <button 
-                    onClick={() => {
-                      if (togglePregnancy) togglePregnancy();
-                      setIsMenuOpen(false);
-                    }}
-                    className={`w-full py-2.5 px-4 rounded-2xl text-[10px] font-bold uppercase tracking-widest transition-all cursor-pointer ${user.isPregnancyMode ? 'bg-indigo-500 text-white shadow-md' : 'bg-pink-50 text-pink-500 border border-pink-100 hover:bg-pink-100/50'}`}
-                  >
-                    🤰 {user.isPregnancyMode ? 'Pregnancy Mode: ON' : 'Switch to Pregnancy'}
-                  </button>
-                  {user.isPostpartumMode && (
-                    <div className="w-full py-2.5 px-4 rounded-2xl bg-[#4f46e5]/10 text-[#4f46e5] text-[10px] font-bold uppercase tracking-widest text-center">
-                      👶 Postpartum Active
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Wallpapers & Themes Card */}
-              <div className="bg-gradient-to-br from-purple-500/10 via-pink-500/10 to-rose-400/10 p-4 rounded-3xl border border-pink-100 shadow-[inset_0_2px_4px_rgba(255,255,255,0.8),_0_6px_15px_rgba(244,114,182,0.04)] space-y-2">
-                <p className="text-[9px] font-black uppercase tracking-wider text-purple-600">Personalization</p>
                 <button 
+                  type="button"
                   onClick={() => {
                     setIsWallpapersOpen(true);
                     setIsMenuOpen(false);
                   }}
-                  className="w-full py-3 px-4 bg-gradient-to-r from-pink-500 via-rose-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-[0.98] shadow-md flex items-center justify-between cursor-pointer"
+                  className="w-full px-4 py-3.5 hover:bg-stone-50 dark:hover:bg-stone-800 text-sm font-medium text-stone-800 dark:text-stone-200 transition-colors flex items-center justify-between cursor-pointer"
                 >
-                  <span className="flex items-center gap-2">
-                    <span className="text-sm">🎨</span>
-                    <span>Wallpapers & Themes</span>
+                  <span className="flex items-center gap-2.5">
+                    <Palette className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                    <span>Wallpapers &amp; Themes</span>
                   </span>
-                  <span className="text-xs">➔</span>
+                  <ChevronRight className="w-4 h-4 text-stone-400" />
                 </button>
-                <p className="text-[9px] text-stone-400 italic text-center">
-                  Customize wallpapers, themes & cycle colors
-                </p>
+              </div>
+
+              <div className="bg-white dark:bg-[#23201d] p-4 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] space-y-2.5">
+                <p className="text-xs font-semibold text-stone-500 dark:text-stone-400">Sanctuary Mode</p>
+                <button 
+                  type="button"
+                  onClick={() => {
+                    if (togglePregnancy) togglePregnancy();
+                    setIsMenuOpen(false);
+                  }}
+                  className={`w-full h-10 px-4 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+                    user.isPregnancyMode 
+                      ? 'bg-indigo-600 text-white' 
+                      : 'bg-pink-50 dark:bg-pink-950/30 text-pink-700 dark:text-pink-300 border border-pink-200/70 dark:border-pink-900/40 hover:bg-pink-100/70'
+                  }`}
+                >
+                  {user.isPregnancyMode ? 'Pregnancy Mode: Active' : 'Switch to Pregnancy Mode'}
+                </button>
+                {user.isPostpartumMode && (
+                  <div className="w-full py-2 px-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-300 text-xs font-semibold text-center">
+                    Postpartum Recovery Active
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Pinned Bottom Sign Out (Never covered by scrollable content, mobile safe-area aware) */}
-            <div className="shrink-0 px-6 py-3 border-t border-pink-100/30 bg-[#fffafb] pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+            <div className="shrink-0 px-5 py-3.5 border-t border-stone-200/80 dark:border-[#2e2a26] bg-[#faf8f6] dark:bg-[#1a1816] pb-[max(1.25rem,env(safe-area-inset-bottom))]">
               <button 
+                type="button"
                 onClick={() => {
                   if (handleLogout) handleLogout();
                   setIsMenuOpen(false);
                 }}
-                className="w-full py-3 rounded-2xl bg-rose-50 text-rose-500 hover:bg-rose-100 transition-colors duration-300 font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 cursor-pointer shadow-xs active:scale-[0.98]"
+                className="w-full h-10 rounded-xl bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300 hover:bg-rose-100 transition-colors font-semibold text-xs flex items-center justify-center gap-2 cursor-pointer"
               >
                 <LogOut className="w-4 h-4" />
-                Sign Out of Sanctuary
+                <span>Sign Out</span>
               </button>
             </div>
           </div>
@@ -2482,30 +2539,30 @@ const Dashboard: React.FC<DashboardProps> = ({
       {/* Slide-out notifications pane (Right drawer) */}
       {isNotificationsOpen && (
         <>
-          <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-[150] transition-opacity" onClick={() => setIsNotificationsOpen(false)} />
-          <div className="fixed inset-y-0 right-0 max-w-xs w-full bg-[#fffafb]/95 backdrop-blur-3xl shadow-2xl z-[160] p-6 flex flex-col border-l border-pink-100/40 animate-slideLeft">
-            {/* Title Header with Close */}
-            <div className="flex items-center justify-between border-b border-pink-100/30 pb-4 mb-6">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xl">🔔</span>
-                <span className="font-serif italic font-black text-xl text-pink-600">Notifications</span>
+          <div className="fixed inset-0 bg-stone-950/45 backdrop-blur-xs z-[150] transition-opacity" onClick={() => setIsNotificationsOpen(false)} />
+          <div className="fixed inset-y-0 right-0 max-w-xs w-full bg-[#faf8f6] dark:bg-[#1a1816] shadow-2xl z-[160] p-5 flex flex-col border-l border-stone-200/80 dark:border-[#2e2a26] animate-slideLeft">
+            <div className="flex items-center justify-between border-b border-stone-200/80 dark:border-[#2e2a26] pb-4 mb-5">
+              <div className="flex items-center gap-2">
+                <Bell className="w-4 h-4 text-pink-600 dark:text-pink-400" />
+                <span className="font-serif text-xl text-stone-900 dark:text-stone-100">Notifications</span>
               </div>
               <button 
+                type="button"
                 onClick={() => setIsNotificationsOpen(false)}
-                className="p-1.5 rounded-xl bg-pink-50 text-pink-500 hover:bg-pink-100 transition-colors"
+                className="w-8 h-8 rounded-xl bg-white dark:bg-[#23201d] border border-stone-200 dark:border-[#2e2a26] text-stone-600 dark:text-stone-300 hover:bg-stone-100 flex items-center justify-center transition-colors cursor-pointer"
+                aria-label="Close Notifications"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Notifications Content */}
             <div className="flex-1 overflow-y-auto space-y-4 scrollbar-hide">
-              {/* User Persistent System Notifications */}
               {user.notifications && user.notifications.length > 0 && (
                 <div className="space-y-2">
                   <div className="flex justify-between items-center px-1">
-                    <p className="text-[9px] font-black uppercase tracking-wider text-pink-400">System Notifications</p>
+                    <p className="text-xs font-semibold text-stone-500 dark:text-stone-400">System Alerts</p>
                     <button 
+                      type="button"
                       onClick={async () => {
                         const updatedUser = {
                           ...user,
@@ -2514,12 +2571,12 @@ const Dashboard: React.FC<DashboardProps> = ({
                         setUser(updatedUser);
                         await syncUser(updatedUser);
                       }}
-                      className="text-[8px] font-black text-indigo-500 hover:underline uppercase tracking-wider cursor-pointer"
+                      className="text-xs font-medium text-pink-700 dark:text-pink-400 hover:underline cursor-pointer"
                     >
-                      Clear All Unread
+                      Mark all read
                     </button>
                   </div>
-                  <div className="space-y-1.5 max-h-[220px] overflow-y-auto pr-1 scrollbar-thin">
+                  <div className="space-y-2 max-h-[240px] overflow-y-auto pr-1 scrollbar-thin">
                     {user.notifications.map(notif => (
                       <div 
                         key={notif.id} 
@@ -2537,23 +2594,20 @@ const Dashboard: React.FC<DashboardProps> = ({
                             setIsNotificationsOpen(false);
                           }
                         }}
-                        className={`p-3 rounded-2xl border transition-all flex flex-col gap-1 cursor-pointer ${
+                        className={`p-3 rounded-xl border transition-colors flex flex-col gap-1 cursor-pointer ${
                           notif.isRead 
-                            ? 'bg-white/40 border-pink-100/10 opacity-70 hover:opacity-100' 
-                            : 'bg-gradient-to-br from-pink-50 to-indigo-50/50 border-pink-100/40 shadow-sm hover:scale-[1.01]'
+                            ? 'bg-white/60 dark:bg-[#23201d]/60 border-stone-200/50 dark:border-[#2e2a26] opacity-75 hover:opacity-100' 
+                            : 'bg-white dark:bg-[#23201d] border-pink-200/80 dark:border-pink-900/40 shadow-xs'
                         }`}
                       >
-                        <div className="flex items-center justify-between gap-1">
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <span className="text-sm shrink-0">{notif.emoji || '🔔'}</span>
-                            <p className="text-[10px] font-black uppercase tracking-wider text-indigo-950 truncate">{notif.title}</p>
-                          </div>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-xs font-semibold text-stone-900 dark:text-stone-100 truncate">{notif.title}</p>
                           {!notif.isRead && (
-                            <span className="w-1.5 h-1.5 bg-rose-500 rounded-full shrink-0" />
+                            <span className="w-2 h-2 bg-pink-600 rounded-full shrink-0" />
                           )}
                         </div>
-                        <p className="text-[10px] text-gray-500 leading-normal font-medium break-words">{notif.body}</p>
-                        <p className="text-[7.5px] text-gray-400 font-bold self-end tracking-wider">
+                        <p className="text-xs text-stone-600 dark:text-stone-400 leading-normal break-words">{notif.body}</p>
+                        <p className="text-[11px] text-stone-400 self-end tabular-nums">
                           {new Date(notif.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                         </p>
                       </div>
@@ -2562,64 +2616,63 @@ const Dashboard: React.FC<DashboardProps> = ({
                 </div>
               )}
 
-              {/* Partner connection request notification */}
               {isPendingRequest && activePendingRequest && (
-                <div className="bg-gradient-to-br from-indigo-50 to-purple-50 p-4 rounded-3xl border border-indigo-100 shadow-[inset_0_2px_4px_rgba(255,255,255,0.8),_0_6px_15px_rgba(244,114,182,0.03)] space-y-3 animate-fadeIn">
-                  <div className="flex gap-2">
-                    <span className="text-xl shrink-0">💕</span>
+                <div className="bg-indigo-50/80 dark:bg-indigo-950/30 p-4 rounded-xl border border-indigo-200/70 dark:border-indigo-900/40 space-y-3">
+                  <div className="flex gap-2.5 items-start">
+                    <HeartHandshake className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Companion Link</p>
-                      <p className="text-xs text-indigo-900 font-bold mt-0.5">{partnerUser?.name || user.partnerName || activePendingRequest.partnerName || 'A partner'} requested to link accounts!</p>
+                      <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">Companion Link Request</p>
+                      <p className="text-xs text-stone-800 dark:text-stone-200 mt-0.5">{partnerUser?.name || user.partnerName || activePendingRequest.partnerName || 'A partner'} requested to link accounts.</p>
                     </div>
                   </div>
                   <button 
+                    type="button"
                     onClick={() => {
                       setIsNotificationsOpen(false);
                       window.scrollTo({ top: 400, behavior: 'smooth' });
                     }}
-                    className="w-full py-2 bg-indigo-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-md hover:bg-indigo-700 transition-all text-center block"
+                    className="w-full h-9 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold transition-colors cursor-pointer"
                   >
-                    Review Request Below
+                    Review Request
                   </button>
                 </div>
               )}
 
-              {/* Gift Notifications */}
               {receivedGifts.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-[9px] font-black uppercase tracking-wider text-pink-400 px-1">Comfort Gifts</p>
+                  <p className="text-xs font-semibold text-stone-500 dark:text-stone-400 px-1">Comfort Gifts</p>
                   {receivedGifts.slice(0, 3).map(gift => (
-                    <div key={gift.id} className="bg-white/80 p-3 rounded-2xl border border-pink-100/30 shadow-sm flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-pink-50 flex items-center justify-center text-lg shadow-inner">
-                        {gift.type === 'hug' ? '🌸' : gift.type === 'tea' ? '🍵' : gift.type === 'flower' ? '💐' : gift.type === 'chocolate' ? '🍫' : '✨'}
+                    <div key={gift.id} className="bg-white dark:bg-[#23201d] p-3 rounded-xl border border-stone-200/80 dark:border-[#2e2a26] flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-pink-50 dark:bg-pink-950/40 text-pink-600 flex items-center justify-center shrink-0">
+                        <Heart className="w-4 h-4" />
                       </div>
                       <div>
-                        <p className="text-[10px] font-bold text-gray-700">{gift.senderName} sent a {gift.type}!</p>
-                        <p className="text-[8px] text-gray-400">{new Date(gift.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                        <p className="text-xs font-semibold text-stone-800 dark:text-stone-200">{gift.senderName} sent a {gift.type}</p>
+                        <p className="text-[11px] text-stone-400 tabular-nums">{new Date(gift.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
                       </div>
                     </div>
                   ))}
                 </div>
               )}
 
-              {/* Active Reminders */}
               <div className="space-y-2">
-                <p className="text-[9px] font-black uppercase tracking-wider text-pink-400 px-1">Active Reminders</p>
+                <p className="text-xs font-semibold text-stone-500 dark:text-stone-400 px-1">Active Reminders</p>
                 {reminders.filter(r => !r.isCompleted).length === 0 ? (
-                  <div className="p-4 bg-white/40 border border-dashed border-pink-100/50 rounded-2xl text-center">
-                    <p className="text-[10px] text-gray-400 italic">All sanctuary routines are completed today 🌸</p>
+                  <div className="p-4 bg-white dark:bg-[#23201d] border border-dashed border-stone-200 dark:border-[#2e2a26] rounded-xl text-center">
+                    <p className="text-xs text-stone-500 dark:text-stone-400">All routines are completed for today.</p>
                   </div>
                 ) : (
                   reminders.filter(r => !r.isCompleted).map(rem => (
-                    <div key={rem.id} className="bg-white/80 p-3 rounded-2xl border border-pink-100/30 shadow-sm flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-base">⏰</span>
+                    <div key={rem.id} className="bg-white dark:bg-[#23201d] p-3 rounded-xl border border-stone-200/80 dark:border-[#2e2a26] flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5">
+                        <Clock className="w-4 h-4 text-pink-600 shrink-0" />
                         <div>
-                          <p className="text-[10px] font-bold text-gray-700 leading-tight">{rem.title}</p>
-                          <p className="text-[8px] text-gray-400 mt-0.5">{rem.time}</p>
+                          <p className="text-xs font-semibold text-stone-800 dark:text-stone-200 leading-tight">{rem.title}</p>
+                          <p className="text-[11px] text-stone-400 mt-0.5 tabular-nums">{rem.time}</p>
                         </div>
                       </div>
                       <button 
+                        type="button"
                         onClick={() => {
                           if (setUser) {
                             setUser((prev: any) => {
@@ -2629,7 +2682,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                             });
                           }
                         }}
-                        className="p-1 rounded-lg bg-pink-50 text-pink-500 hover:bg-pink-100 transition-colors text-[9px] font-bold cursor-pointer"
+                        className="px-2.5 py-1 rounded-lg bg-pink-50 dark:bg-pink-950/40 text-pink-700 dark:text-pink-300 hover:bg-pink-100 transition-colors text-xs font-semibold cursor-pointer"
                       >
                         Done
                       </button>
@@ -2638,11 +2691,10 @@ const Dashboard: React.FC<DashboardProps> = ({
                 )}
               </div>
 
-              {/* General cycle suggestions */}
-              <div className="bg-pink-50/30 p-4 rounded-3xl border border-pink-100/30 space-y-2">
-                <p className="text-[9px] font-black uppercase tracking-wider text-pink-400">Sanctuary Intelligence</p>
-                <p className="text-[11px] text-stone-500 leading-relaxed font-serif italic">
-                  "Synchronize your heavy workloads with your peak follicular and ovulatory energies to protect your mental sanctuary."
+              <div className="bg-white dark:bg-[#23201d] p-4 rounded-xl border border-stone-200/80 dark:border-[#2e2a26] space-y-1.5">
+                <p className="text-xs font-semibold text-pink-700 dark:text-pink-400">Cycle Rhythm Tip</p>
+                <p className="text-xs text-stone-600 dark:text-stone-300 leading-relaxed">
+                  Align demanding focus blocks with your follicular and ovulatory phases, and reserve luteal days for calmer pacing.
                 </p>
               </div>
             </div>
@@ -2651,31 +2703,35 @@ const Dashboard: React.FC<DashboardProps> = ({
       )}
 
       {partnerNotice && (
-        <div role="status" className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-5 py-3 rounded-2xl text-xs font-semibold flex items-center justify-between gap-3">
+        <div role="status" className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/40 text-emerald-800 dark:text-emerald-200 px-4 py-3 rounded-xl text-xs font-medium flex items-center justify-between gap-3">
           <span>{partnerNotice}</span>
-          <button type="button" onClick={() => setPartnerNotice(null)} className="text-emerald-700 font-bold cursor-pointer">✕</button>
+          <button type="button" onClick={() => setPartnerNotice(null)} className="text-emerald-700 font-semibold cursor-pointer" aria-label="Dismiss">
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
       {/* Step 3 (Partner Connection Request) & Step 4 (Privacy Controls) */}
       {isPendingRequest && activePendingRequest && (
-        <section className="bg-gradient-to-br from-purple-50 to-pink-50 p-8 rounded-[2.5rem] border border-pink-100 shadow-sm space-y-6 animate-fadeIn">
+        <section className="bg-white dark:bg-[#1a1816] p-6 sm:p-8 rounded-2xl border border-indigo-200/80 dark:border-indigo-900/40 shadow-sm space-y-6">
           <div className="flex items-start gap-4">
-            <span className="text-3xl">💕</span>
+            <div className="w-11 h-11 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+              <HeartHandshake className="w-5 h-5" />
+            </div>
             <div className="space-y-1">
-              <h3 className="text-2xl font-serif text-indigo-950 italic">Partner Connection Request</h3>
-              <p className="text-sm text-gray-600">
-                <span className="font-bold text-indigo-600">{partnerUser?.name || user.partnerName || activePendingRequest.partnerName || 'Your partner'}</span> would like to connect on Lumina and has requested to receive the following:
+              <h3 className="text-2xl font-serif text-stone-900 dark:text-stone-100">Partner Connection Request</h3>
+              <p className="text-sm text-stone-600 dark:text-stone-400">
+                <span className="font-semibold text-indigo-600 dark:text-indigo-400">{partnerUser?.name || user.partnerName || activePendingRequest.partnerName || 'Your partner'}</span> requested to connect and receive the following updates:
               </p>
             </div>
           </div>
 
-          <div className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl border border-pink-100/50">
-            <h4 className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-3">Requested Categories:</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-indigo-900">
+          <div className="bg-stone-50/70 dark:bg-[#23201d] p-5 rounded-xl border border-stone-200/70 dark:border-[#2e2a26]">
+            <h4 className="text-xs font-semibold text-stone-500 dark:text-stone-400 mb-3">Requested Categories</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-stone-800 dark:text-stone-200">
               {(activePendingRequest.requestedReceives || activePendingRequest.requested_permissions || ['Period Updates', 'Fertility Updates', 'Wellness Support', 'Symptom Updates']).map((reqItem: string, i: number) => (
                 <div key={i} className="flex items-center gap-2">
-                  <span className="text-pink-500">✓</span>
+                  <Check className="w-4 h-4 text-pink-600 shrink-0" />
                   <span>{reqItem}</span>
                 </div>
               ))}
@@ -2687,14 +2743,14 @@ const Dashboard: React.FC<DashboardProps> = ({
               <button
                 type="button"
                 onClick={handleApproveAll}
-                className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-2xl text-[10px] uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-md cursor-pointer"
+                className="h-10 px-5 bg-indigo-600 text-white font-semibold rounded-xl text-xs hover:bg-indigo-700 transition-colors shadow-xs cursor-pointer"
               >
                 Approve All
               </button>
               <button
                 type="button"
                 onClick={() => setIsCustomizingSharing(true)}
-                className="px-6 py-3 bg-white text-indigo-600 border border-indigo-100 font-bold rounded-2xl text-[10px] uppercase tracking-widest hover:bg-indigo-50 transition-all cursor-pointer"
+                className="h-10 px-5 bg-white dark:bg-[#23201d] text-indigo-700 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-900/40 font-semibold rounded-xl text-xs hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition-colors cursor-pointer"
               >
                 Customize Sharing
               </button>
@@ -2702,24 +2758,24 @@ const Dashboard: React.FC<DashboardProps> = ({
                 <button
                   type="button"
                   onClick={() => setConfirmDeclineRequest(true)}
-                  className="px-6 py-3 bg-rose-50 text-rose-600 font-bold rounded-2xl text-[10px] uppercase tracking-widest hover:bg-rose-100 transition-all cursor-pointer"
+                  className="h-10 px-5 bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300 border border-rose-200/70 dark:border-rose-900/40 font-semibold rounded-xl text-xs hover:bg-rose-100 dark:hover:bg-rose-950/50 transition-colors cursor-pointer"
                 >
                   Decline
                 </button>
               ) : (
-                <div className="flex items-center gap-2 bg-rose-50 border border-rose-200 px-3 py-2 rounded-2xl">
-                  <span className="text-[11px] font-semibold text-rose-700">Decline request?</span>
+                <div className="flex items-center gap-2 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 px-3 py-2 rounded-xl">
+                  <span className="text-xs font-semibold text-rose-700 dark:text-rose-300">Decline request?</span>
                   <button
                     type="button"
                     onClick={handleDeclineRequest}
-                    className="px-3 py-1 bg-rose-600 text-white rounded-xl text-[10px] font-bold uppercase cursor-pointer"
+                    className="px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-semibold transition-colors cursor-pointer"
                   >
                     Confirm
                   </button>
                   <button
                     type="button"
                     onClick={() => setConfirmDeclineRequest(false)}
-                    className="px-3 py-1 bg-white text-stone-600 rounded-xl text-[10px] font-bold uppercase cursor-pointer"
+                    className="px-3 py-1 bg-white dark:bg-[#23201d] text-stone-700 dark:text-stone-300 border border-stone-200 dark:border-[#342f2b] rounded-lg text-xs font-semibold transition-colors cursor-pointer"
                   >
                     Keep
                   </button>
@@ -2727,15 +2783,15 @@ const Dashboard: React.FC<DashboardProps> = ({
               )}
             </div>
           ) : (
-            <div className="space-y-5 bg-white p-6 rounded-3xl border border-pink-100 mt-4 animate-scaleUp">
+            <div className="space-y-5 bg-[#faf8f6] dark:bg-[#23201d] p-5 sm:p-6 rounded-2xl border border-stone-200/80 dark:border-[#342f2b] mt-4">
               <div>
-                <h4 className="text-lg font-serif text-indigo-950 italic">Step 4: Privacy Controls</h4>
-                <p className="text-xs text-gray-500 mt-1">
+                <h4 className="text-lg font-serif text-stone-900 dark:text-stone-100">Step 4: Privacy Controls</h4>
+                <p className="text-xs text-stone-600 dark:text-stone-400 mt-1 leading-relaxed">
                   Fine-tune exactly what information {partnerUser?.name || user.partnerName || activePendingRequest.partnerName || 'your partner'} can access. Turn off any sensitive category anytime.
                 </p>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 {[
                   { label: "Share Cycle Information", desc: "Status of period and calendar predictions", key: "shareCycleInfo" },
                   { label: "Share Symptoms", desc: "Symptom logs, physical discomfort levels", key: "shareSymptoms" },
@@ -2746,17 +2802,17 @@ const Dashboard: React.FC<DashboardProps> = ({
                   { label: "Share Appointment Reminders", desc: "Upcoming doctor appointments and timing", key: "shareAppointmentReminders" },
                   { label: "Share Wellness Updates", desc: "Wellness missions, self-care suggestions", key: "shareWellnessUpdates" }
                 ].map((pref) => (
-                  <div key={pref.key} className="flex items-start gap-3 p-3 bg-indigo-50/20 hover:bg-indigo-50/40 rounded-xl transition-all">
+                  <div key={pref.key} className="flex items-start gap-3 p-3.5 bg-white dark:bg-[#1a1816] border border-stone-200/70 dark:border-[#2e2a26] hover:border-indigo-300/80 dark:hover:border-indigo-800/60 rounded-xl transition-colors">
                     <input
                       type="checkbox"
                       id={pref.key}
                       checked={sharingPrefs[pref.key as keyof typeof sharingPrefs]}
                       onChange={(e) => setSharingPrefs(prev => ({ ...prev, [pref.key]: e.target.checked }))}
-                      className="w-5 h-5 rounded border-indigo-200 text-indigo-600 focus:ring-indigo-500 mt-0.5 cursor-pointer"
+                      className="w-4 h-4 rounded border-stone-300 dark:border-[#342f2b] accent-indigo-600 mt-0.5 cursor-pointer shrink-0"
                     />
                     <label htmlFor={pref.key} className="flex-1 cursor-pointer">
-                      <p className="text-xs font-bold text-indigo-950">{pref.label}</p>
-                      <p className="text-[10px] text-gray-400 mt-0.5">{pref.desc}</p>
+                      <p className="text-xs font-semibold text-stone-900 dark:text-stone-100">{pref.label}</p>
+                      <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-0.5">{pref.desc}</p>
                     </label>
                   </div>
                 ))}
@@ -2764,14 +2820,16 @@ const Dashboard: React.FC<DashboardProps> = ({
 
               <div className="flex gap-3 pt-2">
                 <button
+                  type="button"
                   onClick={handleSaveCustomSharing}
-                  className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl text-[10px] uppercase tracking-widest shadow-md hover:bg-indigo-700 transition"
+                  className="flex-1 h-11 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-xs shadow-xs transition-colors cursor-pointer"
                 >
-                  Save Preferences & Connect
+                  Save Preferences &amp; Connect
                 </button>
                 <button
+                  type="button"
                   onClick={() => setIsCustomizingSharing(false)}
-                  className="px-6 py-3 bg-gray-50 text-gray-500 font-bold rounded-xl text-[10px] uppercase tracking-widest hover:bg-gray-100 transition"
+                  className="h-11 px-5 bg-white dark:bg-[#1a1816] text-stone-700 dark:text-stone-300 border border-stone-200 dark:border-[#2e2a26] font-semibold rounded-xl text-xs hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -2793,40 +2851,42 @@ const Dashboard: React.FC<DashboardProps> = ({
 
       {/* "Mark Delivered" Birth modal */}
       {isDeliveredModalOpen && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[300] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[3rem] p-8 max-w-md w-full space-y-6 shadow-2xl border border-pink-100 animate-slideDownBlock">
+        <div className="fixed inset-0 bg-stone-950/75 backdrop-blur-sm z-[300] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#1a1816] rounded-2xl p-6 sm:p-8 max-w-md w-full space-y-5 shadow-2xl border border-stone-200 dark:border-[#2e2a26]">
             <div className="text-center space-y-2">
-              <span className="text-5xl animate-bounce">🎉🐣</span>
-              <h3 className="text-2xl font-serif italic text-indigo-950">Congratulations Mama!</h3>
-              <p className="text-xs text-gray-400">Mark Baby as Delivered and configure the fourth Trimester Postpartum Sanctuary.</p>
+              <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-950/30 text-amber-600 flex items-center justify-center mx-auto">
+                <Baby className="w-6 h-6" />
+              </div>
+              <h3 className="text-2xl font-serif text-stone-900 dark:text-stone-100">Congratulations!</h3>
+              <p className="text-xs text-stone-500 dark:text-stone-400">Record the birth date to activate Postpartum Recovery Mode.</p>
             </div>
 
             <div className="space-y-4">
                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 ml-1">Delivery / Birth Date</label>
+                  <label className="text-xs font-semibold text-stone-700 dark:text-stone-300">Delivery / Birth Date</label>
                   <input
                     type="date"
                     value={deliveryDateInput}
                     onChange={(e) => setDeliveryDateInput(e.target.value)}
-                    className="bg-indigo-50/50 px-4 py-2.5 rounded-2xl border border-indigo-100 text-indigo-950 font-bold outline-none text-sm text-center shadow-inner"
+                    className="h-11 bg-stone-50 dark:bg-[#23201d] px-4 rounded-xl border border-stone-200 dark:border-[#2e2a26] text-stone-900 dark:text-stone-100 font-medium outline-none text-sm text-center"
                   />
                </div>
             </div>
 
-            <div className="flex gap-3 pt-2">
+            <div className="flex gap-3 pt-1">
                <button
                  type="button"
                  onClick={() => setIsDeliveredModalOpen(false)}
-                 className="flex-1 py-3 bg-gray-50 text-gray-400 hover:bg-gray-100 font-bold uppercase text-[10px] tracking-widest rounded-xl transition-all"
+                 className="flex-1 h-11 bg-stone-100 dark:bg-[#23201d] text-stone-700 dark:text-stone-300 hover:bg-stone-200 font-medium text-xs rounded-xl transition-colors cursor-pointer"
                >
                  Cancel
                </button>
                <button
                  type="button"
                  onClick={handleMarkDelivered}
-                 className="flex-1 py-3 bg-gradient-to-r from-pink-500 to-indigo-500 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl shadow-lg transition-all"
+                 className="flex-1 h-11 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl transition-colors cursor-pointer"
                >
-                 Activate Recovery Mode 🎉
+                 Activate Recovery Mode
                </button>
             </div>
           </div>
@@ -2843,104 +2903,103 @@ const Dashboard: React.FC<DashboardProps> = ({
         />
       )}
 
-      {/* Simulated Tutorial Video Modal for Pregnancy, Postpartum, & Cycle Workouts */}
+      {/* Tutorial Video Modal for Pregnancy, Postpartum, & Cycle Workouts */}
       {simulatedVideo && createPortal(
-        <div className="fixed inset-0 bg-stone-950/85 backdrop-blur-xl z-[9999] flex items-center justify-center p-4 animate-fadeIn overflow-y-auto">
-          <div className="bg-slate-900 rounded-[2.5rem] p-6 md:p-8 max-w-2xl w-full space-y-5 shadow-2xl border border-slate-800 overflow-y-auto max-h-[95vh] flex flex-col text-white my-auto">
+        <div className="fixed inset-0 bg-stone-950/85 backdrop-blur-md z-[9999] flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-[#1a1816] rounded-2xl p-6 md:p-8 max-w-2xl w-full space-y-5 shadow-2xl border border-[#2e2a26] overflow-y-auto max-h-[95vh] flex flex-col text-white my-auto">
             
-            {/* Header Info */}
             <div className="flex justify-between items-start gap-4">
               <div className="flex items-center gap-3 text-left">
-                <span className="text-3xl text-pink-400">🧘‍♀️</span>
+                <div className="w-10 h-10 rounded-xl bg-pink-950/50 border border-pink-900/40 text-pink-400 flex items-center justify-center shrink-0">
+                  <Activity className="w-5 h-5" />
+                </div>
                 <div>
-                  <h4 className="text-lg md:text-xl font-serif italic text-pink-300 font-bold">{simulatedVideo.name}</h4>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Pregnancy & Postpartum Guided Sanctuary • {simulatedVideo.duration}</p>
+                  <h4 className="text-lg md:text-xl font-serif text-white">{simulatedVideo.name}</h4>
+                  <p className="text-xs text-stone-400">Guided Movement Practice · {simulatedVideo.duration}</p>
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setSimulatedVideo(null)}
-                className="p-2 hover:bg-slate-800 rounded-full text-slate-400 hover:text-white transition-colors text-sm font-bold cursor-pointer"
+                className="w-8 h-8 hover:bg-stone-800 rounded-xl text-stone-400 hover:text-white transition-colors flex items-center justify-center cursor-pointer"
                 title="Close player"
+                aria-label="Close video player"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Video Area / Procedural AI Video Player */}
-            <div className="relative w-full aspect-video bg-stone-950 rounded-2xl overflow-hidden shadow-inner flex flex-col items-center justify-center border border-slate-800">
+            <div className="relative w-full aspect-video bg-[#11100f] rounded-xl overflow-hidden flex flex-col items-center justify-center border border-[#2e2a26]">
               {videoLoading ? (
-                <div className="space-y-4 text-center py-12">
-                  <div className="w-12 h-12 border-4 border-indigo-500/20 border-t-pink-500 rounded-full animate-spin mx-auto"></div>
-                  <p className="text-xs text-pink-300 italic font-semibold animate-pulse">Initializing AI Somatic Guide, mama...</p>
+                <div className="space-y-3 text-center py-12">
+                  <div className="w-10 h-10 border-2 border-stone-700 border-t-pink-500 rounded-full animate-spin mx-auto" />
+                  <p className="text-xs text-stone-300 font-medium">Preparing guided movement session...</p>
                 </div>
               ) : (
                 <div className="w-full h-full p-4 flex flex-col items-center justify-between relative">
-                  {/* Live procedural graphic */}
                   <div className="flex-1 w-full flex items-center justify-center min-h-[160px]">
                     {renderPregnancyPostpartumExerciseSVG(simulatedVideo.name)}
                   </div>
 
-                  {/* Floating HUD Indicators */}
-                  <div className="absolute top-3 left-3 bg-slate-900/90 border border-slate-700/50 px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-md">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-                    <span className="text-[9px] font-mono font-bold text-slate-300">GUIDED BREATH & POSTURE</span>
+                  <div className="absolute top-3 left-3 bg-[#1a1816]/90 border border-[#2e2a26] px-2.5 py-1 rounded-lg flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                    <span className="text-[11px] font-medium text-stone-300">Guided Breath &amp; Posture</span>
                   </div>
 
-                  <div className="absolute top-3 right-3 bg-slate-900/90 border border-slate-700/50 px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-md">
-                    <span className="text-[9px] font-mono font-bold text-pink-400">💨 {dashBreathState}...</span>
+                  <div className="absolute top-3 right-3 bg-[#1a1816]/90 border border-[#2e2a26] px-2.5 py-1 rounded-lg">
+                    <span className="text-[11px] font-semibold text-pink-400">{dashBreathState}</span>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Guided Breath & Pacing HUD */}
             {!videoLoading && (
               <div className="grid grid-cols-3 gap-3 w-full text-left">
-                <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800 flex items-center gap-2">
+                <div className="bg-[#23201d] p-3 rounded-xl border border-[#2e2a26] flex items-center gap-2.5">
                   <Heart size={16} className="text-rose-400 shrink-0" />
                   <div>
-                    <p className="text-[8px] uppercase text-stone-500 font-bold tracking-widest">Breath Phase</p>
-                    <p className="text-xs font-mono font-bold text-slate-200">{dashBreathState}</p>
+                    <p className="text-[11px] text-stone-400">Breath Phase</p>
+                    <p className="text-xs font-semibold text-stone-100">{dashBreathState}</p>
                   </div>
                 </div>
-                <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800 flex items-center gap-2">
+                <div className="bg-[#23201d] p-3 rounded-xl border border-[#2e2a26] flex items-center gap-2.5">
                   <Activity size={16} className="text-emerald-400 shrink-0" />
                   <div>
-                    <p className="text-[8px] uppercase text-stone-500 font-bold tracking-widest">Guidance</p>
-                    <p className="text-xs font-mono font-bold text-slate-200">Slow &amp; Controlled</p>
+                    <p className="text-[11px] text-stone-400">Guidance</p>
+                    <p className="text-xs font-semibold text-stone-100">Slow &amp; Controlled</p>
                   </div>
                 </div>
-                <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800 flex items-center gap-2">
-                  <span className="text-sm shrink-0">⏳</span>
+                <div className="bg-[#23201d] p-3 rounded-xl border border-[#2e2a26] flex items-center gap-2.5">
+                  <Clock size={16} className="text-amber-400 shrink-0" />
                   <div>
-                    <p className="text-[8px] uppercase text-stone-500 font-bold tracking-widest">Rhythm Pacing</p>
-                    <p className="text-xs font-mono font-bold text-slate-200">{(dashBreathTime).toFixed(1)}s</p>
+                    <p className="text-[11px] text-stone-400">Rhythm</p>
+                    <p className="text-xs font-semibold text-stone-100 tabular-nums">{(dashBreathTime).toFixed(1)}s</p>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Instructions / Safety Check bottom pane */}
-            <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-800 text-left space-y-1.5">
-              <p className="text-[10px] font-black uppercase tracking-widest text-amber-400 flex items-center gap-1">
-                <span>💡</span> Sanctuary Guide Instructions & Safety
+            <div className="bg-[#23201d] p-4 rounded-xl border border-[#2e2a26] text-left space-y-1">
+              <p className="text-xs font-semibold text-amber-400 flex items-center gap-1.5">
+                <Lightbulb className="w-3.5 h-3.5" />
+                <span>Instructions &amp; Safety</span>
               </p>
-              <p className="text-xs text-stone-300 font-serif italic leading-relaxed">
+              <p className="text-xs text-stone-300 leading-relaxed">
                 {getCoachInstructions(simulatedVideo.name)[coachInstructionIndex % getCoachInstructions(simulatedVideo.name).length] || 
-                  "Focus on your breathing, inhale deeply through your nose, expand your abdomen, and exhale completely. Discontinue immediately if you feel dizzy."}
+                  "Focus on slow nasal breathing, expand your ribcage gently, and stop immediately if you feel dizzy."}
               </p>
             </div>
 
-            {/* Bottom Actions */}
-            <div className="flex gap-3 pt-2">
+            <div className="flex gap-3 pt-1">
               <button
+                type="button"
                 onClick={() => {
                   logAvatarActionReward(user, 'postpartum_yoga', `Completed: ${simulatedVideo.name}`, setUser);
                   setSimulatedVideo(null);
                 }}
-                className="flex-1 py-3 bg-indigo-500 hover:bg-indigo-600 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl transition-colors shadow-md text-center cursor-pointer"
+                className="flex-1 h-11 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl transition-colors text-center cursor-pointer"
               >
-                Complete practice & close (+25 XP)
+                Complete Practice &amp; Close (+25 XP)
               </button>
             </div>
           </div>

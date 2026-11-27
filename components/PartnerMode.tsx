@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PartnerOnboardingWizard } from './PartnerOnboardingWizard';
-import { Bell, X, GraduationCap, BookOpen, Heart, ShieldCheck, CheckCircle2, AlertCircle, Info, Sparkles, Settings, LogOut, Shield, User as UserIcon, Trash2, Menu } from 'lucide-react';
+import { Bell, X, GraduationCap, BookOpen, Heart, ShieldCheck, CheckCircle2, AlertCircle, Info, Sparkles, Settings, LogOut, Shield, User as UserIcon, Trash2, Menu, Home, Gift, Mail, CheckSquare, Calendar, ChevronRight, ChevronLeft, Lock, Copy, Share2, MessageSquare, QrCode, RefreshCw, Pause, Play, Unlink, ArrowLeft, Plus, Clock, Users, Check, AlertTriangle, Lightbulb } from 'lucide-react';
 import { User, Reminder, ReceivedComfort, PartnerNotificationPreferences, PartnerSharedSummary } from '../types';
 import { getGiftIdeas, getCommunicationTips, getLoveNoteIdeas, getSupportMission } from '../services/gemini';
 import { 
@@ -629,19 +629,19 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
     partnerNotice ? (
       <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[220] max-w-md w-[92%] animate-fadeIn">
         <div
-          className={`px-4 py-3 rounded-2xl shadow-xl border backdrop-blur-xl flex items-center justify-between gap-3 text-xs font-semibold ${
+          className={`px-4 py-3 rounded-xl shadow-lg border flex items-center justify-between gap-3 text-xs font-semibold ${
             partnerNotice.type === 'error'
-              ? 'bg-rose-50/95 border-rose-200 text-rose-800'
+              ? 'bg-rose-50 dark:bg-rose-950/90 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200'
               : partnerNotice.type === 'info'
-                ? 'bg-indigo-50/95 border-indigo-200 text-indigo-800'
-                : 'bg-emerald-50/95 border-emerald-200 text-emerald-800'
+                ? 'bg-indigo-50 dark:bg-indigo-950/90 border-indigo-200 dark:border-indigo-800 text-indigo-800 dark:text-indigo-200'
+                : 'bg-emerald-50 dark:bg-emerald-950/90 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200'
           }`}
         >
           <span>{partnerNotice.message}</span>
           <button
             type="button"
             onClick={() => setPartnerNotice(null)}
-            className="p-1 rounded-lg hover:bg-black/5 cursor-pointer shrink-0"
+            className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer shrink-0"
             aria-label="Dismiss notification"
           >
             <X className="w-3.5 h-3.5" />
@@ -656,21 +656,23 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
       {/* GLOBAL HAMBURGER NAVIGATION DRAWER */}
       {isMenuOpen && (
         <>
-          <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-[150] transition-opacity" onClick={() => setIsMenuOpen(false)} />
-          <div className="fixed inset-y-0 left-0 top-0 bottom-0 h-screen h-[100dvh] max-h-screen max-h-[100dvh] max-w-xs w-full bg-[#fffafb]/95 backdrop-blur-3xl shadow-2xl z-[160] flex flex-col border-r border-indigo-100/40 animate-slideRight text-left overflow-hidden">
+          <div className="fixed inset-0 bg-stone-950/50 backdrop-blur-sm z-[150] transition-opacity" onClick={() => setIsMenuOpen(false)} />
+          <div className="fixed inset-y-0 left-0 top-0 bottom-0 h-screen h-[100dvh] max-h-screen max-h-[100dvh] max-w-xs w-full bg-[#faf8f6] dark:bg-[#1a1816] shadow-2xl z-[160] flex flex-col border-r border-stone-200/80 dark:border-[#2e2a26] animate-slideRight text-left overflow-hidden">
             {/* Title Header with Close */}
-            <div className="flex items-center justify-between border-b border-indigo-100/30 p-6 pb-4 shrink-0 bg-[#fffafb]/95">
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">🤝</span>
+            <div className="flex items-center justify-between border-b border-stone-200/80 dark:border-[#2e2a26] p-5 shrink-0 bg-white dark:bg-[#1a1816]">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200/70 dark:border-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                  <Heart className="w-4 h-4" />
+                </div>
                 <div>
-                  <span className="font-serif italic font-black text-xl bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent block">Lumina Partner</span>
-                  <span className="text-[9px] font-bold text-stone-400 uppercase tracking-widest block">Navigation Menu</span>
+                  <span className="font-serif font-semibold text-lg text-stone-900 dark:text-stone-100 block leading-tight">Lumina Partner</span>
+                  <span className="text-[11px] font-medium text-stone-500 dark:text-stone-400 block">Navigation menu</span>
                 </div>
               </div>
               <button 
                 type="button"
                 onClick={() => setIsMenuOpen(false)}
-                className="p-1.5 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors cursor-pointer"
+                className="p-2 rounded-xl bg-stone-100 dark:bg-[#23201d] text-stone-600 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-[#2e2a26] transition-colors cursor-pointer"
                 title="Close Menu"
               >
                 <X className="w-4 h-4" />
@@ -678,7 +680,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
             </div>
 
             {/* Navigation Items List */}
-            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4 space-y-2.5 overscroll-contain touch-pan-y scroll-smooth">
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 space-y-2 overscroll-contain touch-pan-y scroll-smooth">
                 {/* 0. Home Dashboard */}
                 <button 
                   type="button"
@@ -686,12 +688,12 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                     setActiveTab('home');
                     setIsMenuOpen(false);
                   }}
-                  className="w-full p-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center justify-between cursor-pointer transition-all shadow-md shadow-indigo-100 active:scale-[0.98]"
+                  className="w-full p-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold text-xs flex items-center justify-between cursor-pointer transition-colors"
                 >
-                  <span className="flex items-center gap-2">
-                    <span>🏠</span> Home Dashboard
+                  <span className="flex items-center gap-2.5">
+                    <Home className="w-4 h-4" /> Home Dashboard
                   </span>
-                  <span className="text-white/80 text-xs">➔</span>
+                  <ChevronRight className="w-4 h-4 text-white/80" />
                 </button>
 
                 {/* 1. Daily Support Mission */}
@@ -701,12 +703,12 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                     setActiveTab('mission');
                     setIsMenuOpen(false);
                   }}
-                  className="w-full p-3 bg-white/90 hover:bg-white border border-stone-200/60 rounded-2xl text-stone-800 font-bold text-xs uppercase tracking-wider flex items-center justify-between cursor-pointer transition-all shadow-2xs"
+                  className="w-full p-3 bg-white dark:bg-[#23201d] hover:bg-stone-50 dark:hover:bg-[#2a2622] border border-stone-200/80 dark:border-[#2e2a26] rounded-xl text-stone-800 dark:text-stone-200 font-semibold text-xs flex items-center justify-between cursor-pointer transition-colors"
                 >
-                  <span className="flex items-center gap-2">
-                    <span>🛡️</span> Support Mission
+                  <span className="flex items-center gap-2.5">
+                    <Shield className="w-4 h-4 text-indigo-600 dark:text-indigo-400" /> Support Mission
                   </span>
-                  <span className="text-stone-400 text-xs">➔</span>
+                  <ChevronRight className="w-4 h-4 text-stone-400" />
                 </button>
 
                 {/* 2. Support Ideas & Gifts */}
@@ -716,12 +718,12 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                     setActiveTab('ideas');
                     setIsMenuOpen(false);
                   }}
-                  className="w-full p-3 bg-white/90 hover:bg-white border border-stone-200/60 rounded-2xl text-stone-800 font-bold text-xs uppercase tracking-wider flex items-center justify-between cursor-pointer transition-all shadow-2xs"
+                  className="w-full p-3 bg-white dark:bg-[#23201d] hover:bg-stone-50 dark:hover:bg-[#2a2622] border border-stone-200/80 dark:border-[#2e2a26] rounded-xl text-stone-800 dark:text-stone-200 font-semibold text-xs flex items-center justify-between cursor-pointer transition-colors"
                 >
-                  <span className="flex items-center gap-2">
-                    <span>🎁</span> Support Ideas & Gifts
+                  <span className="flex items-center gap-2.5">
+                    <Gift className="w-4 h-4 text-pink-600 dark:text-pink-400" /> Support Ideas & Gifts
                   </span>
-                  <span className="text-stone-400 text-xs">➔</span>
+                  <ChevronRight className="w-4 h-4 text-stone-400" />
                 </button>
 
                 {/* 3. Sweet Notes */}
@@ -731,12 +733,12 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                     setActiveTab('notes');
                     setIsMenuOpen(false);
                   }}
-                  className="w-full p-3 bg-white/90 hover:bg-white border border-stone-200/60 rounded-2xl text-stone-800 font-bold text-xs uppercase tracking-wider flex items-center justify-between cursor-pointer transition-all shadow-2xs"
+                  className="w-full p-3 bg-white dark:bg-[#23201d] hover:bg-stone-50 dark:hover:bg-[#2a2622] border border-stone-200/80 dark:border-[#2e2a26] rounded-xl text-stone-800 dark:text-stone-200 font-semibold text-xs flex items-center justify-between cursor-pointer transition-colors"
                 >
-                  <span className="flex items-center gap-2">
-                    <span>💌</span> Sweet Notes
+                  <span className="flex items-center gap-2.5">
+                    <Mail className="w-4 h-4 text-rose-600 dark:text-rose-400" /> Sweet Notes
                   </span>
-                  <span className="text-stone-400 text-xs">➔</span>
+                  <ChevronRight className="w-4 h-4 text-stone-400" />
                 </button>
 
                 {/* 4. Partner Education Guide */}
@@ -746,13 +748,13 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                     setActiveTab('education');
                     setIsMenuOpen(false);
                   }}
-                  className="w-full p-3 bg-indigo-50/70 hover:bg-indigo-100/70 border border-indigo-200/60 rounded-2xl text-indigo-900 font-bold text-xs uppercase tracking-wider flex items-center justify-between cursor-pointer transition-all shadow-2xs"
+                  className="w-full p-3 bg-indigo-50/70 dark:bg-indigo-950/30 hover:bg-indigo-100/70 dark:hover:bg-indigo-950/50 border border-indigo-200/70 dark:border-indigo-900/50 rounded-xl text-indigo-900 dark:text-indigo-200 font-semibold text-xs flex items-center justify-between cursor-pointer transition-colors"
                 >
-                  <span className="flex items-center gap-2">
-                    <GraduationCap className="w-4 h-4 text-indigo-600" />
+                  <span className="flex items-center gap-2.5">
+                    <GraduationCap className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                     <span>Partner Education Guide</span>
                   </span>
-                  <span className="text-indigo-400 text-xs">➔</span>
+                  <ChevronRight className="w-4 h-4 text-indigo-400" />
                 </button>
 
                 {/* 5. Hero Checklist & Tasks */}
@@ -762,12 +764,12 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                     setActiveTab('reminders');
                     setIsMenuOpen(false);
                   }}
-                  className="w-full p-3 bg-white/90 hover:bg-white border border-stone-200/60 rounded-2xl text-stone-800 font-bold text-xs uppercase tracking-wider flex items-center justify-between cursor-pointer transition-all shadow-2xs"
+                  className="w-full p-3 bg-white dark:bg-[#23201d] hover:bg-stone-50 dark:hover:bg-[#2a2622] border border-stone-200/80 dark:border-[#2e2a26] rounded-xl text-stone-800 dark:text-stone-200 font-semibold text-xs flex items-center justify-between cursor-pointer transition-colors"
                 >
-                  <span className="flex items-center gap-2">
-                    <span>⏰</span> Hero Checklist & Tasks
+                  <span className="flex items-center gap-2.5">
+                    <CheckSquare className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> Hero Checklist & Tasks
                   </span>
-                  <span className="text-stone-400 text-xs">➔</span>
+                  <ChevronRight className="w-4 h-4 text-stone-400" />
                 </button>
 
                 {/* 6. Partner Calendar */}
@@ -777,12 +779,12 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                     setActiveTab('calendar');
                     setIsMenuOpen(false);
                   }}
-                  className="w-full p-3 bg-white/90 hover:bg-white border border-stone-200/60 rounded-2xl text-stone-800 font-bold text-xs uppercase tracking-wider flex items-center justify-between cursor-pointer transition-all shadow-2xs"
+                  className="w-full p-3 bg-white dark:bg-[#23201d] hover:bg-stone-50 dark:hover:bg-[#2a2622] border border-stone-200/80 dark:border-[#2e2a26] rounded-xl text-stone-800 dark:text-stone-200 font-semibold text-xs flex items-center justify-between cursor-pointer transition-colors"
                 >
-                  <span className="flex items-center gap-2">
-                    <span>📅</span> Partner Calendar
+                  <span className="flex items-center gap-2.5">
+                    <Calendar className="w-4 h-4 text-amber-600 dark:text-amber-400" /> Partner Calendar
                   </span>
-                  <span className="text-stone-400 text-xs">➔</span>
+                  <ChevronRight className="w-4 h-4 text-stone-400" />
                 </button>
 
                 {/* 7. Sanctuary & Preferences */}
@@ -792,19 +794,19 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                     setIsMenuOpen(false);
                     setShowSettings(true);
                   }}
-                  className="w-full p-3 bg-pink-50/60 hover:bg-pink-100/60 border border-pink-200/60 rounded-2xl text-pink-900 font-bold text-xs uppercase tracking-wider flex items-center justify-between cursor-pointer transition-all shadow-2xs"
+                  className="w-full p-3 bg-pink-50/70 dark:bg-pink-950/30 hover:bg-pink-100/70 dark:hover:bg-pink-950/50 border border-pink-200/70 dark:border-pink-900/50 rounded-xl text-pink-900 dark:text-pink-200 font-semibold text-xs flex items-center justify-between cursor-pointer transition-colors"
                 >
-                  <span className="flex items-center gap-2">
-                    <Settings className="w-4 h-4 text-pink-600" />
+                  <span className="flex items-center gap-2.5">
+                    <Settings className="w-4 h-4 text-pink-600 dark:text-pink-400" />
                     <span>Sanctuary & Preferences</span>
                   </span>
-                  <span className="text-pink-400 text-xs">➔</span>
+                  <ChevronRight className="w-4 h-4 text-pink-400" />
                 </button>
               </div>
 
             {/* Bottom Actions: Log Out & Delete Account (Pinned Footer) */}
-            <div className="border-t border-indigo-100/40 p-6 pt-3 pb-6 shrink-0 bg-[#fffafb]/95 space-y-2 text-center">
-              <span className="text-[9px] font-black uppercase tracking-wider text-stone-400 block mb-1">Account Actions</span>
+            <div className="border-t border-stone-200/80 dark:border-[#2e2a26] p-4 shrink-0 bg-white dark:bg-[#1a1816] space-y-2 text-center">
+              <span className="text-[11px] font-semibold text-stone-400 block mb-1">Account actions</span>
               
               {onLogout && (
                 <button 
@@ -813,10 +815,10 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                     setIsMenuOpen(false);
                     setShowLogoutModal(true);
                   }}
-                  className="w-full py-3 rounded-2xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-[10px] uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer transition-all border border-stone-200/60"
+                  className="w-full h-10 rounded-xl bg-stone-100 dark:bg-[#23201d] hover:bg-stone-200 dark:hover:bg-[#2e2a26] text-stone-700 dark:text-stone-200 font-semibold text-xs flex items-center justify-center gap-2 cursor-pointer transition-colors border border-stone-200/80 dark:border-[#342f2b]"
                 >
-                  <LogOut className="w-4 h-4 text-stone-600" />
-                  Log Out
+                  <LogOut className="w-4 h-4 text-stone-600 dark:text-stone-300" />
+                  Log out
                 </button>
               )}
 
@@ -826,10 +828,10 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                   setIsMenuOpen(false);
                   setShowDeleteAccountModal(true);
                 }}
-                className="w-full py-3 rounded-2xl bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 cursor-pointer transition-all shadow-md shadow-rose-200"
+                className="w-full h-10 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs flex items-center justify-center gap-2 cursor-pointer transition-colors"
               >
                 <Trash2 className="w-4 h-4" />
-                Delete Account & Data
+                Delete account & data
               </button>
             </div>
           </div>
@@ -838,47 +840,47 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
 
       {/* GLOBAL PARTNER SETTINGS MODAL */}
       {showSettings && (
-        <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-md z-[160] flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white/95 backdrop-blur-2xl rounded-[2.5rem] max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 md:p-8 space-y-6 border border-pink-100 shadow-2xl text-stone-800 scrollbar-thin">
+        <div className="fixed inset-0 bg-stone-950/60 backdrop-blur-sm z-[160] flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white dark:bg-[#1a1816] rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 md:p-7 space-y-5 border border-stone-200/80 dark:border-[#2e2a26] shadow-2xl text-stone-800 dark:text-stone-100 scrollbar-thin">
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-pink-100 pb-4">
+            <div className="flex items-center justify-between border-b border-stone-200/80 dark:border-[#2e2a26] pb-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center text-xl shadow-sm">
-                  ⚙️
+                <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-xl flex items-center justify-center border border-indigo-200/60 dark:border-indigo-900/50">
+                  <Settings className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-serif font-bold text-xl text-stone-800">Partner Settings</h3>
-                  <p className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Sanctuary & Preferences</p>
+                  <h3 className="font-serif font-semibold text-xl text-stone-900 dark:text-stone-100">Partner Settings</h3>
+                  <p className="text-xs text-stone-500 dark:text-stone-400">Sanctuary & preferences</p>
                 </div>
               </div>
               <button 
                 type="button"
                 onClick={() => setShowSettings(false)}
-                className="p-2 rounded-2xl bg-stone-100 hover:bg-stone-200 text-stone-500 transition-colors cursor-pointer"
+                className="p-2 rounded-xl bg-stone-100 dark:bg-[#23201d] hover:bg-stone-200 dark:hover:bg-[#2e2a26] text-stone-500 dark:text-stone-300 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Section 1: Account Profile */}
-            <div className="bg-stone-50/80 p-5 rounded-3xl border border-stone-200/60 space-y-3">
-              <div className="flex items-center gap-2 text-indigo-600 font-bold text-xs uppercase tracking-wider">
-                <UserIcon className="w-4 h-4" /> Account Information
+            <div className="bg-[#faf8f6] dark:bg-[#23201d] p-4 sm:p-5 rounded-2xl border border-stone-200/80 dark:border-[#342f2b] space-y-3">
+              <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-semibold text-xs">
+                <UserIcon className="w-4 h-4" /> Account information
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                <div className="bg-white p-3.5 rounded-2xl border border-stone-200/50">
-                  <span className="text-[9px] font-bold text-stone-400 uppercase tracking-wider block">Your Name</span>
-                  <span className="font-bold text-stone-800 text-sm">{user.name || 'Partner'}</span>
+                <div className="bg-white dark:bg-[#1a1816] p-3.5 rounded-xl border border-stone-200/80 dark:border-[#2e2a26]">
+                  <span className="text-[11px] font-medium text-stone-500 dark:text-stone-400 block">Your name</span>
+                  <span className="font-semibold text-stone-900 dark:text-stone-100 text-sm">{user.name || 'Partner'}</span>
                 </div>
-                <div className="bg-white p-3.5 rounded-2xl border border-stone-200/50">
-                  <span className="text-[9px] font-bold text-stone-400 uppercase tracking-wider block">Email</span>
-                  <span className="font-semibold text-stone-700 truncate block text-xs">{user.email || 'partner@lumina.app'}</span>
+                <div className="bg-white dark:bg-[#1a1816] p-3.5 rounded-xl border border-stone-200/80 dark:border-[#2e2a26]">
+                  <span className="text-[11px] font-medium text-stone-500 dark:text-stone-400 block">Email</span>
+                  <span className="font-medium text-stone-700 dark:text-stone-300 truncate block text-xs">{user.email || 'partner@lumina.app'}</span>
                 </div>
               </div>
-              <div className="bg-white p-3.5 rounded-2xl border border-stone-200/50 flex items-center justify-between gap-2">
-                <div>
-                  <span className="text-[9px] font-bold text-stone-400 uppercase tracking-wider block">Partner Invite Code</span>
-                  <span className="font-mono font-bold text-indigo-600 text-sm">{user.partnerCode || user.id}</span>
+              <div className="bg-white dark:bg-[#1a1816] p-3.5 rounded-xl border border-stone-200/80 dark:border-[#2e2a26] flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <span className="text-[11px] font-medium text-stone-500 dark:text-stone-400 block">Partner invite code</span>
+                  <span className="font-mono font-semibold text-indigo-600 dark:text-indigo-400 text-sm tabular-nums truncate block">{user.partnerCode || user.id}</span>
                 </div>
                 <button
                   type="button"
@@ -886,18 +888,18 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                     await navigator.clipboard.writeText(user.partnerCode || user.id);
                     showNotice('Partner Code copied to clipboard!', 'success');
                   }}
-                  className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-xl text-[10px] font-bold uppercase tracking-wider cursor-pointer shrink-0"
+                  className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 text-indigo-600 dark:text-indigo-400 rounded-lg text-xs font-semibold cursor-pointer shrink-0 whitespace-nowrap"
                 >
-                  Copy Code
+                  Copy code
                 </button>
               </div>
             </div>
 
             {/* Section 2: Privacy & Sharing Controls */}
-            <div className="bg-pink-50/30 p-5 rounded-3xl border border-pink-100/60 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-pink-600 font-bold text-xs uppercase tracking-wider">
-                  <Shield className="w-4 h-4" /> Sharing & Privacy
+            <div className="bg-[#faf8f6] dark:bg-[#23201d] p-4 sm:p-5 rounded-2xl border border-stone-200/80 dark:border-[#342f2b] space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-pink-600 dark:text-pink-400 font-semibold text-xs">
+                  <Shield className="w-4 h-4" /> Sharing & privacy
                 </div>
                 <button
                   type="button"
@@ -906,13 +908,13 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                     setUser(updated);
                     await syncUser(updated);
                   }}
-                  className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-all ${
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-colors whitespace-nowrap shrink-0 ${
                     user.isSharingPaused 
-                      ? 'bg-amber-100 text-amber-800 border border-amber-300' 
-                      : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                      ? 'bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800' 
+                      : 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
                   }`}
                 >
-                  {user.isSharingPaused ? 'Sharing Paused ⏸️' : 'Sharing Active 🟢'}
+                  {user.isSharingPaused ? 'Sharing paused' : 'Sharing active'}
                 </button>
               </div>
               <div className="space-y-2 pt-1">
@@ -924,12 +926,12 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
             </div>
 
             {/* Section 3: Partner Education Shortcut */}
-            <div className="bg-indigo-50/60 p-4 rounded-3xl border border-indigo-100 flex items-center justify-between gap-3">
+            <div className="bg-[#faf8f6] dark:bg-[#23201d] p-4 rounded-2xl border border-stone-200/80 dark:border-[#342f2b] flex items-center justify-between gap-3">
               <div>
-                <span className="font-bold text-xs text-indigo-900 flex items-center gap-1.5">
-                  <GraduationCap className="w-4 h-4 text-indigo-600" /> Partner Education Guide
+                <span className="font-semibold text-xs text-stone-900 dark:text-stone-100 flex items-center gap-1.5">
+                  <GraduationCap className="w-4 h-4 text-indigo-600 dark:text-indigo-400" /> Partner Education Guide
                 </span>
-                <span className="text-[10px] text-stone-500 block mt-0.5">Learn about the 4 cycle phases, PMS, and support tips</span>
+                <span className="text-xs text-stone-500 dark:text-stone-400 block mt-0.5">Learn about the 4 cycle phases, PMS, and support tips</span>
               </div>
               <button
                 type="button"
@@ -937,42 +939,42 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                   setShowSettings(false);
                   setActiveTab('education');
                 }}
-                className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider cursor-pointer shrink-0 transition-all shadow-sm"
+                className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold cursor-pointer shrink-0 transition-colors whitespace-nowrap"
               >
-                Open Guide 🎓
+                Open guide
               </button>
             </div>
 
             {/* Section 4: Connection Info & Unlink */}
             {user.isPartnerLinked && (
-              <div className="bg-stone-50/80 p-5 rounded-3xl border border-stone-200/60 space-y-3">
+              <div className="bg-[#faf8f6] dark:bg-[#23201d] p-4 sm:p-5 rounded-2xl border border-stone-200/80 dark:border-[#342f2b] space-y-3">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-stone-700 font-bold text-xs uppercase tracking-wider">
-                    👥 Partner Connection
+                  <div className="flex items-center gap-2 text-stone-700 dark:text-stone-200 font-semibold text-xs">
+                    <Users className="w-4 h-4 text-indigo-600 dark:text-indigo-400" /> Partner connection
                   </div>
-                  <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-[9px] font-bold uppercase">
-                    Active Link
+                  <span className="px-2.5 py-0.5 bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 rounded-md text-[11px] font-semibold">
+                    Active link
                   </span>
                 </div>
-                <p className="text-xs text-stone-600 font-serif italic">
-                  Connected with: <span className="font-bold text-stone-800 font-sans">{getCleanName(partnerUser?.name || user.partnerName, partnerUser?.email) || 'Partner'}</span>
+                <p className="text-xs text-stone-600 dark:text-stone-300">
+                  Connected with: <span className="font-semibold text-stone-900 dark:text-stone-100">{getCleanName(partnerUser?.name || user.partnerName, partnerUser?.email) || 'Partner'}</span>
                 </p>
                 {!showUnlinkInSettingsConfirm ? (
                   <button
                     type="button"
                     onClick={() => setShowUnlinkInSettingsConfirm(true)}
-                    className="w-full py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-2xl text-[10px] font-bold uppercase tracking-wider border border-rose-200 cursor-pointer transition-colors"
+                    className="w-full h-10 bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-950/50 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-semibold border border-rose-200 dark:border-rose-900/50 cursor-pointer transition-colors"
                   >
-                    Unlink Partner Connection
+                    Unlink partner connection
                   </button>
                 ) : (
-                  <div className="p-3 bg-rose-50 rounded-2xl border border-rose-200 space-y-2">
-                    <p className="text-[11px] font-semibold text-rose-800">Are you sure you want to disconnect and immediately stop sharing?</p>
+                  <div className="p-3 bg-rose-50 dark:bg-rose-950/30 rounded-xl border border-rose-200 dark:border-rose-900/50 space-y-2">
+                    <p className="text-xs font-medium text-rose-800 dark:text-rose-200">Are you sure you want to disconnect and immediately stop sharing?</p>
                     <div className="flex gap-2">
                       <button
                         type="button"
                         onClick={() => setShowUnlinkInSettingsConfirm(false)}
-                        className="flex-1 py-2 bg-white text-stone-600 rounded-xl text-[10px] font-bold uppercase border border-stone-200 cursor-pointer"
+                        className="flex-1 h-9 bg-white dark:bg-[#1a1816] text-stone-600 dark:text-stone-300 rounded-lg text-xs font-semibold border border-stone-200 dark:border-[#342f2b] cursor-pointer"
                       >
                         Cancel
                       </button>
@@ -987,9 +989,9 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                           setShowSettings(false);
                           showNotice('Partner connection unlinked and sharing revoked.', 'info');
                         }}
-                        className="flex-1 py-2 bg-rose-600 text-white rounded-xl text-[10px] font-bold uppercase cursor-pointer"
+                        className="flex-1 h-9 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-semibold cursor-pointer"
                       >
-                        Confirm Unlink
+                        Confirm unlink
                       </button>
                     </div>
                   </div>
@@ -998,8 +1000,8 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
             )}
 
             {/* Section 5: Account Actions (Log Out & Delete Account) */}
-            <div className="pt-3 border-t border-stone-100 space-y-2.5 text-center">
-              <span className="text-[10px] font-black uppercase tracking-wider text-stone-400 block mb-1">Account Actions</span>
+            <div className="pt-3 border-t border-stone-200/80 dark:border-[#2e2a26] space-y-2.5 text-center">
+              <span className="text-xs font-semibold text-stone-500 dark:text-stone-400 block mb-1">Account actions</span>
               
               {onLogout && (
                 <button
@@ -1008,9 +1010,9 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                     setShowSettings(false);
                     setShowLogoutModal(true);
                   }}
-                  className="w-full py-3 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-2xl font-bold uppercase text-xs tracking-wider cursor-pointer transition-all flex items-center justify-center gap-2 border border-stone-200/60"
+                  className="w-full h-11 bg-stone-100 dark:bg-[#23201d] hover:bg-stone-200 dark:hover:bg-[#2e2a26] text-stone-700 dark:text-stone-200 rounded-xl font-semibold text-xs cursor-pointer transition-colors flex items-center justify-center gap-2 border border-stone-200/80 dark:border-[#342f2b]"
                 >
-                  <LogOut className="w-4 h-4 text-stone-600" /> Log Out
+                  <LogOut className="w-4 h-4 text-stone-600 dark:text-stone-300" /> Log out
                 </button>
               )}
 
@@ -1020,17 +1022,17 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                   setShowSettings(false);
                   setShowDeleteAccountModal(true);
                 }}
-                className="w-full py-3 bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white rounded-2xl font-bold uppercase text-xs tracking-widest shadow-md shadow-rose-200 cursor-pointer transition-all flex items-center justify-center gap-2"
+                className="w-full h-11 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-semibold text-xs cursor-pointer transition-colors flex items-center justify-center gap-2"
               >
-                <Trash2 className="w-4 h-4" /> Delete Account & Data
+                <Trash2 className="w-4 h-4" /> Delete account & data
               </button>
 
               <button
                 type="button"
                 onClick={() => setShowSettings(false)}
-                className="text-xs font-bold text-stone-400 hover:text-stone-600 uppercase tracking-wider cursor-pointer pt-2 inline-block"
+                className="text-xs font-semibold text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 cursor-pointer pt-2 inline-block"
               >
-                Close Settings
+                Close settings
               </button>
             </div>
           </div>
@@ -1039,22 +1041,22 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
 
       {/* GLOBAL LOGOUT CONFIRMATION MODAL */}
       {showLogoutModal && (
-        <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-md z-[170] flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-[2.5rem] p-6 max-w-sm w-full space-y-5 border border-pink-100 shadow-2xl text-center">
-            <div className="w-16 h-16 bg-pink-50 rounded-full flex items-center justify-center text-rose-500 mx-auto text-2xl">
-              🚪
+        <div className="fixed inset-0 bg-stone-950/60 backdrop-blur-sm z-[170] flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white dark:bg-[#1a1816] rounded-2xl p-6 max-w-sm w-full space-y-5 border border-stone-200/80 dark:border-[#2e2a26] shadow-2xl text-center">
+            <div className="w-14 h-14 bg-rose-50 dark:bg-rose-950/40 rounded-2xl border border-rose-200/70 dark:border-rose-900/50 flex items-center justify-center text-rose-600 dark:text-rose-400 mx-auto">
+              <LogOut className="w-6 h-6" />
             </div>
             <div className="space-y-2">
-              <h3 className="font-serif font-bold text-lg text-stone-800">Partner Logout</h3>
-              <p className="text-xs text-stone-600 font-medium leading-relaxed">
+              <h3 className="font-serif font-semibold text-lg text-stone-900 dark:text-stone-100">Partner logout</h3>
+              <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
                 Are you sure you want to log out of Lumina Partner Mode?
               </p>
             </div>
-            <div className="flex gap-3 pt-2">
+            <div className="flex gap-3 pt-1">
               <button
                 type="button"
                 onClick={() => setShowLogoutModal(false)}
-                className="flex-1 py-3 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs uppercase tracking-wider rounded-2xl transition-all cursor-pointer"
+                className="flex-1 h-10 bg-stone-100 dark:bg-[#23201d] hover:bg-stone-200 dark:hover:bg-[#2e2a26] text-stone-700 dark:text-stone-200 font-semibold text-xs rounded-xl transition-colors cursor-pointer"
               >
                 Cancel
               </button>
@@ -1064,9 +1066,9 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                   setShowLogoutModal(false);
                   if (onLogout) onLogout();
                 }}
-                className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs uppercase tracking-wider rounded-2xl transition-all cursor-pointer shadow-md shadow-rose-200"
+                className="flex-1 h-10 bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs rounded-xl transition-colors cursor-pointer"
               >
-                Log Out
+                Log out
               </button>
             </div>
           </div>
@@ -1088,48 +1090,52 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
 
   if (onboardingStep > 0 && connectionRequest) {
     return (
-      <div className="space-y-8 animate-fadeIn pb-24 max-w-lg mx-auto min-h-[70vh] flex flex-col justify-center">
+      <div className="space-y-6 animate-fadeIn pb-24 max-w-lg mx-auto min-h-[70vh] flex flex-col justify-center">
         {onboardingStep === 1 && (
-          <div className="text-center space-y-8 animate-fadeIn">
-            <div className="relative mx-auto w-32 h-32">
-              <div className="w-32 h-32 bg-gradient-to-tr from-pink-100 to-rose-100 rounded-full flex items-center justify-center text-6xl shadow-inner">
-                💞
+          <div className="bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] rounded-2xl p-8 text-center space-y-6 animate-fadeIn shadow-xs">
+            <div className="relative mx-auto w-20 h-20">
+              <div className="w-20 h-20 bg-pink-50 dark:bg-pink-950/40 border border-pink-200/70 dark:border-pink-900/50 rounded-2xl flex items-center justify-center text-pink-600 dark:text-pink-400">
+                <Heart className="w-9 h-9" />
               </div>
-              <div className="absolute -top-2 -right-2 w-10 h-10 bg-green-400 rounded-full shadow-lg flex items-center justify-center text-white text-xl border-2 border-white">
-                ✓
+              <div className="absolute -top-2 -right-2 w-7 h-7 bg-emerald-600 rounded-full flex items-center justify-center text-white border-2 border-white dark:border-[#1a1816]">
+                <Check className="w-3.5 h-3.5" />
               </div>
             </div>
-            <div className="space-y-4">
-              <h2 className="text-3xl font-serif italic text-pink-900">
-                You're now connected with {connectionRequest.name} 💞
+            <div className="space-y-2">
+              <h2 className="text-2xl sm:text-3xl font-serif text-stone-900 dark:text-stone-100 font-semibold">
+                You&apos;re now connected with {connectionRequest.name}
               </h2>
-              <p className="text-sm text-pink-400 leading-relaxed">
+              <p className="text-sm text-stone-500 dark:text-stone-400 leading-relaxed">
                 You can now view cycle updates and support your partner better.
               </p>
             </div>
             <button 
+              type="button"
               onClick={() => setOnboardingStep(2)}
-              className="w-full py-5 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-[2rem] font-bold uppercase text-xs tracking-widest shadow-xl shadow-pink-100"
+              className="w-full h-11 bg-pink-600 hover:bg-pink-700 text-white rounded-xl font-semibold text-sm transition-colors cursor-pointer"
             >
-              Continue →
+              Continue
             </button>
           </div>
         )}
 
         {onboardingStep === 2 && (
-          <div className="text-center space-y-8 animate-fadeIn">
-            <div className="w-24 h-24 bg-pink-50 rounded-full flex items-center justify-center text-5xl mx-auto shadow-inner">👋</div>
-            <div className="space-y-4">
-              <h2 className="text-3xl font-serif italic text-pink-900">Welcome to Partner Mode</h2>
-              <div className="space-y-3 text-sm text-pink-400 leading-relaxed">
-                <p>• Stay informed about your partner's cycle</p>
-                <p>• Get reminders and support tips</p>
-                <p>• Be more present and understanding</p>
+          <div className="bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] rounded-2xl p-8 text-center space-y-6 animate-fadeIn shadow-xs">
+            <div className="w-16 h-16 bg-pink-50 dark:bg-pink-950/40 border border-pink-200/70 dark:border-pink-900/50 rounded-2xl flex items-center justify-center text-pink-600 dark:text-pink-400 mx-auto">
+              <Sparkles className="w-7 h-7" />
+            </div>
+            <div className="space-y-3">
+              <h2 className="text-2xl sm:text-3xl font-serif text-stone-900 dark:text-stone-100 font-semibold">Welcome to Partner Mode</h2>
+              <div className="space-y-2 text-sm text-stone-600 dark:text-stone-300 leading-relaxed">
+                <p>Stay informed about your partner&apos;s cycle</p>
+                <p>Get reminders and support tips</p>
+                <p>Be more present and understanding</p>
               </div>
             </div>
             <button 
+              type="button"
               onClick={() => setOnboardingStep(3)}
-              className="w-full py-5 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-[2rem] font-bold uppercase text-xs tracking-widest shadow-xl shadow-pink-100"
+              className="w-full h-11 bg-pink-600 hover:bg-pink-700 text-white rounded-xl font-semibold text-sm transition-colors cursor-pointer"
             >
               Next
             </button>
@@ -1137,34 +1143,41 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
         )}
 
         {onboardingStep === 3 && (
-          <div className="text-center space-y-8 animate-fadeIn">
-            <h2 className="text-3xl font-serif italic text-pink-900">What You'll See</h2>
-            <div className="grid grid-cols-1 gap-4 text-left">
-              <div className="p-6 bg-white rounded-[2rem] border border-pink-50 shadow-sm flex items-center gap-5">
-                <span className="text-3xl">📅</span>
+          <div className="bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] rounded-2xl p-8 text-center space-y-6 animate-fadeIn shadow-xs">
+            <h2 className="text-2xl sm:text-3xl font-serif text-stone-900 dark:text-stone-100 font-semibold">What you&apos;ll see</h2>
+            <div className="grid grid-cols-1 gap-3 text-left">
+              <div className="p-4 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl border border-stone-200/80 dark:border-[#342f2b] flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] flex items-center justify-center text-pink-600 dark:text-pink-400 shrink-0">
+                  <Calendar className="w-5 h-5" />
+                </div>
                 <div>
-                  <h4 className="font-bold text-pink-900 text-sm">Cycle Updates</h4>
-                  <p className="text-xs text-pink-300">Know when her period is approaching</p>
+                  <h4 className="font-semibold text-stone-900 dark:text-stone-100 text-sm">Cycle updates</h4>
+                  <p className="text-xs text-stone-500 dark:text-stone-400">Know when her period is approaching</p>
                 </div>
               </div>
-              <div className="p-6 bg-white rounded-[2rem] border border-pink-50 shadow-sm flex items-center gap-5">
-                <span className="text-3xl">💡</span>
+              <div className="p-4 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl border border-stone-200/80 dark:border-[#342f2b] flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+                  <Lightbulb className="w-5 h-5" />
+                </div>
                 <div>
-                  <h4 className="font-bold text-pink-900 text-sm">Support Tips</h4>
-                  <p className="text-xs text-pink-300">Get suggestions on how to help</p>
+                  <h4 className="font-semibold text-stone-900 dark:text-stone-100 text-sm">Support tips</h4>
+                  <p className="text-xs text-stone-500 dark:text-stone-400">Get suggestions on how to help</p>
                 </div>
               </div>
-              <div className="p-6 bg-white rounded-[2rem] border border-pink-50 shadow-sm flex items-center gap-5">
-                <span className="text-3xl">🎁</span>
+              <div className="p-4 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl border border-stone-200/80 dark:border-[#342f2b] flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
+                  <Gift className="w-5 h-5" />
+                </div>
                 <div>
-                  <h4 className="font-bold text-pink-900 text-sm">Care Reminders</h4>
-                  <p className="text-xs text-pink-300">Never forget important moments</p>
+                  <h4 className="font-semibold text-stone-900 dark:text-stone-100 text-sm">Care reminders</h4>
+                  <p className="text-xs text-stone-500 dark:text-stone-400">Never forget important moments</p>
                 </div>
               </div>
             </div>
             <button 
+              type="button"
               onClick={() => setOnboardingStep(4)}
-              className="w-full py-5 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-[2rem] font-bold uppercase text-xs tracking-widest shadow-xl shadow-pink-100"
+              className="w-full h-11 bg-pink-600 hover:bg-pink-700 text-white rounded-xl font-semibold text-sm transition-colors cursor-pointer"
             >
               Next
             </button>
@@ -1172,60 +1185,68 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
         )}
 
         {onboardingStep === 4 && (
-          <div className="text-center space-y-8 animate-fadeIn">
-            <div className="w-24 h-24 bg-indigo-50 rounded-full flex items-center justify-center text-5xl mx-auto shadow-inner">🔒</div>
-            <div className="space-y-4">
-              <h2 className="text-3xl font-serif italic text-indigo-900">Respect & Privacy 🔒</h2>
-              <p className="text-sm text-indigo-400 leading-relaxed px-4">
+          <div className="bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] rounded-2xl p-8 text-center space-y-6 animate-fadeIn shadow-xs">
+            <div className="w-16 h-16 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200/70 dark:border-indigo-900/50 rounded-2xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 mx-auto">
+              <Lock className="w-7 h-7" />
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-2xl sm:text-3xl font-serif text-stone-900 dark:text-stone-100 font-semibold">Respect & privacy</h2>
+              <p className="text-sm text-stone-500 dark:text-stone-400 leading-relaxed px-2">
                 Your partner controls what you can see. Please respect their privacy and use this feature to support them.
               </p>
             </div>
             <button 
+              type="button"
               onClick={() => setOnboardingStep(5)}
-              className="w-full py-5 bg-indigo-500 text-white rounded-[2rem] font-bold uppercase text-xs tracking-widest shadow-xl shadow-indigo-100"
+              className="w-full h-11 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold text-sm transition-colors cursor-pointer"
             >
-              I Understand
+              I understand
             </button>
           </div>
         )}
 
         {onboardingStep === 5 && (
-          <div className="text-center space-y-8 animate-fadeIn">
-            <div className="w-24 h-24 bg-pink-50 rounded-full flex items-center justify-center text-5xl mx-auto shadow-inner">🎯</div>
-            <div className="space-y-4">
-              <h2 className="text-3xl font-serif italic text-pink-900">Personalization</h2>
-              <p className="text-xs text-pink-300 uppercase font-bold tracking-widest">Notification Style</p>
+          <div className="bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] rounded-2xl p-8 text-center space-y-6 animate-fadeIn shadow-xs">
+            <div className="w-16 h-16 bg-pink-50 dark:bg-pink-950/40 border border-pink-200/70 dark:border-pink-900/50 rounded-2xl flex items-center justify-center text-pink-600 dark:text-pink-400 mx-auto">
+              <Bell className="w-7 h-7" />
+            </div>
+            <div className="space-y-3">
+              <h2 className="text-2xl sm:text-3xl font-serif text-stone-900 dark:text-stone-100 font-semibold">Personalization</h2>
+              <p className="text-xs text-stone-500 dark:text-stone-400 font-semibold">Notification style</p>
               <div className="grid grid-cols-1 gap-3">
                 <button 
+                  type="button"
                   onClick={() => setNotificationStyle('gentle')}
-                  className={`p-6 rounded-[2rem] border transition-all text-left flex items-center justify-between ${notificationStyle === 'gentle' ? 'bg-pink-500 text-white border-pink-500' : 'bg-white text-pink-900 border-pink-100'}`}
+                  className={`p-4 rounded-xl border transition-all text-left flex items-center justify-between cursor-pointer ${notificationStyle === 'gentle' ? 'bg-pink-600 text-white border-pink-600' : 'bg-[#faf8f6] dark:bg-[#23201d] text-stone-900 dark:text-stone-100 border-stone-200/80 dark:border-[#342f2b]'}`}
                 >
                   <div>
-                    <h4 className="font-bold text-sm">Gentle Reminders</h4>
-                    <p className={`text-[10px] ${notificationStyle === 'gentle' ? 'text-pink-100' : 'text-pink-300'}`}>Only important updates</p>
+                    <h4 className="font-semibold text-sm">Gentle reminders</h4>
+                    <p className={`text-xs ${notificationStyle === 'gentle' ? 'text-pink-100' : 'text-stone-500 dark:text-stone-400'}`}>Only important updates</p>
                   </div>
-                  {notificationStyle === 'gentle' && <span>✓</span>}
+                  {notificationStyle === 'gentle' && <Check className="w-4 h-4" />}
                 </button>
                 <button 
+                  type="button"
                   onClick={() => setNotificationStyle('full')}
-                  className={`p-6 rounded-[2rem] border transition-all text-left flex items-center justify-between ${notificationStyle === 'full' ? 'bg-pink-500 text-white border-pink-500' : 'bg-white text-pink-900 border-pink-100'}`}
+                  className={`p-4 rounded-xl border transition-all text-left flex items-center justify-between cursor-pointer ${notificationStyle === 'full' ? 'bg-pink-600 text-white border-pink-600' : 'bg-[#faf8f6] dark:bg-[#23201d] text-stone-900 dark:text-stone-100 border-stone-200/80 dark:border-[#342f2b]'}`}
                 >
                   <div>
-                    <h4 className="font-bold text-sm">Full Updates</h4>
-                    <p className={`text-[10px] ${notificationStyle === 'full' ? 'text-pink-100' : 'text-pink-300'}`}>Detailed cycle notifications</p>
+                    <h4 className="font-semibold text-sm">Full updates</h4>
+                    <p className={`text-xs ${notificationStyle === 'full' ? 'text-pink-100' : 'text-stone-500 dark:text-stone-400'}`}>Detailed cycle notifications</p>
                   </div>
-                  {notificationStyle === 'full' && <span>✓</span>}
+                  {notificationStyle === 'full' && <Check className="w-4 h-4" />}
                 </button>
               </div>
             </div>
             <button 
+              type="button"
               onClick={() => {
                 setOnboardingStep(0);
                 setConnectionRequest(null);
               }}
-              className="w-full py-5 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-[2rem] font-bold uppercase text-xs tracking-widest shadow-xl shadow-pink-100"
+              className="w-full h-11 bg-pink-600 hover:bg-pink-700 text-white rounded-xl font-semibold text-sm transition-colors cursor-pointer"
             >
-              Finish Setup
+              Finish setup
             </button>
           </div>
         )}
@@ -1235,83 +1256,83 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
 
   if (connectionRequest) {
     return (
-      <div className="space-y-8 animate-fadeIn pb-24 max-w-lg mx-auto">
-        {/* 1. First Screen - Welcome + Context */}
-        <header className="bg-gradient-to-br from-pink-500 to-rose-500 p-12 rounded-[3.5rem] shadow-2xl text-white text-center relative overflow-hidden">
-          <div className="relative z-10">
-            <h2 className="text-4xl font-serif italic mb-3">You've been invited 💞</h2>
-            <p className="text-sm opacity-90 font-medium">
-              <span className="font-bold">{connectionRequest.name}</span> has invited you to connect on Partner Mode.
-            </p>
+      <div className="space-y-6 animate-fadeIn pb-24 max-w-lg mx-auto">
+        {/* 1. Welcome Header */}
+        <header className="bg-white dark:bg-[#1a1816] p-8 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-xs text-center space-y-2">
+          <div className="w-12 h-12 rounded-xl bg-pink-50 dark:bg-pink-950/40 border border-pink-200/70 dark:border-pink-900/50 flex items-center justify-center text-pink-600 dark:text-pink-400 mx-auto mb-2">
+            <Mail className="w-6 h-6" />
           </div>
-          <div className="absolute top-0 right-0 p-8 opacity-10">
-            <span className="text-9xl rotate-12">💌</span>
-          </div>
+          <h2 className="text-2xl sm:text-3xl font-serif text-stone-900 dark:text-stone-100 font-semibold">You&apos;ve been invited</h2>
+          <p className="text-sm text-stone-600 dark:text-stone-400">
+            <span className="font-semibold text-stone-900 dark:text-stone-100">{connectionRequest.name}</span> has invited you to connect on Partner Mode.
+          </p>
         </header>
 
         {/* 2. User Identity Section */}
-        <section className="bg-white p-10 rounded-[3.5rem] shadow-sm border border-pink-50 flex flex-col items-center gap-8">
+        <section className="bg-white dark:bg-[#1a1816] p-6 sm:p-8 rounded-2xl shadow-xs border border-stone-200/80 dark:border-[#2e2a26] flex flex-col items-center gap-6">
           <div className="relative">
-            <div className="w-28 h-28 bg-gradient-to-tr from-pink-100 to-rose-100 rounded-full flex items-center justify-center text-6xl shadow-inner border-4 border-white">
+            <div className="w-20 h-20 bg-pink-50 dark:bg-pink-950/40 rounded-2xl flex items-center justify-center text-3xl font-serif font-semibold text-pink-600 dark:text-pink-400 border border-pink-200/70 dark:border-pink-900/50">
               {connectionRequest.name.charAt(0)}
             </div>
-            <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-white rounded-full shadow-md flex items-center justify-center text-xl border border-pink-50">
-              💞
+            <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white dark:bg-[#23201d] rounded-full shadow-sm flex items-center justify-center border border-stone-200/80 dark:border-[#342f2b] text-pink-600 dark:text-pink-400">
+              <Heart className="w-4 h-4" />
             </div>
           </div>
           
           <div className="text-center space-y-1">
-            <h3 className="text-2xl font-serif text-pink-900 italic">{connectionRequest.name}</h3>
-            <p className="text-[10px] font-bold text-pink-300 uppercase tracking-[0.2em]">Your Blooming Partner</p>
+            <h3 className="text-xl font-serif font-semibold text-stone-900 dark:text-stone-100">{connectionRequest.name}</h3>
+            <p className="text-xs font-medium text-pink-600 dark:text-pink-400">Your blooming partner</p>
           </div>
 
-          {/* 4. Optional Preview (Smart UX) */}
-          <div className="w-full grid grid-cols-1 gap-3">
-            <div className="flex items-center gap-4 p-4 bg-pink-50/30 rounded-2xl border border-pink-50/50">
-              <span className="text-xl">📊</span>
-              <p className="text-xs text-pink-700 font-medium">View cycle updates & predictions</p>
+          {/* 4. Optional Preview */}
+          <div className="w-full grid grid-cols-1 gap-2.5">
+            <div className="flex items-center gap-3 p-3.5 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl border border-stone-200/80 dark:border-[#342f2b]">
+              <Calendar className="w-4 h-4 text-pink-600 dark:text-pink-400 shrink-0" />
+              <p className="text-xs text-stone-700 dark:text-stone-300 font-medium">View cycle updates &amp; predictions</p>
             </div>
-            <div className="flex items-center gap-4 p-4 bg-pink-50/30 rounded-2xl border border-pink-50/50">
-              <span className="text-xl">⏰</span>
-              <p className="text-xs text-pink-700 font-medium">Receive smart care reminders</p>
+            <div className="flex items-center gap-3 p-3.5 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl border border-stone-200/80 dark:border-[#342f2b]">
+              <Clock className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+              <p className="text-xs text-stone-700 dark:text-stone-300 font-medium">Receive smart care reminders</p>
             </div>
-            <div className="flex items-center gap-4 p-4 bg-pink-50/30 rounded-2xl border border-pink-50/50">
-              <span className="text-xl">🛡️</span>
-              <p className="text-xs text-pink-700 font-medium">Support your partner better</p>
+            <div className="flex items-center gap-3 p-3.5 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl border border-stone-200/80 dark:border-[#342f2b]">
+              <Shield className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <p className="text-xs text-stone-700 dark:text-stone-300 font-medium">Support your partner better</p>
             </div>
           </div>
 
-          {/* 🔐 Privacy Message */}
-          <div className="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 flex items-center gap-3">
-            <span className="text-lg">🔒</span>
-            <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-wider leading-relaxed">
+          {/* Privacy Message */}
+          <div className="w-full p-3.5 bg-indigo-50/70 dark:bg-indigo-950/30 rounded-xl border border-indigo-200/70 dark:border-indigo-900/50 flex items-center gap-3">
+            <Lock className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+            <p className="text-xs text-indigo-700 dark:text-indigo-300 font-medium leading-relaxed">
               Your connection is private and secure. Only approved data will be shared.
             </p>
           </div>
 
-          {/* ✅ Action Buttons */}
-          <div className="w-full space-y-3">
+          {/* Action Buttons */}
+          <div className="w-full space-y-2.5">
             <button 
+              type="button"
               onClick={acceptConnection}
-              className="w-full py-5 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-[2rem] font-bold uppercase text-xs tracking-widest shadow-xl shadow-pink-100 hover:scale-[1.02] active:scale-95 transition-all"
+              className="w-full h-11 bg-pink-600 hover:bg-pink-700 text-white rounded-xl font-semibold text-sm transition-colors cursor-pointer"
             >
-              Accept & Connect 💞
+              Accept &amp; connect
             </button>
             <button 
+              type="button"
               onClick={() => setConnectionRequest(null)}
-              className="w-full py-4 bg-white border-2 border-pink-100 text-pink-400 rounded-[2rem] font-bold uppercase text-[10px] tracking-widest hover:bg-pink-50 transition-colors"
+              className="w-full h-10 bg-white dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] text-stone-600 dark:text-stone-300 rounded-xl font-semibold text-xs hover:bg-stone-50 dark:hover:bg-[#2a2622] transition-colors cursor-pointer"
             >
-              Decline ❌
+              Decline
             </button>
           </div>
         </section>
 
-        {/* 📱 2. If App is Not Installed (Simulated Fallback) */}
-        <div className="text-center space-y-4 p-6">
-          <p className="text-[10px] font-bold text-gray-300 uppercase tracking-widest">Not on Lumina yet?</p>
-          <div className="flex justify-center gap-4">
-            <button className="px-6 py-2 bg-gray-100 text-gray-500 rounded-full text-[9px] font-bold uppercase tracking-widest">Download App</button>
-            <button className="px-6 py-2 text-pink-400 text-[9px] font-bold uppercase tracking-widest underline underline-offset-4">Already installed?</button>
+        {/* Fallback */}
+        <div className="text-center space-y-3 p-4">
+          <p className="text-xs font-medium text-stone-500 dark:text-stone-400">Not on Lumina yet?</p>
+          <div className="flex justify-center gap-3">
+            <button type="button" className="px-4 py-2 bg-stone-100 dark:bg-[#23201d] text-stone-600 dark:text-stone-300 rounded-lg text-xs font-medium">Download App</button>
+            <button type="button" className="px-4 py-2 text-pink-600 dark:text-pink-400 text-xs font-medium underline underline-offset-4">Already installed?</button>
           </div>
         </div>
       </div>
@@ -1377,44 +1398,49 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
 
   if (user.isPartner && user.partnerId && partnerStep < 6) {
     return (
-      <div className="min-h-[80vh] flex flex-col items-center justify-center p-6 animate-fadeIn font-sans">
+      <div className="min-h-[80vh] flex flex-col items-center justify-center p-4 sm:p-6 animate-fadeIn font-sans">
         {renderNoticeBanner()}
-        <div className="w-full max-w-md bg-white rounded-[3rem] shadow-2xl border border-pink-50 p-10 space-y-8 relative overflow-hidden">
+        <div className="w-full max-w-md bg-white dark:bg-[#1a1816] rounded-2xl shadow-sm border border-stone-200/80 dark:border-[#2e2a26] p-6 sm:p-8 space-y-6 relative overflow-hidden">
           {/* Progress Bar */}
-          <div className="absolute top-0 left-0 w-full h-1.5 bg-pink-100/50">
+          <div className="absolute top-0 left-0 w-full h-1.5 bg-stone-100 dark:bg-[#23201d]">
             <div 
-              className="h-full bg-pink-500 transition-all duration-500" 
+              className="h-full bg-pink-600 transition-all duration-500" 
               style={{ width: `${(partnerStep / 5) * 100}%` }}
             ></div>
           </div>
 
           {partnerStep === 1 && (
-            <div className="text-center space-y-6 animate-fadeIn py-6">
-              <div className="w-24 h-24 bg-pink-100 rounded-full flex items-center justify-center text-5xl mx-auto shadow-inner animate-pulse">🌸</div>
-              <h2 className="text-3xl font-serif italic text-pink-900 leading-tight">
+            <div className="text-center space-y-5 animate-fadeIn py-4">
+              <div className="w-16 h-16 bg-pink-50 dark:bg-pink-950/40 border border-pink-200/70 dark:border-pink-900/50 rounded-2xl flex items-center justify-center text-pink-600 dark:text-pink-400 mx-auto">
+                <Heart className="w-7 h-7" />
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-serif text-stone-900 dark:text-stone-100 leading-tight font-semibold">
                 {getCleanName(user.partnerName, user.partnerEmail) || 'Your partner'} invited you to connect on Lumina
               </h2>
-              <p className="text-sm text-pink-500 leading-relaxed max-w-sm mx-auto">
-                You are about to connect safely as {getCleanName(user.partnerName, user.partnerEmail) || 'your partner'}'s Partner. First, complete your companion connection permission setup.
+              <p className="text-sm text-stone-500 dark:text-stone-400 leading-relaxed max-w-sm mx-auto">
+                You are about to connect safely as {getCleanName(user.partnerName, user.partnerEmail) || 'your partner'}&apos;s partner. First, complete your companion connection permission setup.
               </p>
               <button 
+                type="button"
                 onClick={() => setPartnerStep(2)}
-                className="w-full py-4.5 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-lg shadow-pink-150 hover:scale-[1.02] active:scale-95 transition-all"
+                className="w-full h-11 bg-pink-600 hover:bg-pink-700 text-white rounded-xl font-semibold text-sm transition-colors cursor-pointer"
               >
-                Continue &rarr;
+                Continue
               </button>
             </div>
           )}
 
           {partnerStep === 2 && (
-            <div className="space-y-6 animate-fadeIn py-4">
+            <div className="space-y-5 animate-fadeIn py-2">
               <div className="text-center space-y-2">
-                <span className="text-3xl">💕</span>
-                <h2 className="text-2xl font-serif italic text-pink-905">What information would you like to receive?</h2>
-                <p className="text-[11px] text-pink-400 font-medium col-span-full">Select the categories you request to stay synchronized with:</p>
+                <div className="w-12 h-12 bg-pink-50 dark:bg-pink-950/40 border border-pink-200/70 dark:border-pink-900/50 rounded-xl flex items-center justify-center text-pink-600 dark:text-pink-400 mx-auto">
+                  <ShieldCheck className="w-6 h-6" />
+                </div>
+                <h2 className="text-2xl font-serif text-stone-900 dark:text-stone-100 font-semibold">What updates would you like to receive?</h2>
+                <p className="text-xs text-stone-500 dark:text-stone-400">Select the categories you request to stay synchronized with:</p>
               </div>
 
-              <div className="max-h-[300px] overflow-y-auto pr-2 space-y-2 border border-pink-50/50 p-4 rounded-3xl bg-pink-50/5">
+              <div className="max-h-[300px] overflow-y-auto pr-1 space-y-2 border border-stone-200/80 dark:border-[#2e2a26] p-3.5 rounded-xl bg-[#faf8f6] dark:bg-[#23201d]">
                 {[
                   "Period Updates",
                   "Fertility Updates",
@@ -1434,18 +1460,19 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                           setRequestedReceives([...requestedReceives, item]);
                         }
                       }}
-                      className={`flex items-center gap-3 p-3 rounded-2xl border transition-all cursor-pointer text-left ${isChecked ? 'border-pink-300 bg-pink-50/20' : 'border-gray-100 hover:bg-gray-50'}`}
+                      className={`flex items-center gap-3 p-3 rounded-xl border transition-colors cursor-pointer text-left ${isChecked ? 'border-pink-500 bg-pink-50/70 dark:bg-pink-950/30' : 'border-stone-200/80 dark:border-[#342f2b] bg-white dark:bg-[#1a1816] hover:border-pink-300'}`}
                     >
-                      <div className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 ${isChecked ? 'border-pink-500 bg-pink-500 text-white animate-fadeIn' : 'border-gray-300'}`}>
-                        {isChecked && <span className="text-xs">✓</span>}
+                      <div className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 ${isChecked ? 'border-pink-600 bg-pink-600 text-white' : 'border-stone-300 dark:border-stone-600'}`}>
+                        {isChecked && <Check className="w-3.5 h-3.5" />}
                       </div>
-                      <span className="text-xs font-semibold text-gray-750">{item}</span>
+                      <span className="text-xs font-semibold text-stone-800 dark:text-stone-200">{item}</span>
                     </div>
                   );
                 })}
               </div>
 
               <button 
+                type="button"
                 onClick={async () => {
                   setLoading(true);
                   try {
@@ -1470,17 +1497,16 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                     await syncUser(updatedUser);
 
                     if (targetPartnerId) {
-                      // Create real-time Firestore / Sandbox PartnerRequest document!
                       await submitPartnerRequest(
-                        targetPartnerId,      // user_id (The tracked user)
-                        user.id || '',        // partner_id (Michael, the logged-in partner)
-                        user.name || '',      // partnerName (Michael)
-                        user.email || '',     // partnerEmail (Michael)
-                        requestedReceives     // requested_permissions
+                        targetPartnerId,
+                        user.id || '',
+                        user.name || '',
+                        user.email || '',
+                        requestedReceives
                       );
 
                       await addNotificationToUser(targetPartnerId, {
-                        title: '💕 New Partner Connection Request',
+                        title: 'New Partner Connection Request',
                         body: `${user.name} requested to connect on Partner Mode. Tap to review and accept or decline.`,
                         emoji: '💕'
                       });
@@ -1493,58 +1519,60 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                     setLoading(false);
                   }
                 }}
-                className="w-full py-4.5 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-lg cursor-pointer"
+                className="w-full h-11 bg-pink-600 hover:bg-pink-700 text-white rounded-xl font-semibold text-sm transition-colors cursor-pointer"
               >
-                Submit Request
+                Submit request
               </button>
             </div>
           )}
 
           {partnerStep === 3 && (
-            <div className="text-center space-y-6 animate-fadeIn py-6">
-              <div className="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center text-3xl mx-auto shadow-inner animate-pulse">📨</div>
-              <h2 className="text-2xl font-serif italic text-indigo-900 leading-tight">Connection request sent to {partnerDisplayName}.</h2>
+            <div className="text-center space-y-5 animate-fadeIn py-4">
+              <div className="w-16 h-16 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200/70 dark:border-indigo-900/50 rounded-2xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 mx-auto">
+                <Mail className="w-7 h-7" />
+              </div>
+              <h2 className="text-2xl font-serif text-stone-900 dark:text-stone-100 font-semibold leading-tight">Connection request sent to {partnerDisplayName}.</h2>
               <div className="space-y-2 max-w-sm mx-auto">
-                <p className="text-xs text-indigo-500 leading-relaxed">
-                  We have sent your connection and privacy request to <span className="font-bold text-indigo-900">{partnerDisplayName}</span>!
+                <p className="text-xs text-stone-600 dark:text-stone-300 leading-relaxed">
+                  We have sent your connection and privacy request to <span className="font-semibold text-stone-900 dark:text-stone-100">{partnerDisplayName}</span>.
                 </p>
-                <p className="text-xs text-indigo-400 italic">
-                  Once she reviews and approves your requested options, you'll be able to access your companion dashboard instantly.
+                <p className="text-xs text-stone-500 dark:text-stone-400">
+                  Once she reviews and approves your requested options, you&apos;ll be able to access your companion dashboard.
                 </p>
               </div>
 
-              <div className="p-4 bg-indigo-50/40 rounded-3xl border border-indigo-150/10 text-left space-y-2">
-                <p className="text-[10px] font-black uppercase tracking-widest text-indigo-450 col-span-full">Requested Categories ({requestedReceives.length})</p>
+              <div className="p-4 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl border border-stone-200/80 dark:border-[#342f2b] text-left space-y-2">
+                <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-300 tabular-nums">Requested categories ({requestedReceives.length})</p>
                 <div className="flex flex-wrap gap-1.5 max-h-[120px] overflow-y-auto p-1">
                   {requestedReceives.map(r => (
-                    <span key={r} className="px-2.5 py-1 bg-white border border-indigo-100 rounded-full text-[9px] font-semibold text-indigo-700">{r}</span>
+                    <span key={r} className="px-2.5 py-1 bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] rounded-md text-xs font-medium text-stone-700 dark:text-stone-300">{r}</span>
                   ))}
                 </div>
               </div>
 
-              <div className="flex items-center justify-center gap-2 py-4">
-                <div className="w-2 h-2 bg-indigo-600 rounded-full animate-ping"></div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Waiting for approval from {partnerDisplayName}.</span>
+              <div className="flex items-center justify-center gap-2 py-2">
+                <span className="w-2 h-2 bg-amber-500 rounded-full shrink-0" />
+                <span className="text-xs font-medium text-stone-600 dark:text-stone-400">Waiting for approval from {partnerDisplayName}.</span>
               </div>
 
               {!showCancelRequestConfirm ? (
                 <button
                   type="button"
                   onClick={() => setShowCancelRequestConfirm(true)}
-                  className="text-[10px] uppercase tracking-widest font-bold text-gray-400 hover:text-rose-500 transition-colors cursor-pointer"
+                  className="text-xs font-semibold text-stone-500 hover:text-rose-600 dark:text-stone-400 dark:hover:text-rose-400 transition-colors cursor-pointer"
                 >
-                  Disconnect & Cancel Connection 💔
+                  Disconnect &amp; cancel connection
                 </button>
               ) : (
-                <div className="p-4 bg-rose-50 rounded-2xl border border-rose-200 space-y-3 text-center">
-                  <p className="text-xs font-semibold text-rose-800">Cancel and disconnect from your partner connection?</p>
+                <div className="p-4 bg-rose-50 dark:bg-rose-950/30 rounded-xl border border-rose-200 dark:border-rose-900/50 space-y-3 text-center">
+                  <p className="text-xs font-medium text-rose-800 dark:text-rose-200">Cancel and disconnect from your partner connection?</p>
                   <div className="flex gap-2">
                     <button
                       type="button"
                       onClick={() => setShowCancelRequestConfirm(false)}
-                      className="flex-1 py-2 bg-white text-stone-600 rounded-xl text-[10px] font-bold uppercase border border-stone-200 cursor-pointer"
+                      className="flex-1 h-9 bg-white dark:bg-[#1a1816] text-stone-600 dark:text-stone-300 rounded-lg text-xs font-semibold border border-stone-200 dark:border-[#342f2b] cursor-pointer"
                     >
-                      Keep Waiting
+                      Keep waiting
                     </button>
                     <button
                       type="button"
@@ -1563,7 +1591,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                         setShowCancelRequestConfirm(false);
                         setPartnerStep(0);
                       }}
-                      className="flex-1 py-2 bg-rose-600 text-white rounded-xl text-[10px] font-bold uppercase cursor-pointer"
+                      className="flex-1 h-9 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-semibold cursor-pointer"
                     >
                       Disconnect
                     </button>
@@ -1574,13 +1602,16 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
           )}
 
           {partnerStep === 4 && (
-            <div className="text-center space-y-6 animate-fadeIn py-6">
-              <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center text-5xl mx-auto shadow-inner animate-bounce">🎉</div>
-              <h2 className="text-3xl font-serif italic text-green-900">Request Approved!</h2>
-              <p className="text-sm text-green-700 leading-relaxed max-w-sm mx-auto">
-                <span className="font-bold">{getCleanName(user.partnerName, user.partnerEmail) || 'Your partner'}</span> has approved and completed setting up your custom sharing permissions! Let's enter your companion workspace.
+            <div className="text-center space-y-5 animate-fadeIn py-4">
+              <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/70 dark:border-emerald-900/50 rounded-2xl flex items-center justify-center text-emerald-600 dark:text-emerald-400 mx-auto">
+                <CheckCircle2 className="w-8 h-8" />
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-serif text-stone-900 dark:text-stone-100 font-semibold">Request approved</h2>
+              <p className="text-sm text-stone-600 dark:text-stone-300 leading-relaxed max-w-sm mx-auto">
+                <span className="font-semibold text-stone-900 dark:text-stone-100">{getCleanName(user.partnerName, user.partnerEmail) || 'Your partner'}</span> has approved and completed setting up your sharing permissions.
               </p>
               <button 
+                type="button"
                 onClick={async () => {
                   setLoading(true);
                   try {
@@ -1594,21 +1625,24 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                     setLoading(false);
                   }
                 }}
-                className="w-full py-4.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl hover:scale-[1.02] active:scale-95 transition-all w-full cursor-pointer animate-pulse"
+                className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold text-sm transition-colors cursor-pointer"
               >
-                Enter Companion Dashboard 💖
+                Enter companion dashboard
               </button>
             </div>
           )}
 
           {partnerStep === 5 && (
-            <div className="text-center space-y-6 animate-fadeIn py-6">
-              <div className="w-20 h-20 bg-rose-50 rounded-full flex items-center justify-center text-4xl mx-auto shadow-inner">💔</div>
-              <h2 className="text-3xl font-serif italic text-rose-900 leading-tight">Connection Declined</h2>
-              <p className="text-sm text-rose-600 leading-relaxed px-4">
+            <div className="text-center space-y-5 animate-fadeIn py-4">
+              <div className="w-16 h-16 bg-rose-50 dark:bg-rose-950/40 border border-rose-200/70 dark:border-rose-900/50 rounded-2xl flex items-center justify-center text-rose-600 dark:text-rose-400 mx-auto">
+                <AlertCircle className="w-7 h-7" />
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-serif text-stone-900 dark:text-stone-100 font-semibold leading-tight">Connection declined</h2>
+              <p className="text-sm text-stone-600 dark:text-stone-300 leading-relaxed px-2">
                 Your connection request has been declined or unlinked by {user.partnerName || 'your partner'}.
               </p>
               <button 
+                type="button"
                 onClick={async () => {
                   setLoading(true);
                   try {
@@ -1629,9 +1663,9 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                     setLoading(false);
                   }
                 }}
-                className="w-full py-4 bg-rose-500 text-white rounded-2xl font-bold uppercase text-xs tracking-widest shadow-lg shadow-rose-100 hover:bg-rose-600 cursor-pointer"
+                className="w-full h-11 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-semibold text-sm transition-colors cursor-pointer"
               >
-                Disconnect & Try Again 💔
+                Disconnect &amp; try again
               </button>
             </div>
           )}
@@ -1646,163 +1680,163 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
 
   if (!user.isPartner && !user.partnerId && !incomingRequests.some(r => r.status === 'pending') && user.partnerRequest?.status !== 'pending' && !hasPendingNotificationRequest) {
     return (
-      <div className="space-y-8 animate-fadeIn pb-24 font-sans select-none">
+      <div className="space-y-6 animate-fadeIn pb-24 font-sans select-none">
         {renderNoticeBanner()}
-        <header className="bg-gradient-to-br from-pink-500 to-rose-500 p-10 rounded-[3rem] shadow-xl text-white text-center">
-          <h2 className="text-4xl font-serif italic mb-2">Partner Mode</h2>
-          <p className="text-sm opacity-90">Connect with YOUR partner privately & securely</p>
+        <header className="bg-white dark:bg-[#1a1816] p-6 sm:p-8 rounded-2xl shadow-xs border border-stone-200/80 dark:border-[#2e2a26] text-center space-y-1">
+          <h2 className="text-2xl sm:text-3xl font-serif text-stone-900 dark:text-stone-100 font-semibold">Partner Mode</h2>
+          <p className="text-sm text-stone-500 dark:text-stone-400">Connect with your partner privately &amp; securely</p>
         </header>
 
-        <section className="bg-white p-10 rounded-[3rem] shadow-sm border border-pink-50 flex flex-col items-center gap-8">
-          <div className="w-20 h-20 bg-pink-50 rounded-full flex items-center justify-center text-4xl shadow-inner">
-            {generatingLink ? "💖" : "🔗"}
+        <section className="bg-white dark:bg-[#1a1816] p-6 sm:p-8 rounded-2xl shadow-xs border border-stone-200/80 dark:border-[#2e2a26] flex flex-col items-center gap-6">
+          <div className="w-14 h-14 bg-pink-50 dark:bg-pink-950/40 border border-pink-200/70 dark:border-pink-900/50 rounded-2xl flex items-center justify-center text-pink-600 dark:text-pink-400">
+            {generatingLink ? <Sparkles className="w-6 h-6" /> : <Users className="w-6 h-6" />}
           </div>
 
-          <div className="w-full space-y-4">
+          <div className="w-full space-y-5">
             {generatingLink ? (
-              <div className="p-8 text-center space-y-4 animate-pulse bg-pink-50/20 rounded-[2.5rem] border border-pink-50">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-r-2 border-pink-500 border-t-2"></div>
-                <p className="text-sm font-bold text-pink-600">Creating your private partner connection...</p>
-                <p className="text-[10px] text-gray-450 italic">Establishing a secure, private sharing channel...</p>
+              <div className="p-8 text-center space-y-3 bg-[#faf8f6] dark:bg-[#23201d] rounded-2xl border border-stone-200/80 dark:border-[#342f2b]">
+                <div className="inline-block animate-spin rounded-full h-7 w-7 border-2 border-pink-600 border-t-transparent"></div>
+                <p className="text-sm font-semibold text-stone-900 dark:text-stone-100">Creating your private partner connection...</p>
+                <p className="text-xs text-stone-500 dark:text-stone-400">Establishing a secure, private sharing channel.</p>
               </div>
             ) : (
               <>
                 {!user.partnerCode ? (
                   <button 
+                    type="button"
                     onClick={handleGenerateCode}
-                    className="w-full py-4.5 bg-gradient-to-r from-pink-500 to-rose-400 text-white rounded-2xl font-bold uppercase text-xs tracking-widest shadow-lg shadow-pink-100 hover:scale-[1.01] active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    className="w-full h-11 bg-pink-600 hover:bg-pink-700 text-white rounded-xl font-semibold text-sm transition-colors flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    <span>🔗</span> Generate Invite Link
+                    <Share2 className="w-4 h-4" /> Generate invite link
                   </button>
                 ) : (
-                  <div className="space-y-6 animate-fadeIn">
+                  <div className="space-y-5 animate-fadeIn">
                     
                     {/* Success Message Header */}
-                    <div className="bg-gradient-to-br from-pink-500/5 to-rose-500/5 border border-pink-100 rounded-[2.5rem] p-6 text-center space-y-3">
-                      <span className="text-3xl">✨</span>
-                      <h3 className="text-lg font-serif italic font-extrabold text-pink-600">Partner Invitation Ready</h3>
-                      <p className="text-[10px] text-gray-400 uppercase tracking-widest font-black">Invite Code</p>
-                      <div className="bg-white py-3 px-8 rounded-2xl border-2 border-pink-100 inline-block text-2xl font-mono font-black text-pink-600 tracking-widest shadow-sm">
+                    <div className="bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] rounded-2xl p-6 text-center space-y-2.5">
+                      <h3 className="text-lg font-serif font-semibold text-stone-900 dark:text-stone-100">Partner invitation ready</h3>
+                      <p className="text-xs text-stone-500 dark:text-stone-400 font-medium">Invite code</p>
+                      <div className="bg-white dark:bg-[#1a1816] py-2.5 px-6 rounded-xl border border-stone-200/80 dark:border-[#2e2a26] inline-block text-xl font-mono font-bold text-pink-600 dark:text-pink-400 tracking-widest tabular-nums">
                         {user.partnerCode}
                       </div>
                     </div>
 
                     {/* Pre-existing Link Display */}
-                    <div className="bg-pink-50/20 p-5 rounded-[2rem] border border-pink-50 space-y-2.5">
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest text-left pl-1">Current Partner Link</p>
-                      <div className="flex items-center gap-2 bg-white p-3 rounded-xl border border-pink-100">
-                        <div className="text-xs text-pink-700 font-mono truncate flex-1 text-left">
+                    <div className="bg-[#faf8f6] dark:bg-[#23201d] p-4 rounded-xl border border-stone-200/80 dark:border-[#342f2b] space-y-2">
+                      <p className="text-xs font-medium text-stone-500 dark:text-stone-400 text-left">Current partner link</p>
+                      <div className="flex items-center gap-2 bg-white dark:bg-[#1a1816] p-2.5 rounded-xl border border-stone-200/80 dark:border-[#2e2a26]">
+                        <div className="text-xs text-stone-700 dark:text-stone-300 font-mono truncate flex-1 text-left">
                           lumina.app/invite/{user.partnerCode}
                         </div>
                         <button 
+                          type="button"
                           onClick={() => copyOnlyLink()}
-                          className={`flex-shrink-0 px-4 py-1.5 rounded-lg border text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                          className={`shrink-0 px-3.5 py-1.5 rounded-lg border text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
                             linkOnlyCopied 
-                              ? 'bg-green-500 border-green-500 text-white shadow-sm' 
-                              : 'bg-white border-pink-100 text-pink-500 hover:bg-pink-50/30'
+                              ? 'bg-emerald-600 border-emerald-600 text-white' 
+                              : 'bg-stone-50 dark:bg-[#23201d] border-stone-200/80 dark:border-[#342f2b] text-stone-700 dark:text-stone-200 hover:bg-stone-100'
                           }`}
                         >
-                          {linkOnlyCopied ? '✓ Copied' : '📋 Copy'}
+                          {linkOnlyCopied ? <><Check className="w-3.5 h-3.5" /> Copied</> : <><Copy className="w-3.5 h-3.5" /> Copy</>}
                         </button>
                       </div>
                     </div>
 
                     {/* Share Channels */}
                     <div className="space-y-3">
-                      <p className="text-[10px] font-bold text-pink-400 uppercase tracking-widest text-left pl-1">Share Options</p>
+                      <p className="text-xs font-semibold text-stone-600 dark:text-stone-400 text-left">Share options</p>
                       
                       <div className="grid grid-cols-2 gap-3">
-                        {/* Copy Link Option */}
                         <button
+                          type="button"
                           onClick={copyInviteLink}
-                          className="p-4 bg-white hover:bg-pink-50/30 border border-pink-50 rounded-2xl text-left transition-all flex flex-col justify-between gap-3 shadow-sm cursor-pointer group"
+                          className="p-4 bg-[#faf8f6] dark:bg-[#23201d] hover:bg-stone-100 dark:hover:bg-[#2a2622] border border-stone-200/80 dark:border-[#342f2b] rounded-xl text-left transition-colors flex flex-col justify-between gap-2.5 cursor-pointer group"
                         >
-                          <span className="text-xl">📋</span>
+                          <Copy className="w-5 h-5 text-pink-600 dark:text-pink-400" />
                           <div>
-                            <p className="font-bold text-xs text-gray-800">Copy Link</p>
-                            <p className="text-[9px] text-gray-400 group-hover:text-pink-500 transition-colors">
+                            <p className="font-semibold text-xs text-stone-900 dark:text-stone-100">Copy link</p>
+                            <p className="text-[11px] text-stone-500 dark:text-stone-400">
                               {copied ? 'Copied to clipboard' : 'Copy invite text'}
                             </p>
                           </div>
                         </button>
 
-                        {/* WhatsApp Option */}
                         <a
-                          href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Join my Partner Mode on Lumina to stay connected 💞 ${inviteLink}`)}`}
+                          href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Join my Partner Mode on Lumina to stay connected ${inviteLink}`)}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="p-4 bg-white hover:bg-green-50/30 border border-green-100 rounded-2xl text-left transition-all flex flex-col justify-between gap-3 shadow-sm cursor-pointer"
+                          className="p-4 bg-[#faf8f6] dark:bg-[#23201d] hover:bg-stone-100 dark:hover:bg-[#2a2622] border border-stone-200/80 dark:border-[#342f2b] rounded-xl text-left transition-colors flex flex-col justify-between gap-2.5 cursor-pointer"
                         >
-                          <span className="text-xl">💬</span>
+                          <MessageSquare className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                           <div>
-                            <p className="font-bold text-xs text-gray-850">WhatsApp</p>
-                            <p className="text-[9px] text-gray-450">Send message instantly</p>
+                            <p className="font-semibold text-xs text-stone-900 dark:text-stone-100">WhatsApp</p>
+                            <p className="text-[11px] text-stone-500 dark:text-stone-400">Send message instantly</p>
                           </div>
                         </a>
 
-                        {/* Messages Option */}
                         <a
-                          href={`sms:?&body=${encodeURIComponent(`Join my Partner Mode on Lumina 💞 ${inviteLink}`)}`}
-                          className="p-4 bg-white hover:bg-blue-50/30 border border-blue-100 rounded-2xl text-left transition-all flex flex-col justify-between gap-3 shadow-sm cursor-pointer"
+                          href={`sms:?&body=${encodeURIComponent(`Join my Partner Mode on Lumina ${inviteLink}`)}`}
+                          className="p-4 bg-[#faf8f6] dark:bg-[#23201d] hover:bg-stone-100 dark:hover:bg-[#2a2622] border border-stone-200/80 dark:border-[#342f2b] rounded-xl text-left transition-colors flex flex-col justify-between gap-2.5 cursor-pointer"
                         >
-                          <span className="text-xl">📱</span>
+                          <MessageSquare className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                           <div>
-                            <p className="font-bold text-xs text-gray-850">Messages</p>
-                            <p className="text-[9px] text-gray-450">SMS invitation text</p>
+                            <p className="font-semibold text-xs text-stone-900 dark:text-stone-100">Messages</p>
+                            <p className="text-[11px] text-stone-500 dark:text-stone-400">SMS invitation text</p>
                           </div>
                         </a>
 
-                        {/* Email Option */}
                         <a
-                          href={`mailto:?subject=${encodeURIComponent("Join my Lumina Partner Mode")}&body=${encodeURIComponent(`Hi darling, join my private Partner Mode on Lumina to stay in sync with my cycle and journey: ${inviteLink}`)}`}
-                          className="p-4 bg-white hover:bg-purple-50/30 border border-purple-100 rounded-2xl text-left transition-all flex flex-col justify-between gap-3 shadow-sm cursor-pointer"
+                          href={`mailto:?subject=${encodeURIComponent("Join my Lumina Partner Mode")}&body=${encodeURIComponent(`Hi, join my private Partner Mode on Lumina to stay in sync with my cycle and journey: ${inviteLink}`)}`}
+                          className="p-4 bg-[#faf8f6] dark:bg-[#23201d] hover:bg-stone-100 dark:hover:bg-[#2a2622] border border-stone-200/80 dark:border-[#342f2b] rounded-xl text-left transition-colors flex flex-col justify-between gap-2.5 cursor-pointer"
                         >
-                          <span className="text-xl">✉️</span>
+                          <Mail className="w-5 h-5 text-purple-600 dark:text-purple-400" />
                           <div>
-                            <p className="font-bold text-xs text-gray-850">Email</p>
-                            <p className="text-[9px] text-gray-450">Send email message</p>
+                            <p className="font-semibold text-xs text-stone-900 dark:text-stone-100">Email</p>
+                            <p className="text-[11px] text-stone-500 dark:text-stone-400">Send email message</p>
                           </div>
                         </a>
                       </div>
 
                       {/* QR Code Option */}
                       <button
+                        type="button"
                         onClick={() => setShowQRCode(!showQRCode)}
-                        className="w-full p-4.5 bg-white hover:bg-amber-50/10 border border-amber-100 rounded-2xl text-left transition-all flex items-center justify-between gap-4 shadow-sm cursor-pointer"
+                        className="w-full p-4 bg-[#faf8f6] dark:bg-[#23201d] hover:bg-stone-100 dark:hover:bg-[#2a2622] border border-stone-200/80 dark:border-[#342f2b] rounded-xl text-left transition-colors flex items-center justify-between gap-4 cursor-pointer"
                       >
                         <div className="flex items-center gap-3">
-                          <span className="text-2xl">🔳</span>
+                          <QrCode className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
                           <div>
-                            <p className="font-bold text-xs text-gray-850">QR Code</p>
-                            <p className="text-[9px] text-gray-450">Scan invitation directly on device</p>
+                            <p className="font-semibold text-xs text-stone-900 dark:text-stone-100">QR Code</p>
+                            <p className="text-[11px] text-stone-500 dark:text-stone-400">Scan invitation directly on device</p>
                           </div>
                         </div>
-                        <span className="text-[10px] uppercase font-bold text-amber-500">{showQRCode ? 'Hide ✕' : 'View →'}</span>
+                        <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 whitespace-nowrap">{showQRCode ? 'Hide' : 'View'}</span>
                       </button>
 
                       {showQRCode && (
-                        <div className="bg-amber-50/10 border border-amber-100/50 p-4 sm:p-6 rounded-3xl text-center space-y-4 animate-slideDownBlock flex flex-col items-center justify-center w-full">
-                          <p className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">Lumina Scan Invitation</p>
-                          <div className="qr-code-container bg-white p-4 rounded-2xl border border-amber-100 shadow-md w-full max-w-[260px] aspect-square flex items-center justify-center overflow-hidden mx-auto">
+                        <div className="bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] p-5 rounded-2xl text-center space-y-4 animate-slideDownBlock flex flex-col items-center justify-center w-full">
+                          <p className="text-xs font-semibold text-stone-700 dark:text-stone-300">Lumina scan invitation</p>
+                          <div className="qr-code-container bg-white p-4 rounded-xl border border-stone-200/80 shadow-xs w-full max-w-[260px] aspect-square flex items-center justify-center overflow-hidden mx-auto">
                             <QrCodeCanvas
                               value={inviteLink}
                               size={240}
                               alt="Lumina Partner Invitation QR Code"
                             />
                           </div>
-                          <p className="text-[11px] text-gray-600 italic leading-relaxed break-words max-w-full px-2">Have your partner open their camera app to scan and connect instantly.</p>
+                          <p className="text-xs text-stone-500 dark:text-stone-400 leading-relaxed break-words max-w-full px-2">Have your partner open their camera app to scan and connect instantly.</p>
                         </div>
                       )}
                     </div>
 
                     {/* Generate New Link button */}
-                    <div className="pt-4 border-t border-pink-50 flex justify-end">
+                    <div className="pt-3 border-t border-stone-200/70 dark:border-[#2e2a26] flex justify-end">
                       <button 
+                        type="button"
                         onClick={handleForceGenerateNewCode}
                         disabled={generatingLink}
-                        className="px-4 py-2 bg-pink-50 hover:bg-pink-100 rounded-full font-serif font-bold italic text-xs border border-pink-100 text-pink-500 transition-colors cursor-pointer"
+                        className="px-4 py-2 bg-[#faf8f6] dark:bg-[#23201d] hover:bg-stone-100 dark:hover:bg-[#2a2622] rounded-xl font-semibold text-xs border border-stone-200/80 dark:border-[#342f2b] text-pink-600 dark:text-pink-400 transition-colors cursor-pointer flex items-center gap-1.5"
                       >
-                        🔄 Generate New Link
+                        <RefreshCw className="w-3.5 h-3.5" /> Generate new link
                       </button>
                     </div>
 
@@ -1812,31 +1846,32 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
             )}
 
             <div className="flex items-center gap-4 py-2">
-              <div className="h-[1px] flex-1 bg-pink-100"></div>
-              <span className="text-[10px] font-bold text-pink-300 uppercase">OR</span>
-              <div className="h-[1px] flex-1 bg-pink-100"></div>
+              <div className="h-[1px] flex-1 bg-stone-200 dark:bg-[#2e2a26]"></div>
+              <span className="text-xs font-semibold text-stone-400">OR</span>
+              <div className="h-[1px] flex-1 bg-stone-200 dark:bg-[#2e2a26]"></div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               <input 
                 type="text" 
                 value={partnerCodeInput}
                 onChange={(e) => setPartnerCodeInput(e.target.value)}
-                placeholder="Enter Partner Code"
-                className="w-full px-6 py-4 rounded-2xl bg-pink-50/30 border border-pink-50 outline-none text-center text-pink-900 font-bold tracking-widest uppercase"
+                placeholder="Enter partner code"
+                className="w-full h-11 px-4 rounded-xl bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] outline-none focus:border-pink-500 text-center text-stone-900 dark:text-stone-100 font-semibold tracking-wider uppercase text-sm"
               />
               <button 
+                type="button"
                 onClick={handleLinkPartner}
-                className="w-full py-4 bg-white border-2 border-pink-100 text-pink-500 rounded-2xl font-bold uppercase text-xs tracking-widest hover:bg-pink-50 transition-colors cursor-pointer"
+                className="w-full h-11 bg-white dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] text-pink-600 dark:text-pink-400 rounded-xl font-semibold text-sm hover:bg-stone-50 dark:hover:bg-[#2a2622] transition-colors cursor-pointer"
               >
-                Link Partner
+                Link partner
               </button>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 text-pink-300">
-            <span className="text-lg">🔒</span>
-            <p className="text-[10px] font-bold uppercase tracking-widest">Only your partner can view your cycle data</p>
+          <div className="flex items-center gap-2 text-stone-500 dark:text-stone-400">
+            <Lock className="w-4 h-4 shrink-0" />
+            <p className="text-xs font-medium">Only your partner can view your shared cycle data</p>
           </div>
         </section>
         {renderGlobalModals()}
@@ -1995,20 +2030,20 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
     };
 
     return (
-      <div className="space-y-8 animate-fadeIn pb-24 font-sans select-none">
-        {/* Redesigned Glassmorphic Screen Header */}
-        <header className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 text-center md:text-left bg-white/40 backdrop-blur-xl p-6 md:p-8 rounded-[2.5rem] border border-white/60 shadow-[inset_0_2px_4px_rgba(255,255,255,0.6),_0_12px_36px_rgba(244,114,182,0.03)]">
+      <div className="space-y-6 animate-fadeIn pb-24 font-sans select-none">
+        {/* Screen Header */}
+        <header className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 text-center md:text-left bg-white dark:bg-[#1a1816] p-6 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-xs">
           <div>
-            <h2 className="text-3xl font-serif text-pink-600 font-bold tracking-tight">Partner</h2>
-            <p className="text-xs text-stone-500 font-serif italic mt-1">Build understanding and grow together</p>
+            <h2 className="text-2xl sm:text-3xl font-serif text-stone-900 dark:text-stone-100 font-semibold tracking-tight">Partner</h2>
+            <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">Build understanding and grow together</p>
           </div>
           {onLogout && (
             <button
               type="button"
               onClick={() => setShowLogoutModal(true)}
-              className="px-5 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-full text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shadow-sm self-center md:self-auto flex items-center gap-2"
+              className="px-4 py-2 bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50 rounded-xl text-xs font-semibold transition-colors cursor-pointer self-center md:self-auto flex items-center gap-2 whitespace-nowrap"
             >
-              <span>🚪</span> Log Out
+              <LogOut className="w-3.5 h-3.5" /> Log out
             </button>
           )}
         </header>
@@ -2018,70 +2053,70 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
           <button 
             type="button"
             onClick={() => { setSubTab('partners'); setIsCustomizingSharing(false); }}
-            className={`px-5 py-3 rounded-full text-[10px] font-black uppercase tracking-wider whitespace-nowrap shrink-0 transition-all cursor-pointer ${subTab === 'partners' ? 'bg-pink-500 text-white shadow-md' : 'bg-white border border-pink-150/40 text-pink-500 hover:bg-pink-50/20'}`}
+            className={`px-4 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition-colors cursor-pointer flex items-center gap-1.5 ${subTab === 'partners' ? 'bg-pink-600 text-white' : 'bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-[#23201d]'}`}
           >
-            👥 Connected Partners
+            <Users className="w-3.5 h-3.5" /> Connected partners
           </button>
           <button 
             type="button"
             onClick={() => { setSubTab('requests'); }}
-            className={`px-5 py-3 rounded-full text-[10px] font-black uppercase tracking-wider relative whitespace-nowrap shrink-0 transition-all cursor-pointer ${subTab === 'requests' ? 'bg-pink-500 text-white shadow-md' : 'bg-white border border-pink-150/40 text-pink-500 hover:bg-pink-50/20'}`}
+            className={`px-4 py-2.5 rounded-xl text-xs font-semibold relative whitespace-nowrap shrink-0 transition-colors cursor-pointer flex items-center gap-1.5 ${subTab === 'requests' ? 'bg-pink-600 text-white' : 'bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-[#23201d]'}`}
           >
-            📩 Pending Requests
+            <Mail className="w-3.5 h-3.5" /> Pending requests
             {isPendingApproval && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-white flex items-center justify-center text-[8px] font-bold text-white animate-pulse">!</span>
+              <span className="ml-1 w-4 h-4 bg-rose-600 rounded-full flex items-center justify-center text-[10px] font-bold text-white">!</span>
             )}
           </button>
           <button 
             type="button"
             onClick={() => { setSubTab('invitations'); setIsCustomizingSharing(false); }}
-            className={`px-5 py-3 rounded-full text-[10px] font-black uppercase tracking-wider whitespace-nowrap shrink-0 transition-all cursor-pointer ${subTab === 'invitations' ? 'bg-pink-500 text-white shadow-md' : 'bg-white border border-pink-150/40 text-pink-500 hover:bg-pink-50/20'}`}
+            className={`px-4 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition-colors cursor-pointer flex items-center gap-1.5 ${subTab === 'invitations' ? 'bg-pink-600 text-white' : 'bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-[#23201d]'}`}
           >
-            💌 Sent Invitations
+            <Share2 className="w-3.5 h-3.5" /> Sent invitations
           </button>
           <button 
             type="button"
             onClick={() => { setSubTab('privacy'); }}
-            className={`px-5 py-3 rounded-full text-[10px] font-black uppercase tracking-wider whitespace-nowrap shrink-0 transition-all cursor-pointer ${subTab === 'privacy' ? 'bg-pink-500 text-white shadow-md' : 'bg-white border border-pink-150/40 text-pink-500 hover:bg-pink-50/20'}`}
+            className={`px-4 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition-colors cursor-pointer flex items-center gap-1.5 ${subTab === 'privacy' ? 'bg-pink-600 text-white' : 'bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-[#23201d]'}`}
           >
-            🔒 Privacy Settings
+            <Lock className="w-3.5 h-3.5" /> Privacy settings
           </button>
           <button 
             type="button"
             onClick={() => { setSubTab('permissions'); }}
-            className={`px-5 py-3 rounded-full text-[10px] font-black uppercase tracking-wider whitespace-nowrap shrink-0 transition-all cursor-pointer ${subTab === 'permissions' ? 'bg-pink-500 text-white shadow-md' : 'bg-white border border-pink-150/40 text-pink-500 hover:bg-pink-50/20'}`}
+            className={`px-4 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition-colors cursor-pointer flex items-center gap-1.5 ${subTab === 'permissions' ? 'bg-pink-600 text-white' : 'bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-[#23201d]'}`}
           >
-            ⚙️ Manage Permissions
+            <Settings className="w-3.5 h-3.5" /> Manage permissions
           </button>
           {onLogout && (
             <button 
               type="button"
               onClick={() => setShowLogoutModal(true)}
-              className="px-5 py-3 rounded-full text-[10px] font-black uppercase tracking-wider whitespace-nowrap shrink-0 transition-all cursor-pointer bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100"
+              className="px-4 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition-colors cursor-pointer bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50 hover:bg-rose-100 flex items-center gap-1.5"
             >
-              🚪 Log Out
+              <LogOut className="w-3.5 h-3.5" /> Log out
             </button>
           )}
         </div>
 
         {/* LOGOUT CONFIRMATION MODAL */}
         {showLogoutModal && (
-          <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fadeIn">
-            <div className="bg-white rounded-[2.5rem] p-6 max-w-sm w-full space-y-5 border border-pink-100 shadow-2xl text-center">
-              <div className="w-16 h-16 bg-pink-50 rounded-full flex items-center justify-center text-rose-500 mx-auto text-2xl">
-                🚪
+          <div className="fixed inset-0 bg-stone-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
+            <div className="bg-white dark:bg-[#1a1816] rounded-2xl p-6 max-w-sm w-full space-y-5 border border-stone-200/80 dark:border-[#2e2a26] shadow-2xl text-center">
+              <div className="w-14 h-14 bg-rose-50 dark:bg-rose-950/40 border border-rose-200/70 dark:border-rose-900/50 rounded-2xl flex items-center justify-center text-rose-600 dark:text-rose-400 mx-auto">
+                <LogOut className="w-6 h-6" />
               </div>
               <div className="space-y-2">
-                <h3 className="font-serif font-bold text-lg text-stone-800">Partner Logout</h3>
-                <p className="text-xs text-stone-600 font-medium leading-relaxed">
+                <h3 className="font-serif font-semibold text-lg text-stone-900 dark:text-stone-100">Partner logout</h3>
+                <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
                   Are you sure you want to log out?
                 </p>
               </div>
-              <div className="flex gap-3 pt-2">
+              <div className="flex gap-3 pt-1">
                 <button
                   type="button"
                   onClick={() => setShowLogoutModal(false)}
-                  className="flex-1 py-3 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs uppercase tracking-wider rounded-2xl transition-all cursor-pointer"
+                  className="flex-1 h-10 bg-stone-100 dark:bg-[#23201d] hover:bg-stone-200 dark:hover:bg-[#2e2a26] text-stone-700 dark:text-stone-200 font-semibold text-xs rounded-xl transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -2091,9 +2126,9 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                     setShowLogoutModal(false);
                     if (onLogout) onLogout();
                   }}
-                  className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs uppercase tracking-wider rounded-2xl transition-all cursor-pointer shadow-md shadow-rose-200"
+                  className="flex-1 h-10 bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs rounded-xl transition-colors cursor-pointer"
                 >
-                  Log Out
+                  Log out
                 </button>
               </div>
             </div>
@@ -2103,69 +2138,71 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
         {/* Sub-Tab Contents */}
         {subTab === 'partners' && (
           <div className="space-y-6 animate-fadeIn">
-            <section className="bg-white p-8 rounded-[3rem] shadow-sm border border-pink-50 space-y-6">
-              <div className="flex items-center gap-4 p-6 bg-pink-50/30 rounded-[2.5rem] border border-pink-50">
-                <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-3xl shadow-sm">👨</div>
-                <div className="flex-1 text-left">
-                  <h3 className="text-xl font-serif text-pink-600 italic font-bold">{user.partnerName}</h3>
+            <section className="bg-white dark:bg-[#1a1816] p-6 sm:p-8 rounded-2xl shadow-xs border border-stone-200/80 dark:border-[#2e2a26] space-y-5">
+              <div className="flex items-center gap-4 p-4 sm:p-5 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl border border-stone-200/80 dark:border-[#342f2b]">
+                <div className="w-12 h-12 bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] rounded-xl flex items-center justify-center text-pink-600 dark:text-pink-400 font-serif font-semibold text-lg shrink-0">
+                  {(user.partnerName || 'P').charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1 text-left min-w-0">
+                  <h3 className="text-lg font-serif text-stone-900 dark:text-stone-100 font-semibold truncate">{user.partnerName}</h3>
                   {isApproved ? (
-                    <p className="text-[10px] font-bold text-green-500 uppercase tracking-widest flex items-center gap-1">
-                      <span>●</span> Status: Sync Active ✅
+                    <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span> Sync active
                     </p>
                   ) : isPendingApproval ? (
-                    <p className="text-[10px] font-bold text-amber-500 uppercase tracking-widest flex items-center gap-1">
-                      <span>●</span> Status: Awaiting Approval ⏳
+                    <p className="text-xs font-medium text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-amber-500 inline-block"></span> Awaiting approval
                     </p>
                   ) : (
-                    <p className="text-[10px] font-bold text-rose-400 uppercase tracking-widest flex items-center gap-1">
-                      <span>●</span> Status: Setup Pending 📪
+                    <p className="text-xs font-medium text-rose-600 dark:text-rose-400 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-rose-500 inline-block"></span> Setup pending
                     </p>
                   )}
                 </div>
               </div>
 
               {!isApproved && isPendingApproval && (
-                <div className="p-4 bg-amber-50 border border-amber-100 rounded-2xl text-left text-xs text-amber-700 leading-relaxed">
-                  ⚠️ <span className="font-bold">{user.partnerName}</span> has sent a connection request. Head to the <span className="font-bold text-pink-600 cursor-pointer underline" onClick={() => setSubTab('requests')}>Pending Requests</span> tab to review and approve!
+                <div className="p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/50 rounded-xl text-left text-xs text-amber-800 dark:text-amber-200 leading-relaxed">
+                  <span className="font-semibold">{user.partnerName}</span> has sent a connection request. Head to the <span className="font-semibold text-pink-600 dark:text-pink-400 cursor-pointer underline" onClick={() => setSubTab('requests')}>Pending requests</span> tab to review and approve.
                 </div>
               )}
 
-              <div className="grid gap-3">
+              <div className="grid gap-2.5">
                 {isApproved && (
                   <button 
                     type="button"
                     onClick={() => setIsPreviewingCompanion(true)}
-                    className="w-full py-4 bg-gradient-to-r from-pink-500 to-rose-400 text-white rounded-2xl font-bold uppercase text-[10px] tracking-widest shadow-lg shadow-pink-100 hover:scale-[1.01] active:scale-95 transition-all cursor-pointer"
+                    className="w-full h-11 bg-pink-600 hover:bg-pink-700 text-white rounded-xl font-semibold text-xs transition-colors cursor-pointer"
                   >
-                    Preview Companion Dashboard 💻
+                    Preview companion dashboard
                   </button>
                 )}
                 
                 <button 
                   type="button"
                   onClick={() => setSubTab('privacy')}
-                  className="w-full py-4 bg-white border-2 border-pink-100 text-pink-500 rounded-2xl font-bold uppercase text-[10px] tracking-widest hover:bg-pink-50/10 cursor-pointer"
+                  className="w-full h-11 bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] text-stone-700 dark:text-stone-200 rounded-xl font-semibold text-xs hover:bg-stone-100 dark:hover:bg-[#2a2622] cursor-pointer transition-colors"
                 >
-                  Manage Sharing Settings 🔒
+                  Manage sharing settings
                 </button>
 
                 <button 
                   type="button"
                   onClick={() => setShowDisconnectConfirm(true)}
-                  className="w-full py-4 text-rose-450 hover:text-rose-600 font-bold uppercase text-[10px] tracking-widest cursor-pointer"
+                  className="w-full h-10 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl font-semibold text-xs cursor-pointer transition-colors"
                 >
-                  Disconnect Partner ❌
+                  Disconnect partner
                 </button>
               </div>
             </section>
 
             {isApproved && (
-              <section className="bg-white p-8 rounded-[3rem] shadow-sm border border-pink-50 space-y-6 text-center">
-                <h3 className="text-lg font-serif italic text-indigo-950 font-bold">Send supportive comfort instead! 💕</h3>
-                <p className="text-xs text-gray-500 max-w-md mx-auto leading-relaxed">
-                  Just because you are synchronized doesn't mean you can't have fun. Send your partner cute digital gifts that bloom on their companion dashboard instantly!
+              <section className="bg-white dark:bg-[#1a1816] p-6 sm:p-8 rounded-2xl shadow-xs border border-stone-200/80 dark:border-[#2e2a26] space-y-5 text-center">
+                <h3 className="text-lg font-serif text-stone-900 dark:text-stone-100 font-semibold">Send supportive comfort</h3>
+                <p className="text-xs text-stone-500 dark:text-stone-400 max-w-md mx-auto leading-relaxed">
+                  Send your partner thoughtful digital gifts that appear on their companion dashboard right away.
                 </p>
-                <div className="flex justify-center gap-8 pt-2">
+                <div className="flex justify-center gap-6 pt-1">
                   <ComfortButton icon="🌸" label="Flower" onClick={() => sendDigitalComfort('flower')} />
                   <ComfortButton icon="🍫" label="Chocolate" onClick={() => sendDigitalComfort('chocolate')} />
                   <ComfortButton icon="🍵" label="Warm Tea" onClick={() => sendDigitalComfort('tea')} />
@@ -2179,28 +2216,30 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
           <div className="space-y-6 animate-fadeIn text-left">
             {/* Header / Subtitle */}
             <div className="space-y-1">
-              <h3 className="text-xl font-serif text-indigo-950 font-bold italic">Partner Requests Inbox</h3>
-              <p className="text-xs text-gray-500">Review connection requests, customize sharing categories, and check request status history.</p>
+              <h3 className="text-xl font-serif text-stone-900 dark:text-stone-100 font-semibold">Partner requests inbox</h3>
+              <p className="text-xs text-stone-500 dark:text-stone-400">Review connection requests, customize sharing categories, and check request history.</p>
             </div>
 
             {isPendingApproval ? (
-              <div className="bg-gradient-to-br from-purple-50 via-pink-50/50 to-indigo-50/20 p-8 rounded-[2.5rem] border border-pink-100 shadow-sm space-y-6">
+              <div className="bg-white dark:bg-[#1a1816] p-6 sm:p-8 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-xs space-y-5">
                 <div className="flex items-start gap-4">
-                  <span className="text-3xl">💕</span>
-                  <div className="space-y-1 w-full">
-                    <h3 className="text-xl font-serif text-indigo-950 italic font-black">Active Connection Request</h3>
-                    <div className="text-xs space-y-1 mt-2 text-gray-600 bg-white/40 p-3 rounded-2xl border border-pink-150">
-                      <p><span className="font-bold text-indigo-950">Partner Name:</span> {requesterName}</p>
-                      <p><span className="font-bold text-indigo-950">Partner Email:</span> {activePendingRequest?.partnerEmail || 'No email provided'}</p>
-                      <p><span className="font-bold text-indigo-950">Date Requested:</span> {activePendingRequest?.created_at ? new Date(activePendingRequest.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recently'}</p>
+                  <div className="w-11 h-11 rounded-xl bg-pink-50 dark:bg-pink-950/40 border border-pink-200/70 dark:border-pink-900/50 flex items-center justify-center text-pink-600 dark:text-pink-400 shrink-0">
+                    <Heart className="w-5 h-5" />
+                  </div>
+                  <div className="space-y-2 w-full">
+                    <h3 className="text-lg font-serif text-stone-900 dark:text-stone-100 font-semibold">Active connection request</h3>
+                    <div className="text-xs space-y-1 text-stone-600 dark:text-stone-300 bg-[#faf8f6] dark:bg-[#23201d] p-3.5 rounded-xl border border-stone-200/80 dark:border-[#342f2b]">
+                      <p><span className="font-semibold text-stone-900 dark:text-stone-100">Partner name:</span> {requesterName}</p>
+                      <p><span className="font-semibold text-stone-900 dark:text-stone-100">Partner email:</span> {activePendingRequest?.partnerEmail || 'No email provided'}</p>
+                      <p className="tabular-nums"><span className="font-semibold text-stone-900 dark:text-stone-100">Date requested:</span> {activePendingRequest?.created_at ? new Date(activePendingRequest.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recently'}</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl border border-pink-100/50 space-y-4">
+                <div className="bg-[#faf8f6] dark:bg-[#23201d] p-5 rounded-xl border border-stone-200/80 dark:border-[#342f2b] space-y-3.5">
                   <div>
-                    <h4 className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Permission Review</h4>
-                    <p className="text-xs text-gray-400 mt-1">Deselect any categories you do not wish to share before approving. Checked items will be shared.</p>
+                    <h4 className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">Permission review</h4>
+                    <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">Deselect any categories you do not wish to share before approving.</p>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
@@ -2216,61 +2255,61 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                               setReviewedPermissions([...reviewedPermissions, reqItem]);
                             }
                           }}
-                          className={`flex items-center gap-3 p-2.5 rounded-xl border transition-all cursor-pointer ${isChecked ? 'border-pink-300 bg-pink-50/20' : 'border-gray-150 hover:bg-gray-50'}`}
+                          className={`flex items-center gap-3 p-2.5 rounded-xl border transition-colors cursor-pointer ${isChecked ? 'border-pink-500 bg-pink-50/70 dark:bg-pink-950/30' : 'border-stone-200/80 dark:border-[#342f2b] bg-white dark:bg-[#1a1816] hover:border-pink-300'}`}
                         >
-                          <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${isChecked ? 'border-pink-500 bg-pink-500 text-white animate-fadeIn' : 'border-gray-300 bg-white'}`}>
-                            {isChecked && <span className="text-[10px] font-bold">✓</span>}
+                          <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${isChecked ? 'border-pink-600 bg-pink-600 text-white' : 'border-stone-300 dark:border-stone-600 bg-white dark:bg-[#1a1816]'}`}>
+                            {isChecked && <Check className="w-3 h-3" />}
                           </div>
-                          <span className="font-semibold text-gray-750">{reqItem}</span>
+                          <span className="font-semibold text-stone-800 dark:text-stone-200">{reqItem}</span>
                         </div>
                       );
                     })}
                     {requestedPermissionsList.length === 0 && (
-                      <span className="text-xs text-gray-400 italic">No specific categories specified (All by default)</span>
+                      <span className="text-xs text-stone-500 dark:text-stone-400">No specific categories specified (All by default)</span>
                     )}
                   </div>
                 </div>
 
-                <div className="flex flex-wrap gap-3 pt-2">
+                <div className="flex flex-wrap gap-2.5 pt-1">
                   <button
                     type="button"
                     onClick={handleApproveSelected}
-                    className="px-6 py-4 bg-pink-500 hover:bg-pink-600 text-white font-bold rounded-2xl text-[10px] uppercase tracking-widest shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+                    className="px-5 h-10 bg-pink-600 hover:bg-pink-700 text-white font-semibold rounded-xl text-xs transition-colors cursor-pointer flex items-center gap-1.5"
                   >
-                    <span>💖</span> Save Permissions & Approve Connection
+                    <Check className="w-4 h-4" /> Save permissions &amp; approve
                   </button>
                   <button
                     type="button"
                     onClick={handleApproveAll}
-                    className="px-6 py-4 bg-white text-pink-500 border border-pink-100 hover:bg-pink-50/50 font-bold rounded-2xl text-[10px] uppercase tracking-widest shadow-sm transition-all cursor-pointer"
+                    className="px-5 h-10 bg-white dark:bg-[#23201d] text-stone-700 dark:text-stone-200 border border-stone-200/80 dark:border-[#342f2b] hover:bg-stone-50 font-semibold rounded-xl text-xs transition-colors cursor-pointer"
                   >
-                    Approve All Categories
+                    Approve all categories
                   </button>
                   {!showDeclineConfirm ? (
                     <button
                       type="button"
                       onClick={() => setShowDeclineConfirm(true)}
-                      className="px-6 py-4 bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold rounded-2xl text-[10px] uppercase tracking-widest transition-all cursor-pointer"
+                      className="px-5 h-10 bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 hover:bg-rose-100 font-semibold rounded-xl text-xs transition-colors cursor-pointer"
                     >
-                      Decline Request ✕
+                      Decline request
                     </button>
                   ) : (
-                    <div className="w-full p-4 bg-rose-50 border border-rose-200 rounded-2xl flex flex-wrap items-center justify-between gap-3">
-                      <span className="text-xs font-semibold text-rose-800">Decline {requesterName}'s partner request?</span>
+                    <div className="w-full p-4 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 rounded-xl flex flex-wrap items-center justify-between gap-3">
+                      <span className="text-xs font-medium text-rose-800 dark:text-rose-200">Decline {requesterName}&apos;s partner request?</span>
                       <div className="flex gap-2">
                         <button
                           type="button"
                           onClick={() => setShowDeclineConfirm(false)}
-                          className="px-4 py-2 bg-white text-stone-600 rounded-xl text-[10px] font-bold uppercase border border-stone-200 cursor-pointer"
+                          className="px-3.5 h-8 bg-white dark:bg-[#1a1816] text-stone-600 dark:text-stone-300 rounded-lg text-xs font-semibold border border-stone-200 dark:border-[#342f2b] cursor-pointer"
                         >
                           Cancel
                         </button>
                         <button
                           type="button"
                           onClick={executeDeclineRequest}
-                          className="px-4 py-2 bg-rose-600 text-white rounded-xl text-[10px] font-bold uppercase cursor-pointer"
+                          className="px-3.5 h-8 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-semibold cursor-pointer"
                         >
-                          Confirm Decline
+                          Confirm decline
                         </button>
                       </div>
                     </div>
@@ -2278,63 +2317,65 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                 </div>
               </div>
             ) : (
-              <section className="bg-white p-8 rounded-[3rem] shadow-sm border border-pink-50 text-center space-y-4">
-                <span className="text-4xl block">📪</span>
-                <h3 className="text-lg font-serif text-pink-600 italic">No Active Pending Requests</h3>
-                <p className="text-xs text-gray-400 max-w-xs mx-auto">
-                  You don't have any pending requests to approve at the moment. All companion links are fully processed.
+              <section className="bg-white dark:bg-[#1a1816] p-8 rounded-2xl shadow-xs border border-stone-200/80 dark:border-[#2e2a26] text-center space-y-3">
+                <div className="w-12 h-12 rounded-xl bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] flex items-center justify-center text-stone-400 mx-auto">
+                  <Mail className="w-5 h-5" />
+                </div>
+                <h3 className="text-lg font-serif text-stone-900 dark:text-stone-100 font-semibold">No active pending requests</h3>
+                <p className="text-xs text-stone-500 dark:text-stone-400 max-w-xs mx-auto">
+                  You don&apos;t have any pending requests to approve at the moment.
                 </p>
               </section>
             )}
 
             {/* Notification & Connection History */}
-            <section className="bg-white p-8 rounded-[3rem] shadow-sm border border-pink-50 space-y-6">
-              <div className="flex items-center justify-between border-b border-pink-50 pb-4">
+            <section className="bg-white dark:bg-[#1a1816] p-6 sm:p-8 rounded-2xl shadow-xs border border-stone-200/80 dark:border-[#2e2a26] space-y-5">
+              <div className="flex items-center justify-between border-b border-stone-200/70 dark:border-[#2e2a26] pb-4 gap-3">
                 <div className="space-y-1">
-                  <h4 className="text-lg font-serif italic text-indigo-950 font-bold">Request & Connection History</h4>
-                  <p className="text-[11px] text-gray-400">A historical timeline of companion connection requests on this account.</p>
+                  <h4 className="text-lg font-serif text-stone-900 dark:text-stone-100 font-semibold">Request &amp; connection history</h4>
+                  <p className="text-xs text-stone-500 dark:text-stone-400">A timeline of companion connection requests on this account.</p>
                 </div>
-                <span className="text-xs font-bold font-mono text-gray-400 px-3 py-1 bg-gray-50 rounded-full border border-gray-100">
+                <span className="text-xs font-semibold font-mono text-stone-600 dark:text-stone-300 px-3 py-1 bg-[#faf8f6] dark:bg-[#23201d] rounded-lg border border-stone-200/80 dark:border-[#342f2b] tabular-nums shrink-0">
                   Total: {incomingRequests.length}
                 </span>
               </div>
 
               <div className="space-y-3">
                 {incomingRequests.map((req) => (
-                  <div key={req.id} className="p-5 rounded-3xl border border-gray-100 bg-white/50 space-y-3 hover:border-pink-100 transition-colors">
+                  <div key={req.id} className="p-4 sm:p-5 rounded-xl border border-stone-200/80 dark:border-[#342f2b] bg-[#faf8f6] dark:bg-[#23201d] space-y-3">
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div className="space-y-1 text-left">
-                        <span className="text-sm font-bold text-indigo-950">{req.partnerName}</span>
-                        <p className="text-xs text-gray-400">{req.partnerEmail || 'No email provided'}</p>
+                      <div className="space-y-0.5 text-left">
+                        <span className="text-sm font-semibold text-stone-900 dark:text-stone-100">{req.partnerName}</span>
+                        <p className="text-xs text-stone-500 dark:text-stone-400">{req.partnerEmail || 'No email provided'}</p>
                       </div>
                       
-                      <span className={`px-3.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                      <span className={`px-3 py-1 rounded-lg text-xs font-semibold border ${
                         req.status === 'approved' 
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
+                          ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900/50' 
                           : req.status === 'declined'
-                          ? 'bg-rose-50 text-rose-700 border-rose-100'
-                          : 'bg-amber-50 text-amber-700 border-amber-100 animate-pulse'
+                          ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-900/50'
+                          : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-900/50'
                       }`}>
-                        {req.status === 'approved' ? '✓ Access Approved' : req.status === 'declined' ? '✕ Declined' : '⏱ Pending Review'}
+                        {req.status === 'approved' ? 'Approved' : req.status === 'declined' ? 'Declined' : 'Pending review'}
                       </span>
                     </div>
 
-                    <div className="pt-2 border-t border-dashed border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs text-left">
-                      <div>
-                        <span className="font-bold text-gray-500">Date:</span>{' '}
-                        <span className="text-gray-600">
+                    <div className="pt-2.5 border-t border-stone-200/70 dark:border-[#2e2a26] flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs text-left">
+                      <div className="tabular-nums">
+                        <span className="font-semibold text-stone-600 dark:text-stone-400">Date:</span>{' '}
+                        <span className="text-stone-700 dark:text-stone-300">
                           {req.created_at ? new Date(req.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : 'Recently'}
                         </span>
                       </div>
-                      <div className="flex flex-wrap gap-1 items-center">
-                        <span className="font-bold text-gray-500 mr-1">Categories requested:</span>
+                      <div className="flex flex-wrap gap-1.5 items-center">
+                        <span className="font-semibold text-stone-600 dark:text-stone-400 mr-1">Categories:</span>
                         {(req.requested_permissions || []).map((p: string, idx: number) => (
-                          <span key={idx} className="bg-pink-50/50 text-[10px] font-bold text-pink-600 px-2 py-0.5 rounded-full border border-pink-100/50">
+                          <span key={idx} className="bg-white dark:bg-[#1a1816] text-xs font-medium text-pink-700 dark:text-pink-300 px-2 py-0.5 rounded-md border border-stone-200/80 dark:border-[#2e2a26]">
                             {p}
                           </span>
                         ))}
                         {(!req.requested_permissions || req.requested_permissions.length === 0) && (
-                          <span className="text-gray-400 italic">None specified</span>
+                          <span className="text-stone-500 dark:text-stone-400">None specified</span>
                         )}
                       </div>
                     </div>
@@ -2342,9 +2383,9 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                 ))}
 
                 {incomingRequests.length === 0 && (
-                  <div className="text-center py-10 text-gray-400 space-y-2">
-                    <span className="text-3xl">📭</span>
-                    <p className="text-xs font-semibold">No requests recorded in history.</p>
+                  <div className="text-center py-8 text-stone-500 dark:text-stone-400 space-y-2">
+                    <Mail className="w-6 h-6 mx-auto opacity-50" />
+                    <p className="text-xs font-medium">No requests recorded in history.</p>
                   </div>
                 )}
               </div>
@@ -2354,32 +2395,29 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
 
         {subTab === 'invitations' && (
           <div className="space-y-6 animate-fadeIn text-left">
-            <section className="bg-white p-8 rounded-[3rem] shadow-sm border border-pink-50 space-y-6">
-              <div className="bg-gradient-to-br from-pink-500/5 to-rose-500/5 border border-pink-100 rounded-[2.5rem] p-6 text-center space-y-3">
-                <span className="text-3xl">✨</span>
-                <h3 className="text-lg font-serif italic font-extrabold text-pink-600">Your Partner Link</h3>
-                <p className="text-[10px] text-gray-400 uppercase tracking-widest font-black">Share with your partner to connect</p>
-                <div className="bg-white py-3 px-6 rounded-2xl border-2 border-pink-100 block text-sm font-mono font-black text-pink-600 tracking-wide truncate shadow-sm">
+            <section className="bg-white dark:bg-[#1a1816] p-6 sm:p-8 rounded-2xl shadow-xs border border-stone-200/80 dark:border-[#2e2a26] space-y-5">
+              <div className="bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] rounded-2xl p-6 text-center space-y-2.5">
+                <h3 className="text-lg font-serif font-semibold text-stone-900 dark:text-stone-100">Your partner link</h3>
+                <p className="text-xs text-stone-500 dark:text-stone-400 font-medium">Share with your partner to connect</p>
+                <div className="bg-white dark:bg-[#1a1816] py-3 px-5 rounded-xl border border-stone-200/80 dark:border-[#2e2a26] block text-sm font-mono font-semibold text-pink-600 dark:text-pink-400 tracking-wide truncate">
                   {window.location.host}/invite/{user.partnerCode || '...'}
                 </div>
               </div>
 
               {/* Share Options Grid */}
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {/* Copy Link */}
                 <button
                   type="button"
                   onClick={() => {
                     navigator.clipboard.writeText(inviteLink);
-                    showNotice("Invite link copied to clipboard! 📋", 'success');
+                    showNotice("Invite link copied to clipboard!", 'success');
                   }}
-                  className="p-4 bg-pink-50/50 hover:bg-pink-50 border border-pink-100 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all cursor-pointer"
+                  className="p-4 bg-[#faf8f6] dark:bg-[#23201d] hover:bg-stone-100 dark:hover:bg-[#2a2622] border border-stone-200/80 dark:border-[#342f2b] rounded-xl flex flex-col items-center justify-center gap-2 transition-colors cursor-pointer"
                 >
-                  <span className="text-2xl">📋</span>
-                  <span className="text-xs font-bold text-pink-700">Copy Link</span>
+                  <Copy className="w-5 h-5 text-pink-600 dark:text-pink-400" />
+                  <span className="text-xs font-semibold text-stone-800 dark:text-stone-200">Copy link</span>
                 </button>
 
-                {/* Share Link */}
                 <button
                   type="button"
                   onClick={async () => {
@@ -2387,7 +2425,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                       try {
                         await navigator.share({
                           title: 'Connect on Lumina',
-                          text: `🌸 ${getUserDisplayName(user)} invited you to join her Lumina Partner Circle`,
+                          text: `${getUserDisplayName(user)} invited you to join her Lumina Partner Circle`,
                           url: inviteLink
                         });
                       } catch (err) {
@@ -2395,78 +2433,74 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                       }
                     } else {
                       navigator.clipboard.writeText(inviteLink);
-                      showNotice("Web Share not supported. Link copied to clipboard instead! 📋", 'info');
+                      showNotice("Web Share not supported. Link copied to clipboard instead!", 'info');
                     }
                   }}
-                  className="p-4 bg-pink-50/50 hover:bg-pink-50 border border-pink-100 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all cursor-pointer"
+                  className="p-4 bg-[#faf8f6] dark:bg-[#23201d] hover:bg-stone-100 dark:hover:bg-[#2a2622] border border-stone-200/80 dark:border-[#342f2b] rounded-xl flex flex-col items-center justify-center gap-2 transition-colors cursor-pointer"
                 >
-                  <span className="text-2xl">🔗</span>
-                  <span className="text-xs font-bold text-pink-700">Share Link</span>
+                  <Share2 className="w-5 h-5 text-pink-600 dark:text-pink-400" />
+                  <span className="text-xs font-semibold text-stone-800 dark:text-stone-200">Share link</span>
                 </button>
 
-                {/* WhatsApp */}
                 <a
-                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`🌸 ${getUserDisplayName(user)} invited you to join her Lumina Partner Circle: ${inviteLink}`)}`}
+                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`${getUserDisplayName(user)} invited you to join her Lumina Partner Circle: ${inviteLink}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-4 bg-emerald-50/50 hover:bg-emerald-50 border border-emerald-100 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all cursor-pointer text-center"
+                  className="p-4 bg-[#faf8f6] dark:bg-[#23201d] hover:bg-stone-100 dark:hover:bg-[#2a2622] border border-stone-200/80 dark:border-[#342f2b] rounded-xl flex flex-col items-center justify-center gap-2 transition-colors cursor-pointer text-center"
                 >
-                  <span className="text-2xl">💬</span>
-                  <span className="text-xs font-bold text-emerald-700">WhatsApp</span>
+                  <MessageSquare className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                  <span className="text-xs font-semibold text-stone-800 dark:text-stone-200">WhatsApp</span>
                 </a>
 
-                {/* Messages */}
                 <a
-                  href={`sms:?&body=${encodeURIComponent(`🌸 ${getUserDisplayName(user)} invited you to join her Lumina Partner Circle: ${inviteLink}`)}`}
-                  className="p-4 bg-blue-50/50 hover:bg-blue-50 border border-blue-100 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all cursor-pointer text-center"
+                  href={`sms:?&body=${encodeURIComponent(`${getUserDisplayName(user)} invited you to join her Lumina Partner Circle: ${inviteLink}`)}`}
+                  className="p-4 bg-[#faf8f6] dark:bg-[#23201d] hover:bg-stone-100 dark:hover:bg-[#2a2622] border border-stone-200/80 dark:border-[#342f2b] rounded-xl flex flex-col items-center justify-center gap-2 transition-colors cursor-pointer text-center"
                 >
-                  <span className="text-2xl">✉️</span>
-                  <span className="text-xs font-bold text-blue-700">Messages</span>
+                  <MessageSquare className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  <span className="text-xs font-semibold text-stone-800 dark:text-stone-200">Messages</span>
                 </a>
 
-                {/* Email */}
                 <a
                   href={`mailto:?subject=${encodeURIComponent('Join my Lumina Partner Circle')}&body=${encodeURIComponent(`Hi,\n\nI want to connect with you securely on Lumina Partner Mode! Here is my invitation link to join my Lumina Partner Circle:\n${inviteLink}\n\nLove,\n${getUserDisplayName(user)}`)}`}
-                  className="p-4 bg-purple-50/50 hover:bg-purple-50 border border-purple-100 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all cursor-pointer text-center"
+                  className="p-4 bg-[#faf8f6] dark:bg-[#23201d] hover:bg-stone-100 dark:hover:bg-[#2a2622] border border-stone-200/80 dark:border-[#342f2b] rounded-xl flex flex-col items-center justify-center gap-2 transition-colors cursor-pointer text-center"
                 >
-                  <span className="text-2xl">📧</span>
-                  <span className="text-xs font-bold text-purple-700">Email</span>
+                  <Mail className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                  <span className="text-xs font-semibold text-stone-800 dark:text-stone-200">Email</span>
                 </a>
 
-                {/* QR Code toggle */}
                 <button
                   type="button"
                   onClick={() => setShowQRCode(!showQRCode)}
-                  className={`p-4 border rounded-2xl flex flex-col items-center justify-center gap-2 transition-all cursor-pointer ${showQRCode ? 'bg-amber-100 border-amber-300' : 'bg-amber-50/50 hover:bg-amber-50 border-amber-100'}`}
+                  className={`p-4 border rounded-xl flex flex-col items-center justify-center gap-2 transition-colors cursor-pointer ${showQRCode ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800' : 'bg-[#faf8f6] dark:bg-[#23201d] hover:bg-stone-100 dark:hover:bg-[#2a2622] border-stone-200/80 dark:border-[#342f2b]'}`}
                 >
-                  <span className="text-2xl">🔳</span>
-                  <span className="text-xs font-bold text-amber-700">QR Code</span>
+                  <QrCode className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                  <span className="text-xs font-semibold text-stone-800 dark:text-stone-200">QR Code</span>
                 </button>
               </div>
 
               {showQRCode && (
-                <div className="bg-amber-50/10 border border-amber-100/50 p-4 sm:p-6 rounded-3xl text-center space-y-4 animate-slideDownBlock flex flex-col items-center justify-center w-full">
-                  <p className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">Lumina Scan Invitation</p>
-                  <div className="qr-code-container bg-white p-4 rounded-2xl border border-amber-100 shadow-md w-full max-w-[260px] aspect-square flex items-center justify-center overflow-hidden mx-auto">
+                <div className="bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] p-5 rounded-2xl text-center space-y-4 animate-slideDownBlock flex flex-col items-center justify-center w-full">
+                  <p className="text-xs font-semibold text-stone-700 dark:text-stone-300">Lumina scan invitation</p>
+                  <div className="qr-code-container bg-white p-4 rounded-xl border border-stone-200/80 shadow-xs w-full max-w-[260px] aspect-square flex items-center justify-center overflow-hidden mx-auto">
                     <QrCodeCanvas
                       value={inviteLink}
                       size={240}
                       alt="Lumina Partner Invitation QR Code"
                     />
                   </div>
-                  <p className="text-[11px] text-gray-600 italic leading-relaxed break-words max-w-full px-2">Have your partner open their camera app to scan and connect instantly.</p>
+                  <p className="text-xs text-stone-500 dark:text-stone-400 leading-relaxed break-words max-w-full px-2">Have your partner open their camera app to scan and connect instantly.</p>
                 </div>
               )}
 
               {/* Generate New Link button */}
-              <div className="pt-4 border-t border-pink-50 flex justify-end">
+              <div className="pt-3 border-t border-stone-200/70 dark:border-[#2e2a26] flex justify-end">
                 <button 
                   type="button"
                   onClick={handleForceGenerateNewCode}
                   disabled={generatingLink}
-                  className="px-4 py-2 bg-pink-50 hover:bg-pink-100 rounded-full font-serif font-bold italic text-xs border border-pink-100 text-pink-500 transition-colors cursor-pointer"
+                  className="px-4 py-2 bg-[#faf8f6] dark:bg-[#23201d] hover:bg-stone-100 dark:hover:bg-[#2a2622] rounded-xl font-semibold text-xs border border-stone-200/80 dark:border-[#342f2b] text-pink-600 dark:text-pink-400 transition-colors cursor-pointer flex items-center gap-1.5"
                 >
-                  🔄 Generate New Link
+                  <RefreshCw className="w-3.5 h-3.5" /> Generate new link
                 </button>
               </div>
             </section>
@@ -2475,30 +2509,30 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
 
         {subTab === 'privacy' && (
           <div className="space-y-6 animate-fadeIn text-left">
-            <section className="bg-white p-8 rounded-[3rem] shadow-sm border border-pink-50 space-y-6">
-              <div className="flex items-start justify-between">
+            <section className="bg-white dark:bg-[#1a1816] p-6 sm:p-8 rounded-2xl shadow-xs border border-stone-200/80 dark:border-[#2e2a26] space-y-5">
+              <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h3 className="text-xl font-serif text-pink-600 italic font-bold">Privacy Controls</h3>
-                  <p className="text-xs text-gray-400 mt-1">
-                    Control exactly what information your connected companion can view in real time.
+                  <h3 className="text-xl font-serif text-stone-900 dark:text-stone-100 font-semibold">Privacy controls</h3>
+                  <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">
+                    Control what information your connected companion can view in real time.
                   </p>
                 </div>
                 <button 
                   type="button"
                   onClick={togglePauseSharing}
-                  className={`px-3 py-1.5 rounded-full text-[8.5px] font-black uppercase tracking-widest border transition-all cursor-pointer ${user.isSharingPaused ? 'bg-amber-500 border-amber-500 text-white animate-pulse' : 'bg-white border-amber-200 text-amber-600 hover:bg-amber-55/10'}`}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1.5 ${user.isSharingPaused ? 'bg-amber-600 border-amber-600 text-white' : 'bg-[#faf8f6] dark:bg-[#23201d] border-amber-300 dark:border-amber-800 text-amber-700 dark:text-amber-300 hover:bg-amber-50'}`}
                 >
-                  {user.isSharingPaused ? '⏸️ Sharing Paused' : '⏸️ Pause All'}
+                  {user.isSharingPaused ? <><Play className="w-3.5 h-3.5" /> Sharing paused</> : <><Pause className="w-3.5 h-3.5" /> Pause all</>}
                 </button>
               </div>
 
               {isCustomizingSharing && (
-                <div className="p-4 bg-pink-50/20 border border-pink-100 rounded-2xl text-xs text-pink-800 leading-relaxed font-semibold">
-                  🛠️ <span className="font-extrabold uppercase text-pink-600">Custom Mode:</span> Toggling the variables below will adjust your sharing settings. Once you are finished, hit the "Approve Permissions" button below to active sync!
+                <div className="p-4 bg-pink-50/70 dark:bg-pink-950/30 border border-pink-200/80 dark:border-pink-900/50 rounded-xl text-xs text-pink-900 dark:text-pink-200 leading-relaxed font-medium">
+                  <span className="font-semibold text-pink-700 dark:text-pink-300">Custom mode:</span> Toggling the switches below will adjust your sharing settings. Save below to activate sync.
                 </div>
               )}
 
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <SharingToggle label="Share Cycle Information" active={user.sharingSettings?.shareCycleInfo === true} onChange={(v) => updateSharing('shareCycleInfo', v)} />
                 <SharingToggle label="Share Symptoms" active={user.sharingSettings?.shareSymptoms === true} onChange={(v) => updateSharing('shareSymptoms', v)} />
                 <SharingToggle label="Share Mood" active={user.sharingSettings?.shareMood === true} onChange={(v) => updateSharing('shareMood', v)} />
@@ -2512,20 +2546,20 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                 <button 
                   type="button"
                   onClick={handleSaveCustomSharing}
-                  className="w-full mt-6 py-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl font-bold uppercase text-[10px] tracking-widest shadow-lg shadow-pink-150 cursor-pointer"
+                  className="w-full mt-4 h-11 bg-pink-600 hover:bg-pink-700 text-white rounded-xl font-semibold text-xs transition-colors cursor-pointer"
                 >
-                  Save & Approve Connection 💮
+                  Save &amp; approve connection
                 </button>
               ) : (
                 <button 
                   type="button"
                   onClick={async () => {
                     await syncUser(user);
-                    showNotice('Sharing settings saved and synchronized securely! ✨', 'success');
+                    showNotice('Sharing settings saved and synchronized securely!', 'success');
                   }}
-                  className="w-full mt-6 py-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl font-bold uppercase text-[10px] tracking-widest shadow-lg shadow-pink-150 cursor-pointer"
+                  className="w-full mt-4 h-11 bg-pink-600 hover:bg-pink-700 text-white rounded-xl font-semibold text-xs transition-colors cursor-pointer"
                 >
-                  Save Sharing Settings 🔒
+                  Save sharing settings
                 </button>
               )}
             </section>
@@ -2533,27 +2567,29 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
         )}
 
         {showDisconnectConfirm && (
-          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
-            <div className="bg-white rounded-[3rem] p-10 w-full max-w-sm text-center space-y-8 animate-fadeIn">
-              <div className="w-20 h-20 bg-rose-50 rounded-full flex items-center justify-center text-4xl mx-auto shadow-inner">⚠️</div>
-              <div className="space-y-3">
-                <h3 className="text-2xl font-serif italic text-rose-905 font-bold">Disconnect?</h3>
-                <p className="text-xs text-rose-450 leading-relaxed font-semibold">
+          <div className="fixed inset-0 bg-stone-950/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-[#1a1816] rounded-2xl p-6 sm:p-8 w-full max-w-sm border border-stone-200/80 dark:border-[#2e2a26] shadow-2xl text-center space-y-5 animate-fadeIn">
+              <div className="w-14 h-14 bg-rose-50 dark:bg-rose-950/40 border border-rose-200/70 dark:border-rose-900/50 rounded-2xl flex items-center justify-center text-rose-600 dark:text-rose-400 mx-auto">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-xl font-serif text-stone-900 dark:text-stone-100 font-semibold">Disconnect partner?</h3>
+                <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
                   This will immediately stop sharing your cycle data with {user.partnerName}. They will no longer be able to see your updates.
                 </p>
               </div>
-              <div className="grid gap-3">
+              <div className="grid gap-2.5">
                 <button 
                   type="button"
                   onClick={handleDisconnect}
-                  className="w-full py-4 bg-rose-500 text-white rounded-2xl font-bold uppercase text-xs tracking-widest shadow-lg shadow-rose-100 cursor-pointer"
+                  className="w-full h-11 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-semibold text-xs transition-colors cursor-pointer"
                 >
-                  Yes, Disconnect ❌
+                  Yes, disconnect
                 </button>
                 <button 
                   type="button"
                   onClick={() => setShowDisconnectConfirm(false)}
-                  className="w-full py-4 bg-white border-2 border-rose-100 text-rose-400 rounded-2xl font-bold uppercase text-xs tracking-widest cursor-pointer"
+                  className="w-full h-10 bg-stone-100 dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] text-stone-700 dark:text-stone-200 rounded-xl font-semibold text-xs hover:bg-stone-200 cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -2569,26 +2605,28 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
   // Partner pending or declined state view for Partner Mode
   if (user.isPartner && !isConnected) {
     return (
-      <div className="space-y-8 animate-fadeIn pb-24 font-sans max-w-2xl mx-auto pt-4">
+      <div className="space-y-6 animate-fadeIn pb-24 font-sans max-w-2xl mx-auto pt-4">
         {renderNoticeBanner()}
         {/* Top Header Section for Partner Mode */}
-        <header className="flex items-center justify-between px-4 py-3 bg-white/40 backdrop-blur-2xl border border-white/60 shadow-sm rounded-3xl sticky top-2 z-40 flex-wrap gap-2">
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex items-center gap-1.5 cursor-pointer">
-              <span className="text-xl animate-pulse">🤝</span>
-              <span className="font-serif italic font-black text-2xl bg-gradient-to-r from-indigo-500 to-purple-400 bg-clip-text text-transparent drop-shadow-sm">
+        <header className="flex items-center justify-between px-4 py-3 bg-white/95 dark:bg-[#1a1816]/95 backdrop-blur-md border border-stone-200/80 dark:border-[#2e2a26] shadow-xs rounded-2xl sticky top-2 z-40 flex-wrap gap-2">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200/70 dark:border-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                <Users className="w-4 h-4" />
+              </div>
+              <span className="font-serif font-semibold text-lg text-stone-900 dark:text-stone-100">
                 Lumina Partner
               </span>
             </div>
             {isDeclined ? (
-              <div className="flex items-center gap-1.5 px-3 py-1 bg-rose-50 text-rose-700 rounded-full text-[10px] font-black uppercase tracking-wider border border-rose-200/60 shadow-sm">
-                <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0"></span>
-                <span>Request Declined</span>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 rounded-full text-xs font-medium border border-rose-200/70 dark:border-rose-900/50">
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
+                <span>Request declined</span>
               </div>
             ) : (
-              <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-700 rounded-full text-[10px] font-black uppercase tracking-wider border border-amber-200/60 shadow-sm">
-                <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping shrink-0"></span>
-                <span>Pending Approval</span>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 rounded-full text-xs font-medium border border-amber-200/70 dark:border-amber-900/50">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                <span>Pending approval</span>
               </div>
             )}
           </div>
@@ -2598,51 +2636,54 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
               <button 
                 type="button"
                 onClick={() => setShowLogoutModal(true)}
-                className="px-3 py-1.5 rounded-2xl bg-rose-50 text-rose-600 hover:bg-rose-100 text-[10px] font-black uppercase tracking-wider border border-rose-200/60 transition-all cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-xs font-semibold border border-rose-200/70 dark:border-rose-900/50 transition-colors cursor-pointer whitespace-nowrap"
               >
-                🚪 Log Out
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Log out</span>
               </button>
             )}
           </div>
         </header>
 
         {isDeclined ? (
-          <section className="bg-white p-10 rounded-[3rem] shadow-lg border border-rose-100 flex flex-col items-center text-center space-y-6 animate-fadeIn">
-            <div className="w-20 h-20 bg-rose-50 rounded-full flex items-center justify-center text-4xl shadow-inner border border-rose-100">
-              💔
+          <section className="bg-white dark:bg-[#1a1816] p-8 sm:p-10 rounded-2xl shadow-xs border border-stone-200/80 dark:border-[#2e2a26] flex flex-col items-center text-center space-y-5 animate-fadeIn">
+            <div className="w-16 h-16 bg-rose-50 dark:bg-rose-950/40 rounded-2xl flex items-center justify-center text-rose-600 dark:text-rose-400 border border-rose-200/70 dark:border-rose-900/50">
+              <AlertCircle className="w-7 h-7" />
             </div>
             <div className="space-y-2">
-              <h3 className="text-2xl font-serif italic text-stone-800 font-bold">Connection Request Declined</h3>
-              <p className="text-xs text-stone-600 max-w-md mx-auto leading-relaxed">
-                Your request to connect with <span className="font-bold text-indigo-600">{partnerDisplayName}</span> was declined. It is only when <span className="font-bold text-indigo-600">{partnerDisplayName}</span> accepts your connection request that you will be able to access partner features and view cycle insights.
+              <h3 className="text-2xl font-serif text-stone-900 dark:text-stone-100 font-semibold">Connection request declined</h3>
+              <p className="text-sm text-stone-600 dark:text-stone-400 max-w-md mx-auto leading-relaxed">
+                Your request to connect with <span className="font-semibold text-indigo-600 dark:text-indigo-400">{partnerDisplayName}</span> was declined. You will be able to access partner features and cycle insights once <span className="font-semibold text-indigo-600 dark:text-indigo-400">{partnerDisplayName}</span> accepts your connection request.
               </p>
             </div>
-            <div className="p-4 bg-rose-50/50 rounded-2xl border border-rose-100 max-w-md w-full text-left space-y-2 text-xs">
-              <p className="font-bold text-rose-900 flex items-center gap-1.5">
-                <span>🔒</span> Privacy Safeguard
+            <div className="p-4 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl border border-stone-200/80 dark:border-[#342f2b] max-w-md w-full text-left space-y-1.5">
+              <p className="font-semibold text-xs text-stone-900 dark:text-stone-100 flex items-center gap-1.5">
+                <Lock className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
+                <span>Privacy safeguard</span>
               </p>
-              <p className="text-stone-600 text-[11px] leading-relaxed">
-                We respect both partners' privacy choices. You can enter a new invitation link if your partner re-invites you.
+              <p className="text-stone-600 dark:text-stone-400 text-xs leading-relaxed">
+                We respect both partners&apos; privacy choices. You can enter a new invitation link if your partner re-invites you.
               </p>
             </div>
           </section>
         ) : (
-          <section className="bg-white p-10 rounded-[3rem] shadow-lg border border-amber-100 flex flex-col items-center text-center space-y-6 animate-fadeIn">
-            <div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center text-4xl shadow-inner border border-amber-100 animate-pulse">
-              ⏳
+          <section className="bg-white dark:bg-[#1a1816] p-8 sm:p-10 rounded-2xl shadow-xs border border-stone-200/80 dark:border-[#2e2a26] flex flex-col items-center text-center space-y-5 animate-fadeIn">
+            <div className="w-16 h-16 bg-amber-50 dark:bg-amber-950/40 rounded-2xl flex items-center justify-center text-amber-600 dark:text-amber-400 border border-amber-200/70 dark:border-amber-900/50">
+              <Clock className="w-7 h-7" />
             </div>
             <div className="space-y-2">
-              <h3 className="text-2xl font-serif italic text-stone-800 font-bold">Connection Request Pending</h3>
-              <p className="text-xs text-stone-600 max-w-md mx-auto leading-relaxed">
-                Your partner account has been created! A connection request has been sent to <span className="font-bold text-indigo-600">{partnerDisplayName}</span>. Once <span className="font-bold text-indigo-600">{partnerDisplayName}</span> accepts your request, you will be connected and can view their actual cycle calendar and support features.
+              <h3 className="text-2xl font-serif text-stone-900 dark:text-stone-100 font-semibold">Connection request pending</h3>
+              <p className="text-sm text-stone-600 dark:text-stone-400 max-w-md mx-auto leading-relaxed">
+                Your partner account has been created. A connection request has been sent to <span className="font-semibold text-indigo-600 dark:text-indigo-400">{partnerDisplayName}</span>. Once <span className="font-semibold text-indigo-600 dark:text-indigo-400">{partnerDisplayName}</span> accepts your request, you will be connected and can view their shared cycle calendar and support features.
               </p>
             </div>
-            <div className="p-4 bg-indigo-50/60 rounded-2xl border border-indigo-100 max-w-md w-full text-left space-y-2 text-xs">
-              <p className="font-bold text-indigo-900 flex items-center gap-1.5">
-                <span>🔔</span> Notification Sent to {partnerDisplayName}
+            <div className="p-4 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl border border-stone-200/80 dark:border-[#342f2b] max-w-md w-full text-left space-y-1.5">
+              <p className="font-semibold text-xs text-stone-900 dark:text-stone-100 flex items-center gap-1.5">
+                <Bell className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                <span>Notification sent to {partnerDisplayName}</span>
               </p>
-              <p className="text-stone-600 text-[11px] leading-relaxed">
-                {partnerDisplayName} has received a notification in their bell icon and pending requests panel to accept your request.
+              <p className="text-stone-600 dark:text-stone-400 text-xs leading-relaxed">
+                {partnerDisplayName} has received a notification in their notifications drawer and pending requests panel to approve your request.
               </p>
             </div>
             <button 
@@ -2657,31 +2698,32 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                 await syncUser(user);
                 showNotice('Connection status refreshed.', 'info');
               }}
-              className="px-6 py-3 bg-indigo-600 text-white rounded-2xl font-bold text-xs uppercase tracking-wider shadow-md hover:bg-indigo-700 transition-all cursor-pointer"
+              className="inline-flex items-center gap-2 px-6 h-11 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold text-xs transition-colors cursor-pointer"
             >
-              Check Connection Status 🔄
+              <RefreshCw className="w-4 h-4" />
+              <span>Check connection status</span>
             </button>
           </section>
         )}
 
         {/* LOGOUT CONFIRMATION MODAL */}
         {showLogoutModal && (
-          <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fadeIn">
-            <div className="bg-white rounded-[2.5rem] p-6 max-w-sm w-full space-y-5 border border-pink-100 shadow-2xl text-center">
-              <div className="w-16 h-16 bg-pink-50 rounded-full flex items-center justify-center text-rose-500 mx-auto text-2xl">
-                🚪
+          <div className="fixed inset-0 bg-stone-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
+            <div className="bg-white dark:bg-[#1a1816] rounded-2xl p-6 max-w-sm w-full space-y-5 border border-stone-200/80 dark:border-[#2e2a26] shadow-2xl text-center">
+              <div className="w-12 h-12 bg-rose-50 dark:bg-rose-950/40 border border-rose-200/70 dark:border-rose-900/50 rounded-xl flex items-center justify-center text-rose-600 dark:text-rose-400 mx-auto">
+                <LogOut className="w-5 h-5" />
               </div>
-              <div className="space-y-2">
-                <h3 className="font-serif font-bold text-lg text-stone-800">Partner Logout</h3>
-                <p className="text-xs text-stone-600 font-medium leading-relaxed">
+              <div className="space-y-1.5">
+                <h3 className="font-serif font-semibold text-lg text-stone-900 dark:text-stone-100">Partner log out</h3>
+                <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
                   Are you sure you want to log out?
                 </p>
               </div>
-              <div className="flex gap-3 pt-2">
+              <div className="flex gap-2.5 pt-1">
                 <button
                   type="button"
                   onClick={() => setShowLogoutModal(false)}
-                  className="flex-1 py-3 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs uppercase tracking-wider rounded-2xl transition-all cursor-pointer"
+                  className="flex-1 h-10 bg-stone-100 dark:bg-[#23201d] hover:bg-stone-200 dark:hover:bg-[#2e2a26] border border-stone-200/80 dark:border-[#342f2b] text-stone-700 dark:text-stone-200 font-semibold text-xs rounded-xl transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -2691,9 +2733,9 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                     setShowLogoutModal(false);
                     if (onLogout) onLogout();
                   }}
-                  className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs uppercase tracking-wider rounded-2xl transition-all cursor-pointer shadow-md shadow-rose-200"
+                  className="flex-1 h-10 bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs rounded-xl transition-colors cursor-pointer"
                 >
-                  Log Out
+                  Log out
                 </button>
               </div>
             </div>
@@ -2703,59 +2745,58 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
     );
   }
 
-  // Partner Dashboard View
+  // Partner Dashboard View (Paused Sharing)
   if (targetUser?.isSharingPaused) {
     return (
-      <div className="space-y-8 animate-fadeIn pb-24 font-sans">
+      <div className="space-y-6 animate-fadeIn pb-24 font-sans">
         {/* Top Header Section for Partner Mode */}
-        <header className="flex items-center justify-between px-4 py-3 bg-white/40 backdrop-blur-2xl border border-white/60 shadow-[inset_0_2px_4px_rgba(255,255,255,0.6),_0_8px_32px_rgba(99,102,241,0.03)] rounded-3xl sticky top-2 z-40 flex-wrap gap-2">
-          <div className="flex items-center gap-2 flex-wrap">
+        <header className="flex items-center justify-between px-4 py-3 bg-white/95 dark:bg-[#1a1816]/95 backdrop-blur-md border border-stone-200/80 dark:border-[#2e2a26] shadow-xs rounded-2xl sticky top-2 z-40 flex-wrap gap-2">
+          <div className="flex items-center gap-2.5 flex-wrap">
             <button 
               type="button"
               onClick={() => setIsMenuOpen(true)}
-              title="Navigation Menu"
-              className="p-2.5 rounded-2xl bg-white/70 hover:bg-white/95 text-indigo-600 transition-all duration-300 shadow-sm border border-indigo-100/60 cursor-pointer flex items-center justify-center active:scale-90"
+              title="Navigation menu"
+              className="p-2 rounded-xl bg-stone-100 dark:bg-[#23201d] hover:bg-stone-200 dark:hover:bg-[#2e2a26] text-stone-700 dark:text-stone-200 transition-colors border border-stone-200/80 dark:border-[#342f2b] cursor-pointer flex items-center justify-center"
             >
-              <Menu className="w-5 h-5" />
+              <Menu className="w-4 h-4" />
             </button>
-            <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => setActiveTab('home')}>
-              <span className="text-xl animate-pulse">🤝</span>
-              <span className="font-serif italic font-black text-2xl bg-gradient-to-r from-indigo-500 to-purple-400 bg-clip-text text-transparent drop-shadow-sm">
+            <div className="flex items-center gap-2 cursor-pointer" onClick={() => setActiveTab('home')}>
+              <span className="font-serif font-semibold text-lg text-stone-900 dark:text-stone-100">
                 Lumina Partner
               </span>
             </div>
-            {/* Connection Status Indicator Badge */}
             {isConnected ? (
-              <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-wider border border-emerald-200/60 shadow-sm">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 rounded-full text-xs font-medium border border-emerald-200/70 dark:border-emerald-900/50">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
                 <span>Connected ({partnerDisplayName})</span>
               </div>
             ) : activePendingRequest?.status === 'pending' || user.partnerRequest?.status === 'pending' ? (
-              <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-700 rounded-full text-[10px] font-black uppercase tracking-wider border border-amber-200/60 shadow-sm">
-                <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping shrink-0"></span>
-                <span>Pending Approval</span>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 rounded-full text-xs font-medium border border-amber-200/70 dark:border-amber-900/50">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                <span>Pending approval</span>
               </div>
             ) : activePendingRequest?.status === 'declined' || user.partnerRequest?.status === 'declined' ? (
-              <div className="flex items-center gap-1.5 px-3 py-1 bg-rose-50 text-rose-700 rounded-full text-[10px] font-black uppercase tracking-wider border border-rose-200/60 shadow-sm">
-                <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0"></span>
-                <span>Request Declined</span>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 rounded-full text-xs font-medium border border-rose-200/70 dark:border-rose-900/50">
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
+                <span>Request declined</span>
               </div>
             ) : (
-              <div className="flex items-center gap-1.5 px-3 py-1 bg-stone-100 text-stone-600 rounded-full text-[10px] font-black uppercase tracking-wider border border-stone-200/60 shadow-sm">
-                <span className="w-2 h-2 rounded-full bg-stone-400 shrink-0"></span>
-                <span>Not Connected</span>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-stone-100 dark:bg-[#23201d] text-stone-600 dark:text-stone-400 rounded-full text-xs font-medium border border-stone-200/80 dark:border-[#342f2b]">
+                <span className="w-1.5 h-1.5 rounded-full bg-stone-400 shrink-0" />
+                <span>Not connected</span>
               </div>
             )}
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2">
             {(!user.isPartner || isPreviewingCompanion) && (
               <button 
                 type="button"
                 onClick={() => setIsPreviewingCompanion(false)}
-                className="px-3 py-2 text-[10px] font-bold text-indigo-600 bg-indigo-50/50 hover:bg-indigo-100/50 rounded-2xl border border-indigo-100/50 transition-all active:scale-95 cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 rounded-xl border border-indigo-200/70 dark:border-indigo-900/50 transition-colors cursor-pointer whitespace-nowrap"
               >
-                ← Back to My Account
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Back to my account</span>
               </button>
             )}
 
@@ -2769,78 +2810,80 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                 }
               }}
               title="Notifications"
-              className="p-2.5 rounded-2xl bg-white/60 hover:bg-white/90 text-indigo-600 transition-all duration-300 shadow-[inset_0_1.5px_2.5px_rgba(255,255,255,0.7),_0_4px_12px_rgba(99,102,241,0.05)] border border-indigo-50/50 cursor-pointer flex items-center justify-center relative active:scale-90"
+              className="p-2 rounded-xl bg-stone-100 dark:bg-[#23201d] hover:bg-stone-200 dark:hover:bg-[#2e2a26] text-stone-700 dark:text-stone-200 transition-colors border border-stone-200/80 dark:border-[#342f2b] cursor-pointer flex items-center justify-center relative"
             >
-              <Bell className={`w-5 h-5 ${hasUnreadPartnerAlerts ? 'animate-shake' : ''}`} />
-              {/* Active Notifications dot if any partner notifications are unread */}
+              <Bell className="w-4 h-4" />
               {hasUnreadPartnerAlerts && (
-                <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-gradient-to-r from-indigo-500 to-purple-550 rounded-full border-2 border-white animate-pulse" />
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-indigo-600 rounded-full ring-2 ring-white dark:ring-[#23201d]" />
               )}
             </button>
           </div>
         </header>
 
-        <header className="relative bg-gradient-to-br from-indigo-700 to-purple-800 p-12 rounded-[3.5rem] shadow-2xl text-white text-center overflow-hidden">
-          <div className="relative z-10 space-y-4">
-            <span className="text-5xl block animate-bounce">⏸️</span>
-            <h2 className="text-3xl font-serif italic">Sharing Temporarily Paused</h2>
-            <p className="text-sm opacity-90 max-w-sm mx-auto font-medium">
-              {getCleanName(targetUser?.name, targetUser?.email) || 'Your partner'} has temporarily paused data sharing. We respect her privacy choices.
+        <section className="bg-indigo-950 dark:bg-[#1c1a30] p-8 sm:p-10 rounded-2xl shadow-sm border border-indigo-900/60 dark:border-indigo-900/40 text-white text-center space-y-4">
+          <div className="w-14 h-14 bg-white/10 border border-white/15 rounded-2xl flex items-center justify-center mx-auto">
+            <Pause className="w-6 h-6 text-indigo-200" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl sm:text-3xl font-serif font-semibold">Sharing temporarily paused</h2>
+            <p className="text-sm text-indigo-100/90 max-w-md mx-auto leading-relaxed">
+              {getCleanName(targetUser?.name, targetUser?.email) || 'Your partner'} has temporarily paused cycle data sharing. Their privacy choices remain protected.
             </p>
-            <div className="pt-2">
-              <span className="px-4 py-1.5 bg-white/15 rounded-full text-[10px] font-black uppercase tracking-widest border border-white/10">Active Pause Guard 🔒</span>
-            </div>
           </div>
-          <div className="absolute top-0 right-0 p-8 opacity-10">
-            <span className="text-9xl rotate-12">🌸</span>
+          <div>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/10 rounded-full text-xs font-medium border border-white/15">
+              <Lock className="w-3.5 h-3.5 text-indigo-200" />
+              <span>Pause guard active</span>
+            </span>
           </div>
-        </header>
+        </section>
 
-        <section className="bg-white p-10 rounded-[3rem] shadow-sm border border-purple-50 flex flex-col items-center gap-6 text-center">
-          <h3 className="text-lg font-serif italic text-indigo-950">Send supportive comfort instead! 💕</h3>
-          <p className="text-xs text-gray-500 max-w-md leading-relaxed">
-            Just because sharing is paused doesn't mean you can't be a hero. Send her sweet animations or supportive digital gifts that balloon on her dashboard instantly!
-          </p>
-          <div className="flex justify-center gap-8 pt-2">
+        <section className="bg-white dark:bg-[#1a1816] p-8 rounded-2xl shadow-xs border border-stone-200/80 dark:border-[#2e2a26] flex flex-col items-center gap-5 text-center">
+          <div className="space-y-1.5">
+            <h3 className="text-lg font-serif font-semibold text-stone-900 dark:text-stone-100">Send supportive comfort</h3>
+            <p className="text-xs text-stone-600 dark:text-stone-400 max-w-md leading-relaxed">
+              Even while sharing is paused, you can send thoughtful gestures directly to her dashboard.
+            </p>
+          </div>
+          <div className="flex flex-wrap justify-center gap-6 pt-1">
             <ComfortButton icon="🌸" label="Flower" onClick={() => sendDigitalComfort('flower')} />
             <ComfortButton icon="🍫" label="Chocolate" onClick={() => sendDigitalComfort('chocolate')} />
-            <ComfortButton icon="🍵" label="Warm Tea" onClick={() => sendDigitalComfort('tea')} />
+            <ComfortButton icon="🍵" label="Warm tea" onClick={() => sendDigitalComfort('tea')} />
           </div>
           <button 
+            type="button"
             onClick={() => setIsPreviewingCompanion(false)}
-            className="text-[10px] font-black text-indigo-505 uppercase tracking-widest hover:underline mt-4 cursor-pointer"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline mt-2 cursor-pointer"
           >
-            ← Back to My Account
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Back to my account</span>
           </button>
         </section>
 
         {/* Slide-out notifications pane (Right drawer) */}
         {isNotificationsOpen && (
           <>
-            <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-[150] transition-opacity" onClick={() => setIsNotificationsOpen(false)} />
-            <div className="fixed inset-y-0 right-0 max-w-xs w-full bg-[#fffafb]/95 backdrop-blur-3xl shadow-2xl z-[160] p-6 flex flex-col border-l border-indigo-100/40 animate-slideLeft text-left">
-              {/* Title Header with Close */}
-              <div className="flex items-center justify-between border-b border-indigo-100/30 pb-4 mb-6">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xl">🔔</span>
-                  <span className="font-serif italic font-black text-xl text-indigo-650">Notifications</span>
+            <div className="fixed inset-0 bg-stone-950/60 backdrop-blur-sm z-[150] transition-opacity" onClick={() => setIsNotificationsOpen(false)} />
+            <div className="fixed inset-y-0 right-0 max-w-xs w-full bg-white dark:bg-[#1a1816] shadow-2xl z-[160] p-6 flex flex-col border-l border-stone-200/80 dark:border-[#2e2a26] animate-slideLeft text-left">
+              <div className="flex items-center justify-between border-b border-stone-200/80 dark:border-[#2e2a26] pb-4 mb-5">
+                <div className="flex items-center gap-2">
+                  <Bell className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                  <span className="font-serif font-semibold text-lg text-stone-900 dark:text-stone-100">Notifications</span>
                 </div>
                 <button 
                   type="button"
                   onClick={() => setIsNotificationsOpen(false)}
-                  className="p-1.5 rounded-xl bg-indigo-50 text-indigo-500 hover:bg-indigo-100 transition-colors cursor-pointer"
+                  className="p-1.5 rounded-lg bg-stone-100 dark:bg-[#23201d] text-stone-600 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-[#2e2a26] transition-colors cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
 
-              {/* Notifications Content */}
               <div className="flex-1 overflow-y-auto space-y-4 scrollbar-hide">
-                {/* Partner Persistent System Notifications */}
                 {user.notifications && user.notifications.length > 0 ? (
-                  <div className="space-y-2">
+                  <div className="space-y-2.5">
                     <div className="flex justify-between items-center px-1">
-                      <p className="text-[9px] font-black uppercase tracking-wider text-indigo-400">System Notifications</p>
+                      <p className="text-xs font-semibold text-stone-500 dark:text-stone-400">System notifications</p>
                       <button 
                         type="button"
                         onClick={async () => {
@@ -2851,12 +2894,12 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                           setUser(updatedUser);
                           await syncUser(updatedUser);
                         }}
-                        className="text-[8px] font-black text-indigo-500 hover:underline uppercase tracking-wider cursor-pointer"
+                        className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
                       >
-                        Clear All Unread
+                        Mark all read
                       </button>
                     </div>
-                    <div className="space-y-1.5 max-h-[400px] overflow-y-auto pr-1 scrollbar-thin">
+                    <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
                       {user.notifications.map(notif => (
                         <div 
                           key={notif.id} 
@@ -2870,23 +2913,23 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                               await syncUser(updatedUser);
                             }
                           }}
-                          className={`p-3 rounded-2xl border transition-all flex flex-col gap-1 cursor-pointer ${
+                          className={`p-3.5 rounded-xl border transition-colors flex flex-col gap-1 cursor-pointer ${
                             notif.isRead 
-                              ? 'bg-white/40 border-indigo-100/10 opacity-70 hover:opacity-100' 
-                              : 'bg-gradient-to-br from-indigo-50 to-purple-50 border-indigo-100/40 shadow-sm hover:scale-[1.01]'
+                              ? 'bg-[#faf8f6] dark:bg-[#23201d] border-stone-200/70 dark:border-[#342f2b] opacity-75 hover:opacity-100' 
+                              : 'bg-indigo-50/60 dark:bg-indigo-950/30 border-indigo-200/80 dark:border-indigo-900/50'
                           }`}
                         >
-                          <div className="flex items-center justify-between gap-1">
+                          <div className="flex items-center justify-between gap-2">
                             <div className="flex items-center gap-1.5 min-w-0">
                               <span className="text-sm shrink-0">{notif.emoji || '🔔'}</span>
-                              <p className="text-[10px] font-black uppercase tracking-wider text-indigo-95 truncate">{notif.title}</p>
+                              <p className="text-xs font-semibold text-stone-900 dark:text-stone-100 truncate">{notif.title}</p>
                             </div>
                             {!notif.isRead && (
-                              <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full shrink-0" />
+                              <span className="w-2 h-2 bg-indigo-600 rounded-full shrink-0" />
                             )}
                           </div>
-                          <p className="text-[10px] text-gray-500 leading-normal font-medium break-words">{notif.body}</p>
-                          <p className="text-[7.5px] text-gray-400 font-bold self-end tracking-wider">
+                          <p className="text-xs text-stone-600 dark:text-stone-400 leading-normal break-words">{notif.body}</p>
+                          <p className="text-[11px] text-stone-400 dark:text-stone-500 self-end tabular-nums">
                             {new Date(notif.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                           </p>
                         </div>
@@ -2894,7 +2937,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center py-8 text-stone-400 font-serif italic text-xs">
+                  <div className="text-center py-8 text-stone-500 dark:text-stone-400 text-xs">
                     No notifications yet.
                   </div>
                 )}
@@ -2908,56 +2951,55 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
   }
 
   return (
-    <div className="space-y-8 animate-fadeIn pb-24">
+    <div className="space-y-6 animate-fadeIn pb-24 font-sans">
       {/* Top Header Section for Partner Mode */}
-      <header className="flex items-center justify-between px-4 py-3 bg-white/40 backdrop-blur-2xl border border-white/60 shadow-[inset_0_2px_4px_rgba(255,255,255,0.6),_0_8px_32px_rgba(99,102,241,0.03)] rounded-3xl sticky top-2 z-40 flex-wrap gap-2">
-        <div className="flex items-center gap-2 flex-wrap">
+      <header className="flex items-center justify-between px-4 py-3 bg-white/95 dark:bg-[#1a1816]/95 backdrop-blur-md border border-stone-200/80 dark:border-[#2e2a26] shadow-xs rounded-2xl sticky top-2 z-40 flex-wrap gap-2">
+        <div className="flex items-center gap-2.5 flex-wrap">
           <button 
             type="button"
             onClick={() => setIsMenuOpen(true)}
-            title="Navigation Menu"
-            className="p-2.5 rounded-2xl bg-white/70 hover:bg-white/95 text-indigo-600 transition-all duration-300 shadow-sm border border-indigo-100/60 cursor-pointer flex items-center justify-center active:scale-90"
+            title="Navigation menu"
+            className="p-2 rounded-xl bg-stone-100 dark:bg-[#23201d] hover:bg-stone-200 dark:hover:bg-[#2e2a26] text-stone-700 dark:text-stone-200 transition-colors border border-stone-200/80 dark:border-[#342f2b] cursor-pointer flex items-center justify-center"
           >
-            <Menu className="w-5 h-5" />
+            <Menu className="w-4 h-4" />
           </button>
-          <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => setActiveTab('home')}>
-            <span className="text-xl animate-pulse">🤝</span>
-            <span className="font-serif italic font-black text-2xl bg-gradient-to-r from-indigo-500 to-purple-400 bg-clip-text text-transparent drop-shadow-sm">
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => setActiveTab('home')}>
+            <span className="font-serif font-semibold text-lg text-stone-900 dark:text-stone-100">
               Lumina Partner
             </span>
           </div>
-          {/* Connection Status Indicator Badge */}
           {isConnected ? (
-            <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-wider border border-emerald-200/60 shadow-sm">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 rounded-full text-xs font-medium border border-emerald-200/70 dark:border-emerald-900/50">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
               <span>Connected ({partnerDisplayName})</span>
             </div>
           ) : activePendingRequest?.status === 'pending' || user.partnerRequest?.status === 'pending' ? (
-            <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-700 rounded-full text-[10px] font-black uppercase tracking-wider border border-amber-200/60 shadow-sm">
-              <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping shrink-0"></span>
-              <span>Pending Approval</span>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 rounded-full text-xs font-medium border border-amber-200/70 dark:border-amber-900/50">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+              <span>Pending approval</span>
             </div>
           ) : activePendingRequest?.status === 'declined' || user.partnerRequest?.status === 'declined' ? (
-            <div className="flex items-center gap-1.5 px-3 py-1 bg-rose-50 text-rose-700 rounded-full text-[10px] font-black uppercase tracking-wider border border-rose-200/60 shadow-sm">
-              <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0"></span>
-              <span>Request Declined</span>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 rounded-full text-xs font-medium border border-rose-200/70 dark:border-rose-900/50">
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
+              <span>Request declined</span>
             </div>
           ) : (
-            <div className="flex items-center gap-1.5 px-3 py-1 bg-stone-100 text-stone-600 rounded-full text-[10px] font-black uppercase tracking-wider border border-stone-200/60 shadow-sm">
-              <span className="w-2 h-2 rounded-full bg-stone-400 shrink-0"></span>
-              <span>Not Connected</span>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-stone-100 dark:bg-[#23201d] text-stone-600 dark:text-stone-400 rounded-full text-xs font-medium border border-stone-200/80 dark:border-[#342f2b]">
+              <span className="w-1.5 h-1.5 rounded-full bg-stone-400 shrink-0" />
+              <span>Not connected</span>
             </div>
           )}
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-2">
           {(!user.isPartner || isPreviewingCompanion) && (
             <button 
               type="button"
               onClick={() => setIsPreviewingCompanion(false)}
-              className="px-3 py-2 text-[10px] font-bold text-indigo-600 bg-indigo-50/50 hover:bg-indigo-100/50 rounded-2xl border border-indigo-100/50 transition-all active:scale-95 cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 rounded-xl border border-indigo-200/70 dark:border-indigo-900/50 transition-colors cursor-pointer whitespace-nowrap"
             >
-              ← Back to My Account
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Back to my account</span>
             </button>
           )}
           
@@ -2971,43 +3013,42 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
               }
             }}
             title="Notifications"
-            className="p-2.5 rounded-2xl bg-white/60 hover:bg-white/90 text-indigo-600 transition-all duration-300 shadow-[inset_0_1.5px_2.5px_rgba(255,255,255,0.7),_0_4px_12px_rgba(99,102,241,0.05)] border border-indigo-50/50 cursor-pointer flex items-center justify-center relative active:scale-90"
+            className="p-2 rounded-xl bg-stone-100 dark:bg-[#23201d] hover:bg-stone-200 dark:hover:bg-[#2e2a26] text-stone-700 dark:text-stone-200 transition-colors border border-stone-200/80 dark:border-[#342f2b] cursor-pointer flex items-center justify-center relative"
           >
-            <Bell className={`w-5 h-5 ${hasUnreadPartnerAlerts ? 'animate-shake' : ''}`} />
-            {/* Active Notifications dot if any partner notifications are unread */}
+            <Bell className="w-4 h-4" />
             {hasUnreadPartnerAlerts && (
-              <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-gradient-to-r from-indigo-500 to-purple-550 rounded-full border-2 border-white animate-pulse" />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-indigo-600 rounded-full ring-2 ring-white dark:ring-[#23201d]" />
             )}
           </button>
         </div>
       </header>
 
       {/* ALWAYS-VISIBLE TOP NAVIGATION TAB BAR */}
-      <nav className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none sticky top-[60px] z-30 bg-white/80 backdrop-blur-xl p-2 rounded-2xl border border-indigo-100/80 shadow-md">
+      <nav className="flex items-center gap-1.5 overflow-x-auto scrollbar-none sticky top-[62px] z-30 bg-white/95 dark:bg-[#1a1816]/95 backdrop-blur-md p-1.5 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-xs">
         {[
-          { id: 'home', label: 'Dashboard', icon: '🏠' },
-          { id: 'mission', label: 'Support Mission', icon: '🛡️' },
-          { id: 'ideas', label: 'Ideas & Gifts', icon: '🎁' },
-          { id: 'notes', label: 'Sweet Notes', icon: '💌' },
-          { id: 'reminders', label: 'Hero Checklist', icon: '⏰' },
-          { id: 'calendar', label: 'Cycle Calendar', icon: '📅' },
-          { id: 'education', label: 'Education', icon: '🎓' },
-          { id: 'notifications', label: 'Settings', icon: '⚙️' }
-        ].map((tab) => {
-          const isActive = activeTab === tab.id;
+          { id: 'home', label: 'Dashboard', Icon: Home },
+          { id: 'mission', label: 'Support mission', Icon: Shield },
+          { id: 'ideas', label: 'Ideas & gifts', Icon: Gift },
+          { id: 'notes', label: 'Sweet notes', Icon: Mail },
+          { id: 'reminders', label: 'Checklist', Icon: CheckSquare },
+          { id: 'calendar', label: 'Cycle calendar', Icon: Calendar },
+          { id: 'education', label: 'Education', Icon: GraduationCap },
+          { id: 'notifications', label: 'Settings', Icon: Settings }
+        ].map(({ id, label, Icon }) => {
+          const isActive = activeTab === id;
           return (
             <button
-              key={tab.id}
+              key={id}
               type="button"
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`px-3.5 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all whitespace-nowrap cursor-pointer shrink-0 ${
+              onClick={() => setActiveTab(id as any)}
+              className={`px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors whitespace-nowrap cursor-pointer shrink-0 ${
                 isActive
-                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-200 scale-[1.02]'
-                  : 'bg-white/90 hover:bg-white text-stone-600 hover:text-indigo-600 border border-stone-200/50 shadow-2xs'
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-[#23201d] hover:text-stone-900 dark:hover:text-stone-100'
               }`}
             >
-              <span className="text-sm">{tab.icon}</span>
-              <span>{tab.label}</span>
+              <Icon className="w-3.5 h-3.5 shrink-0" />
+              <span>{label}</span>
             </button>
           );
         })}
@@ -3015,200 +3056,152 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
 
       {/* Home Dashboard View */}
       {activeTab === 'home' && (
-        <div className="space-y-8 animate-fadeIn">
+        <div className="space-y-6 animate-fadeIn">
           {/* Header with Linked User Profile */}
-          <header className="relative bg-gradient-to-br from-indigo-600 to-indigo-800 p-8 md:p-10 rounded-[3rem] shadow-2xl shadow-indigo-200 text-white border border-indigo-400 overflow-hidden">
-            <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
-              <div className="space-y-4 text-center md:text-left">
-                <div className="flex items-center justify-center md:justify-start gap-4">
-                  <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-4xl shadow-inner border border-white/30">
-                    🛡️
+          <header className="bg-indigo-950 dark:bg-[#1c1a30] p-6 sm:p-8 rounded-2xl shadow-sm text-white border border-indigo-900/60 dark:border-indigo-900/40">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+              <div className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center border border-white/15 shrink-0">
+                    <ShieldCheck className="w-6 h-6 text-indigo-200" />
                   </div>
                   <div>
-                    <h2 className="text-3xl md:text-4xl font-serif italic tracking-tight">
+                    <h2 className="text-2xl sm:text-3xl font-serif font-semibold tracking-tight">
                       {getSanctuaryTitle(targetUser)}
                     </h2>
-                    <p className="text-sm opacity-80 font-medium">
-                      Supporting {getCleanName(targetUser?.name, targetUser?.email) || "your partner"}'s bloom
+                    <p className="text-sm text-indigo-200/90 mt-0.5">
+                      Supporting {getCleanName(targetUser?.name, targetUser?.email) || 'your partner'}&apos;s bloom
                     </p>
                   </div>
                 </div>
                 
-                <div className="flex flex-wrap justify-center md:justify-start gap-2">
-                  <div className="bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border border-white/10">
-                    Phase: <span className="text-yellow-300">{currentPhase}</span>
+                <div className="flex flex-wrap gap-2">
+                  <div className="bg-white/10 px-3.5 py-1.5 rounded-full text-xs font-medium border border-white/15">
+                    Phase: <span className="text-amber-300 font-semibold">{currentPhase}</span>
                   </div>
-                  <div className="bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border border-white/10">
-                    Mission: <span className="text-pink-300">Support Hero</span>
+                  <div className="bg-white/10 px-3.5 py-1.5 rounded-full text-xs font-medium border border-white/15">
+                    Role: <span className="text-pink-200 font-semibold">Support companion</span>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white/10 backdrop-blur-md p-5 rounded-[2.5rem] border border-white/20 text-center w-full md:w-64">
-                <p className="text-[10px] font-black uppercase tracking-widest text-indigo-200 mb-2">Quick Navigation</p>
-                <p className="text-xs font-medium text-white/90 leading-relaxed">
-                  Use the navigation bar above or tap the cards below to access Support Tasks, Gifts, Sweet Notes & Calendar.
+              <div className="bg-white/10 p-4 rounded-xl border border-white/15 w-full md:w-64">
+                <p className="text-xs font-semibold text-indigo-200 mb-1">Quick navigation</p>
+                <p className="text-xs text-white/85 leading-relaxed">
+                  Use the navigation tabs above or choose a card below for Support Tasks, Gifts, Sweet Notes, and the Cycle Calendar.
                 </p>
               </div>
-            </div>
-            <div className="absolute top-0 right-0 p-12 opacity-10">
-              <span className="text-[15rem] rotate-12">🛡️</span>
             </div>
           </header>
 
           {/* Quick Access Feature Shortcuts Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <div 
-              onClick={() => setActiveTab('mission')}
-              className="bg-gradient-to-br from-indigo-50 to-white p-5 rounded-[2rem] border border-indigo-100/80 shadow-sm hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-3xl group-hover:scale-110 transition-transform">🛡️</span>
-                <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest bg-indigo-100/60 px-2.5 py-1 rounded-full">Phase Tasks</span>
-              </div>
-              <div>
-                <h4 className="font-serif italic font-bold text-indigo-950 text-base">Support Mission</h4>
-                <p className="text-[10px] text-stone-500 mt-1 line-clamp-2">Daily phase-specific actions for {currentPhase} phase</p>
-              </div>
-            </div>
-
-            <div 
-              onClick={() => setActiveTab('ideas')}
-              className="bg-gradient-to-br from-pink-50 to-white p-5 rounded-[2rem] border border-pink-100/80 shadow-sm hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-3xl group-hover:scale-110 transition-transform">🎁</span>
-                <span className="text-[9px] font-black text-pink-500 uppercase tracking-widest bg-pink-100/60 px-2.5 py-1 rounded-full">Care Ideas</span>
-              </div>
-              <div>
-                <h4 className="font-serif italic font-bold text-pink-950 text-base">Ideas & Gifts</h4>
-                <p className="text-[10px] text-stone-500 mt-1 line-clamp-2">Thoughtful gifts, date ideas & comforting gestures</p>
-              </div>
-            </div>
-
-            <div 
-              onClick={() => setActiveTab('notes')}
-              className="bg-gradient-to-br from-rose-50 to-white p-5 rounded-[2rem] border border-rose-100/80 shadow-sm hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-3xl group-hover:scale-110 transition-transform">💌</span>
-                <span className="text-[9px] font-black text-rose-500 uppercase tracking-widest bg-rose-100/60 px-2.5 py-1 rounded-full">Love Notes</span>
-              </div>
-              <div>
-                <h4 className="font-serif italic font-bold text-rose-950 text-base">Sweet Notes</h4>
-                <p className="text-[10px] text-stone-500 mt-1 line-clamp-2">Send love letters & digital comfort to her app</p>
-              </div>
-            </div>
-
-            <div 
-              onClick={() => setActiveTab('reminders')}
-              className="bg-gradient-to-br from-purple-50 to-white p-5 rounded-[2rem] border border-purple-100/80 shadow-sm hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-3xl group-hover:scale-110 transition-transform">⏰</span>
-                <span className="text-[9px] font-black text-purple-500 uppercase tracking-widest bg-purple-100/60 px-2.5 py-1 rounded-full">To-Do List</span>
-              </div>
-              <div>
-                <h4 className="font-serif italic font-bold text-purple-950 text-base">Hero Checklist</h4>
-                <p className="text-[10px] text-stone-500 mt-1 line-clamp-2">Track support tasks & build your Hero streak</p>
-              </div>
-            </div>
-
-            <div 
-              onClick={() => setActiveTab('calendar')}
-              className="bg-gradient-to-br from-amber-50 to-white p-5 rounded-[2rem] border border-amber-100/80 shadow-sm hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-3xl group-hover:scale-110 transition-transform">📅</span>
-                <span className="text-[9px] font-black text-amber-600 uppercase tracking-widest bg-amber-100/60 px-2.5 py-1 rounded-full">Live Phases</span>
-              </div>
-              <div>
-                <h4 className="font-serif italic font-bold text-amber-950 text-base">Partner Calendar</h4>
-                <p className="text-[10px] text-stone-500 mt-1 line-clamp-2">View upcoming period, fertile window & phase dates</p>
-              </div>
-            </div>
-
-            <div 
-              onClick={() => setActiveTab('education')}
-              className="bg-gradient-to-br from-emerald-50 to-white p-5 rounded-[2rem] border border-emerald-100/80 shadow-sm hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-3xl group-hover:scale-110 transition-transform">🎓</span>
-                <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-100/60 px-2.5 py-1 rounded-full">Guide</span>
-              </div>
-              <div>
-                <h4 className="font-serif italic font-bold text-emerald-950 text-base">Education Guide</h4>
-                <p className="text-[10px] text-stone-500 mt-1 line-clamp-2">Understand menstrual science & hormone shifts</p>
-              </div>
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[
+              { id: 'mission', title: 'Support mission', badge: 'Phase tasks', desc: `Daily phase-specific actions for ${currentPhase} phase`, Icon: Shield, accent: 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 border-indigo-200/70 dark:border-indigo-900/50' },
+              { id: 'ideas', title: 'Ideas & gifts', badge: 'Care ideas', desc: 'Thoughtful gifts, date ideas, and comforting gestures', Icon: Gift, accent: 'text-pink-600 dark:text-pink-400 bg-pink-50 dark:bg-pink-950/40 border-pink-200/70 dark:border-pink-900/50' },
+              { id: 'notes', title: 'Sweet notes', badge: 'Love notes', desc: 'Send affirmations and digital comfort to her app', Icon: Mail, accent: 'text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border-rose-200/70 dark:border-rose-900/50' },
+              { id: 'reminders', title: 'Hero checklist', badge: 'To-do list', desc: 'Track support tasks and stay consistent', Icon: CheckSquare, accent: 'text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/40 border-purple-200/70 dark:border-purple-900/50' },
+              { id: 'calendar', title: 'Partner calendar', badge: 'Live phases', desc: 'View upcoming periods, fertile window, and phase dates', Icon: Calendar, accent: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border-amber-200/70 dark:border-amber-900/50' },
+              { id: 'education', title: 'Education guide', badge: 'Guide', desc: 'Understand cycle phases and hormonal shifts', Icon: GraduationCap, accent: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200/70 dark:border-emerald-900/50' },
+            ].map((card) => (
+              <button
+                key={card.id}
+                type="button"
+                onClick={() => setActiveTab(card.id as any)}
+                className="bg-white dark:bg-[#1a1816] p-5 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-xs hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors cursor-pointer text-left flex flex-col justify-between gap-4"
+              >
+                <div className="flex items-center justify-between w-full">
+                  <div className={`w-10 h-10 rounded-xl border flex items-center justify-center ${card.accent}`}>
+                    <card.Icon className="w-5 h-5" />
+                  </div>
+                  <span className="text-[11px] font-medium text-stone-600 dark:text-stone-400 bg-stone-100 dark:bg-[#23201d] border border-stone-200/70 dark:border-[#342f2b] px-2.5 py-0.5 rounded-full">
+                    {card.badge}
+                  </span>
+                </div>
+                <div>
+                  <h4 className="font-serif font-semibold text-stone-900 dark:text-stone-100 text-base">{card.title}</h4>
+                  <p className="text-xs text-stone-600 dark:text-stone-400 mt-1 line-clamp-2">{card.desc}</p>
+                </div>
+              </button>
+            ))}
           </div>
 
           {/* Cycle Overview Card */}
-          <section className="bg-white p-8 rounded-[3rem] shadow-sm border border-indigo-50 space-y-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-2xl font-serif text-indigo-600 italic">
-                {getCleanName(targetUser?.name, targetUser?.email) || "Your Partner"}'s Cycle Status
+          <section className="bg-white dark:bg-[#1a1816] p-6 sm:p-8 rounded-2xl shadow-xs border border-stone-200/80 dark:border-[#2e2a26] space-y-5">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <h3 className="text-xl font-serif font-semibold text-stone-900 dark:text-stone-100">
+                {getCleanName(targetUser?.name, targetUser?.email) || 'Your partner'}&apos;s cycle status
               </h3>
               {(!user.isPartner || isPreviewingCompanion) && (
                 <button 
+                  type="button"
                   onClick={() => setIsPreviewingCompanion(false)}
-                  className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest cursor-pointer hover:underline"
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 cursor-pointer hover:underline"
                 >
-                  ← Back to My Account
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Back to my account</span>
                 </button>
               )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="p-6 bg-indigo-50/30 rounded-[2rem] border border-indigo-50">
-                <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-2">Status</p>
+              <div className="p-5 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl border border-stone-200/80 dark:border-[#342f2b] space-y-1.5">
+                <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">Status</p>
                 {targetUser && targetUser.sharingSettings?.shareCycleInfo === true ? (
                   (() => {
                     const sync = calculateCycleSyncData(targetUser, new Date());
                     return (
                       <>
-                        <p className="text-lg font-serif italic text-indigo-900">Current Phase: <span className="font-bold text-indigo-600">{currentPhase}</span></p>
-                        <p className="text-xs text-indigo-400 mt-1">
-                          Cycle Day {sync.cycleDay} • Next period in ~{sync.daysUntilNextPeriod} days
+                        <p className="text-base font-serif font-semibold text-stone-900 dark:text-stone-100">
+                          Current phase: <span className="text-indigo-600 dark:text-indigo-400">{currentPhase}</span>
+                        </p>
+                        <p className="text-xs text-stone-600 dark:text-stone-400 tabular-nums">
+                          Cycle day {sync.cycleDay} • Next period in ~{sync.daysUntilNextPeriod} days
                         </p>
                       </>
                     );
                   })()
                 ) : (
-                  <p className="text-xs text-indigo-300 italic">Cycle info is private 🔒</p>
+                  <p className="text-xs text-stone-500 dark:text-stone-400 flex items-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5" />
+                    <span>Cycle info is private</span>
+                  </p>
                 )}
               </div>
-              <div className="p-6 bg-pink-50/30 rounded-[2rem] border border-pink-50">
-                <p className="text-[10px] font-bold text-pink-400 uppercase tracking-widest mb-2">Mood & Symptoms</p>
+              <div className="p-5 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl border border-stone-200/80 dark:border-[#342f2b] space-y-1.5">
+                <p className="text-xs font-semibold text-pink-600 dark:text-pink-400">Mood &amp; symptoms</p>
                 {targetUser && (targetUser.sharingSettings?.shareMood === true || targetUser.sharingSettings?.shareSymptoms === true) ? (
                   <>
                     {targetUser.sharingSettings?.shareMood === true ? (
-                      <p className="text-lg font-serif italic text-pink-600">
-                        {targetUser.todaySymptomLog?.mood ? `Mood: ${targetUser.todaySymptomLog.mood}` : 'Mood: Restful & Calm'}
+                      <p className="text-base font-serif font-semibold text-stone-900 dark:text-stone-100">
+                        {targetUser.todaySymptomLog?.mood ? `Mood: ${targetUser.todaySymptomLog.mood}` : 'Mood: Restful & calm'}
                       </p>
                     ) : (
-                      <p className="text-xs text-pink-300 italic">Mood updates are private 🔒</p>
+                      <p className="text-xs text-stone-500 dark:text-stone-400">Mood updates are private</p>
                     )}
                     {targetUser.sharingSettings?.shareSymptoms === true ? (
-                      <p className="text-xs text-pink-400 mt-1">
+                      <p className="text-xs text-stone-600 dark:text-stone-400">
                         {targetUser.todaySymptomLog?.symptoms?.length ? `Symptoms: ${targetUser.todaySymptomLog.symptoms.join(', ')}` : 'Symptoms: None logged today'}
                       </p>
                     ) : (
-                      <p className="text-xs text-pink-300 italic mt-1">Symptoms are private 🔒</p>
+                      <p className="text-xs text-stone-500 dark:text-stone-400">Symptoms are private</p>
                     )}
                   </>
                 ) : (
-                  <p className="text-xs text-pink-300 italic">Mood & symptoms are private 🔒</p>
+                  <p className="text-xs text-stone-500 dark:text-stone-400 flex items-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5" />
+                    <span>Mood &amp; symptoms are private</span>
+                  </p>
                 )}
               </div>
             </div>
 
-            <div className="p-6 bg-yellow-50/50 rounded-[2rem] border border-yellow-100 flex items-start gap-4">
-              <span className="text-2xl">💡</span>
+            <div className="p-5 bg-amber-50/70 dark:bg-amber-950/20 rounded-xl border border-amber-200/70 dark:border-amber-900/40 flex items-start gap-3">
+              <Lightbulb className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
               <div>
-                <p className="text-[10px] font-bold text-yellow-600 uppercase tracking-widest mb-1">Today's Support Strategy</p>
-                <p className="text-sm text-yellow-900 italic font-serif leading-relaxed">
-                  {loading ? "Calculating support strategy..." : (commTips.substring(0, 120).split('\n')[0] || "She may benefit from a warm cup of herbal tea and lower stress levels today. Offer quiet companionship and handle dinner.")}
+                <p className="text-xs font-semibold text-amber-800 dark:text-amber-300 mb-1">Today&apos;s support strategy</p>
+                <p className="text-sm text-stone-700 dark:text-stone-300 leading-relaxed">
+                  {loading ? 'Calculating support strategy...' : (commTips.substring(0, 140).split('\n')[0] || 'She may benefit from a warm cup of herbal tea and lower stress today. Offer quiet companionship and help with evening chores.')}
                 </p>
               </div>
             </div>
@@ -3218,22 +3211,23 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
 
       {/* Sub-view Top Header Bar (When a feature tab is selected from navigation bar) */}
       {activeTab !== 'home' && (
-        <div className="flex items-center justify-between bg-white/80 backdrop-blur-md p-4 rounded-3xl border border-indigo-100/60 shadow-sm animate-fadeIn flex-wrap gap-2 mb-6">
+        <div className="flex items-center justify-between bg-white dark:bg-[#1a1816] p-4 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-xs animate-fadeIn flex-wrap gap-2 mb-6">
           <button 
             type="button"
             onClick={() => setActiveTab('home')}
-            className="flex items-center gap-2 px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-2xl font-black text-[10px] uppercase tracking-wider transition-all cursor-pointer active:scale-95 shadow-2xs"
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200/70 dark:border-indigo-900/50 rounded-xl font-semibold text-xs transition-colors cursor-pointer whitespace-nowrap"
           >
-            <span>← Back to Home Dashboard</span>
+            <ChevronLeft className="w-4 h-4" />
+            <span>Back to dashboard</span>
           </button>
-          <span className="text-xs font-black uppercase tracking-widest text-indigo-600 bg-indigo-50/60 px-4 py-2 rounded-full border border-indigo-100/40">
-            {activeTab === 'mission' && '🛡️ Daily Support Mission'}
-            {activeTab === 'ideas' && '🎁 Support Ideas & Gifts'}
-            {activeTab === 'notes' && '💌 Sweet Notes'}
-            {activeTab === 'education' && '🎓 Partner Education Guide'}
-            {activeTab === 'reminders' && '⏰ Hero Checklist & Tasks'}
-            {activeTab === 'calendar' && '📅 Cycle Calendar'}
-            {activeTab === 'notifications' && '⚙️ Settings & Preferences'}
+          <span className="inline-flex items-center gap-2 text-xs font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 px-3.5 py-2 rounded-xl border border-indigo-200/70 dark:border-indigo-900/50 whitespace-nowrap shrink-0">
+            {activeTab === 'mission' && <><Shield className="w-3.5 h-3.5" /> Daily Support Mission</>}
+            {activeTab === 'ideas' && <><Gift className="w-3.5 h-3.5" /> Support Ideas & Gifts</>}
+            {activeTab === 'notes' && <><Mail className="w-3.5 h-3.5" /> Sweet Notes</>}
+            {activeTab === 'education' && <><GraduationCap className="w-3.5 h-3.5" /> Partner Education</>}
+            {activeTab === 'reminders' && <><CheckSquare className="w-3.5 h-3.5" /> Support Checklist</>}
+            {activeTab === 'calendar' && <><Calendar className="w-3.5 h-3.5" /> Cycle Calendar</>}
+            {activeTab === 'notifications' && <><Settings className="w-3.5 h-3.5" /> Notification Settings</>}
           </span>
         </div>
       )}
@@ -3241,40 +3235,39 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
       {/* 1. Daily Support Mission View */}
       {activeTab === 'mission' && (
         <div className="space-y-6 animate-fadeIn">
-          <section className="bg-white p-8 rounded-[3rem] shadow-sm border border-indigo-50 space-y-6">
+          <section className="bg-white dark:bg-[#1a1816] p-6 sm:p-8 rounded-2xl shadow-xs border border-stone-200/80 dark:border-[#2e2a26] space-y-6">
             <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
-                <h3 className="text-2xl md:text-3xl font-serif text-indigo-900 italic font-bold">Daily Support Mission</h3>
-                <p className="text-xs text-indigo-400 font-bold uppercase tracking-widest mt-1">Actionable tasks tailored to her exact phase</p>
+                <h3 className="text-2xl font-serif font-semibold text-stone-900 dark:text-stone-100">Daily Support Mission</h3>
+                <p className="text-sm text-stone-500 dark:text-stone-400 mt-1">Actionable tasks tailored to her current phase</p>
               </div>
-              {loading && <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin shrink-0"></div>}
+              {loading && <RefreshCw className="w-5 h-5 text-indigo-500 animate-spin shrink-0" />}
             </header>
 
             {/* Mission Phase Switcher Pills */}
             <div className="space-y-2">
-              <p className="text-[10px] font-black uppercase tracking-wider text-indigo-400">Select Phase View:</p>
+              <p className="text-xs font-semibold text-stone-500 dark:text-stone-400">Select phase view</p>
               <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
                 {[
-                  { name: 'Menstrual', icon: '🩸', label: 'Menstrual (Period)' },
-                  { name: 'Follicular', icon: '🌱', label: 'Follicular (Rising Energy)' },
-                  { name: 'Ovulation', icon: '✨', label: 'Ovulation (Peak)' },
-                  { name: 'Luteal', icon: '🌙', label: 'Luteal (PMS Support)' },
-                  { name: 'Pregnancy', icon: '👶', label: 'Pregnancy Mode' }
+                  { name: 'Menstrual', label: 'Menstrual' },
+                  { name: 'Follicular', label: 'Follicular' },
+                  { name: 'Ovulation', label: 'Ovulation' },
+                  { name: 'Luteal', label: 'Luteal' },
+                  { name: 'Pregnancy', label: 'Pregnancy' }
                 ].map((ph) => {
-                  const isSelected = selectedMissionPhase === ph.name || (currentPhase && currentPhase.toLowerCase().includes(ph.name.toLowerCase()) && selectedMissionPhase === 'Menstrual');
+                  const isActive = selectedMissionPhase === ph.name;
                   return (
                     <button
                       key={ph.name}
                       type="button"
                       onClick={() => setSelectedMissionPhase(ph.name)}
-                      className={`px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
-                        selectedMissionPhase === ph.name
-                          ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200 scale-[1.02]'
-                          : 'bg-indigo-50/60 hover:bg-indigo-100/60 text-indigo-700 border border-indigo-100/60'
+                      className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
+                        isActive
+                          ? 'bg-indigo-600 text-white shadow-xs'
+                          : 'bg-[#faf8f6] dark:bg-[#23201d] hover:bg-stone-100 dark:hover:bg-[#2c2824] text-stone-700 dark:text-stone-300 border border-stone-200/80 dark:border-[#342f2b]'
                       }`}
                     >
-                      <span>{ph.icon}</span>
-                      <span>{ph.name}</span>
+                      <span>{ph.label}</span>
                     </button>
                   );
                 })}
@@ -3282,61 +3275,62 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
             </div>
 
             {/* Task list for selected phase */}
-            <div className="space-y-3 pt-2">
+            <div className="space-y-3 pt-1">
               {(() => {
                 const phaseTasksMap: Record<string, string[]> = {
                   'Menstrual': [
-                    "🩸 Prepare a warm heating pad or hot water bottle for her cramps.",
-                    "☕ Brew a soothing chamomile or ginger tea without being asked.",
-                    "🍫 Bring her favorite dark chocolate or comfort snack.",
-                    "🧹 Take care of all heavy household chores (dishes, laundry) so she can rest.",
-                    "🛋️ Set up a cozy blanket spot on the couch with a nice movie.",
-                    "💆 Give a gentle lower back or foot rub to ease tension."
+                    "Prepare a warm heating pad or hot water bottle for cramps.",
+                    "Brew soothing chamomile or ginger tea without being asked.",
+                    "Bring her favorite dark chocolate or comfort snack.",
+                    "Take care of heavy household chores (dishes, laundry) so she can rest.",
+                    "Set up a cozy blanket spot on the couch with a quiet movie.",
+                    "Offer a gentle lower back or foot rub to ease tension."
                   ],
                   'Follicular': [
-                    "🌱 Plan an exciting, creative outdoor date or walk together.",
-                    "🚴 Encourage her new ideas and support her active projects.",
-                    "🥗 Prepare a fresh, light, protein-rich meal.",
-                    "💬 Ask about her personal goals and brainstorm together.",
-                    "🎨 Try a fun new activity together like cooking a new recipe."
+                    "Plan an exciting, creative outdoor date or walk together.",
+                    "Encourage her new ideas and support her active projects.",
+                    "Prepare a fresh, light, protein-rich meal.",
+                    "Ask about her personal goals and brainstorm together.",
+                    "Try a fun new activity together like cooking a new recipe."
                   ],
                   'Ovulation': [
-                    "✨ Plan a romantic dinner date night out.",
-                    "💐 Surprising her with fresh flowers or a thoughtful small gift.",
-                    "💃 Dress up nicely together and take romantic photos.",
-                    "🗣️ Give sincere compliments on her energy, style, and beauty.",
-                    "🕯️ Create a cozy candlelit atmosphere at home."
+                    "Plan a thoughtful dinner date night out.",
+                    "Surprise her with fresh flowers or a small thoughtful gift.",
+                    "Dress up nicely together and take photos together.",
+                    "Give sincere compliments on her energy, style, and presence.",
+                    "Create a relaxing candlelit atmosphere at home."
                   ],
                   'Luteal': [
-                    "🌙 Keep her favorite crunchy or sweet comfort snacks stocked.",
-                    "👂 Listen patiently without offering unsolicited solutions.",
-                    "🛀 Prepare a warm relaxing bath with epsom salts.",
-                    "🔕 Protect her quiet time and reduce household noise and stress.",
-                    "💆 Offer a soothing neck and shoulder massage before sleep."
+                    "Keep her favorite crunchy or sweet comfort snacks stocked.",
+                    "Listen patiently without offering unsolicited solutions.",
+                    "Prepare a warm relaxing bath with Epsom salts.",
+                    "Protect her quiet time and reduce household noise and stress.",
+                    "Offer a soothing neck and shoulder massage before sleep."
                   ],
                   'Pregnancy': [
-                    "👶 Keep cold water and nausea-safe snacks (crackers) nearby.",
-                    "🛋️ Fluff back pillows and ensure comfortable seating.",
-                    "🛍️ Take over grocery shopping and heavy carrying completely.",
-                    "👣 Offer a soothing foot massage to reduce swelling.",
-                    "💌 Leave a sweet note telling her what an amazing mother she is."
+                    "Keep cold water and nausea-safe snacks (crackers) nearby.",
+                    "Fluff back pillows and ensure comfortable seating.",
+                    "Take over grocery shopping and heavy carrying completely.",
+                    "Offer a soothing foot massage to reduce swelling.",
+                    "Leave a sweet note telling her how much she is appreciated."
                   ]
                 };
 
                 const displayTasks = phaseTasksMap[selectedMissionPhase] || supportMission;
 
                 return displayTasks.map((task, i) => (
-                  <div key={i} className="group p-5 bg-gradient-to-r from-indigo-50/40 to-purple-50/30 rounded-[2rem] hover:bg-indigo-50 transition-all border border-indigo-100/40 flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-4 min-w-0">
-                      <span className="text-2xl shrink-0 group-hover:scale-110 transition-transform">📌</span>
-                      <p className="text-indigo-950 font-serif italic text-base leading-snug">{task}</p>
+                  <div key={i} className="p-4 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors border border-stone-200/80 dark:border-[#342f2b] flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <CheckCircle2 className="w-4 h-4 text-indigo-500 shrink-0" />
+                      <p className="text-stone-800 dark:text-stone-200 text-sm leading-snug">{task}</p>
                     </div>
-                    <button 
+                    <button
+                      type="button"
                       onClick={() => {
                         addReminder(task);
-                        showNotice(`Added "${task.slice(0, 30)}..." to your Hero Checklist! 🎯`, 'success');
+                        showNotice(`Added "${task.slice(0, 30)}..." to your Support Checklist.`, 'success');
                       }}
-                      className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-wider hover:scale-105 active:scale-95 transition-all shadow-md shrink-0 cursor-pointer"
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-2 rounded-xl text-xs font-semibold transition-colors shrink-0 cursor-pointer whitespace-nowrap"
                     >
                       + Add Task
                     </button>
@@ -3346,57 +3340,59 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
             </div>
           </section>
 
-          <section className="bg-gradient-to-br from-indigo-900 via-indigo-950 to-purple-900 p-8 rounded-[3rem] text-white shadow-xl relative overflow-hidden border border-indigo-800">
-             <div className="relative z-10 space-y-3">
-                <h4 className="text-xl font-serif italic mb-2 flex items-center gap-2 text-indigo-200 font-bold">
-                  <span className="text-2xl">🗣️</span> Communication Briefing ({selectedMissionPhase} Phase)
-                </h4>
-                <div className="p-6 bg-white/10 rounded-3xl border border-white/15 italic text-sm leading-relaxed whitespace-pre-line text-white/90">
-                  {selectedMissionPhase === 'Menstrual' && "During the menstrual phase, energy is low and physical comfort is paramount. Keep conversation light, offer warm drinks, and take initiative on chores so she doesn't have to ask."}
-                  {selectedMissionPhase === 'Follicular' && "Estrogen is rising! She likely feels refreshed, optimistic, and mentally sharp. Great time to discuss future plans, try new hobbies, or go on an adventure."}
-                  {selectedMissionPhase === 'Ovulation' && "Peak energy, sociability, and confidence! Romantic gestures, compliments, and social dates will resonate strongly right now."}
-                  {selectedMissionPhase === 'Luteal' && "Progesterone is high and dropping before period. She may feel sensitive to stress, bloated, or fatigued. Be extra patient, avoid debating small things, and stock her favorite snacks."}
-                  {selectedMissionPhase === 'Pregnancy' && "Hormonal shifts and physical fatigue require maximum gentle care and proactive support. Ensure she feels rested, hydrated, and cherished every day."}
-                </div>
-             </div>
+          <section className="bg-gradient-to-br from-indigo-950 via-indigo-900 to-stone-900 p-6 sm:p-8 rounded-2xl text-white shadow-sm border border-indigo-800/60">
+            <div className="space-y-3">
+              <h4 className="text-lg font-serif font-semibold flex items-center gap-2 text-indigo-100">
+                <MessageSquare className="w-5 h-5 text-indigo-300" />
+                Communication Briefing ({selectedMissionPhase} Phase)
+              </h4>
+              <div className="p-5 bg-white/10 rounded-xl border border-white/15 text-sm leading-relaxed text-stone-100">
+                {selectedMissionPhase === 'Menstrual' && "During the menstrual phase, energy is low and physical comfort is paramount. Keep conversation light, offer warm drinks, and take initiative on chores so she doesn't have to ask."}
+                {selectedMissionPhase === 'Follicular' && "Estrogen is rising. She likely feels refreshed, optimistic, and mentally sharp. This is a great time to discuss future plans, try new hobbies, or enjoy an active outing."}
+                {selectedMissionPhase === 'Ovulation' && "Peak energy, sociability, and confidence. Thoughtful gestures, sincere compliments, and shared quality time will resonate strongly right now."}
+                {selectedMissionPhase === 'Luteal' && "Progesterone is elevated and drops before the period starts. She may feel more sensitive to stress, bloated, or fatigued. Be extra patient, avoid debating small things, and keep her favorite snacks stocked."}
+                {selectedMissionPhase === 'Pregnancy' && "Hormonal shifts and physical fatigue call for gentle care and proactive support. Help ensure she feels rested, hydrated, and supported every day."}
+              </div>
+            </div>
           </section>
         </div>
       )}
 
       {/* 2. Support Ideas & Gifts View */}
       {activeTab === 'ideas' && (
-        <section className="bg-white p-8 md:p-10 rounded-[3rem] shadow-sm border border-pink-100 animate-fadeIn space-y-6">
-          <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-pink-50 pb-6">
+        <section className="bg-white dark:bg-[#1a1816] p-6 sm:p-8 rounded-2xl shadow-xs border border-stone-200/80 dark:border-[#2e2a26] animate-fadeIn space-y-6">
+          <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-stone-200/70 dark:border-[#2e2a26] pb-5">
             <div>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-pink-50 text-pink-600 text-[10px] font-black uppercase tracking-widest mb-2 border border-pink-100">
-                <span>🎁</span> Support Ideas & Gestures
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-pink-50 dark:bg-pink-950/40 text-pink-700 dark:text-pink-300 text-xs font-semibold mb-2 border border-pink-200/60 dark:border-pink-900/50">
+                <Gift className="w-3.5 h-3.5" /> Support Ideas & Gestures
               </div>
-              <h3 className="text-2xl md:text-3xl font-serif text-pink-950 italic font-bold">Romantic & Care Ideas</h3>
-              <p className="text-xs text-stone-500 italic mt-1">Thoughtful gifts, date nights, and comforting acts of service</p>
+              <h3 className="text-2xl font-serif font-semibold text-stone-900 dark:text-stone-100">Thoughtful Care & Gift Ideas</h3>
+              <p className="text-sm text-stone-500 dark:text-stone-400 mt-1">Thoughtful gifts, date nights, and comforting acts of service</p>
             </div>
             <button
+              type="button"
               onClick={() => setActiveTab('notes')}
-              className="px-5 py-2.5 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl text-xs font-bold uppercase tracking-wider shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer"
+              className="px-4 py-2.5 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1.5"
             >
-              Send Sweet Note 💌
+              <Mail className="w-3.5 h-3.5" /> Send Sweet Note
             </button>
           </header>
 
           {/* Category Filters */}
           <div className="space-y-2">
-            <p className="text-[10px] font-black uppercase tracking-wider text-pink-400">Filter Category:</p>
+            <p className="text-xs font-semibold text-stone-500 dark:text-stone-400">Filter by category</p>
             <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-              {['All', 'Care Packages 🎁', 'Romantic Dates 🕯️', 'Comfort Foods 🍫', 'Acts of Service 🧹', 'Digital Gestures 📲'].map((cat) => {
-                const isCatSelected = selectedGiftCategory === cat || (cat === 'All' && selectedGiftCategory === 'All');
+              {['All', 'Care Packages', 'Romantic Dates', 'Comfort Foods', 'Acts of Service', 'Digital Gestures'].map((cat) => {
+                const isCatSelected = selectedGiftCategory === cat || (cat === 'All' && selectedGiftCategory === 'All') || selectedGiftCategory.startsWith(cat);
                 return (
                   <button
                     key={cat}
                     type="button"
                     onClick={() => setSelectedGiftCategory(cat)}
-                    className={`px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap ${
+                    className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
                       isCatSelected
-                        ? 'bg-pink-500 text-white shadow-md shadow-pink-200 scale-[1.02]'
-                        : 'bg-pink-50/60 hover:bg-pink-100/60 text-pink-700 border border-pink-100/60'
+                        ? 'bg-pink-600 text-white shadow-xs'
+                        : 'bg-[#faf8f6] dark:bg-[#23201d] hover:bg-stone-100 dark:hover:bg-[#2c2824] text-stone-700 dark:text-stone-300 border border-stone-200/80 dark:border-[#342f2b]'
                     }`}
                   >
                     {cat}
@@ -3409,45 +3405,46 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
           {/* Ideas Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {[
-              { icon: '♨️', title: 'Electric Heating Pad / Hot Water Bottle', desc: 'A soft, plug-in heated cushion for instant belly & lower back cramp relief.', cat: 'Care Packages 🎁' },
-              { icon: '💐', title: 'Surprise Flower Bouquet', desc: 'Fresh peonies, roses, or wildflowers delivered with a handwritten love note.', cat: 'Care Packages 🎁' },
-              { icon: '🕯️', title: 'Lavender Aromatherapy & Candle', desc: 'Essential oil diffuser or soothing candle to calm stress and ease sleep.', cat: 'Care Packages 🎁' },
-              { icon: '🍫', title: 'Artisanal Dark Chocolate & Treats', desc: '70%+ dark chocolate bars rich in magnesium to naturally soothe cramps.', cat: 'Comfort Foods 🍫' },
-              { icon: '🍵', title: 'Warm Chamomile or Berry Herbal Tea', desc: 'Hot caffeine-free tea served in her favorite mug with a drizzle of honey.', cat: 'Comfort Foods 🍫' },
-              { icon: '🛋️', title: 'Cozy Blanket Movie Marathon Night', desc: 'Build a plush pillow fort on the couch with her favorite movies & popcorn.', cat: 'Romantic Dates 🕯️' },
-              { icon: '🧺', title: 'Full House Chores Takeover', desc: 'Clean the kitchen, wash the laundry, and fold clothes without her asking.', cat: 'Acts of Service 🧹' },
-              { icon: '💆', title: '15-Minute Soothing Foot or Neck Massage', desc: 'Use scented massage oil to melt away joint tension and fatigue.', cat: 'Acts of Service 🧹' },
-              { icon: '📲', title: 'Send Digital Comfort Balloons', desc: 'Trigger floating flowers, hot cocoa, or hearts right on her app screen.', cat: 'Digital Gestures 📲' }
+              { emoji: '♨️', title: 'Electric Heating Pad / Hot Water Bottle', desc: 'A soft heated cushion for quick abdominal and lower-back cramp relief.', cat: 'Care Packages' },
+              { emoji: '💐', title: 'Surprise Flower Bouquet', desc: 'Fresh peonies, roses, or wildflowers delivered with a handwritten note.', cat: 'Care Packages' },
+              { emoji: '🕯️', title: 'Lavender Aromatherapy & Candle', desc: 'Essential oil diffuser or soothing candle to calm stress and ease sleep.', cat: 'Care Packages' },
+              { emoji: '🍫', title: 'Artisanal Dark Chocolate & Treats', desc: '70%+ dark chocolate bars rich in magnesium to help soothe muscle tension.', cat: 'Comfort Foods' },
+              { emoji: '🍵', title: 'Warm Chamomile or Berry Herbal Tea', desc: 'Hot caffeine-free tea served in her favorite mug with a drizzle of honey.', cat: 'Comfort Foods' },
+              { emoji: '🛋️', title: 'Cozy Blanket Movie Night', desc: 'Set up plush pillows on the couch with her favorite movies and snacks.', cat: 'Romantic Dates' },
+              { emoji: '🧺', title: 'Full House Chores Takeover', desc: 'Clean the kitchen, run laundry, and fold clothes without her asking.', cat: 'Acts of Service' },
+              { emoji: '💆', title: '15-Minute Foot or Neck Massage', desc: 'Use warm lotion or massage oil to relieve joint tension and fatigue.', cat: 'Acts of Service' },
+              { emoji: '✨', title: 'Send Digital Comfort Gesture', desc: 'Send a live warm hug, tea, or flower notification straight to her screen.', cat: 'Digital Gestures' }
             ]
             .filter(item => selectedGiftCategory === 'All' || item.cat.includes(selectedGiftCategory.split(' ')[0]))
             .map((idea, i) => (
-              <div key={i} className="p-6 bg-gradient-to-br from-pink-50/30 to-purple-50/20 rounded-[2.5rem] border border-pink-100/60 shadow-xs flex flex-col justify-between gap-4 hover:shadow-md transition-all">
-                <div className="flex items-start gap-4">
-                  <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center text-3xl shadow-sm border border-pink-100 shrink-0">
-                    {idea.icon}
+              <div key={i} className="p-5 bg-[#faf8f6] dark:bg-[#23201d] rounded-2xl border border-stone-200/80 dark:border-[#342f2b] flex flex-col justify-between gap-4 hover:border-pink-300 dark:hover:border-pink-800 transition-colors">
+                <div className="flex items-start gap-3.5">
+                  <div className="w-11 h-11 bg-white dark:bg-[#1a1816] rounded-xl flex items-center justify-center text-xl border border-stone-200/80 dark:border-[#342f2b] shrink-0">
+                    {idea.emoji}
                   </div>
                   <div>
-                    <h4 className="font-serif italic font-bold text-pink-950 text-lg">{idea.title}</h4>
-                    <p className="text-xs text-stone-600 mt-1 leading-relaxed">{idea.desc}</p>
+                    <h4 className="font-serif font-semibold text-stone-900 dark:text-stone-100 text-base">{idea.title}</h4>
+                    <p className="text-xs text-stone-600 dark:text-stone-400 mt-1 leading-relaxed">{idea.desc}</p>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-2 border-t border-pink-100/40">
-                  <span className="text-[9px] font-black uppercase tracking-wider text-pink-400 bg-pink-100/50 px-3 py-1 rounded-full">
+                <div className="flex items-center justify-between pt-3 border-t border-stone-200/70 dark:border-[#342f2b]">
+                  <span className="text-xs font-medium text-stone-600 dark:text-stone-300 bg-white dark:bg-[#1a1816] px-2.5 py-1 rounded-lg border border-stone-200/70 dark:border-[#342f2b]">
                     {idea.cat}
                   </span>
                   <button
+                    type="button"
                     onClick={() => {
                       if (idea.cat.includes('Digital')) {
                         sendDigitalComfort('flower');
                       } else {
                         addReminder(`Get: ${idea.title}`);
-                        showNotice(`Added "${idea.title}" to your Hero Checklist! 🎁`, 'success');
+                        showNotice(`Added "${idea.title}" to your Support Checklist.`, 'success');
                       }
                     }}
-                    className="px-3.5 py-1.5 bg-pink-500 hover:bg-pink-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider shadow-xs cursor-pointer active:scale-95 transition-all"
+                    className="px-3.5 py-1.5 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-xs font-semibold cursor-pointer transition-colors whitespace-nowrap"
                   >
-                    {idea.cat.includes('Digital') ? 'Send Now 📲' : '+ Add to To-Do'}
+                    {idea.cat.includes('Digital') ? 'Send Now' : '+ Add to List'}
                   </button>
                 </div>
               </div>
@@ -3458,29 +3455,32 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
 
       {/* 3. Sweet Notes View */}
       {activeTab === 'notes' && (
-        <section className="bg-white p-8 md:p-10 rounded-[3rem] shadow-sm border border-pink-50 animate-fadeIn space-y-8">
-          <header className="border-b border-pink-50 pb-6">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 text-rose-600 text-[10px] font-black uppercase tracking-widest mb-2 border border-rose-100">
-              <span>💌</span> Love Notes & Affirmations
+        <section className="bg-white dark:bg-[#1a1816] p-6 sm:p-8 rounded-2xl shadow-xs border border-stone-200/80 dark:border-[#2e2a26] animate-fadeIn space-y-6">
+          <header className="border-b border-stone-200/70 dark:border-[#2e2a26] pb-5">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs font-semibold mb-2 border border-rose-200/60 dark:border-rose-900/50">
+              <Mail className="w-3.5 h-3.5" /> Love Notes & Affirmations
             </div>
-            <h3 className="text-2xl md:text-3xl font-serif text-pink-600 italic font-bold">Encoded Sweet Notes</h3>
-            <p className="text-xs text-stone-500 italic mt-1">Send thoughtful affirmations directly to her app or copy to messaging apps</p>
+            <h3 className="text-2xl font-serif font-semibold text-stone-900 dark:text-stone-100">Send a Sweet Note</h3>
+            <p className="text-sm text-stone-500 dark:text-stone-400 mt-1">Send thoughtful affirmations directly to her app or copy for messaging</p>
           </header>
 
           {/* Custom Love Note Composer */}
-          <div className="p-7 bg-gradient-to-br from-rose-50/60 via-purple-50/30 to-pink-50/60 rounded-[2.5rem] border border-rose-200/60 shadow-sm space-y-4">
-            <h4 className="text-base font-serif italic text-rose-950 font-bold flex items-center gap-2">
-              <span>✍️</span> Compose Custom Note for {getCleanName(targetUser?.name, targetUser?.email) || "Your Partner"}
+          <div className="p-5 sm:p-6 bg-[#faf8f6] dark:bg-[#23201d] rounded-2xl border border-stone-200/80 dark:border-[#342f2b] space-y-4">
+            <h4 className="text-base font-serif font-semibold text-stone-900 dark:text-stone-100 flex items-center gap-2">
+              <Heart className="w-4 h-4 text-rose-500" />
+              Compose a note for {getCleanName(targetUser?.name, targetUser?.email) || "Your Partner"}
             </h4>
 
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {['💌', '🌹', '💖', '🍫', '🍵', '✨', '👑', '🌸'].map(emo => (
                 <button
                   key={emo}
                   type="button"
                   onClick={() => setCustomNoteEmoji(emo)}
-                  className={`p-2 text-xl rounded-xl border transition-all cursor-pointer ${
-                    customNoteEmoji === emo ? 'bg-white border-rose-400 scale-110 shadow-sm' : 'bg-white/50 border-transparent opacity-70'
+                  className={`p-2 text-xl rounded-xl border transition-colors cursor-pointer ${
+                    customNoteEmoji === emo
+                      ? 'bg-white dark:bg-[#1a1816] border-rose-500 ring-2 ring-rose-500/20'
+                      : 'bg-white/70 dark:bg-[#1a1816]/60 border-stone-200/80 dark:border-[#342f2b] opacity-80 hover:opacity-100'
                   }`}
                 >
                   {emo}
@@ -3491,13 +3491,13 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
             <textarea
               value={customNoteText}
               onChange={(e) => setCustomNoteText(e.target.value)}
-              placeholder="Type a sweet message (e.g. 'You are doing amazing today. I made sure your tea is ready when you get home 💕')..."
-              className="w-full p-4 rounded-2xl bg-white border border-rose-200 text-sm text-stone-800 placeholder:text-stone-400 outline-none focus:ring-2 focus:ring-rose-300 min-h-[90px]"
+              placeholder="Write a sweet message (e.g. 'You are doing great today. I made sure tea is ready when you get home')..."
+              className="w-full p-4 rounded-xl bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#342f2b] text-sm text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 outline-none focus:ring-2 focus:ring-rose-500/30 min-h-[96px]"
             />
 
-            <div className="flex justify-between items-center flex-wrap gap-2">
-              <span className="text-[10px] font-bold text-rose-400 uppercase tracking-wider">
-                {sentNoteSuccess ? '✨ Sent to her app dashboard!' : 'Delivered live via Lumina connection'}
+            <div className="flex justify-between items-center flex-wrap gap-3">
+              <span className="text-xs font-medium text-stone-500 dark:text-stone-400">
+                {sentNoteSuccess ? 'Delivered to her Lumina dashboard.' : 'Delivered live via Lumina connection'}
               </span>
               <button
                 type="button"
@@ -3508,43 +3508,43 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                   setTimeout(() => setSentNoteSuccess(false), 4000);
                   setCustomNoteText('');
                 }}
-                className="px-6 py-3 bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white rounded-2xl text-xs font-bold uppercase tracking-wider shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap"
               >
-                Send to Her App Screen 💌
+                Send to App Screen
               </button>
             </div>
           </div>
 
           {/* Preset Love Letters Grid */}
-          <div className="space-y-4">
-            <h4 className="text-xs font-black uppercase tracking-widest text-pink-400 px-2">Ready-to-Send Affirmations:</h4>
+          <div className="space-y-3">
+            <h4 className="text-xs font-semibold text-stone-500 dark:text-stone-400">Ready-to-send affirmations</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {loveNotes.map((note, i) => (
-                <div 
-                  key={i} 
-                  className="p-6 bg-gradient-to-br from-indigo-50/40 via-white to-pink-50/30 rounded-[2.5rem] border border-indigo-100/60 shadow-2xs flex flex-col justify-between gap-4 hover:shadow-md transition-all group"
+                <div
+                  key={i}
+                  className="p-5 bg-[#faf8f6] dark:bg-[#23201d] rounded-2xl border border-stone-200/80 dark:border-[#342f2b] flex flex-col justify-between gap-4 hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors"
                 >
-                  <p className="text-indigo-950 font-serif italic text-base leading-relaxed">
+                  <p className="text-stone-800 dark:text-stone-200 font-serif text-base leading-relaxed">
                     "{note.replace(/^\d\.\s*/, '')}"
                   </p>
 
-                  <div className="flex items-center justify-between pt-2 border-t border-indigo-100/40">
-                    <button 
-                      onClick={() => {
-                        copyToClipboard(note);
-                      }}
-                      className="text-[10px] font-bold text-indigo-500 hover:underline uppercase tracking-widest cursor-pointer"
+                  <div className="flex items-center justify-between pt-3 border-t border-stone-200/70 dark:border-[#342f2b]">
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(note)}
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
                     >
-                      📋 Copy Text
+                      <Copy className="w-3.5 h-3.5" /> Copy Text
                     </button>
 
                     <button
+                      type="button"
                       onClick={async () => {
                         await sendDigitalComfort('love_note');
                       }}
-                      className="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-wider shadow-xs hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                      className="px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap"
                     >
-                      Send to App 💌
+                      Send to App
                     </button>
                   </div>
                 </div>
@@ -3556,41 +3556,42 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
 
       {/* 4. Hero Checklist & Tasks View */}
       {activeTab === 'reminders' && (
-        <section className="bg-white p-8 md:p-10 rounded-[3rem] shadow-sm border border-indigo-50 animate-fadeIn space-y-6">
-          <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-indigo-50 pb-6">
+        <section className="bg-white dark:bg-[#1a1816] p-6 sm:p-8 rounded-2xl shadow-xs border border-stone-200/80 dark:border-[#2e2a26] animate-fadeIn space-y-6">
+          <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-stone-200/70 dark:border-[#2e2a26] pb-5">
             <div>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase tracking-widest mb-2 border border-indigo-100">
-                <span>⏰</span> Partner To-Do List
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 text-xs font-semibold mb-2 border border-indigo-200/60 dark:border-indigo-900/50">
+                <CheckSquare className="w-3.5 h-3.5" /> Partner To-Do List
               </div>
-              <h3 className="text-2xl md:text-3xl font-serif text-indigo-900 italic font-bold">Your Hero Support Checklist</h3>
-              <p className="text-xs text-stone-500 italic mt-1">Track active support tasks and build your hero connection streak</p>
+              <h3 className="text-2xl font-serif font-semibold text-stone-900 dark:text-stone-100">Support Checklist</h3>
+              <p className="text-sm text-stone-500 dark:text-stone-400 mt-1">Track active support tasks and build your consistency</p>
             </div>
-            
-            {/* Hero Level Badge */}
-            <div className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-5 py-2.5 rounded-2xl shadow-md text-center">
-              <p className="text-[9px] font-black uppercase tracking-widest opacity-80">Support Hero Level</p>
-              <p className="text-base font-serif italic font-bold">
-                {reminders.filter(r => r.isCompleted).length > 3 ? '🏆 Master Hero' : '⭐ Support Knight'}
+
+            {/* Support Level Badge */}
+            <div className="bg-indigo-600 text-white px-4 py-2.5 rounded-xl text-left sm:text-right shrink-0">
+              <p className="text-xs font-medium text-indigo-100">Support Level</p>
+              <p className="text-base font-serif font-semibold">
+                {reminders.filter(r => r.isCompleted).length > 3 ? 'Dedicated Partner' : 'Active Supporter'}
               </p>
             </div>
           </header>
 
           {/* Add New Task Form */}
-          <div className="p-6 bg-indigo-50/40 rounded-[2.5rem] border border-indigo-100/60 space-y-3">
-            <p className="text-[10px] font-black uppercase tracking-wider text-indigo-400">Add New Support Task:</p>
+          <div className="p-5 bg-[#faf8f6] dark:bg-[#23201d] rounded-2xl border border-stone-200/80 dark:border-[#342f2b] space-y-3">
+            <label className="block text-xs font-semibold text-stone-600 dark:text-stone-300">Add new support task</label>
             <div className="flex flex-col sm:flex-row gap-3">
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={newReminderText}
                 onChange={(e) => setNewReminderText(e.target.value)}
-                placeholder="e.g. Buy warm heating pad, cook salmon dinner..."
-                className="flex-1 px-5 py-3.5 rounded-2xl bg-white border border-indigo-200 outline-none text-sm text-indigo-950 placeholder:text-stone-400 focus:ring-2 focus:ring-indigo-300"
+                placeholder="e.g. Buy warm heating pad, prepare dinner..."
+                className="flex-1 h-11 px-4 rounded-xl bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#342f2b] outline-none text-sm text-stone-900 dark:text-stone-100 placeholder:text-stone-400 focus:ring-2 focus:ring-indigo-500/30"
               />
-              <button 
+              <button
+                type="button"
                 onClick={() => addReminder()}
-                className="px-7 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black uppercase text-[10px] tracking-wider shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer shrink-0"
+                className="h-11 px-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold text-xs transition-colors cursor-pointer shrink-0 flex items-center justify-center gap-1.5 whitespace-nowrap"
               >
-                + Add Task
+                <Plus className="w-4 h-4" /> Add Task
               </button>
             </div>
           </div>
@@ -3598,39 +3599,43 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
           {/* Tasks List */}
           <div className="space-y-3">
             <div className="flex justify-between items-center px-1">
-              <p className="text-[10px] font-black uppercase tracking-wider text-indigo-400">
-                Active Checklist ({reminders.filter(r => r.isCompleted).length} / {reminders.length} Completed):
+              <p className="text-xs font-semibold text-stone-500 dark:text-stone-400 tabular-nums">
+                Active Checklist ({reminders.filter(r => r.isCompleted).length} / {reminders.length} Completed)
               </p>
             </div>
 
             {reminders.length === 0 ? (
-              <div className="text-center py-12 bg-indigo-50/20 rounded-[2.5rem] border border-indigo-100/40 space-y-2">
-                <span className="text-4xl block">🎯</span>
-                <p className="font-serif italic text-indigo-900 font-bold text-base">No active tasks on your list!</p>
-                <p className="text-xs text-stone-500">Go to Support Mission or Gift Ideas tab to add tasks easily.</p>
+              <div className="text-center py-10 bg-[#faf8f6] dark:bg-[#23201d] rounded-2xl border border-stone-200/80 dark:border-[#342f2b] space-y-2">
+                <CheckSquare className="w-8 h-8 text-indigo-500 mx-auto" />
+                <p className="font-serif font-semibold text-stone-900 dark:text-stone-100 text-base">No active tasks on your list</p>
+                <p className="text-xs text-stone-500 dark:text-stone-400">Add tasks from the Support Mission or Ideas tabs.</p>
               </div>
             ) : (
               reminders.map((reminder) => (
-                <div key={reminder.id} className="flex items-center justify-between p-5 bg-white border border-indigo-100/80 rounded-[2rem] shadow-xs hover:shadow-sm transition-all gap-4">
-                  <div className="flex items-center gap-4 min-w-0">
-                    <button 
+                <div key={reminder.id} className="flex items-center justify-between p-4 bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] rounded-xl transition-colors gap-4">
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <button
                       type="button"
                       onClick={() => toggleReminder(reminder.id)}
-                      className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all cursor-pointer shrink-0 ${reminder.isCompleted ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-indigo-300 hover:border-indigo-500'}`}
+                      className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-colors cursor-pointer shrink-0 ${
+                        reminder.isCompleted
+                          ? 'bg-emerald-600 border-emerald-600 text-white'
+                          : 'border-stone-300 dark:border-stone-600 bg-white dark:bg-[#1a1816] hover:border-indigo-500'
+                      }`}
                     >
-                      {reminder.isCompleted && <span className="text-xs font-bold">✓</span>}
+                      {reminder.isCompleted && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                     </button>
-                    <p className={`font-serif italic text-base ${reminder.isCompleted ? 'line-through text-stone-400' : 'text-indigo-950 font-medium'}`}>
+                    <p className={`text-sm ${reminder.isCompleted ? 'line-through text-stone-400 dark:text-stone-500' : 'text-stone-800 dark:text-stone-200 font-medium'}`}>
                       {reminder.text}
                     </p>
                   </div>
-                  <button 
+                  <button
                     type="button"
-                    onClick={() => deleteReminder(reminder.id)} 
-                    className="text-stone-300 hover:text-rose-500 p-2 cursor-pointer transition-colors"
+                    onClick={() => deleteReminder(reminder.id)}
+                    className="text-stone-400 hover:text-rose-600 p-2 rounded-lg cursor-pointer transition-colors"
                     title="Delete Task"
                   >
-                    ✕
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
               ))
@@ -3641,33 +3646,33 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
 
       {/* 5. Partner Calendar View */}
       {activeTab === 'calendar' && (
-        <section className="bg-white p-8 md:p-10 rounded-[3rem] shadow-sm border border-indigo-50 animate-fadeIn space-y-6">
-          <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-indigo-50 pb-6">
+        <section className="bg-white dark:bg-[#1a1816] p-6 sm:p-8 rounded-2xl shadow-xs border border-stone-200/80 dark:border-[#2e2a26] animate-fadeIn space-y-6">
+          <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-stone-200/70 dark:border-[#2e2a26] pb-5">
             <div>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase tracking-widest mb-2 border border-indigo-100">
-                <span>📅</span> Real-Time Cycle Calendar
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 text-xs font-semibold mb-2 border border-indigo-200/60 dark:border-indigo-900/50">
+                <Calendar className="w-3.5 h-3.5" /> Live Cycle Calendar
               </div>
-              <h3 className="text-2xl md:text-3xl font-serif text-indigo-900 italic font-bold">
-                {getCleanName(targetUser?.name, targetUser?.email) || partnerDisplayName}'s Live Calendar
+              <h3 className="text-2xl font-serif font-semibold text-stone-900 dark:text-stone-100">
+                {getCleanName(targetUser?.name, targetUser?.email) || partnerDisplayName}'s Calendar
               </h3>
-              <p className="text-xs text-stone-500 italic mt-1">Calculated period phases, fertile window, and mood forecast</p>
+              <p className="text-sm text-stone-500 dark:text-stone-400 mt-1">Calculated cycle phases, fertile window, and mood forecast</p>
             </div>
 
             {/* Legend */}
-            <div className="flex items-center gap-3 bg-indigo-50/50 px-4 py-2 rounded-2xl border border-indigo-100/50">
+            <div className="flex items-center gap-3 bg-[#faf8f6] dark:bg-[#23201d] px-3.5 py-2 rounded-xl border border-stone-200/80 dark:border-[#342f2b]">
               <div className="flex items-center gap-1.5">
-                <span className="w-3 h-3 bg-rose-500 rounded-full inline-block"></span>
-                <span className="text-[10px] font-black uppercase text-stone-600">Period</span>
+                <span className="w-2.5 h-2.5 bg-rose-500 rounded-full inline-block"></span>
+                <span className="text-xs font-medium text-stone-700 dark:text-stone-300">Period</span>
               </div>
               {targetUser?.sharingSettings?.shareFertilityInfo === true && (
                 <>
                   <div className="flex items-center gap-1.5">
-                    <span className="w-3 h-3 bg-purple-500 rounded-full inline-block"></span>
-                    <span className="text-[10px] font-black uppercase text-stone-600">Fertile</span>
+                    <span className="w-2.5 h-2.5 bg-purple-500 rounded-full inline-block"></span>
+                    <span className="text-xs font-medium text-stone-700 dark:text-stone-300">Fertile</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="w-3 h-3 bg-amber-400 rounded-full inline-block"></span>
-                    <span className="text-[10px] font-black uppercase text-stone-600">Ovulation</span>
+                    <span className="w-2.5 h-2.5 bg-amber-400 rounded-full inline-block"></span>
+                    <span className="text-xs font-medium text-stone-700 dark:text-stone-300">Ovulation</span>
                   </div>
                 </>
               )}
@@ -3675,48 +3680,48 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
           </header>
 
           {!targetUser || targetUser.sharingSettings?.shareCycleInfo !== true ? (
-            <div className="p-8 bg-indigo-50/40 rounded-[2.5rem] border border-indigo-100 text-center space-y-2">
-              <span className="text-3xl block">🔒</span>
-              <p className="font-serif italic text-indigo-900 text-lg font-bold">Cycle Calendar is Private</p>
-              <p className="text-xs text-stone-500 max-w-md mx-auto">
+            <div className="p-8 bg-[#faf8f6] dark:bg-[#23201d] rounded-2xl border border-stone-200/80 dark:border-[#342f2b] text-center space-y-2">
+              <Lock className="w-8 h-8 text-indigo-500 mx-auto" />
+              <p className="font-serif font-semibold text-stone-900 dark:text-stone-100 text-lg">Cycle Calendar is Private</p>
+              <p className="text-sm text-stone-500 dark:text-stone-400 max-w-md mx-auto">
                 Your partner has not enabled Cycle Information sharing yet. You can still send digital comfort or love notes anytime.
               </p>
             </div>
           ) : (
             <>
               {/* Interactive Month Calendar */}
-              <div className="p-6 bg-gradient-to-br from-indigo-50/40 via-white to-purple-50/30 rounded-[2.5rem] border border-indigo-100/60 shadow-xs space-y-4">
-                <div className="flex items-center justify-between">
-                  <button 
+              <div className="p-4 sm:p-6 bg-[#faf8f6] dark:bg-[#23201d] rounded-2xl border border-stone-200/80 dark:border-[#342f2b] space-y-4">
+                <div className="flex items-center justify-between gap-2">
+                  <button
                     type="button"
                     onClick={() => setCalendarMonthOffset(prev => prev - 1)}
-                    className="p-2 rounded-xl bg-white border border-indigo-100 text-indigo-600 font-bold hover:bg-indigo-50 transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#342f2b] text-stone-700 dark:text-stone-200 text-xs font-semibold hover:bg-stone-50 dark:hover:bg-[#2c2824] transition-colors cursor-pointer"
                   >
-                    ← Prev Month
+                    <ChevronLeft className="w-4 h-4" /> Prev
                   </button>
-                  
-                  <p className="font-serif italic font-bold text-indigo-950 text-lg">
+
+                  <p className="font-serif font-semibold text-stone-900 dark:text-stone-100 text-lg">
                     {new Date(new Date().getFullYear(), new Date().getMonth() + calendarMonthOffset, 1).toLocaleDateString([], { month: 'long', year: 'numeric' })}
                   </p>
 
-                  <button 
+                  <button
                     type="button"
                     onClick={() => setCalendarMonthOffset(prev => prev + 1)}
-                    className="p-2 rounded-xl bg-white border border-indigo-100 text-indigo-600 font-bold hover:bg-indigo-50 transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#342f2b] text-stone-700 dark:text-stone-200 text-xs font-semibold hover:bg-stone-50 dark:hover:bg-[#2c2824] transition-colors cursor-pointer"
                   >
-                    Next Month →
+                    Next <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
 
                 {/* Days of Week Header */}
-                <div className="grid grid-cols-7 gap-2 text-center">
+                <div className="grid grid-cols-7 gap-1.5 sm:gap-2 text-center">
                   {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
-                    <span key={d} className="text-[10px] font-black uppercase tracking-wider text-indigo-400">{d}</span>
+                    <span key={d} className="text-xs font-semibold text-stone-500 dark:text-stone-400">{d}</span>
                   ))}
                 </div>
 
                 {/* Calendar Grid */}
-                <div className="grid grid-cols-7 gap-2">
+                <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
                   {(() => {
                     const now = new Date();
                     const targetMonth = new Date(now.getFullYear(), now.getMonth() + calendarMonthOffset, 1);
@@ -3736,27 +3741,26 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                       const isSelected = selectedCalendarDate.toDateString() === cellDate.toDateString();
 
                       cells.push(
-                        <div 
+                        <button
                           key={d}
-                          onClick={() => {
-                            setSelectedCalendarDate(cellDate);
-                          }}
-                          className={`aspect-square rounded-2xl flex flex-col items-center justify-center p-1 cursor-pointer transition-all border relative ${
-                            isToday ? 'ring-2 ring-indigo-600 font-black' : ''
+                          type="button"
+                          onClick={() => setSelectedCalendarDate(cellDate)}
+                          className={`aspect-square rounded-xl flex flex-col items-center justify-center p-1 cursor-pointer transition-all border relative tabular-nums ${
+                            isToday ? 'ring-2 ring-indigo-600' : ''
                           } ${
-                            isSelected ? 'scale-105 shadow-md z-10 ring-2 ring-purple-400' : ''
+                            isSelected ? 'ring-2 ring-purple-500 z-10 shadow-xs' : ''
                           } ${
-                            details.isPeriod ? 'bg-rose-500 text-white border-rose-400 shadow-sm shadow-rose-200' :
-                            canSeeFertility && details.isOvulation ? 'bg-amber-400 text-slate-900 font-bold border-amber-300 shadow-sm' :
-                            canSeeFertility && details.isFertile ? 'bg-purple-500 text-white border-purple-400 shadow-sm' :
-                            'bg-white text-indigo-900 border-indigo-100/60 hover:bg-indigo-50/60'
+                            details.isPeriod ? 'bg-rose-600 text-white border-rose-500' :
+                            canSeeFertility && details.isOvulation ? 'bg-amber-400 text-stone-950 font-semibold border-amber-300' :
+                            canSeeFertility && details.isFertile ? 'bg-purple-600 text-white border-purple-500' :
+                            'bg-white dark:bg-[#1a1816] text-stone-800 dark:text-stone-200 border-stone-200/80 dark:border-[#342f2b] hover:bg-stone-50 dark:hover:bg-[#2c2824]'
                           }`}
                         >
-                          <span className="text-xs font-bold">{d}</span>
-                          <span className="text-[7.5px] uppercase font-black tracking-tight opacity-90 truncate max-w-full">
-                            {details.isPeriod ? 'Period' : canSeeFertility && details.isOvulation ? 'Peak ✨' : canSeeFertility && details.isFertile ? 'Fertile' : ''}
+                          <span className="text-xs font-semibold tabular-nums">{d}</span>
+                          <span className="text-[10px] font-medium opacity-90 truncate max-w-full hidden sm:inline">
+                            {details.isPeriod ? 'Period' : canSeeFertility && details.isOvulation ? 'Peak' : canSeeFertility && details.isFertile ? 'Fertile' : ''}
                           </span>
-                        </div>
+                        </button>
                       );
                     }
 
@@ -3771,57 +3775,58 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                 const canSeeMood = targetUser.sharingSettings?.shareMood === true;
                 const canSeeSymptoms = targetUser.sharingSettings?.shareSymptoms === true;
                 return (
-                  <div className="p-6 bg-indigo-50/50 rounded-[2.5rem] border border-indigo-100/60 space-y-3">
-                    <h4 className="font-serif italic font-bold text-indigo-950 text-base flex items-center gap-2">
-                      <span>🔍</span> Date Details: {selectedCalendarDate.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
+                  <div className="p-5 bg-[#faf8f6] dark:bg-[#23201d] rounded-2xl border border-stone-200/80 dark:border-[#342f2b] space-y-3">
+                    <h4 className="font-serif font-semibold text-stone-900 dark:text-stone-100 text-base flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-indigo-500" />
+                      {selectedCalendarDate.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
                     </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-stone-700">
-                      <div className="bg-white p-4 rounded-2xl border border-indigo-100/50 space-y-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-stone-700 dark:text-stone-300">
+                      <div className="bg-white dark:bg-[#1a1816] p-4 rounded-xl border border-stone-200/80 dark:border-[#342f2b] space-y-2">
                         <div>
-                          <p className="font-black text-[10px] uppercase tracking-wider text-indigo-500 mb-0.5">Calculated Cycle Phase:</p>
-                          <p className="font-serif italic text-sm text-indigo-950 font-bold">
+                          <p className="font-semibold text-xs text-indigo-600 dark:text-indigo-400 mb-0.5">Calculated Cycle Phase</p>
+                          <p className="font-serif text-base text-stone-900 dark:text-stone-100 font-semibold">
                             {details.phaseName}
                           </p>
                           {targetUser?.cycleLength && (
-                            <p className="text-[10px] text-indigo-400 font-semibold mt-0.5">Cycle Day {details.dayInCycle} of {targetUser.cycleLength || 28}</p>
+                            <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5 tabular-nums">Cycle Day {details.dayInCycle} of {targetUser.cycleLength || 28}</p>
                           )}
                         </div>
 
                         {canSeeMood && details.loggedMood && (
-                          <div className="pt-2 border-t border-indigo-50">
-                            <p className="font-black text-[9px] uppercase tracking-wider text-purple-500">Logged Mood:</p>
-                            <p className="text-xs font-bold text-stone-800 capitalize">{details.loggedMood}</p>
+                          <div className="pt-2 border-t border-stone-200/70 dark:border-[#2e2a26]">
+                            <p className="font-semibold text-xs text-purple-600 dark:text-purple-400">Logged Mood</p>
+                            <p className="text-sm font-medium text-stone-800 dark:text-stone-200 capitalize">{details.loggedMood}</p>
                           </div>
                         )}
 
                         {canSeeSymptoms && details.loggedSymptoms.length > 0 && (
-                          <div className="pt-2 border-t border-indigo-50">
-                            <p className="font-black text-[9px] uppercase tracking-wider text-rose-500">Logged Symptoms:</p>
-                            <div className="flex flex-wrap gap-1 mt-1">
+                          <div className="pt-2 border-t border-stone-200/70 dark:border-[#2e2a26]">
+                            <p className="font-semibold text-xs text-rose-600 dark:text-rose-400">Logged Symptoms</p>
+                            <div className="flex flex-wrap gap-1.5 mt-1.5">
                               {details.loggedSymptoms.map((sym, idx) => (
-                                <span key={idx} className="px-2 py-0.5 bg-rose-50 text-rose-600 rounded-full text-[9px] font-bold border border-rose-100">{sym}</span>
+                                <span key={idx} className="px-2.5 py-0.5 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 rounded-lg text-xs font-medium border border-rose-200/60 dark:border-rose-900/50">{sym}</span>
                               ))}
                             </div>
                           </div>
                         )}
                       </div>
 
-                      <div className="bg-white p-4 rounded-2xl border border-indigo-100/50 flex flex-col justify-between">
-                        <p className="font-black text-[10px] uppercase tracking-wider text-indigo-500 mb-1">Partner Action Plan:</p>
-                        <p className="text-[11px] text-stone-500 italic mb-3">
-                          {details.isPeriod ? "Offer warm drinks, heating pads, and extra rest support." :
-                           (targetUser.sharingSettings?.shareFertilityInfo === true && details.isOvulation) ? "Great energy day! Ideal time for special dates or quality bonding." :
-                           (targetUser.sharingSettings?.shareFertilityInfo === true && details.isFertile) ? "Higher energy and connection window. Plan fun activities together!" :
-                           "Send gentle love notes or check-in messages to brighten her day."}
-                        </p>
+                      <div className="bg-white dark:bg-[#1a1816] p-4 rounded-xl border border-stone-200/80 dark:border-[#342f2b] flex flex-col justify-between gap-3">
+                        <div>
+                          <p className="font-semibold text-xs text-indigo-600 dark:text-indigo-400 mb-1">Partner Action Plan</p>
+                          <p className="text-xs text-stone-600 dark:text-stone-300 leading-relaxed">
+                            {details.isPeriod ? "Offer warm drinks, heating pads, and extra rest support." :
+                             (targetUser.sharingSettings?.shareFertilityInfo === true && details.isOvulation) ? "Higher energy day. Great time for a special date or quality bonding." :
+                             (targetUser.sharingSettings?.shareFertilityInfo === true && details.isFertile) ? "Higher energy and connection window. Plan enjoyable activities together." :
+                             "Send a thoughtful note or check-in message to brighten her day."}
+                          </p>
+                        </div>
                         <button
                           type="button"
-                          onClick={() => {
-                            sendDigitalComfort('flower');
-                          }}
-                          className="px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider shadow-xs hover:scale-105 active:scale-95 transition-all cursor-pointer self-start"
+                          onClick={() => sendDigitalComfort('flower')}
+                          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold transition-colors cursor-pointer self-start whitespace-nowrap"
                         >
-                          Send Comfort Greeting 📲
+                          Send Comfort Greeting
                         </button>
                       </div>
                     </div>
@@ -3834,112 +3839,97 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
       )}
 
       {activeTab === 'education' && (
-        <section className="space-y-8 animate-fadeIn font-sans">
+        <section className="space-y-6 animate-fadeIn">
           {/* Partner Education Header Banner */}
-          <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 p-8 md:p-10 rounded-[3rem] text-white shadow-xl relative overflow-hidden">
-            <div className="relative z-10 space-y-3">
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-[10px] font-black uppercase tracking-widest border border-white/20">
-                <GraduationCap className="w-4 h-4 text-pink-200" />
+          <div className="bg-gradient-to-br from-indigo-700 via-indigo-800 to-stone-900 p-6 sm:p-8 rounded-2xl text-white shadow-sm border border-indigo-700/50">
+            <div className="space-y-3">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-white/15 text-xs font-semibold border border-white/20">
+                <GraduationCap className="w-4 h-4 text-indigo-200" />
                 Partner Education Guide
               </div>
-              <h3 className="text-3xl md:text-4xl font-serif italic font-bold">Understanding Her Cycle & How to Support</h3>
-              <p className="text-sm opacity-90 max-w-xl leading-relaxed font-serif italic">
-                Knowledge is empathy. Understanding the 4 menstrual phases, PMS, and mood patterns will help you become her greatest comfort and support hero.
+              <h3 className="text-2xl sm:text-3xl font-serif font-semibold">Understanding Her Cycle & How to Support</h3>
+              <p className="text-sm text-indigo-100 max-w-2xl leading-relaxed">
+                Knowledge builds empathy. Understanding the four menstrual phases, PMS, and mood patterns helps you offer thoughtful support at the right moment.
               </p>
-            </div>
-            <div className="absolute top-0 right-0 p-8 opacity-10">
-              <span className="text-[12rem]">🎓</span>
             </div>
           </div>
 
           {/* The 4 Phases Cards */}
-          <div className="space-y-4">
-            <h4 className="text-xs font-black text-indigo-400 uppercase tracking-widest px-2">The 4 Menstrual Phases</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-3">
+            <h4 className="text-sm font-semibold text-stone-700 dark:text-stone-300 px-1">The 4 Menstrual Phases</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Phase 1: Menstrual */}
-              <div className="bg-white p-7 rounded-[2.5rem] border border-rose-100 shadow-sm space-y-4 hover:shadow-md transition-all">
-                <div className="flex justify-between items-start">
-                  <span className="text-4xl">🩸</span>
-                  <span className="px-3 py-1 rounded-full bg-rose-50 text-rose-600 text-[10px] font-black uppercase tracking-widest">Days 1 - 5</span>
+              <div className="bg-white dark:bg-[#1a1816] p-6 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-xs space-y-4">
+                <div className="flex justify-between items-center">
+                  <h5 className="text-lg font-serif font-semibold text-rose-700 dark:text-rose-400">1. Menstrual Phase</h5>
+                  <span className="px-2.5 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs font-semibold tabular-nums border border-rose-200/60 dark:border-rose-900/50">Days 1 - 5</span>
                 </div>
-                <div>
-                  <h5 className="text-xl font-serif italic text-rose-600 font-bold">1. Menstrual Phase</h5>
-                  <p className="text-xs text-gray-500 italic mt-1 leading-relaxed">
-                    Hormones (estrogen & progesterone) drop to their lowest level. The uterine lining sheds.
-                  </p>
-                </div>
-                <div className="space-y-2 pt-2 border-t border-rose-50">
-                  <p className="text-[10px] font-black text-rose-500 uppercase tracking-wider">How She Feels:</p>
-                  <p className="text-xs text-stone-600 italic">Cramps, low energy, fatigue, desire for warmth & rest.</p>
-                  <p className="text-[10px] font-black text-indigo-500 uppercase tracking-wider mt-2">How You Can Support:</p>
-                  <p className="text-xs text-stone-700 bg-indigo-50/50 p-3 rounded-2xl border border-indigo-100/50 italic">
-                    "Bring a heating pad, prepare warm tea, offer gentle massages, and take over physical chores without asking."
+                <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
+                  Estrogen and progesterone drop to their lowest levels as the uterine lining sheds.
+                </p>
+                <div className="space-y-2 pt-3 border-t border-stone-200/70 dark:border-[#2e2a26]">
+                  <p className="text-xs font-semibold text-rose-600 dark:text-rose-400">How she may feel</p>
+                  <p className="text-xs text-stone-600 dark:text-stone-300">Cramps, lower energy, fatigue, need for warmth and rest.</p>
+                  <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 pt-1">How you can support</p>
+                  <p className="text-xs text-stone-700 dark:text-stone-300 bg-[#faf8f6] dark:bg-[#23201d] p-3 rounded-xl border border-stone-200/70 dark:border-[#342f2b]">
+                    Bring a heating pad, prepare warm tea, offer gentle massages, and handle household chores proactively.
                   </p>
                 </div>
               </div>
 
               {/* Phase 2: Follicular */}
-              <div className="bg-white p-7 rounded-[2.5rem] border border-emerald-100 shadow-sm space-y-4 hover:shadow-md transition-all">
-                <div className="flex justify-between items-start">
-                  <span className="text-4xl">🌱</span>
-                  <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase tracking-widest">Days 6 - 13</span>
+              <div className="bg-white dark:bg-[#1a1816] p-6 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-xs space-y-4">
+                <div className="flex justify-between items-center">
+                  <h5 className="text-lg font-serif font-semibold text-emerald-700 dark:text-emerald-400">2. Follicular Phase</h5>
+                  <span className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-xs font-semibold tabular-nums border border-emerald-200/60 dark:border-emerald-900/50">Days 6 - 13</span>
                 </div>
-                <div>
-                  <h5 className="text-xl font-serif italic text-emerald-600 font-bold">2. Follicular Phase</h5>
-                  <p className="text-xs text-gray-500 italic mt-1 leading-relaxed">
-                    Estrogen rises steadily. Follicles develop in the ovaries and energy rebounds.
-                  </p>
-                </div>
-                <div className="space-y-2 pt-2 border-t border-emerald-50">
-                  <p className="text-[10px] font-black text-emerald-500 uppercase tracking-wider">How She Feels:</p>
-                  <p className="text-xs text-stone-600 italic">Increased stamina, optimism, mental clarity, creative energy.</p>
-                  <p className="text-[10px] font-black text-indigo-500 uppercase tracking-wider mt-2">How You Can Support:</p>
-                  <p className="text-xs text-stone-700 bg-indigo-50/50 p-3 rounded-2xl border border-indigo-100/50 italic">
-                    "Plan active dates, try new outdoor experiences, and support her new ideas and projects."
+                <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
+                  Estrogen rises steadily as follicles develop in the ovaries and energy rebounds.
+                </p>
+                <div className="space-y-2 pt-3 border-t border-stone-200/70 dark:border-[#2e2a26]">
+                  <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">How she may feel</p>
+                  <p className="text-xs text-stone-600 dark:text-stone-300">Increased stamina, optimism, mental clarity, creative energy.</p>
+                  <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 pt-1">How you can support</p>
+                  <p className="text-xs text-stone-700 dark:text-stone-300 bg-[#faf8f6] dark:bg-[#23201d] p-3 rounded-xl border border-stone-200/70 dark:border-[#342f2b]">
+                    Plan active dates, try new outdoor experiences, and encourage her new ideas and projects.
                   </p>
                 </div>
               </div>
 
               {/* Phase 3: Ovulation */}
-              <div className="bg-white p-7 rounded-[2.5rem] border border-amber-100 shadow-sm space-y-4 hover:shadow-md transition-all">
-                <div className="flex justify-between items-start">
-                  <span className="text-4xl">✨</span>
-                  <span className="px-3 py-1 rounded-full bg-amber-50 text-amber-600 text-[10px] font-black uppercase tracking-widest">Days 14 - 16</span>
+              <div className="bg-white dark:bg-[#1a1816] p-6 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-xs space-y-4">
+                <div className="flex justify-between items-center">
+                  <h5 className="text-lg font-serif font-semibold text-amber-700 dark:text-amber-400">3. Ovulation Phase</h5>
+                  <span className="px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 text-xs font-semibold tabular-nums border border-amber-200/60 dark:border-amber-900/50">Days 14 - 16</span>
                 </div>
-                <div>
-                  <h5 className="text-xl font-serif italic text-amber-600 font-bold">3. Ovulation Phase</h5>
-                  <p className="text-xs text-gray-500 italic mt-1 leading-relaxed">
-                    Estrogen and LH surge to release an egg. Fertility and confidence reach peak height.
-                  </p>
-                </div>
-                <div className="space-y-2 pt-2 border-t border-amber-50">
-                  <p className="text-[10px] font-black text-amber-500 uppercase tracking-wider">How She Feels:</p>
-                  <p className="text-xs text-stone-600 italic">High confidence, sociability, heightened sense of attraction & romance.</p>
-                  <p className="text-[10px] font-black text-indigo-500 uppercase tracking-wider mt-2">How You Can Support:</p>
-                  <p className="text-xs text-stone-700 bg-indigo-50/50 p-3 rounded-2xl border border-indigo-100/50 italic">
-                    "Plan romantic dinners, dress up together, give sincere compliments, and enjoy deep connection."
+                <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
+                  Estrogen and LH surge to release an egg. Energy and confidence often reach their peak.
+                </p>
+                <div className="space-y-2 pt-3 border-t border-stone-200/70 dark:border-[#2e2a26]">
+                  <p className="text-xs font-semibold text-amber-600 dark:text-amber-400">How she may feel</p>
+                  <p className="text-xs text-stone-600 dark:text-stone-300">Higher confidence, sociability, heightened emotional connection.</p>
+                  <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 pt-1">How you can support</p>
+                  <p className="text-xs text-stone-700 dark:text-stone-300 bg-[#faf8f6] dark:bg-[#23201d] p-3 rounded-xl border border-stone-200/70 dark:border-[#342f2b]">
+                    Plan a thoughtful dinner, dress up together, share sincere compliments, and enjoy quality time.
                   </p>
                 </div>
               </div>
 
               {/* Phase 4: Luteal */}
-              <div className="bg-white p-7 rounded-[2.5rem] border border-purple-100 shadow-sm space-y-4 hover:shadow-md transition-all">
-                <div className="flex justify-between items-start">
-                  <span className="text-4xl">🌙</span>
-                  <span className="px-3 py-1 rounded-full bg-purple-50 text-purple-600 text-[10px] font-black uppercase tracking-widest">Days 17 - 28</span>
+              <div className="bg-white dark:bg-[#1a1816] p-6 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-xs space-y-4">
+                <div className="flex justify-between items-center">
+                  <h5 className="text-lg font-serif font-semibold text-purple-700 dark:text-purple-400">4. Luteal Phase & PMS</h5>
+                  <span className="px-2.5 py-1 rounded-lg bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 text-xs font-semibold tabular-nums border border-purple-200/60 dark:border-purple-900/50">Days 17 - 28</span>
                 </div>
-                <div>
-                  <h5 className="text-xl font-serif italic text-purple-600 font-bold">4. Luteal Phase & PMS</h5>
-                  <p className="text-xs text-gray-500 italic mt-1 leading-relaxed">
-                    Progesterone peaks then drops. Metabolic needs increase, leading to cravings and sensitivity.
-                  </p>
-                </div>
-                <div className="space-y-2 pt-2 border-t border-purple-50">
-                  <p className="text-[10px] font-black text-purple-500 uppercase tracking-wider">How She Feels:</p>
-                  <p className="text-xs text-stone-600 italic">Bloating, mood swings, irritability, food cravings, sensitivity to stress.</p>
-                  <p className="text-[10px] font-black text-indigo-500 uppercase tracking-wider mt-2">How You Can Support:</p>
-                  <p className="text-xs text-stone-700 bg-indigo-50/50 p-3 rounded-2xl border border-indigo-100/50 italic">
-                    "Be patient, bring her favorite snacks, avoid arguing over small things, and offer soothing comfort."
+                <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
+                  Progesterone peaks then drops. Resting metabolic needs rise, which can bring cravings and stress sensitivity.
+                </p>
+                <div className="space-y-2 pt-3 border-t border-stone-200/70 dark:border-[#2e2a26]">
+                  <p className="text-xs font-semibold text-purple-600 dark:text-purple-400">How she may feel</p>
+                  <p className="text-xs text-stone-600 dark:text-stone-300">Bloating, mood shifts, fatigue, food cravings, heightened sensitivity to stress.</p>
+                  <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 pt-1">How you can support</p>
+                  <p className="text-xs text-stone-700 dark:text-stone-300 bg-[#faf8f6] dark:bg-[#23201d] p-3 rounded-xl border border-stone-200/70 dark:border-[#342f2b]">
+                    Practice extra patience, bring her favorite snacks, avoid debating small things, and offer calm support.
                   </p>
                 </div>
               </div>
@@ -3947,47 +3937,51 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
           </div>
 
           {/* PMS & Mood Changes Deep Dive */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white p-8 rounded-[3rem] border border-indigo-50 shadow-sm space-y-4">
-              <div className="w-12 h-12 bg-pink-100 rounded-full flex items-center justify-center text-2xl">🍫</div>
-              <h4 className="text-xl font-serif italic text-indigo-900 font-bold">Understanding PMS & Mood Shifts</h4>
-              <p className="text-xs text-stone-500 leading-relaxed italic">
-                PMS is caused by sudden hormonal drops before bleeding. It is not an exaggeration — her body is undergoing real physiological shifts.
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-white dark:bg-[#1a1816] p-6 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-xs space-y-3">
+              <div className="w-10 h-10 bg-pink-50 dark:bg-pink-950/40 rounded-xl flex items-center justify-center text-pink-600 dark:text-pink-400 border border-pink-200/60 dark:border-pink-900/50">
+                <Lightbulb className="w-5 h-5" />
+              </div>
+              <h4 className="text-lg font-serif font-semibold text-stone-900 dark:text-stone-100">Understanding PMS & Mood Shifts</h4>
+              <p className="text-xs text-stone-500 dark:text-stone-400 leading-relaxed">
+                PMS is driven by real physiological hormone shifts prior to menstruation.
               </p>
-              <ul className="space-y-2.5 text-xs text-stone-600">
+              <ul className="space-y-2 text-xs text-stone-700 dark:text-stone-300">
                 <li className="flex items-start gap-2">
-                  <span className="text-pink-500 font-bold">•</span>
-                  <span><strong>Cravings:</strong> Her body burns more calories during the luteal phase, driving carbohydrate and sweet cravings.</span>
+                  <span className="text-pink-600 dark:text-pink-400 font-bold">•</span>
+                  <span><strong>Cravings:</strong> Metabolic demand rises during the luteal phase, driving carbohydrate and sweet cravings.</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-pink-500 font-bold">•</span>
-                  <span><strong>Mood Changes:</strong> Serotonin levels drop alongside progesterone. Extra patience goes a long way.</span>
+                  <span className="text-pink-600 dark:text-pink-400 font-bold">•</span>
+                  <span><strong>Mood Shifts:</strong> Serotonin shifts alongside progesterone drops; extra patience goes a long way.</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-pink-500 font-bold">•</span>
-                  <span><strong>Physical Sensitivity:</strong> Headaches, bloating, and joint discomfort are common.</span>
+                  <span className="text-pink-600 dark:text-pink-400 font-bold">•</span>
+                  <span><strong>Physical Sensitivity:</strong> Headaches, bloating, and muscle soreness are common.</span>
                 </li>
               </ul>
             </div>
 
-            <div className="bg-white p-8 rounded-[3rem] border border-indigo-50 shadow-sm space-y-4">
-              <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center text-2xl">🛡️</div>
-              <h4 className="text-xl font-serif italic text-indigo-900 font-bold">How to Support Like a Pro</h4>
-              <p className="text-xs text-stone-500 leading-relaxed italic">
-                Golden rules every partner should follow to make her feel cherished and understood:
+            <div className="bg-white dark:bg-[#1a1816] p-6 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-xs space-y-3">
+              <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-950/40 rounded-xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-900/50">
+                <Shield className="w-5 h-5" />
+              </div>
+              <h4 className="text-lg font-serif font-semibold text-stone-900 dark:text-stone-100">Practical Support Habits</h4>
+              <p className="text-xs text-stone-500 dark:text-stone-400 leading-relaxed">
+                Three consistent habits that make a lasting difference:
               </p>
-              <ul className="space-y-2.5 text-xs text-stone-600">
+              <ul className="space-y-2 text-xs text-stone-700 dark:text-stone-300">
                 <li className="flex items-start gap-2">
-                  <span className="text-indigo-500 font-bold">1.</span>
-                  <span><strong>Listen without fixing:</strong> Sometimes she just needs validation, not solutions.</span>
+                  <span className="text-indigo-600 dark:text-indigo-400 font-bold">1.</span>
+                  <span><strong>Listen without fixing:</strong> Sometimes empathy and validation are what help most.</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-indigo-500 font-bold">2.</span>
-                  <span><strong>Anticipate needs:</strong> Check her cycle status on Lumina and bring tea or snacks proactively.</span>
+                  <span className="text-indigo-600 dark:text-indigo-400 font-bold">2.</span>
+                  <span><strong>Anticipate needs:</strong> Check her cycle phase and offer tea or snacks before she asks.</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-indigo-500 font-bold">3.</span>
-                  <span><strong>Send Digital Comfort:</strong> Use the Comfort Buttons below to send hugs, flowers, and cocoa balloons.</span>
+                  <span className="text-indigo-600 dark:text-indigo-400 font-bold">3.</span>
+                  <span><strong>Send quick check-ins:</strong> Use the Digital Comfort actions below to brighten her day.</span>
                 </li>
               </ul>
             </div>
@@ -3996,31 +3990,32 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
       )}
 
       {activeTab === 'notifications' && (
-        <section className="bg-white p-8 md:p-10 rounded-[3rem] border border-purple-100 shadow-sm space-y-6 animate-fadeIn font-sans">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-purple-50 pb-6">
+        <section className="bg-white dark:bg-[#1a1816] p-6 sm:p-8 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-xs space-y-6 animate-fadeIn">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-stone-200/70 dark:border-[#2e2a26] pb-5">
             <div>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-50 text-purple-600 text-[10px] font-black uppercase tracking-widest mb-2 border border-purple-100">
-                <span>🔔</span> Partner Notification Preferences
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 text-xs font-semibold mb-2 border border-purple-200/60 dark:border-purple-900/50">
+                <Bell className="w-3.5 h-3.5" /> Notification Preferences
               </div>
-              <h3 className="text-2xl md:text-3xl font-serif italic text-purple-950 font-bold">
-                Stay Connected 💜
+              <h3 className="text-2xl font-serif font-semibold text-stone-900 dark:text-stone-100">
+                Stay Connected
               </h3>
-              <p className="text-xs text-stone-500 italic mt-1">
-                Choose which updates you would like to receive.
+              <p className="text-sm text-stone-500 dark:text-stone-400 mt-1">
+                Choose which partner updates you would like to receive.
               </p>
             </div>
             <button
+              type="button"
               onClick={async () => {
                 await syncUser(user);
-                showNotice("Notification preferences updated successfully! 💜", 'success');
+                showNotice("Notification preferences updated.", 'success');
               }}
-              className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-2xl text-xs font-bold uppercase tracking-wider shadow-md active:scale-95 transition-all shrink-0 cursor-pointer"
+              className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold transition-colors shrink-0 cursor-pointer whitespace-nowrap"
             >
-              Save Preferences ✨
+              Save Preferences
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {[
               { key: 'periodStarting', label: 'Period Starting', desc: "Notify me when my partner's period starts." },
               { key: 'periodEnding', label: 'Period Ending', desc: "Notify me when my partner's period ends." },
@@ -4035,12 +4030,12 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
             ].map((pref) => {
               const currentVal = Boolean(user.partnerNotificationPreferences?.[pref.key as keyof PartnerNotificationPreferences] ?? true);
               return (
-                <div key={pref.key} className="flex items-start justify-between p-4 bg-purple-50/20 hover:bg-purple-50/50 rounded-2xl border border-purple-100/60 transition-all">
+                <label key={pref.key} className="flex items-start justify-between p-4 bg-[#faf8f6] dark:bg-[#23201d] hover:border-indigo-300 dark:hover:border-indigo-700 rounded-xl border border-stone-200/80 dark:border-[#342f2b] transition-colors cursor-pointer">
                   <div className="pr-4">
-                    <p className="text-xs font-bold text-purple-950 flex items-center gap-1">
+                    <p className="text-sm font-semibold text-stone-900 dark:text-stone-100">
                       {pref.label}
                     </p>
-                    <p className="text-[10px] text-stone-500 mt-0.5 leading-tight italic">{pref.desc}</p>
+                    <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5 leading-snug">{pref.desc}</p>
                   </div>
                   <input
                     type="checkbox"
@@ -4102,9 +4097,9 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                       localStorage.removeItem('lumina_user');
                       await syncUser(updatedUser);
                     }}
-                    className="w-5 h-5 rounded border-purple-300 text-purple-600 focus:ring-purple-500 mt-0.5 cursor-pointer shrink-0"
+                    className="w-4 h-4 rounded border-stone-300 dark:border-stone-600 text-indigo-600 focus:ring-indigo-500 mt-1 cursor-pointer shrink-0"
                   />
-                </div>
+                </label>
               );
             })}
           </div>
@@ -4112,32 +4107,32 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
       )}
 
       {/* Comfort Station */}
-      <section className="bg-white/70 backdrop-blur-md p-8 rounded-[3rem] border border-pink-100 shadow-sm flex flex-col items-center gap-6">
-         <h3 className="text-xs font-bold text-pink-400 uppercase tracking-widest">Send Digital Comfort</h3>
-         <div className="flex flex-wrap justify-center gap-4">
-            <ComfortButton icon="💖" label="Hug" onClick={() => sendDigitalComfort('hug')} />
-            <ComfortButton icon="🍵" label="Tea" onClick={() => sendDigitalComfort('tea')} />
-            <ComfortButton icon="💐" label="Flower" onClick={() => sendDigitalComfort('flower')} />
-            <ComfortButton icon="🍫" label="Cocoa" onClick={() => sendDigitalComfort('chocolate')} />
-            <ComfortButton icon="✨" label="Sparkle" onClick={() => sendDigitalComfort('sparkle')} />
-         </div>
+      <section className="bg-white dark:bg-[#1a1816] p-6 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-xs flex flex-col items-center gap-4">
+        <h3 className="text-xs font-semibold text-stone-500 dark:text-stone-400">Send Digital Comfort</h3>
+        <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
+          <ComfortButton icon="💖" label="Hug" onClick={() => sendDigitalComfort('hug')} />
+          <ComfortButton icon="🍵" label="Tea" onClick={() => sendDigitalComfort('tea')} />
+          <ComfortButton icon="💐" label="Flower" onClick={() => sendDigitalComfort('flower')} />
+          <ComfortButton icon="🍫" label="Cocoa" onClick={() => sendDigitalComfort('chocolate')} />
+          <ComfortButton icon="✨" label="Sparkle" onClick={() => sendDigitalComfort('sparkle')} />
+        </div>
       </section>
 
       {/* Slide-out notifications pane (Right drawer) */}
       {isNotificationsOpen && (
         <>
-          <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-[150] transition-opacity" onClick={() => setIsNotificationsOpen(false)} />
-          <div className="fixed inset-y-0 right-0 max-w-xs w-full bg-[#fffafb]/95 backdrop-blur-3xl shadow-2xl z-[160] p-6 flex flex-col border-l border-indigo-100/40 animate-slideLeft text-left">
+          <div className="fixed inset-0 bg-stone-950/50 backdrop-blur-xs z-[150] transition-opacity" onClick={() => setIsNotificationsOpen(false)} />
+          <div className="fixed inset-y-0 right-0 max-w-xs w-full bg-white dark:bg-[#1a1816] shadow-2xl z-[160] p-5 flex flex-col border-l border-stone-200 dark:border-[#2e2a26] animate-slideLeft text-left">
             {/* Title Header with Close */}
-            <div className="flex items-center justify-between border-b border-indigo-100/30 pb-4 mb-6">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xl">🔔</span>
-                <span className="font-serif italic font-black text-xl text-indigo-650">Notifications</span>
+            <div className="flex items-center justify-between border-b border-stone-200/80 dark:border-[#2e2a26] pb-4 mb-4">
+              <div className="flex items-center gap-2">
+                <Bell className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                <span className="font-serif font-semibold text-lg text-stone-900 dark:text-stone-100">Notifications</span>
               </div>
-              <button 
+              <button
                 type="button"
                 onClick={() => setIsNotificationsOpen(false)}
-                className="p-1.5 rounded-xl bg-indigo-50 text-indigo-500 hover:bg-indigo-100 transition-colors cursor-pointer"
+                className="p-1.5 rounded-xl bg-[#faf8f6] dark:bg-[#23201d] text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-[#2c2824] transition-colors cursor-pointer border border-stone-200/80 dark:border-[#342f2b]"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -4147,10 +4142,10 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
             <div className="flex-1 overflow-y-auto space-y-4 scrollbar-hide">
               {/* Partner Persistent System Notifications */}
               {user.notifications && user.notifications.length > 0 ? (
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   <div className="flex justify-between items-center px-1">
-                    <p className="text-[9px] font-black uppercase tracking-wider text-indigo-400">System Notifications</p>
-                    <button 
+                    <p className="text-xs font-semibold text-stone-500 dark:text-stone-400">System Updates</p>
+                    <button
                       type="button"
                       onClick={async () => {
                         const updatedUser = {
@@ -4160,15 +4155,15 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                         setUser(updatedUser);
                         await syncUser(updatedUser);
                       }}
-                      className="text-[8px] font-black text-indigo-500 hover:underline uppercase tracking-wider cursor-pointer"
+                      className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
                     >
-                      Clear All Unread
+                      Mark all read
                     </button>
                   </div>
-                  <div className="space-y-1.5 max-h-[400px] overflow-y-auto pr-1 scrollbar-thin">
+                  <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1 scrollbar-thin">
                     {user.notifications.map(notif => (
-                      <div 
-                        key={notif.id} 
+                      <div
+                        key={notif.id}
                         onClick={async () => {
                           if (!notif.isRead) {
                             const updatedUser = {
@@ -4179,31 +4174,31 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
                             await syncUser(updatedUser);
                           }
                         }}
-                        className={`p-3 rounded-2xl border transition-all flex flex-col gap-1 cursor-pointer ${
-                          notif.isRead 
-                            ? 'bg-white/40 border-indigo-100/10 opacity-70 hover:opacity-100' 
-                            : 'bg-gradient-to-br from-indigo-50 to-purple-50 border-indigo-100/40 shadow-sm hover:scale-[1.01]'
+                        className={`p-3 rounded-xl border transition-colors flex flex-col gap-1 cursor-pointer ${
+                          notif.isRead
+                            ? 'bg-[#faf8f6]/70 dark:bg-[#23201d]/50 border-stone-200/60 dark:border-[#342f2b]/60 opacity-75 hover:opacity-100'
+                            : 'bg-indigo-50/60 dark:bg-indigo-950/30 border-indigo-200/80 dark:border-indigo-900/60'
                         }`}
                       >
-                        <div className="flex items-center justify-between gap-1">
+                        <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-1.5 min-w-0">
                             <span className="text-sm shrink-0">{notif.emoji || '🔔'}</span>
-                            <p className="text-[10px] font-black uppercase tracking-wider text-indigo-95 truncate">{notif.title}</p>
+                            <p className="text-xs font-semibold text-stone-900 dark:text-stone-100 truncate">{notif.title}</p>
                           </div>
                           {!notif.isRead && (
-                            <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full shrink-0" />
+                            <span className="w-2 h-2 bg-indigo-600 rounded-full shrink-0" />
                           )}
                         </div>
-                        <p className="text-[10px] text-gray-500 leading-normal font-medium break-words">{notif.body}</p>
-                        <p className="text-[7.5px] text-gray-400 font-bold self-end tracking-wider">
-                          {new Date(notif.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                        <p className="text-xs text-stone-600 dark:text-stone-300 leading-snug break-words">{notif.body}</p>
+                        <p className="text-[11px] text-stone-400 dark:text-stone-500 self-end tabular-nums">
+                          {new Date(notif.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </p>
                       </div>
                     ))}
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-8 text-stone-400 font-serif italic text-xs">
+                <div className="text-center py-8 text-stone-500 dark:text-stone-400 text-sm">
                   No notifications yet.
                 </div>
               )}
@@ -4217,43 +4212,50 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
 };
 
 const SharingToggle: React.FC<{ label: string; active: boolean; onChange: (v: boolean) => void }> = ({ label, active, onChange }) => (
-  <div className="flex items-center justify-between p-4 bg-pink-50/30 rounded-2xl border border-pink-50">
-    <span className="text-sm font-medium text-pink-900">{label}</span>
-    <button 
+  <div className="flex items-center justify-between p-4 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl border border-stone-200/80 dark:border-[#342f2b]">
+    <span className="text-sm font-medium text-stone-800 dark:text-stone-200">{label}</span>
+    <button
+      type="button"
       onClick={() => onChange(!active)}
-      className={`w-12 h-6 rounded-full transition-colors relative ${active ? 'bg-pink-500' : 'bg-pink-100'}`}
+      className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${active ? 'bg-pink-600' : 'bg-stone-300 dark:bg-stone-700'}`}
     >
-      <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${active ? 'left-7' : 'left-1'}`}></div>
+      <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${active ? 'left-6' : 'left-1'}`}></div>
     </button>
   </div>
 );
 
 const SuggestionItem: React.FC<{ icon: string; label: string }> = ({ icon, label }) => (
-  <div className="flex items-center gap-3 p-3 bg-pink-50/50 rounded-xl border border-pink-50">
+  <div className="flex items-center gap-3 p-3 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl border border-stone-200/80 dark:border-[#342f2b]">
     <span className="text-lg">{icon}</span>
-    <span className="text-[10px] font-bold text-pink-600 uppercase tracking-tight">{label}</span>
+    <span className="text-xs font-medium text-stone-700 dark:text-stone-300">{label}</span>
   </div>
 );
 
 const NavItem: React.FC<{ active: boolean, onClick: () => void, label: string, icon: string }> = ({ active, onClick, label, icon }) => (
-  <button 
+  <button
+    type="button"
     onClick={onClick}
-    className={`flex-1 py-3 rounded-2xl text-[9px] font-bold uppercase tracking-widest transition-all flex flex-col items-center gap-1 ${active ? 'bg-indigo-500 text-white shadow-lg' : 'text-indigo-300 hover:bg-indigo-50'}`}
+    className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-semibold transition-colors flex flex-col items-center gap-1 cursor-pointer ${
+      active
+        ? 'bg-indigo-600 text-white shadow-xs'
+        : 'text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-[#23201d]'
+    }`}
   >
-    <span className="text-lg">{icon}</span>
+    <span className="text-base">{icon}</span>
     <span className="hidden md:inline">{label}</span>
   </button>
 );
 
 const ComfortButton: React.FC<{ icon: string, label: string, onClick: () => void }> = ({ icon, label, onClick }) => (
-  <button 
+  <button
+    type="button"
     onClick={onClick}
-    className="flex flex-col items-center gap-1 group"
+    className="flex flex-col items-center gap-1.5 group cursor-pointer"
   >
-     <div className="w-16 h-16 bg-pink-50 rounded-[2rem] flex items-center justify-center text-3xl shadow-sm border border-pink-100 group-hover:scale-110 group-hover:bg-pink-100 transition-all active:scale-95">
-        {icon}
-     </div>
-     <span className="text-[9px] font-bold text-pink-300 uppercase tracking-widest">{label}</span>
+    <div className="w-14 h-14 bg-[#faf8f6] dark:bg-[#23201d] rounded-2xl flex items-center justify-center text-2xl border border-stone-200/80 dark:border-[#342f2b] group-hover:border-pink-400 dark:group-hover:border-pink-700 transition-colors">
+      {icon}
+    </div>
+    <span className="text-xs font-semibold text-stone-600 dark:text-stone-300">{label}</span>
   </button>
 );
 

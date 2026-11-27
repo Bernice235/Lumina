@@ -396,39 +396,41 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
   return (
     <section
       aria-label="Privacy and Security Dashboard"
-      className={embedded ? 'space-y-6' : 'max-w-4xl mx-auto pb-16 space-y-6'}
+      className={embedded ? 'space-y-5' : 'max-w-5xl mx-auto pb-16 space-y-5'}
     >
-      {/* Header Banner */}
-      <div className="bg-gradient-to-r from-pink-50 via-white to-purple-50 border border-pink-100 rounded-3xl p-6 sm:p-7 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Header Card */}
+      <div className="bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] rounded-2xl p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="space-y-1.5">
-          <div className="flex items-center gap-2">
-            <span className="p-2 rounded-2xl bg-pink-100 text-pink-700">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-pink-50 dark:bg-pink-950/40 text-pink-600 dark:text-pink-400 border border-pink-200/60 dark:border-pink-800/40 flex items-center justify-center shrink-0">
               <ShieldCheck size={20} aria-hidden="true" />
-            </span>
-            <h2 className="text-2xl font-serif font-bold text-stone-900">
-              Privacy &amp; Security Vault
-            </h2>
+            </div>
+            <div>
+              <h2 className="text-xl sm:text-2xl font-serif font-bold text-stone-900 dark:text-stone-100 tracking-tight">
+                Privacy &amp; Security Vault
+              </h2>
+              <p className="text-xs sm:text-sm text-stone-600 dark:text-stone-400 mt-0.5">
+                Inspect stored data, control consent and partner sharing, and protect your account.
+              </p>
+            </div>
           </div>
-          <p className="text-sm text-stone-600">
-            See what personal data Lumina stores, control consent and partner sharing, and protect your account.
-          </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           <span
-            className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 border ${
               security.twoFactorEnabled
-                ? 'bg-emerald-100 text-emerald-800'
-                : 'bg-amber-100 text-amber-900'
+                ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/50 text-emerald-800 dark:text-emerald-300'
+                : 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800/50 text-amber-800 dark:text-amber-300'
             }`}
           >
             <KeyRound size={13} aria-hidden="true" />
             {security.twoFactorEnabled ? '2FA Protected' : '2FA Off'}
           </span>
           <span
-            className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 border ${
               isFirebaseEmailVerified
-                ? 'bg-emerald-100 text-emerald-800'
-                : 'bg-stone-100 text-stone-700'
+                ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/50 text-emerald-800 dark:text-emerald-300'
+                : 'bg-stone-100 dark:bg-[#23201d] border-stone-200 dark:border-[#342f2b] text-stone-700 dark:text-stone-300'
             }`}
           >
             <MailCheck size={13} aria-hidden="true" />
@@ -441,19 +443,19 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
       {feedback && (
         <div
           role="status"
-          className={`p-4 rounded-2xl border text-xs font-semibold flex items-center justify-between gap-3 ${
+          className={`p-4 rounded-xl border text-xs font-medium flex items-center justify-between gap-3 ${
             feedback.type === 'success'
-              ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+              ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/50 text-emerald-900 dark:text-emerald-200'
               : feedback.type === 'error'
-              ? 'bg-rose-50 border-rose-200 text-rose-900'
-              : 'bg-purple-50 border-purple-200 text-purple-900'
+              ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800/50 text-rose-900 dark:text-rose-200'
+              : 'bg-purple-50 dark:bg-purple-950/40 border-purple-200 dark:border-purple-800/50 text-purple-900 dark:text-purple-200'
           }`}
         >
           <span>{feedback.message}</span>
           <button
             type="button"
             onClick={() => setFeedback(null)}
-            className="text-xs underline font-bold cursor-pointer"
+            className="text-xs underline font-semibold cursor-pointer shrink-0"
           >
             Dismiss
           </button>
@@ -461,7 +463,7 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
       )}
 
       {/* Navigation Tabs */}
-      <div className="flex flex-wrap gap-2 bg-white p-2 rounded-2xl border border-pink-100 shadow-xs" role="tablist">
+      <div className="flex flex-wrap gap-1.5 bg-stone-100/90 dark:bg-[#23201d] p-1.5 rounded-xl border border-stone-200/80 dark:border-[#2e2a26]" role="tablist">
         {subTabs.map((tab) => {
           const Icon = tab.icon;
           const active = section === tab.id;
@@ -472,14 +474,14 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
               role="tab"
               aria-selected={active}
               onClick={() => setSection(tab.id)}
-              className={`flex-1 min-w-[130px] py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+              className={`flex-1 min-w-[130px] py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer ${
                 active
-                  ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-sm'
-                  : 'text-stone-700 hover:bg-pink-50'
+                  ? 'bg-white dark:bg-[#1a1816] text-pink-700 dark:text-pink-400 shadow-xs border border-stone-200/70 dark:border-[#342f2b]'
+                  : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'
               }`}
             >
               <Icon size={14} aria-hidden="true" />
-              <span>{tab.label}</span>
+              <span className="whitespace-nowrap">{tab.label}</span>
             </button>
           );
         })}
@@ -488,47 +490,49 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
       {/* TAB 1: DATA OVERVIEW & POLICY */}
       {section === 'overview' && (
         <div className="space-y-5">
-          <div className="bg-white border border-pink-100 rounded-3xl p-6 space-y-4">
-            <h3 className="text-lg font-serif font-bold text-stone-900">
+          <div className="bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] rounded-2xl p-6 space-y-4">
+            <h3 className="text-base font-serif font-bold text-stone-900 dark:text-stone-100">
               Information Lumina Collects &amp; How It Is Used
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
               {collectedCategories.map((cat) => (
                 <div
                   key={cat.title}
-                  className="p-4 rounded-2xl bg-pink-50/35 border border-pink-100 space-y-1.5"
+                  className="p-4 rounded-xl bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/70 dark:border-[#2e2a26] space-y-1.5"
                 >
-                  <p className="text-sm font-bold text-stone-900">{cat.title}</p>
-                  <p className="text-xs font-semibold text-pink-800">{cat.items}</p>
-                  <p className="text-xs text-stone-600 leading-relaxed">{cat.purpose}</p>
+                  <p className="text-sm font-semibold text-stone-900 dark:text-stone-100">{cat.title}</p>
+                  <p className="text-xs font-medium text-pink-700 dark:text-pink-400">{cat.items}</p>
+                  <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">{cat.purpose}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="bg-white border border-pink-100 rounded-3xl p-6 space-y-3">
+          <div className="bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] rounded-2xl p-6 space-y-3">
             <button
               type="button"
               onClick={() => setShowPolicy(!showPolicy)}
               aria-expanded={showPolicy}
               className="w-full flex items-center justify-between text-left cursor-pointer"
             >
-              <div className="flex items-center gap-2.5">
-                <FileText size={18} className="text-pink-600" aria-hidden="true" />
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-pink-50 dark:bg-pink-950/40 text-pink-600 dark:text-pink-400 flex items-center justify-center shrink-0">
+                  <FileText size={17} aria-hidden="true" />
+                </div>
                 <div>
-                  <h3 className="text-base font-serif font-bold text-stone-900">
+                  <h3 className="text-base font-serif font-bold text-stone-900 dark:text-stone-100">
                     Lumina Privacy Policy &amp; Confidentiality Pledge
                   </h3>
-                  <p className="text-xs text-stone-600">
+                  <p className="text-xs text-stone-600 dark:text-stone-400">
                     Clear commitments on encryption, third-party limits, and deletion rights.
                   </p>
                 </div>
               </div>
-              {showPolicy ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+              {showPolicy ? <ChevronUp size={18} className="text-stone-500" /> : <ChevronDown size={18} className="text-stone-500" />}
             </button>
 
             {showPolicy && (
-              <div className="pt-3 border-t border-pink-100 text-xs text-stone-700 space-y-2.5 leading-relaxed">
+              <div className="pt-4 border-t border-stone-200/80 dark:border-[#2e2a26] text-xs text-stone-700 dark:text-stone-300 space-y-2.5 leading-relaxed">
                 <p>
                   <strong>1. Data Controller &amp; DPO (NDPA 2023 / GDPR):</strong> Lumina: Bloom &amp; Balance acts as Data Controller for your wellness sanctuary. Contact our Data Protection Officer at{' '}
                   <a href="mailto:privacy@luminabloom.app" className="text-pink-700 font-bold underline">privacy@luminabloom.app</a>{' '}
@@ -558,8 +562,8 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
       {/* TAB 2: PERMISSIONS & COOKIE CONSENT */}
       {section === 'permissions' && (
         <div className="space-y-5">
-          <div className="bg-white border border-pink-100 rounded-3xl p-6 space-y-4">
-            <h3 className="text-lg font-serif font-bold text-stone-900">
+          <div className="bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] rounded-2xl p-6 space-y-4">
+            <h3 className="text-base font-serif font-bold text-stone-900 dark:text-stone-100">
               Privacy &amp; App Behavior Controls
             </h3>
 
@@ -587,11 +591,11 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
             ].map((item) => (
               <label
                 key={item.key}
-                className="flex items-start justify-between gap-4 p-4 rounded-2xl bg-stone-50/70 border border-stone-200 cursor-pointer hover:border-pink-200"
+                className="flex items-start justify-between gap-4 p-4 rounded-xl bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#2e2a26] cursor-pointer hover:border-pink-200 dark:hover:border-pink-800/60 transition-colors"
               >
                 <div>
-                  <span className="text-sm font-bold text-stone-900 block">{item.label}</span>
-                  <span className="text-xs text-stone-600 block mt-0.5">{item.desc}</span>
+                  <span className="text-sm font-semibold text-stone-900 dark:text-stone-100 block">{item.label}</span>
+                  <span className="text-xs text-stone-600 dark:text-stone-400 block mt-0.5">{item.desc}</span>
                 </div>
                 <input
                   type="checkbox"
@@ -604,10 +608,10 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
               </label>
             ))}
 
-            <div className="p-4 rounded-2xl bg-stone-50/70 border border-stone-200 flex items-center justify-between gap-4">
+            <div className="p-4 rounded-xl bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#2e2a26] flex items-center justify-between gap-4">
               <div>
-                <span className="text-sm font-bold text-stone-900 block">Inactivity Auto-Lock Timer</span>
-                <span className="text-xs text-stone-600 block mt-0.5">
+                <span className="text-sm font-semibold text-stone-900 dark:text-stone-100 block">Inactivity Auto-Lock Timer</span>
+                <span className="text-xs text-stone-600 dark:text-stone-400 block mt-0.5">
                   Automatically lock Secret Diary and App Lock after periods of inactivity.
                 </span>
               </div>
@@ -620,7 +624,7 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
                     'Inactivity Auto-Lock Timer'
                   )
                 }
-                className="px-3 py-2 rounded-xl border border-stone-200 bg-white text-xs font-bold text-stone-800 outline-none"
+                className="px-3 py-2 rounded-xl border border-stone-200 dark:border-[#342f2b] bg-white dark:bg-[#1a1816] text-xs font-semibold text-stone-800 dark:text-stone-200 outline-none tabular-nums"
               >
                 <option value={1}>1 minute</option>
                 <option value={3}>3 minutes</option>
@@ -632,13 +636,13 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
           </div>
 
           {/* Partner Data-Sharing Permissions */}
-          <div className="bg-white border border-pink-100 rounded-3xl p-6 space-y-4">
-            <div className="flex items-center justify-between gap-3">
+          <div className="bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] rounded-2xl p-6 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h3 className="text-lg font-serif font-bold text-stone-900">
+                <h3 className="text-base font-serif font-bold text-stone-900 dark:text-stone-100">
                   Partner Data-Sharing Permissions
                 </h3>
-                <p className="text-xs text-stone-600">
+                <p className="text-xs text-stone-600 dark:text-stone-400">
                   Control exactly what a linked partner may view inside Partner Mode.
                 </p>
               </div>
@@ -656,10 +660,10 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
                   );
                   notify('info', paused ? 'All partner sharing paused.' : 'Partner sharing resumed.');
                 }}
-                className={`px-3.5 py-2 rounded-xl text-xs font-bold cursor-pointer ${
+                className={`px-3.5 py-2 rounded-xl text-xs font-semibold cursor-pointer border transition-colors ${
                   user.isSharingPaused
-                    ? 'bg-amber-100 text-amber-900'
-                    : 'bg-pink-50 text-pink-800 hover:bg-pink-100'
+                    ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800/50 text-amber-900 dark:text-amber-300'
+                    : 'bg-pink-50 dark:bg-pink-950/40 border-pink-200 dark:border-pink-800/40 text-pink-800 dark:text-pink-300 hover:bg-pink-100 dark:hover:bg-pink-950/60'
                 }`}
               >
                 {user.isSharingPaused ? 'Resume Sharing' : 'Pause All Sharing'}
@@ -677,9 +681,9 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
               ].map((perm) => (
                 <label
                   key={perm.key}
-                  className="flex items-center justify-between p-3.5 rounded-2xl border border-stone-200 bg-white cursor-pointer"
+                  className="flex items-center justify-between p-3.5 rounded-xl border border-stone-200/80 dark:border-[#2e2a26] bg-[#faf8f6] dark:bg-[#23201d] cursor-pointer"
                 >
-                  <span className="text-xs font-bold text-stone-800">{perm.label}</span>
+                  <span className="text-xs font-semibold text-stone-800 dark:text-stone-200">{perm.label}</span>
                   <input
                     type="checkbox"
                     checked={Boolean(user.sharingSettings?.[perm.key])}
@@ -692,13 +696,13 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
           </div>
 
           {/* Cookie & Tracking Consent */}
-          <div className="bg-white border border-pink-100 rounded-3xl p-6 space-y-4">
-            <div className="flex items-center justify-between gap-2">
+          <div className="bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] rounded-2xl p-6 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <h3 className="text-lg font-serif font-bold text-stone-900">
+                <h3 className="text-base font-serif font-bold text-stone-900 dark:text-stone-100">
                   Cookie &amp; Analytics Consent
                 </h3>
-                <p className="text-xs text-stone-600">
+                <p className="text-xs text-stone-600 dark:text-stone-400">
                   {cookieConsent.decided
                     ? `Consent recorded on ${new Date(cookieConsent.updatedAt || Date.now()).toLocaleDateString()}.`
                     : 'Pending your choice — non-essential cookies are blocked until accepted.'}
@@ -707,7 +711,7 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
               <button
                 type="button"
                 onClick={() => window.dispatchEvent(new CustomEvent('lumina:open-cookie-settings'))}
-                className="px-3 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-bold cursor-pointer"
+                className="px-3.5 py-2 rounded-xl bg-stone-100 dark:bg-[#23201d] hover:bg-stone-200 dark:hover:bg-[#2c2824] text-stone-800 dark:text-stone-200 text-xs font-semibold cursor-pointer border border-stone-200/70 dark:border-[#342f2b]"
               >
                 Open Banner Modal
               </button>
@@ -721,9 +725,9 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
               ].map((c) => (
                 <label
                   key={c.id}
-                  className="p-3.5 rounded-2xl border border-stone-200 flex items-center justify-between gap-2 cursor-pointer"
+                  className="p-3.5 rounded-xl border border-stone-200/80 dark:border-[#2e2a26] bg-[#faf8f6] dark:bg-[#23201d] flex items-center justify-between gap-2 cursor-pointer"
                 >
-                  <span className="text-xs font-bold text-stone-800">{c.label}</span>
+                  <span className="text-xs font-semibold text-stone-800 dark:text-stone-200">{c.label}</span>
                   <input
                     type="checkbox"
                     checked={c.value}
@@ -741,16 +745,16 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
       {section === 'protection' && (
         <div className="space-y-5">
           {/* Email Verification Card */}
-          <div className="bg-white border border-pink-100 rounded-3xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <MailCheck size={18} className="text-pink-600" aria-hidden="true" />
-                <h3 className="text-base font-serif font-bold text-stone-900">
+                <MailCheck size={18} className="text-pink-600 dark:text-pink-400" aria-hidden="true" />
+                <h3 className="text-base font-serif font-bold text-stone-900 dark:text-stone-100">
                   Email Verification
                 </h3>
               </div>
-              <p className="text-xs text-stone-600">
-                Primary address: <strong className="text-stone-900">{user.email}</strong> —{' '}
+              <p className="text-xs text-stone-600 dark:text-stone-400">
+                Primary address: <strong className="text-stone-900 dark:text-stone-100">{user.email}</strong> —{' '}
                 {isFirebaseEmailVerified ? 'Verified and trusted for recovery.' : 'Not yet confirmed via email link.'}
               </p>
             </div>
@@ -758,23 +762,23 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
               type="button"
               disabled={sendingVerify}
               onClick={handleSendVerificationEmail}
-              className="px-4 py-2.5 rounded-2xl bg-pink-600 hover:bg-pink-700 text-white text-xs font-bold shrink-0 cursor-pointer disabled:opacity-50"
+              className="px-4 py-2.5 rounded-xl bg-pink-600 hover:bg-pink-700 text-white text-xs font-semibold shrink-0 cursor-pointer disabled:opacity-50 transition-colors"
             >
               {sendingVerify ? 'Sending...' : isFirebaseEmailVerified ? 'Check Status' : 'Verify Email'}
             </button>
           </div>
 
           {/* Two-Factor Authentication Card */}
-          <div className="bg-white border border-pink-100 rounded-3xl p-6 space-y-5">
+          <div className="bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] rounded-2xl p-6 space-y-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <KeyRound size={18} className="text-pink-600" aria-hidden="true" />
-                  <h3 className="text-lg font-serif font-bold text-stone-900">
+                  <KeyRound size={18} className="text-pink-600 dark:text-pink-400" aria-hidden="true" />
+                  <h3 className="text-base font-serif font-bold text-stone-900 dark:text-stone-100">
                     Two-Factor Authentication (Authenticator App)
                   </h3>
                 </div>
-                <p className="text-xs text-stone-600">
+                <p className="text-xs text-stone-600 dark:text-stone-400">
                   Require a time-based 6-digit verification code (TOTP) or single-use recovery code at login.
                 </p>
               </div>
@@ -782,7 +786,7 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
                 <button
                   type="button"
                   onClick={handleDisable2fa}
-                  className="px-4 py-2 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 text-xs font-bold cursor-pointer shrink-0"
+                  className="px-4 py-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800/50 text-xs font-semibold cursor-pointer shrink-0"
                 >
                   Disable 2FA
                 </button>
@@ -791,7 +795,7 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
                 <button
                   type="button"
                   onClick={handleStart2faSetup}
-                  className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-pink-500 to-rose-500 text-white text-xs font-bold shadow-sm cursor-pointer shrink-0"
+                  className="px-5 py-2.5 rounded-xl bg-pink-600 hover:bg-pink-700 text-white text-xs font-semibold shadow-xs cursor-pointer shrink-0 transition-colors"
                 >
                   Enable 2FA Protection
                 </button>
@@ -799,9 +803,9 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
             </div>
 
             {setup2faStep === 'qr' && (
-              <form onSubmit={handleConfirm2faSetup} className="p-5 rounded-3xl bg-pink-50/40 border border-pink-200 space-y-5">
+              <form onSubmit={handleConfirm2faSetup} className="p-5 rounded-2xl bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#2e2a26] space-y-5">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-                  <div className="bg-white p-4 rounded-2xl border border-pink-100 shadow-xs w-48 h-48 mx-auto flex items-center justify-center">
+                  <div className="bg-white p-4 rounded-2xl border border-stone-200/80 shadow-xs w-48 h-48 mx-auto flex items-center justify-center">
                     <QrCodeCanvas
                       value={otpAuthUri}
                       size={180}
@@ -809,11 +813,11 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
                     />
                   </div>
                   <div className="space-y-3">
-                    <p className="text-xs font-bold text-stone-900">
+                    <p className="text-xs font-semibold text-stone-900 dark:text-stone-100">
                       1. Scan this QR code in Google Authenticator, 1Password, or Apple Passwords.
                     </p>
-                    <div className="p-3 rounded-xl bg-white border border-pink-100 flex items-center justify-between gap-2">
-                      <code className="text-[11px] font-mono text-pink-800 break-all">
+                    <div className="p-3 rounded-xl bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#342f2b] flex items-center justify-between gap-2">
+                      <code className="text-[11px] font-mono text-pink-700 dark:text-pink-400 break-all">
                         {draftTotpSecret}
                       </code>
                       <button
@@ -824,12 +828,12 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
                           setCopiedSecret(true);
                           setTimeout(() => setCopiedSecret(false), 2000);
                         }}
-                        className="p-1.5 rounded-lg bg-pink-50 text-pink-700 hover:bg-pink-100 cursor-pointer shrink-0"
+                        className="p-1.5 rounded-lg bg-pink-50 dark:bg-pink-950/40 text-pink-700 dark:text-pink-400 hover:bg-pink-100 cursor-pointer shrink-0"
                       >
                         {copiedSecret ? <Check size={14} /> : <Copy size={14} />}
                       </button>
                     </div>
-                    <p className="text-xs font-bold text-stone-900">
+                    <p className="text-xs font-semibold text-stone-900 dark:text-stone-100">
                       2. Enter the 6-digit code shown in your app to activate 2FA:
                     </p>
                     <div className="flex gap-2">
@@ -841,12 +845,12 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
                         onChange={(e) => setTotpCodeInput(e.target.value.replace(/\D/g, ''))}
                         placeholder="123456"
                         aria-label="6-digit authenticator verification code"
-                        className="flex-1 px-4 py-2.5 rounded-xl bg-white border border-pink-200 text-sm font-mono tracking-widest text-stone-900 focus:outline-none focus:ring-2 focus:ring-pink-400"
+                        className="flex-1 h-11 px-4 rounded-xl bg-white dark:bg-[#1a1816] border border-stone-200 dark:border-[#342f2b] text-sm font-mono tracking-widest tabular-nums text-stone-900 dark:text-stone-100 focus:outline-none focus:border-pink-400"
                         required
                       />
                       <button
                         type="submit"
-                        className="px-4 py-2.5 rounded-xl bg-pink-600 hover:bg-pink-700 text-white text-xs font-bold cursor-pointer"
+                        className="px-4 h-11 rounded-xl bg-pink-600 hover:bg-pink-700 text-white text-xs font-semibold cursor-pointer"
                       >
                         Verify &amp; Activate
                       </button>
@@ -854,7 +858,7 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
                     <button
                       type="button"
                       onClick={() => setSetup2faStep('idle')}
-                      className="text-xs text-stone-600 underline cursor-pointer"
+                      className="text-xs text-stone-600 dark:text-stone-400 underline cursor-pointer"
                     >
                       Cancel 2FA Setup
                     </button>
@@ -864,14 +868,14 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
             )}
 
             {setup2faStep === 'recovery' && recoveryCodes.length > 0 && (
-              <div className="p-5 rounded-3xl bg-emerald-50 border border-emerald-200 space-y-4">
+              <div className="p-5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 space-y-4">
                 <div className="flex items-start gap-2.5">
-                  <CheckCircle2 size={18} className="text-emerald-700 mt-0.5 shrink-0" />
+                  <CheckCircle2 size={18} className="text-emerald-700 dark:text-emerald-400 mt-0.5 shrink-0" />
                   <div>
-                    <p className="text-sm font-bold text-emerald-950">
+                    <p className="text-sm font-semibold text-emerald-950 dark:text-emerald-200">
                       Save Your 8 Single-Use Recovery Codes
                     </p>
-                    <p className="text-xs text-emerald-800 mt-0.5">
+                    <p className="text-xs text-emerald-800 dark:text-emerald-300 mt-0.5">
                       Each code can unlock your account once if you lose access to your authenticator app. They will not be shown again.
                     </p>
                   </div>
@@ -880,7 +884,7 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
                   {recoveryCodes.map((code) => (
                     <code
                       key={code}
-                      className="px-3 py-2 rounded-xl bg-white border border-emerald-200 text-xs font-mono font-bold text-stone-900 text-center select-all"
+                      className="px-3 py-2 rounded-xl bg-white dark:bg-[#1a1816] border border-emerald-200 dark:border-emerald-800/50 text-xs font-mono font-bold text-stone-900 dark:text-stone-100 text-center select-all tabular-nums"
                     >
                       {code}
                     </code>
@@ -894,10 +898,10 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
                       setCopiedRecovery(true);
                       setTimeout(() => setCopiedRecovery(false), 2500);
                     }}
-                    className="px-4 py-2 rounded-xl bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                    className="px-4 py-2 rounded-xl bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
                   >
                     {copiedRecovery ? <Check size={14} /> : <Copy size={14} />}
-                    <span>{copiedRecovery ? 'Copied Codes!' : 'Copy Recovery Codes'}</span>
+                    <span>{copiedRecovery ? 'Copied Codes' : 'Copy Recovery Codes'}</span>
                   </button>
                   <button
                     type="button"
@@ -905,7 +909,7 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
                       setSetup2faStep('idle');
                       setRecoveryCodes([]);
                     }}
-                    className="px-4 py-2 rounded-xl bg-white border border-emerald-300 text-emerald-900 text-xs font-bold cursor-pointer"
+                    className="px-4 py-2 rounded-xl bg-white dark:bg-[#1a1816] border border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-300 text-xs font-semibold cursor-pointer"
                   >
                     I Have Saved Them
                   </button>
@@ -914,10 +918,10 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
             )}
 
             {security.twoFactorEnabled && setup2faStep === 'idle' && (
-              <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200 flex items-center justify-between gap-3">
-                <div className="text-xs text-emerald-900">
+              <div className="p-4 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 flex items-center justify-between gap-3">
+                <div className="text-xs text-emerald-900 dark:text-emerald-200">
                   <strong className="block">Authenticator 2FA Active</strong>
-                  <span>
+                  <span className="tabular-nums">
                     Remaining backup recovery codes: {security.twoFactorRecoveryHashes?.length ?? 0}
                   </span>
                 </div>
@@ -929,7 +933,7 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
                       notify('info', 'Your 2FA authenticator key is verified and encrypted.');
                     }
                   }}
-                  className="text-xs font-bold text-emerald-800 underline cursor-pointer"
+                  className="text-xs font-semibold text-emerald-800 dark:text-emerald-300 underline cursor-pointer"
                 >
                   Verify Vault Key
                 </button>
@@ -942,20 +946,20 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
       {/* TAB 4: ACTIVE SESSIONS & LOGIN ACTIVITY */}
       {section === 'sessions' && (
         <div className="space-y-5">
-          <div className="bg-white border border-pink-100 rounded-3xl p-6 space-y-4">
+          <div className="bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] rounded-2xl p-6 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h3 className="text-lg font-serif font-bold text-stone-900">
+                <h3 className="text-base font-serif font-bold text-stone-900 dark:text-stone-100">
                   Active Devices &amp; Sessions
                 </h3>
-                <p className="text-xs text-stone-600">
+                <p className="text-xs text-stone-600 dark:text-stone-400 tabular-nums">
                   Current browser: {deviceDesc.deviceLabel} ({deviceDesc.timezone}) • Epoch #{security.sessionEpoch || 1}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={handleLogoutAllDevicesClick}
-                className="px-4 py-2.5 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shrink-0"
+                className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer shrink-0 transition-colors"
               >
                 <LogOut size={14} aria-hidden="true" />
                 <span>Log Out of All Devices</span>
@@ -963,7 +967,7 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
             </div>
 
             {security.activeSessions.length === 0 ? (
-              <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200 text-xs text-stone-700">
+              <div className="p-4 rounded-xl bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#2e2a26] text-xs text-stone-700 dark:text-stone-300">
                 Active session: <strong>{deviceDesc.deviceLabel}</strong> (This Device)
               </div>
             ) : (
@@ -973,18 +977,18 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
                   return (
                     <div
                       key={sess.sessionId}
-                      className="p-4 rounded-2xl bg-stone-50/80 border border-stone-200 flex items-center justify-between gap-3"
+                      className="p-4 rounded-xl bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#2e2a26] flex items-center justify-between gap-3"
                     >
                       <div className="space-y-0.5">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-stone-900">{sess.deviceLabel}</span>
+                          <span className="text-xs font-semibold text-stone-900 dark:text-stone-100">{sess.deviceLabel}</span>
                           {isCurrent && (
-                            <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                            <span className="px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 text-[11px] font-semibold">
                               Current Device
                             </span>
                           )}
                         </div>
-                        <p className="text-[11px] text-stone-600">
+                        <p className="text-[11px] text-stone-600 dark:text-stone-400 tabular-nums">
                           {sess.timezone} • Signed in via {sess.authMethod} • Last active{' '}
                           {new Date(sess.lastActiveAt).toLocaleString()}
                         </p>
@@ -993,7 +997,7 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
                         <button
                           type="button"
                           onClick={() => handleRevokeSession(sess.sessionId)}
-                          className="px-3 py-1.5 rounded-xl bg-white border border-rose-200 text-rose-700 hover:bg-rose-50 text-xs font-bold cursor-pointer"
+                          className="px-3 py-1.5 rounded-lg bg-white dark:bg-[#1a1816] border border-rose-200 dark:border-rose-800/50 text-rose-700 dark:text-rose-400 hover:bg-rose-50 text-xs font-semibold cursor-pointer"
                         >
                           Revoke
                         </button>
@@ -1005,15 +1009,15 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
             )}
           </div>
 
-          <div className="bg-white border border-pink-100 rounded-3xl p-6 space-y-4">
+          <div className="bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] rounded-2xl p-6 space-y-4">
             <div className="flex items-center gap-2">
-              <Activity size={18} className="text-pink-600" aria-hidden="true" />
-              <h3 className="text-lg font-serif font-bold text-stone-900">
+              <Activity size={18} className="text-pink-600 dark:text-pink-400" aria-hidden="true" />
+              <h3 className="text-base font-serif font-bold text-stone-900 dark:text-stone-100">
                 Login Activity &amp; Security Events
               </h3>
             </div>
             {security.loginHistory.length === 0 ? (
-              <p className="text-xs text-stone-600">
+              <p className="text-xs text-stone-600 dark:text-stone-400">
                 No recent security events recorded yet. Sign-ins, 2FA updates, and unfamiliar devices appear here.
               </p>
             ) : (
@@ -1021,32 +1025,32 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
                 {security.loginHistory.map((evt) => (
                   <div
                     key={evt.id}
-                    className={`p-3.5 rounded-2xl border text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${
+                    className={`p-3.5 rounded-xl border text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${
                       evt.suspicious || evt.status === 'locked' || evt.status === 'failed'
-                        ? 'bg-rose-50/70 border-rose-200'
-                        : 'bg-stone-50/60 border-stone-200'
+                        ? 'bg-rose-50/70 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800/50'
+                        : 'bg-[#faf8f6] dark:bg-[#23201d] border-stone-200/80 dark:border-[#2e2a26]'
                     }`}
                   >
                     <div className="space-y-0.5">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-stone-900">
+                        <span className="font-semibold text-stone-900 dark:text-stone-100">
                           {evt.note || `Sign-in (${evt.method})`}
                         </span>
                         {evt.suspicious && (
-                          <span className="px-2 py-0.5 rounded-full bg-rose-600 text-white text-[10px] font-bold">
+                          <span className="px-2 py-0.5 rounded-md bg-rose-600 text-white text-[11px] font-semibold">
                             New Device / Location
                           </span>
                         )}
                       </div>
-                      <p className="text-[11px] text-stone-600">
+                      <p className="text-[11px] text-stone-600 dark:text-stone-400">
                         {evt.deviceLabel} • {evt.timezone}
                       </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className="px-2 py-0.5 rounded-full bg-white border border-stone-200 text-[10px] font-bold uppercase text-stone-700">
+                      <span className="px-2 py-0.5 rounded-md bg-white dark:bg-[#1a1816] border border-stone-200 dark:border-[#342f2b] text-[11px] font-medium capitalize text-stone-700 dark:text-stone-300">
                         {evt.status.replace('_', ' ')}
                       </span>
-                      <span className="text-[11px] text-stone-500">
+                      <span className="text-[11px] text-stone-500 dark:text-stone-400 tabular-nums">
                         {new Date(evt.timestamp).toLocaleString()}
                       </span>
                     </div>
@@ -1061,48 +1065,50 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
       {/* TAB 5: DOWNLOAD DATA & VERIFIED DELETION */}
       {section === 'data' && (
         <div className="space-y-5">
-          <div className="bg-white border border-pink-100 rounded-3xl p-6 space-y-4">
+          <div className="bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] rounded-2xl p-6 space-y-4">
             <div className="flex items-center gap-2">
-              <Download size={18} className="text-pink-600" aria-hidden="true" />
-              <h3 className="text-lg font-serif font-bold text-stone-900">
+              <Download size={18} className="text-pink-600 dark:text-pink-400" aria-hidden="true" />
+              <h3 className="text-base font-serif font-bold text-stone-900 dark:text-stone-100">
                 Download Your Personal Information
               </h3>
             </div>
-            <p className="text-xs text-stone-600 leading-relaxed">
+            <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
               Export your complete Lumina health profile, cycle records, diary entries, and preferences in a SHA-256 verified archive. Optionally protect your download with AES-256 encryption using a custom passphrase.
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="p-4 rounded-2xl bg-pink-50/40 border border-pink-100 space-y-3">
-                <p className="text-xs font-bold text-stone-900">Standard Portable JSON (SHA-256 Verified)</p>
-                <p className="text-[11px] text-stone-600">
-                  Readable archive with tamper-evident integrity checksum for easy portability.
-                </p>
+              <div className="p-4 rounded-xl bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#2e2a26] space-y-3 flex flex-col justify-between">
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-stone-900 dark:text-stone-100">Standard Portable JSON (SHA-256 Verified)</p>
+                  <p className="text-[11px] text-stone-600 dark:text-stone-400">
+                    Readable archive with tamper-evident integrity checksum for easy portability.
+                  </p>
+                </div>
                 <button
                   type="button"
                   disabled={exporting}
                   onClick={() => handleExportPersonalData(false)}
-                  className="w-full py-2.5 px-4 rounded-xl bg-white border border-pink-200 text-pink-800 hover:bg-pink-100 text-xs font-bold cursor-pointer"
+                  className="w-full h-10 px-4 rounded-xl bg-white dark:bg-[#1a1816] border border-stone-200 dark:border-[#342f2b] text-stone-800 dark:text-stone-200 hover:bg-stone-50 text-xs font-semibold cursor-pointer transition-colors"
                 >
                   Download Portable Archive
                 </button>
               </div>
 
-              <div className="p-4 rounded-2xl bg-purple-50/40 border border-purple-200 space-y-3">
-                <p className="text-xs font-bold text-stone-900">AES-256 Encrypted Archive</p>
+              <div className="p-4 rounded-xl bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#2e2a26] space-y-3">
+                <p className="text-xs font-semibold text-stone-900 dark:text-stone-100">AES-256 Encrypted Archive</p>
                 <input
                   type="password"
                   value={exportPassphrase}
                   onChange={(e) => setExportPassphrase(e.target.value)}
                   placeholder="Enter backup passphrase (min 6 chars)"
                   aria-label="Encryption passphrase for backup download"
-                  className="w-full px-3.5 py-2 rounded-xl bg-white border border-purple-200 text-xs text-stone-900"
+                  className="w-full h-10 px-3.5 rounded-xl bg-white dark:bg-[#1a1816] border border-stone-200 dark:border-[#342f2b] text-xs text-stone-900 dark:text-stone-100"
                 />
                 <button
                   type="button"
                   disabled={exporting}
                   onClick={() => handleExportPersonalData(true)}
-                  className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-bold cursor-pointer"
+                  className="w-full h-10 px-4 rounded-xl bg-pink-600 hover:bg-pink-700 text-white text-xs font-semibold cursor-pointer transition-colors"
                 >
                   Download Encrypted Backup
                 </button>
@@ -1113,7 +1119,7 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
               <button
                 type="button"
                 onClick={onNavigateToBackup}
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-pink-700 hover:underline cursor-pointer"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-pink-700 dark:text-pink-400 hover:underline cursor-pointer"
               >
                 <RefreshCw size={13} aria-hidden="true" />
                 <span>Manage Automatic Backups &amp; Restore Snapshots</span>
@@ -1122,14 +1128,14 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
           </div>
 
           {/* Account & Data Deletion */}
-          <div className="bg-rose-50/60 border border-rose-200 rounded-3xl p-6 space-y-4">
+          <div className="bg-rose-50/60 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/50 rounded-2xl p-6 space-y-4">
             <div className="flex items-start gap-3">
-              <AlertTriangle size={20} className="text-rose-700 mt-0.5 shrink-0" aria-hidden="true" />
+              <AlertTriangle size={20} className="text-rose-700 dark:text-rose-400 mt-0.5 shrink-0" aria-hidden="true" />
               <div className="space-y-1">
-                <h3 className="text-base font-serif font-bold text-rose-950">
+                <h3 className="text-base font-serif font-bold text-rose-950 dark:text-rose-200">
                   Request Permanent Account &amp; Data Deletion
                 </h3>
-                <p className="text-xs text-rose-900 leading-relaxed">
+                <p className="text-xs text-rose-900 dark:text-rose-300 leading-relaxed">
                   Permanently deletes your profile, cycle history, diary entries, partner connections, and device backups. This action cannot be undone.
                 </p>
               </div>
@@ -1138,7 +1144,7 @@ export const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({
             <button
               type="button"
               onClick={onRequestDeleteAccount}
-              className="px-4 py-2.5 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer shadow-sm"
+              className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
             >
               <Trash2 size={14} aria-hidden="true" />
               <span>Verify Identity &amp; Delete Account</span>

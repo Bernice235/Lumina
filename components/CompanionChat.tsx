@@ -448,30 +448,31 @@ export const CompanionChat: React.FC<CompanionChatProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-rose-50/70 via-stone-50 to-pink-50/40 text-stone-800 flex flex-col relative pb-2 sm:pb-4 max-w-4xl mx-auto shadow-2xl rounded-none sm:rounded-[2.5rem] overflow-hidden border border-pink-100/80 my-0 sm:my-3">
+    <div className="min-h-screen bg-[#faf8f6] dark:bg-[#11100f] text-stone-800 dark:text-stone-100 flex flex-col relative pb-2 sm:pb-4 max-w-4xl mx-auto shadow-sm sm:rounded-2xl overflow-hidden border border-stone-200/80 dark:border-[#2e2a26] my-0 sm:my-3">
       {/* Companion Top App Header */}
-      <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-pink-100/90 px-4 sm:px-6 py-3.5 flex items-center justify-between shadow-xs">
+      <header className="sticky top-0 z-30 bg-white/95 dark:bg-[#1a1816]/95 backdrop-blur-md border-b border-stone-200/80 dark:border-[#2e2a26] px-4 sm:px-6 py-3.5 flex items-center justify-between">
         <div className="flex items-center gap-3 min-w-0">
           <button
+            type="button"
             onClick={onClose}
-            className="p-2 -ml-1 rounded-full text-stone-500 hover:text-stone-800 hover:bg-pink-50 transition-all cursor-pointer"
+            className="p-2 -ml-1 rounded-xl text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 hover:bg-stone-100 dark:hover:bg-[#23201d] transition-colors cursor-pointer"
             title="Back to Dashboard"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
 
           {/* Avatar Visual with Protruding Head & Alive Expressions */}
-          <div 
+          <div
             onClick={() => setShowAvatarSelector(!showAvatarSelector)}
             className="relative cursor-pointer group shrink-0"
             title="Click to switch companion or see profile"
           >
-            <AvatarVisual 
+            <AvatarVisual
               avatar={{
                 ...currentAvatar,
                 mood: avatarMood.mood
-              }} 
-              size="md" 
+              }}
+              size="md"
               showTierBadge={false}
               showMoodBadge={false}
               isSpeaking={isSpeaking}
@@ -479,7 +480,7 @@ export const CompanionChat: React.FC<CompanionChatProps> = ({
               interactive
               className="group-hover:scale-105 transition-transform"
             />
-            <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-gradient-to-r from-pink-500 to-rose-400 text-white text-[9px] font-black flex items-center justify-center border-2 border-white shadow-xs">
+            <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-pink-600 text-white text-[9px] font-bold flex items-center justify-center border-2 border-white dark:border-[#1a1816]">
               {preset.emoji}
             </span>
           </div>
@@ -589,24 +590,24 @@ export const CompanionChat: React.FC<CompanionChatProps> = ({
       </AnimatePresence>
 
       {/* Wellness Context Bar banner */}
-      <div className="bg-gradient-to-r from-pink-50 via-rose-50/60 to-amber-50/40 px-4 py-2 border-b border-pink-100/60 flex items-center justify-between text-[11px] text-stone-600 flex-wrap gap-2">
+      <div className="bg-white dark:bg-[#1a1816] px-4 sm:px-6 py-2.5 border-b border-stone-200/80 dark:border-[#2e2a26] flex items-center justify-between text-[11px] text-stone-600 dark:text-stone-300 flex-wrap gap-2">
         <div className="flex items-center gap-3">
-          <span className="font-semibold flex items-center gap-1 text-pink-700">
+          <span className="font-semibold flex items-center gap-1.5 text-pink-700 dark:text-pink-400 tabular-nums">
             <Calendar className="w-3.5 h-3.5" />
             <span>{periodStatus}</span>
           </span>
-          <span className="font-semibold flex items-center gap-1 text-sky-700">
+          <span className="font-semibold flex items-center gap-1.5 text-sky-700 dark:text-sky-400 tabular-nums">
             <Droplet className="w-3.5 h-3.5" />
             <span>{waterIntake}ml / {waterGoal}ml</span>
           </span>
         </div>
         <div className="flex items-center gap-2">
           {recentSymptomsList.length > 0 && (
-            <span className="text-[10px] bg-white/80 px-2 py-0.5 rounded-full border border-pink-100 font-medium text-stone-500">
+            <span className="text-[10px] bg-[#faf8f6] dark:bg-[#23201d] px-2.5 py-0.5 rounded-md border border-stone-200/80 dark:border-[#342f2b] font-medium text-stone-600 dark:text-stone-300">
               Recent: {recentSymptomsList.slice(0, 2).join(', ')}
             </span>
           )}
-          <span className="text-[10px] font-bold text-pink-600 bg-white px-2 py-0.5 rounded-full shadow-2xs border border-pink-100">
+          <span className="text-[10px] font-semibold text-pink-700 dark:text-pink-300 bg-pink-50 dark:bg-pink-950/40 px-2.5 py-0.5 rounded-md border border-pink-200/70 dark:border-pink-900/40">
             {avatarMood.emoji} {avatarMood.label}
           </span>
         </div>
@@ -615,31 +616,31 @@ export const CompanionChat: React.FC<CompanionChatProps> = ({
       {/* Chat Messages Scroll Container */}
       <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 space-y-5">
         {/* Companion Welcome Introduction Card */}
-        <div className="bg-gradient-to-br from-white/90 to-pink-50/50 p-4 rounded-3xl border border-pink-100/80 shadow-xs flex items-center gap-4 text-left">
+        <div className="bg-white dark:bg-[#1a1816] p-4 sm:p-5 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-xs flex items-center gap-4 text-left">
           <div className="shrink-0">
-            <AvatarVisual 
-              avatar={currentAvatar} 
-              size="lg" 
+            <AvatarVisual
+              avatar={currentAvatar}
+              size="lg"
               interactive
               isWaving={isWaving}
               showMoodBadge={false}
             />
           </div>
-          <div className="space-y-1 min-w-0">
+          <div className="space-y-1.5 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-black uppercase tracking-wider text-pink-600">
+              <span className="text-xs font-bold text-stone-900 dark:text-stone-100">
                 {preset.name} {preset.emoji}
               </span>
-              <span className="text-[10px] bg-pink-100 text-pink-700 font-bold px-2 py-0.5 rounded-full">
+              <span className="text-[10px] bg-pink-50 dark:bg-pink-950/40 text-pink-700 dark:text-pink-300 border border-pink-200/70 dark:border-pink-900/40 font-semibold px-2 py-0.5 rounded-md tabular-nums">
                 Level {progression.level} Companion
               </span>
             </div>
-            <p className="text-xs text-stone-600 leading-relaxed font-serif italic">
+            <p className="text-xs text-stone-600 dark:text-stone-300 leading-relaxed font-serif italic">
               "{preset.quote}"
             </p>
-            <div className="flex items-center gap-1.5 pt-1 flex-wrap">
+            <div className="flex items-center gap-1.5 pt-0.5 flex-wrap">
               {preset.traits.map((trait, idx) => (
-                <span key={idx} className="text-[9.5px] font-bold px-2 py-0.5 bg-white text-stone-600 rounded-full border border-pink-100">
+                <span key={idx} className="text-[10px] font-medium px-2 py-0.5 bg-[#faf8f6] dark:bg-[#23201d] text-stone-600 dark:text-stone-300 rounded-md border border-stone-200/80 dark:border-[#342f2b]">
                   {trait}
                 </span>
               ))}
@@ -674,10 +675,10 @@ export const CompanionChat: React.FC<CompanionChatProps> = ({
 
                 {/* Message Bubble */}
                 <div
-                  className={`p-3.5 sm:p-4 rounded-3xl text-sm leading-relaxed text-left shadow-xs transition-all ${
+                  className={`p-3.5 sm:p-4 rounded-2xl text-sm leading-relaxed text-left transition-colors ${
                     isUser
-                      ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-br-xs font-medium'
-                      : 'bg-white text-stone-800 rounded-bl-xs border border-pink-100/80 shadow-xs'
+                      ? 'bg-pink-600 text-white rounded-br-sm font-medium'
+                      : 'bg-white dark:bg-[#1a1816] text-stone-800 dark:text-stone-100 rounded-bl-sm border border-stone-200/80 dark:border-[#2e2a26] shadow-xs'
                   }`}
                 >
                   <p className="whitespace-pre-wrap">{msg.text}</p>
@@ -685,10 +686,11 @@ export const CompanionChat: React.FC<CompanionChatProps> = ({
               </div>
 
               {/* Timestamp & Companion Audio Read-Aloud trigger */}
-              <div className={`flex items-center gap-2 text-[10px] text-stone-400 px-2 ${isUser ? 'pr-2' : 'pl-9'}`}>
-                <span>{msg.timestamp}</span>
+              <div className={`flex items-center gap-2 text-[10px] text-stone-500 dark:text-stone-400 px-2 ${isUser ? 'pr-2' : 'pl-9'}`}>
+                <span className="tabular-nums">{msg.timestamp}</span>
                 {!isUser && (
                   <button
+                    type="button"
                     onClick={() => {
                       if (isCurrentlySpeakingThis) {
                         handleStopSpeaking();
@@ -696,10 +698,10 @@ export const CompanionChat: React.FC<CompanionChatProps> = ({
                         handleSpeakMessage(msg.id, msg.text);
                       }
                     }}
-                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-bold transition-colors cursor-pointer ${
-                      isCurrentlySpeakingThis 
-                        ? 'bg-rose-500 text-white animate-pulse' 
-                        : 'hover:text-pink-600 bg-pink-50 hover:bg-pink-100 text-pink-700'
+                    className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md font-semibold transition-colors cursor-pointer ${
+                      isCurrentlySpeakingThis
+                        ? 'bg-pink-600 text-white'
+                        : 'hover:text-pink-700 dark:hover:text-pink-300 bg-pink-50 dark:bg-pink-950/40 hover:bg-pink-100 dark:hover:bg-pink-950/60 text-pink-700 dark:text-pink-300'
                     }`}
                     title={isCurrentlySpeakingThis ? 'Stop speaking' : 'Read aloud with companion voice'}
                   >
@@ -714,9 +716,10 @@ export const CompanionChat: React.FC<CompanionChatProps> = ({
                 <div className="flex flex-wrap gap-1.5 pl-9 pt-1">
                   {msg.suggestedPrompts.map((prompt, pIdx) => (
                     <button
+                      type="button"
                       key={pIdx}
                       onClick={() => handleSendMessage(prompt.replace(/[^\w\s\?]/g, '').trim())}
-                      className="text-[11px] font-semibold bg-white/90 hover:bg-pink-50 text-stone-700 hover:text-pink-700 px-3 py-1.5 rounded-full border border-pink-200/60 shadow-2xs transition-all active:scale-95 cursor-pointer flex items-center gap-1"
+                      className="text-[11px] font-semibold bg-white dark:bg-[#1a1816] hover:bg-pink-50 dark:hover:bg-[#23201d] text-stone-700 dark:text-stone-200 hover:text-pink-700 dark:hover:text-pink-300 px-3 py-1.5 rounded-xl border border-stone-200/80 dark:border-[#2e2a26] transition-colors cursor-pointer flex items-center gap-1"
                     >
                       <span>{prompt}</span>
                     </button>
@@ -732,16 +735,14 @@ export const CompanionChat: React.FC<CompanionChatProps> = ({
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex items-center gap-2.5 text-stone-400 pl-1"
+            className="flex items-center gap-2.5 text-stone-500 dark:text-stone-400 pl-1"
           >
-            <div className="w-6 h-6 rounded-full bg-pink-100 flex items-center justify-center text-xs">
+            <div className="w-6 h-6 rounded-full bg-pink-100 dark:bg-pink-950/50 flex items-center justify-center text-xs">
               {preset.emoji}
             </div>
-            <div className="bg-white border border-pink-100 px-3.5 py-2.5 rounded-2xl rounded-bl-xs flex items-center gap-1.5 shadow-2xs">
-              <span className="w-2 h-2 rounded-full bg-pink-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-              <span className="w-2 h-2 rounded-full bg-pink-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-              <span className="w-2 h-2 rounded-full bg-pink-400 animate-bounce" style={{ animationDelay: '300ms' }} />
-              <span className="text-[11px] text-stone-400 font-medium ml-1">{preset.name} is typing...</span>
+            <div className="bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] px-3.5 py-2.5 rounded-xl rounded-bl-sm flex items-center gap-2 shadow-xs">
+              <RefreshCw className="w-3.5 h-3.5 text-pink-600 dark:text-pink-400 animate-spin" />
+              <span className="text-[11px] text-stone-500 dark:text-stone-400 font-medium">{preset.name} is thinking...</span>
             </div>
           </motion.div>
         )}
@@ -749,49 +750,53 @@ export const CompanionChat: React.FC<CompanionChatProps> = ({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Quick Action Pills above Input Field */}
+      {/* Quick Action Bar above Input Field */}
       <div className="px-4 pb-2 flex items-center gap-2 overflow-x-auto no-scrollbar">
         <button
+          type="button"
           onClick={() => handleSendMessage("How is my cycle today?")}
-          className="shrink-0 text-[11px] font-bold bg-pink-50 hover:bg-pink-100 text-pink-700 px-3 py-1.5 rounded-full border border-pink-200/70 transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
+          className="shrink-0 text-[11px] font-semibold bg-white dark:bg-[#1a1816] hover:bg-pink-50 dark:hover:bg-[#23201d] text-stone-700 dark:text-stone-200 px-3 py-1.5 rounded-xl border border-stone-200/80 dark:border-[#2e2a26] transition-colors cursor-pointer flex items-center gap-1.5"
         >
-          <Calendar className="w-3 h-3 text-pink-500" />
+          <Calendar className="w-3.5 h-3.5 text-pink-600 dark:text-pink-400" />
           <span>Cycle Status</span>
         </button>
 
         <button
+          type="button"
           onClick={() => {
             if (onOpenLogModal) onOpenLogModal();
             else handleSendMessage("I want to log my symptoms today");
           }}
-          className="shrink-0 text-[11px] font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 px-3 py-1.5 rounded-full border border-rose-200/70 transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
+          className="shrink-0 text-[11px] font-semibold bg-white dark:bg-[#1a1816] hover:bg-pink-50 dark:hover:bg-[#23201d] text-stone-700 dark:text-stone-200 px-3 py-1.5 rounded-xl border border-stone-200/80 dark:border-[#2e2a26] transition-colors cursor-pointer flex items-center gap-1.5"
         >
-          <Heart className="w-3 h-3 text-rose-500" />
+          <Heart className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
           <span>Log Symptoms</span>
         </button>
 
         <button
+          type="button"
           onClick={() => handleSendMessage("Give me a self-care recommendation for right now")}
-          className="shrink-0 text-[11px] font-bold bg-amber-50 hover:bg-amber-100 text-amber-700 px-3 py-1.5 rounded-full border border-amber-200/70 transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
+          className="shrink-0 text-[11px] font-semibold bg-white dark:bg-[#1a1816] hover:bg-pink-50 dark:hover:bg-[#23201d] text-stone-700 dark:text-stone-200 px-3 py-1.5 rounded-xl border border-stone-200/80 dark:border-[#2e2a26] transition-colors cursor-pointer flex items-center gap-1.5"
         >
-          <Sparkles className="w-3 h-3 text-amber-500" />
+          <Sparkles className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
           <span>Self-Care Tip</span>
         </button>
 
         <button
+          type="button"
           onClick={() => handleSendMessage("Remind me to drink water and check my hydration")}
-          className="shrink-0 text-[11px] font-bold bg-sky-50 hover:bg-sky-100 text-sky-700 px-3 py-1.5 rounded-full border border-sky-200/70 transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
+          className="shrink-0 text-[11px] font-semibold bg-white dark:bg-[#1a1816] hover:bg-pink-50 dark:hover:bg-[#23201d] text-stone-700 dark:text-stone-200 px-3 py-1.5 rounded-xl border border-stone-200/80 dark:border-[#2e2a26] transition-colors cursor-pointer flex items-center gap-1.5"
         >
-          <Droplet className="w-3 h-3 text-sky-500" />
+          <Droplet className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
           <span>Hydration</span>
         </button>
       </div>
 
       {/* Input Form Bar */}
-      <footer className="bg-white/95 backdrop-blur-md border-t border-pink-100 px-4 py-3 sm:px-6">
+      <footer className="bg-white/95 dark:bg-[#1a1816]/95 backdrop-blur-md border-t border-stone-200/80 dark:border-[#2e2a26] px-4 py-3 sm:px-6">
         {/* Privacy / Notice Banners */}
         {!isAiPersonalizationAllowed && (
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 mb-2 flex items-center justify-between gap-2 text-xs text-amber-900">
+          <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/40 rounded-xl p-3 mb-2 flex items-center justify-between gap-2 text-xs text-amber-900 dark:text-amber-200">
             <span>AI companion replies are paused per your Privacy Preferences.</span>
             {setUser && (
               <button
@@ -814,7 +819,7 @@ export const CompanionChat: React.FC<CompanionChatProps> = ({
                   await syncUser(updatedUser);
                   setChatNotice(null);
                 }}
-                className="px-3 py-1 bg-amber-600 text-white rounded-xl font-bold text-[10px] uppercase tracking-wider cursor-pointer shrink-0"
+                className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-semibold text-xs cursor-pointer shrink-0 transition-colors"
               >
                 Enable AI Chat
               </button>
@@ -822,9 +827,9 @@ export const CompanionChat: React.FC<CompanionChatProps> = ({
           </div>
         )}
         {chatNotice && (
-          <div role="status" className="bg-rose-50 border border-rose-200 text-rose-700 rounded-2xl px-3 py-2 mb-2 text-xs flex items-center justify-between gap-2">
+          <div role="status" className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 text-rose-700 dark:text-rose-300 rounded-xl px-3 py-2 mb-2 text-xs flex items-center justify-between gap-2">
             <span>{chatNotice}</span>
-            <button type="button" onClick={() => setChatNotice(null)} className="text-[10px] font-bold uppercase cursor-pointer">Dismiss</button>
+            <button type="button" onClick={() => setChatNotice(null)} className="text-xs font-semibold cursor-pointer">Dismiss</button>
           </div>
         )}
 
@@ -839,10 +844,10 @@ export const CompanionChat: React.FC<CompanionChatProps> = ({
           <button
             type="button"
             onClick={toggleVoiceListening}
-            className={`p-2.5 rounded-full transition-all cursor-pointer shrink-0 ${
-              isListening 
-                ? 'bg-rose-500 text-white animate-pulse shadow-md' 
-                : 'bg-pink-50 hover:bg-pink-100 text-pink-600'
+            className={`p-2.5 rounded-xl transition-colors cursor-pointer shrink-0 border ${
+              isListening
+                ? 'bg-rose-600 text-white border-rose-600'
+                : 'bg-[#faf8f6] dark:bg-[#23201d] hover:bg-pink-50 dark:hover:bg-[#2b2724] text-pink-600 dark:text-pink-400 border-stone-200/80 dark:border-[#342f2b]'
             }`}
             title={isListening ? 'Listening... tap to stop' : 'Tap to speak your message'}
           >
@@ -857,7 +862,7 @@ export const CompanionChat: React.FC<CompanionChatProps> = ({
               onChange={(e) => setInputText(e.target.value)}
               disabled={!isAiPersonalizationAllowed}
               placeholder={!isAiPersonalizationAllowed ? 'AI Companion paused in Privacy Settings' : isListening ? "Listening to your voice..." : `Message ${preset.name}...`}
-              className="w-full bg-stone-50 hover:bg-stone-100/70 focus:bg-white border border-pink-200/80 rounded-full px-4 py-2.5 text-sm text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:border-transparent transition-all shadow-inner disabled:opacity-60"
+              className="w-full h-11 bg-[#faf8f6] dark:bg-[#23201d] focus:bg-white dark:focus:bg-[#1a1816] border border-stone-200/80 dark:border-[#342f2b] rounded-xl px-4 text-sm text-stone-900 dark:text-stone-100 placeholder-stone-400 focus:outline-none focus:border-pink-400 transition-colors disabled:opacity-60"
             />
           </div>
 
@@ -865,10 +870,10 @@ export const CompanionChat: React.FC<CompanionChatProps> = ({
           <button
             type="submit"
             disabled={!inputText.trim() || isTyping || !isAiPersonalizationAllowed}
-            className={`p-2.5 rounded-full transition-all cursor-pointer shrink-0 ${
+            className={`h-11 px-4 rounded-xl transition-colors cursor-pointer shrink-0 flex items-center justify-center ${
               inputText.trim() && !isTyping && isAiPersonalizationAllowed
-                ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-md hover:opacity-95 active:scale-95'
-                : 'bg-stone-200 text-stone-400 cursor-not-allowed'
+                ? 'bg-pink-600 hover:bg-pink-700 text-white shadow-xs'
+                : 'bg-stone-200 dark:bg-[#23201d] text-stone-400 cursor-not-allowed'
             }`}
             title="Send Message"
           >
@@ -876,7 +881,7 @@ export const CompanionChat: React.FC<CompanionChatProps> = ({
           </button>
         </form>
 
-        <p className="text-[10px] text-stone-500 mt-2 text-center">
+        <p className="text-[10px] text-stone-500 dark:text-stone-400 mt-2 text-center">
           {preset.name} is an AI wellness companion powered by Google Gemini — not a medical professional or medical advice.
         </p>
       </footer>

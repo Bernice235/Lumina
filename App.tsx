@@ -10,6 +10,9 @@ import {
   Bell, 
   Play, 
   Pause, 
+  SkipBack,
+  SkipForward,
+  Disc3,
   Power, 
   Eye, 
   Info, 
@@ -20,7 +23,23 @@ import {
   Trash2,
   CheckCheck,
   Activity,
-  Image as ImageIcon 
+  Image as ImageIcon,
+  Home,
+  Calendar,
+  HeartPulse,
+  BookOpen,
+  Music,
+  User as UserIcon,
+  Plus,
+  Menu,
+  Settings as SettingsIcon,
+  Flower2,
+  Lock,
+  KeyRound,
+  CloudDownload,
+  Crown,
+  HeartHandshake,
+  ArrowRight
 } from 'lucide-react';
 import { User, Symptom, DiaryEntry, SelfCareTask, AppTheme, Reminder, BirthControlLog, Song, TemperatureLog, PeriodLog, Period, ReceivedComfort, AppNotification } from './types';
 import Auth from './components/Auth';
@@ -34,7 +53,6 @@ import { NotificationCenterModal } from './components/NotificationCenterModal';
 import { AvatarVisual } from './components/AvatarVisual';
 import { CompanionChat } from './components/CompanionChat';
 import { CookieConsentBanner } from './components/CookieConsentBanner';
-import { NotFoundPage } from './components/NotFoundPage';
 import { DeleteAccountPage } from './components/DeleteAccountPage';
 import { DeleteAccountModal } from './components/DeleteAccountModal';
 import { getOrCreateUserAvatar } from './services/avatarService';
@@ -124,7 +142,7 @@ const PATH_TO_TAB: Record<string, string> = {
   '/companion': 'companion_chat',
 };
 
-function resolveInitialRoute(pathname: string): { isNotFound: boolean; isDeleteAccountRoute: boolean; tabFromPath: string | null } {
+function resolveInitialRoute(pathname: string): { isNotFound: boolean; isDeleteAccountRoute: boolean; tabFromPath: string | null; shouldNormalizeUrl?: boolean } {
   const normalized = (pathname || '/').replace(/\/+$/, '') || '/';
   if (normalized === '/delete-account' || normalized === '/account-deletion') {
     return { isNotFound: false, isDeleteAccountRoute: true, tabFromPath: null };
@@ -135,7 +153,7 @@ function resolveInitialRoute(pathname: string): { isNotFound: boolean; isDeleteA
   if (Object.prototype.hasOwnProperty.call(PATH_TO_TAB, normalized)) {
     return { isNotFound: false, isDeleteAccountRoute: false, tabFromPath: PATH_TO_TAB[normalized] };
   }
-  return { isNotFound: true, isDeleteAccountRoute: false, tabFromPath: null };
+  return { isNotFound: false, isDeleteAccountRoute: false, tabFromPath: 'dashboard', shouldNormalizeUrl: true };
 }
 
 const isDeepEqual = (obj1: any, obj2: any): boolean => {
@@ -328,11 +346,17 @@ const App: React.FC = () => {
   // Migrate and scrub legacy plaintext localStorage data & sync browser history on mount
   useEffect(() => {
     migrateAndScrubLegacyPlaintextData().catch(() => {});
+    const initialRoute = resolveInitialRoute(window.location.pathname);
+    if (initialRoute.shouldNormalizeUrl) {
+      try {
+        window.history.replaceState({}, document.title, '/');
+      } catch {}
+    }
     const handlePopState = () => {
       const route = resolveInitialRoute(window.location.pathname);
-      setIsNotFoundRoute(route.isNotFound);
+      setIsNotFoundRoute(false);
       setIsDeleteAccountRoute(route.isDeleteAccountRoute);
-      if (!route.isNotFound && !route.isDeleteAccountRoute && route.tabFromPath) {
+      if (!route.isDeleteAccountRoute && route.tabFromPath) {
         setActiveTab(route.tabFromPath);
       }
     };
@@ -1860,10 +1884,12 @@ const App: React.FC = () => {
 
     if (authLoading) {
       return (
-        <div className="flex-1 bg-[#fffafb] dark:bg-[#12100e] flex flex-col items-center justify-center p-6 h-full min-h-[500px]">
+        <div className="flex-1 bg-[#faf8f6] dark:bg-[#11100f] flex flex-col items-center justify-center p-6 h-full min-h-[500px]">
           <div className="flex flex-col items-center gap-4">
-            <div className="w-12 h-12 border-4 border-pink-100 border-t-pink-500 rounded-full animate-spin"></div>
-            <p className="text-pink-400 font-serif italic text-sm tracking-widest animate-pulse text-center animate-pulse">Entering Sanctuary...</p>
+            <div className="w-10 h-10 border-2 border-stone-200 dark:border-stone-800 border-t-pink-600 rounded-full animate-spin" />
+            <p className="text-stone-600 dark:text-stone-300 font-serif text-sm tracking-wide text-center">
+              Entering your sanctuary...
+            </p>
           </div>
         </div>
       );
@@ -1871,26 +1897,31 @@ const App: React.FC = () => {
 
     if (restoreDataPrompt) {
       return (
-        <div className="flex-1 bg-[#fffafb] dark:bg-[#12100e] flex items-center justify-center p-4 h-full min-h-[450px]">
-          <div className="bg-white dark:bg-[#1c1917] max-w-sm w-full rounded-[2rem] border border-pink-100/60 shadow-lg p-6 space-y-4 text-center">
-            <div className="w-12 h-12 bg-gradient-to-br from-pink-100 to-rose-100 rounded-xl flex items-center justify-center text-2xl mx-auto animate-pulse">🌸</div>
-            <div className="space-y-1">
-              <h2 className="text-base font-serif font-bold text-gray-800 dark:text-stone-200 italic leading-snug">Restore cloud data?</h2>
-              <p className="text-[10px] text-gray-500">Backup found under <strong className="text-pink-500">{restoreDataPrompt.userData.email}</strong>.</p>
+        <div className="flex-1 bg-[#faf8f6] dark:bg-[#11100f] flex items-center justify-center p-4 h-full min-h-[450px]">
+          <div className="bg-white dark:bg-[#1a1816] max-w-sm w-full rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-sm p-6 sm:p-7 space-y-5 text-center">
+            <div className="w-11 h-11 bg-pink-50 dark:bg-pink-950/40 text-pink-600 dark:text-pink-400 border border-pink-100 dark:border-pink-900/40 rounded-xl flex items-center justify-center mx-auto">
+              <CloudDownload className="w-5 h-5" />
             </div>
-            <div className="flex flex-col gap-2 pt-2">
+            <div className="space-y-1.5">
+              <h2 className="text-lg font-serif font-semibold text-stone-900 dark:text-stone-100 leading-snug">Restore cloud data?</h2>
+              <p className="text-xs text-stone-500 dark:text-stone-400">
+                Encrypted backup found for <strong className="text-stone-800 dark:text-stone-200 font-semibold">{restoreDataPrompt.userData.email}</strong>.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2.5 pt-1">
               <button
                 onClick={() => {
                   proceedWithLogin(restoreDataPrompt.userData);
                   setRestoreDataPrompt(null);
                 }}
-                className="w-full py-2.5 bg-gradient-to-r from-pink-400 to-rose-400 text-white font-extrabold uppercase text-[9px] tracking-widest rounded-full shadow-md"
+                className="w-full h-11 bg-pink-600 hover:bg-pink-700 text-white font-semibold text-sm rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2"
               >
-                ☁️ Restore Data
+                <CloudDownload className="w-4 h-4" />
+                <span>Restore Data</span>
               </button>
               <button
                 onClick={() => handleContinueAsNewUser(restoreDataPrompt.userData)}
-                className="w-full py-2 bg-white border border-gray-150 text-gray-500 font-bold uppercase text-[9px] tracking-widest rounded-full"
+                className="w-full h-11 bg-white dark:bg-[#23201d] border border-stone-200 dark:border-[#2e2a26] hover:bg-stone-50 dark:hover:bg-stone-800 text-stone-700 dark:text-stone-300 font-medium text-sm rounded-xl transition-colors cursor-pointer"
               >
                 Start Fresh
               </button>
@@ -1971,38 +2002,36 @@ const App: React.FC = () => {
       };
 
       return (
-        <div className="flex-1 bg-stone-950 flex flex-col items-center justify-center p-8 h-full min-h-[480px] text-stone-100 font-sans">
-          <div className="max-w-xs w-full text-center space-y-6 animate-fadeIn">
-            <div className="w-20 h-20 bg-stone-900 border border-stone-800 rounded-3xl flex items-center justify-center mx-auto text-3xl shadow-lg relative">
-              <span>🔒</span>
+        <div className="flex-1 bg-[#11100f] flex flex-col items-center justify-center p-6 sm:p-8 h-full min-h-[480px] text-stone-100 font-sans">
+          <div className="max-w-sm w-full bg-[#1a1816] border border-[#2e2a26] rounded-2xl p-6 sm:p-8 text-center space-y-6 shadow-xl">
+            <div className="w-12 h-12 bg-[#23201d] border border-[#2e2a26] rounded-xl flex items-center justify-center mx-auto text-pink-400">
+              <Lock className="w-5 h-5" />
             </div>
 
             <div className="space-y-2">
-              <h2 className="text-xl font-serif italic text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-rose-300">Lumina Secured</h2>
-              <p className="text-xs text-stone-300 leading-relaxed">
+              <h2 className="text-2xl font-serif font-normal text-stone-100 tracking-tight">Lumina Secured</h2>
+              <p className="text-xs text-stone-400 leading-relaxed">
                 App Lock is active. Verify with {hasBiometricUnlock ? 'your device biometrics' : 'your Security PIN'} {hasBiometricUnlock && hasPinConfigured ? 'or your Security PIN' : ''} to continue.
               </p>
             </div>
 
             {appLockError && (
-              <div role="alert" className="p-3 rounded-2xl bg-rose-950/70 border border-rose-500/40 text-xs text-rose-200 leading-relaxed">
+              <div role="alert" className="p-3 rounded-xl bg-rose-950/60 border border-rose-500/30 text-xs text-rose-200 leading-relaxed text-left">
                 {appLockError}
               </div>
             )}
 
             {appBiometricResult === 'scanning' ? (
               <div className="space-y-3 py-4">
-                <div className="w-12 h-12 border-2 border-dashed border-pink-500 rounded-full animate-spin mx-auto flex items-center justify-center">
-                  <div className="w-8 h-8 rounded-full bg-pink-500/10 animate-pulse" />
-                </div>
-                <p className="text-[10px] text-pink-400 font-bold uppercase tracking-widest">Waiting for hardware verification...</p>
+                <div className="w-10 h-10 border-2 border-stone-700 border-t-pink-500 rounded-full animate-spin mx-auto" />
+                <p className="text-xs text-pink-300 font-medium">Waiting for device verification...</p>
               </div>
             ) : appBiometricResult === 'success' ? (
               <div className="space-y-2 py-4">
-                <div className="w-12 h-12 bg-emerald-500/20 border border-emerald-500 rounded-full mx-auto flex items-center justify-center text-emerald-400 text-xl">
-                  ✓
+                <div className="w-10 h-10 bg-emerald-500/15 border border-emerald-500/50 rounded-full mx-auto flex items-center justify-center text-emerald-400">
+                  <Check className="w-5 h-5" />
                 </div>
-                <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest">Access Granted</p>
+                <p className="text-xs text-emerald-400 font-medium">Access Granted</p>
               </div>
             ) : (showLockPinFallback || !hasBiometricUnlock) && hasPinConfigured ? (
               <form onSubmit={handleLockPinSubmit} className="space-y-3">
@@ -2012,14 +2041,14 @@ const App: React.FC = () => {
                   maxLength={6}
                   value={appLockPin}
                   onChange={(e) => setAppLockPin(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
-                  placeholder="Enter Security PIN"
+                  placeholder="Enter 4–6 digit PIN"
                   aria-label="Security PIN"
-                  className="w-full px-4 py-3.5 rounded-2xl bg-stone-900 border border-stone-700 text-center text-sm font-mono tracking-[0.4em] text-white outline-none focus:border-pink-400"
+                  className="w-full h-11 px-4 rounded-xl bg-[#23201d] border border-[#2e2a26] text-center text-sm font-mono tracking-[0.35em] tabular-nums text-white outline-none focus:border-pink-500"
                   required
                 />
                 <button
                   type="submit"
-                  className="w-full py-3.5 bg-gradient-to-r from-pink-500 to-rose-500 text-white font-bold uppercase text-[10px] tracking-widest rounded-full shadow-lg cursor-pointer"
+                  className="w-full h-11 bg-pink-600 hover:bg-pink-700 text-white font-semibold text-sm rounded-xl transition-colors cursor-pointer"
                 >
                   Unlock with PIN
                 </button>
@@ -2030,20 +2059,21 @@ const App: React.FC = () => {
                       setShowLockPinFallback(false);
                       setAppLockError('');
                     }}
-                    className="text-[10px] text-stone-400 hover:text-white uppercase tracking-widest font-bold cursor-pointer"
+                    className="text-xs text-stone-400 hover:text-white font-medium cursor-pointer pt-1"
                   >
                     Back to Biometrics
                   </button>
                 )}
               </form>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 <button
                   type="button"
                   onClick={handleRealBiometricUnlock}
-                  className="w-full py-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white font-extrabold uppercase text-[10px] tracking-widest rounded-full shadow-lg hover:scale-[1.02] transition-all cursor-pointer"
+                  className="w-full h-11 bg-pink-600 hover:bg-pink-700 text-white font-semibold text-sm rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2"
                 >
-                  🔑 Unlock with Device Biometrics
+                  <Fingerprint className="w-4 h-4" />
+                  <span>Unlock with Biometrics</span>
                 </button>
                 {hasPinConfigured && (
                   <button
@@ -2052,9 +2082,10 @@ const App: React.FC = () => {
                       setShowLockPinFallback(true);
                       setAppLockError('');
                     }}
-                    className="w-full py-3 bg-stone-900 border border-stone-700 text-stone-200 font-bold uppercase text-[10px] tracking-widest rounded-full cursor-pointer hover:bg-stone-800"
+                    className="w-full h-11 bg-[#23201d] border border-[#2e2a26] hover:bg-stone-800 text-stone-200 font-medium text-sm rounded-xl cursor-pointer transition-colors flex items-center justify-center gap-2"
                   >
-                    Use Security PIN Instead
+                    <KeyRound className="w-4 h-4" />
+                    <span>Use Security PIN</span>
                   </button>
                 )}
               </div>
@@ -2063,7 +2094,7 @@ const App: React.FC = () => {
             <button 
               type="button"
               onClick={handleLogout}
-              className="text-[10px] text-stone-400 hover:text-stone-200 uppercase tracking-widest font-bold transition-colors block mx-auto cursor-pointer"
+              className="text-xs text-stone-400 hover:text-stone-200 font-medium transition-colors block mx-auto cursor-pointer"
             >
               Sign out &amp; verify with password
             </button>
@@ -2137,36 +2168,39 @@ const App: React.FC = () => {
     // Main authenticated application screen inside container
     return (
       <div className="flex flex-col h-full w-full relative">
-        <header className="px-4 py-3 bg-white/90 dark:bg-stone-900/90 backdrop-blur-md shadow-sm sticky top-0 z-[60] border-b border-pink-50/10">
-          <div className="w-full flex justify-between items-center gap-2">
-            <div className="cursor-pointer flex-shrink-0" onClick={() => setActiveTab('dashboard')}>
-              <h1 className={`text-xl font-serif italic ${themeClass}`}>Lumina</h1>
-            </div>
+        <header className="px-4 sm:px-6 h-14 bg-white/95 dark:bg-[#1a1816]/95 backdrop-blur-md sticky top-0 z-[60] border-b border-stone-200/80 dark:border-[#2e2a26] flex items-center">
+          <div className="w-full max-w-6xl mx-auto flex justify-between items-center gap-3">
+            <button
+              type="button"
+              className="flex items-center gap-2 cursor-pointer shrink-0 text-left"
+              onClick={() => setActiveTab('dashboard')}
+            >
+              <Flower2 className="w-5 h-5 text-pink-600 dark:text-pink-400" />
+              <span className={`text-xl font-serif tracking-tight ${themeClass}`}>Lumina</span>
+            </button>
             
-            <div className="flex items-center gap-1.5 justify-end">
-              {/* Analytics & Health Dashboard Button */}
+            <div className="flex items-center gap-2 justify-end shrink-0">
               <button
                 onClick={() => setIsAnalyticsOpen(true)}
-                className="p-1.5 rounded-full bg-rose-50/80 dark:bg-stone-800 hover:bg-rose-100 text-rose-600 transition-all cursor-pointer active:scale-95 flex items-center justify-center border border-rose-100/50"
+                className="w-9 h-9 rounded-xl bg-stone-50 dark:bg-[#23201d] hover:bg-stone-100 text-stone-600 dark:text-stone-300 transition-colors cursor-pointer flex items-center justify-center border border-stone-200/80 dark:border-[#2e2a26]"
                 title="Analytics & Health Dashboard"
                 id="app-header-analytics-button"
               >
-                <Activity className="w-3.5 h-3.5 text-rose-500" />
+                <Activity className="w-4 h-4 text-rose-600 dark:text-rose-400" />
               </button>
 
-              {/* Notification Bell */}
               <button 
                 onClick={() => {
                   setSelectedNotifForModal(null);
                   setIsGlobalNotificationsOpen(true);
                 }}
-                className="p-1.5 rounded-full bg-pink-50/80 dark:bg-stone-800 hover:bg-pink-100 text-pink-600 transition-all relative cursor-pointer active:scale-95 flex items-center justify-center border border-pink-100/50"
+                className="w-9 h-9 rounded-xl bg-stone-50 dark:bg-[#23201d] hover:bg-stone-100 text-stone-600 dark:text-stone-300 transition-colors relative cursor-pointer flex items-center justify-center border border-stone-200/80 dark:border-[#2e2a26]"
                 title="Notification Center"
                 id="app-header-notification-bell"
               >
-                <Bell className={`w-3.5 h-3.5 ${hasUnreadNotifs ? 'animate-bounce text-pink-600' : 'text-stone-500'}`} />
+                <Bell className={`w-4 h-4 ${hasUnreadNotifs ? 'text-pink-600 dark:text-pink-400' : 'text-stone-500'}`} />
                 {hasUnreadNotifs && (
-                  <span className="absolute -top-1 -right-1 min-w-[15px] h-[15px] px-1 bg-gradient-to-r from-rose-500 to-pink-500 text-white text-[8px] font-black rounded-full flex items-center justify-center border border-white dark:border-stone-900 animate-pulse">
+                  <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 bg-pink-600 text-white text-[10px] font-semibold tabular-nums rounded-full flex items-center justify-center border border-white dark:border-[#1a1816]">
                     {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
@@ -2175,36 +2209,44 @@ const App: React.FC = () => {
               {!user.isPartner && (
                 <button 
                   onClick={togglePregnancy}
-                  className={`text-[8px] font-extrabold uppercase px-2.5 py-1 rounded-full border border-pink-100/40 transition-all ${user.isPregnancyMode ? 'bg-indigo-500 text-white border-indigo-500' : 'bg-rose-50/60 dark:bg-stone-800 text-gray-500'}`}
+                  className={`h-9 px-3 text-xs font-semibold rounded-xl border whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
+                    user.isPregnancyMode 
+                      ? 'bg-indigo-600 text-white border-indigo-600' 
+                      : 'bg-stone-50 dark:bg-[#23201d] text-stone-700 dark:text-stone-300 border-stone-200/80 dark:border-[#2e2a26] hover:bg-stone-100'
+                  }`}
                 >
                   {user.isPregnancyMode ? 'Pregnancy' : 'Cycle'}
                 </button>
               )}
 
-              <div className="flex items-center gap-1 bg-pink-50/30 dark:bg-stone-800/40 px-1.5 py-0.5 rounded-full border border-pink-100/30">
-                <button 
-                  onClick={() => {
-                    if (currentTrack?.source !== 'internal') {
-                      setActiveTab('music');
-                    } else {
-                      toggleMusic();
-                    }
-                  }} 
-                  className="text-[9px]"
-                  title="Toggle Ambient Audio"
-                  aria-label="Toggle Ambient Audio"
-                >
-                  {currentTrack?.source !== 'internal' ? '🎵' : (isMusicPlaying ? '⏸️' : '▶️')}
-                </button>
-              </div>
+              <button 
+                onClick={() => {
+                  if (currentTrack?.source !== 'internal') {
+                    setActiveTab('music');
+                  } else {
+                    toggleMusic();
+                  }
+                }} 
+                className="w-9 h-9 rounded-xl bg-stone-50 dark:bg-[#23201d] hover:bg-stone-100 text-stone-700 dark:text-stone-300 border border-stone-200/80 dark:border-[#2e2a26] flex items-center justify-center transition-colors cursor-pointer"
+                title="Toggle Ambient Audio"
+                aria-label="Toggle Ambient Audio"
+              >
+                {currentTrack?.source !== 'internal' ? (
+                  <Music className="w-4 h-4" />
+                ) : isMusicPlaying ? (
+                  <Pause className="w-4 h-4" />
+                ) : (
+                  <Play className="w-4 h-4" />
+                )}
+              </button>
             </div>
           </div>
         </header>
 
-        {/* Content body with custom padding inside the mobile container */}
-        <main className="flex-1 overflow-y-auto px-4 py-4 scrollbar-none pb-32">
+        {/* Content body inside container */}
+        <main className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-6 max-w-6xl w-full mx-auto scrollbar-none pb-28">
           <ErrorBoundary onReset={() => setActiveTab('dashboard')}>
-            <Suspense fallback={<div className="py-12 text-center text-xs text-pink-700 font-semibold">Loading section...</div>}>
+            <Suspense fallback={<div className="py-12 text-center text-xs text-stone-600 font-medium">Loading section...</div>}>
               {renderContent()}
             </Suspense>
           </ErrorBoundary>
@@ -2244,7 +2286,7 @@ const App: React.FC = () => {
       } else if (day <= 16) {
         return 'bg-gradient-to-br from-orange-100/80 via-amber-50 to-yellow-100/50';
       } else {
-        return 'bg-gradient-to-br from-purple-150 via-indigo-100/80 to-slate-200/60';
+        return 'bg-gradient-to-br from-purple-100 via-indigo-100/80 to-slate-200/60';
       }
     }
 
@@ -2255,31 +2297,31 @@ const App: React.FC = () => {
       }
     }
 
-    return currentThemeData?.bg || 'bg-[#fffafb]';
+    return currentThemeData?.bg || 'bg-[#faf8f6]';
   };
 
   const renderPremiumLock = (title: string, description: string, emoji: string) => {
     return (
-      <div className="bg-white rounded-[3rem] border border-pink-50 p-12 text-center max-w-lg mx-auto shadow-sm space-y-6 my-10 animate-fadeIn text-gray-700">
-        <div className="w-20 h-20 bg-pink-50 text-pink-500 rounded-full flex items-center justify-center text-4xl mx-auto shadow-inner animate-pulse">
-          {emoji}
+      <div className="bg-white dark:bg-[#1a1816] rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] p-8 sm:p-10 text-center max-w-lg mx-auto shadow-sm space-y-5 my-10 text-stone-700 dark:text-stone-300">
+        <div className="w-12 h-12 bg-pink-50 dark:bg-pink-950/40 text-pink-600 dark:text-pink-400 border border-pink-100 dark:border-pink-900/40 rounded-xl flex items-center justify-center mx-auto">
+          <Crown className="w-5 h-5" />
         </div>
-        <div className="space-y-3">
-          <h3 className="text-2xl font-serif italic text-pink-600 font-bold">{title}</h3>
-          <p className="text-[10px] font-black uppercase tracking-widest text-pink-400">Premium Sanctuary Feature 👑</p>
-          <p className="text-xs text-gray-500 leading-relaxed font-serif italic">
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-pink-700 dark:text-pink-400">Premium Sanctuary Feature</p>
+          <h3 className="text-2xl font-serif text-stone-900 dark:text-stone-100 font-normal tracking-tight">{title}</h3>
+          <p className="text-sm text-stone-600 dark:text-stone-400 leading-relaxed">
             {description}
           </p>
         </div>
-        <div className="pt-4">
+        <div className="pt-2">
           <button
             onClick={() => {
               setSettingsSubTab('billing');
               setActiveTab('settings');
             }}
-            className="w-full py-4 bg-gradient-to-r from-pink-50 via-rose-500 to-indigo-600 text-white rounded-3xl text-xs uppercase tracking-widest font-black shadow-xl shadow-rose-100/40 hover:scale-[1.01] active:scale-95 transition-all cursor-pointer"
+            className="w-full h-11 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-sm font-semibold transition-colors cursor-pointer"
           >
-            💎 Get Premium Access
+            Unlock Premium Access
           </button>
         </div>
       </div>
@@ -2502,21 +2544,6 @@ const App: React.FC = () => {
 
   const currentTrack = fullLibrary[currentSongIndex];
 
-  // Render 404 Error Page cleanly for unknown paths (both signed-in and signed-out)
-  if (!showSplash && isNotFoundRoute) {
-    return (
-      <div className={`min-h-screen w-full overflow-x-hidden ${getAppBackgroundClass()} selection:bg-pink-100 transition-colors duration-500`}>
-        <NotFoundPage
-          requestedPath={window.location.pathname}
-          onGoHome={() => handleNavigateFrom404('dashboard')}
-          onGoCycle={user ? () => handleNavigateFrom404('cycle') : undefined}
-          onGoPrivacy={user ? () => handleNavigateFrom404('privacy') : undefined}
-        />
-        <CookieConsentBanner />
-      </div>
-    );
-  }
-
   // Render Public Account Deletion & DSAR Page for /delete-account or /account-deletion
   if (!showSplash && isDeleteAccountRoute) {
     return (
@@ -2559,8 +2586,24 @@ const App: React.FC = () => {
     );
   }
 
+  const unreadNotifCount = (user?.notifications || []).filter(n => {
+    if (n.isRead) return false;
+    if (!user?.isPartner) {
+      const isConnectionRequest = n.category === 'partner_request' || 
+                                  n.isPartnerRequest === true || 
+                                  (n.title && (n.title.toLowerCase().includes('request') || n.title.toLowerCase().includes('invite') || n.title.toLowerCase().includes('connection') || n.title.toLowerCase().includes('linked')));
+      if (isConnectionRequest) return true;
+
+      const isPartnerNotif = n.category === 'partner' || n.isPartner === true;
+      if (isPartnerNotif) return false;
+    }
+    return true;
+  }).length;
+
+  const pendingPartnerRequestCount = partnerRequests.filter(r => r.status === 'pending').length;
+
   return (
-    <div className={`min-h-screen w-full overflow-x-hidden pb-28 ${getAppBackgroundClass()} selection:bg-pink-100 transition-colors duration-500`}>
+    <div className={`min-h-screen w-full overflow-x-hidden pb-24 md:pb-10 ${getAppBackgroundClass()} selection:bg-pink-100 transition-colors duration-200`}>
       <audio 
         ref={audioRef}
         src={currentTrack?.source === 'internal' ? currentTrack.url : undefined} 
@@ -2568,67 +2611,106 @@ const App: React.FC = () => {
         loop={false}
       />
       
-      {!user.isPartner && !(activeTab === 'dashboard') && (
-        <header className="px-4 md:px-6 pt-8 pb-5 bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-[60] border-b border-pink-50">
-          <div className="w-full flex flex-wrap md:flex-nowrap justify-between items-center gap-4">
-            <div className="cursor-pointer flex-shrink-0" onClick={() => setActiveTab('dashboard')}>
-              <h1 className={`text-2xl md:text-3xl font-serif italic ${themeClass}`}>Lumina</h1>
-            </div>
-            
-            <div className="flex items-center gap-2 md:gap-4 flex-wrap justify-end">
-              {!user.isPartner && (
-                <button 
-                  onClick={togglePregnancy}
-                  className={`text-[10px] font-bold px-3 py-1.5 rounded-full border transition-all cursor-pointer ${user.isPregnancyMode ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white text-gray-700 border-gray-200 hover:border-pink-200'}`}
-                >
-                  {user.isPregnancyMode ? 'PREGNANCY' : 'CYCLE'}
-                </button>
-              )}
+      {!user.isPartner && (
+        <header className="sticky top-0 z-[60] bg-white/95 dark:bg-[#1a1816]/95 backdrop-blur-md border-b border-stone-200/80 dark:border-[#2e2a26]">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-14 md:h-16 flex items-center justify-between gap-3">
+            {/* Zone 1: Menu + Brand */}
+            <div className="flex items-center gap-2.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  if (activeTab !== 'dashboard') {
+                    setActiveTab('dashboard');
+                    setTimeout(() => {
+                      window.dispatchEvent(new CustomEvent('lumina:toggle-dashboard-menu'));
+                    }, 50);
+                  } else {
+                    window.dispatchEvent(new CustomEvent('lumina:toggle-dashboard-menu'));
+                  }
+                }}
+                className="w-9 h-9 rounded-xl border border-stone-200/80 dark:border-[#2e2a26] bg-white dark:bg-[#23201d] hover:bg-stone-50 dark:hover:bg-stone-800 text-stone-700 dark:text-stone-200 flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                title="Open Sanctuary Menu"
+                aria-label="Open Sanctuary Menu"
+              >
+                <Menu className="w-4 h-4" />
+              </button>
 
-              <div className="flex items-center gap-1.5 md:gap-2 bg-pink-50/50 px-2 py-1 md:px-3 md:py-1.5 rounded-full border border-pink-100/50">
-                <button 
-                  onClick={() => {
-                    if (currentTrack?.source !== 'internal') {
-                      setActiveTab('music');
-                    } else {
-                      toggleMusic();
-                    }
-                  }} 
-                  aria-label={isMusicPlaying ? 'Pause ambient music' : 'Play ambient music'}
-                  className="text-[10px] md:text-xs cursor-pointer"
-                >
-                  {currentTrack?.source !== 'internal' ? '🎵' : (isMusicPlaying ? '⏸️' : '▶️')}
-                </button>
-                <input 
-                  type="range" min="0" max="1" step="0.01" value={volume} 
-                  aria-label="Ambient audio volume"
-                  onChange={(e) => setVolume(parseFloat(e.target.value))}
-                  className="w-8 md:w-10 h-1 accent-pink-500"
-                />
-              </div>
+              <button
+                type="button"
+                onClick={() => setActiveTab('dashboard')}
+                className="flex items-center gap-2 cursor-pointer whitespace-nowrap shrink-0"
+              >
+                <Flower2 className="w-5 h-5 text-pink-600 dark:text-pink-400 shrink-0" />
+                <span className={`text-xl md:text-2xl font-serif tracking-tight font-normal ${themeClass}`}>Lumina</span>
+              </button>
+            </div>
+
+            {/* Zone 2: Desktop Primary Nav */}
+            <nav className="hidden md:flex items-center gap-1" aria-label="Primary Navigation">
+              {[
+                { id: 'dashboard', label: 'Today' },
+                { id: 'cycle', label: 'Calendar' },
+                { id: 'wellness', label: 'Wellness' },
+                { id: 'edu', label: 'Learn' },
+                { id: 'music', label: 'Music' },
+              ].map((item) => {
+                const isActive = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setActiveTab(item.id)}
+                    aria-current={isActive ? 'page' : undefined}
+                    className={`px-3 py-2 rounded-xl text-sm whitespace-nowrap shrink-0 transition-colors cursor-pointer relative ${
+                      isActive
+                        ? 'text-pink-700 dark:text-pink-300 bg-pink-50/90 dark:bg-pink-950/30 font-semibold'
+                        : 'text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white hover:bg-stone-100/80 dark:hover:bg-[#23201d] font-medium'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                );
+              })}
+            </nav>
+
+            {/* Zone 3: Mode Toggle, Utilities & Primary CTA */}
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              <button 
+                type="button"
+                onClick={togglePregnancy}
+                className={`h-9 px-2.5 sm:px-3 text-xs font-semibold rounded-xl border whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
+                  user.isPregnancyMode 
+                    ? 'bg-indigo-600 text-white border-indigo-600' 
+                    : 'bg-stone-50 dark:bg-[#23201d] text-stone-700 dark:text-stone-300 border-stone-200/80 dark:border-[#2e2a26] hover:bg-stone-100 dark:hover:bg-stone-800'
+                }`}
+              >
+                {user.isPregnancyMode ? 'Pregnancy' : 'Cycle'}
+              </button>
 
               {/* Welcome Voice Trigger Button */}
               <button
+                type="button"
                 onClick={() => {
                   if (user) {
                     playWelcomeVoiceGreeting(user, { force: true }).catch(() => {});
                   }
                 }}
-                className="p-2 rounded-full bg-pink-50/90 hover:bg-pink-100 text-pink-700 transition-all cursor-pointer active:scale-95 flex items-center justify-center border border-pink-100/80 shadow-sm"
+                className="w-9 h-9 rounded-xl bg-stone-50 dark:bg-[#23201d] hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-600 dark:text-stone-300 border border-stone-200/80 dark:border-[#2e2a26] transition-colors cursor-pointer flex items-center justify-center shrink-0"
                 title="Play Welcome Voice Greeting"
                 aria-label="Play Welcome Voice Greeting"
                 id="global-header-welcome-voice-btn"
               >
-                <span className="text-sm" aria-hidden="true">🌸</span>
+                <Volume2 className="w-4 h-4" />
               </button>
 
               {/* Privacy & Security Vault Shortcut */}
               <button
+                type="button"
                 onClick={() => setActiveTab('privacy')}
-                className={`p-2 rounded-full transition-all cursor-pointer active:scale-95 flex items-center justify-center border shadow-sm ${
+                className={`w-9 h-9 rounded-xl transition-colors cursor-pointer flex items-center justify-center border shrink-0 ${
                   activeTab === 'privacy'
                     ? 'bg-pink-600 text-white border-pink-600'
-                    : 'bg-pink-50/90 hover:bg-pink-100 text-pink-700 border-pink-100/80'
+                    : 'bg-stone-50 dark:bg-[#23201d] hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-600 dark:text-stone-300 border-stone-200/80 dark:border-[#2e2a26]'
                 }`}
                 title="Privacy & Security Dashboard"
                 aria-label="Open Privacy and Security Dashboard"
@@ -2637,85 +2719,67 @@ const App: React.FC = () => {
               </button>
 
               {/* Global Notification Bell Button */}
-              {(() => {
-                const unreadNotifCount = (user?.notifications || []).filter(n => {
-                  if (n.isRead) return false;
-                  if (!user?.isPartner) {
-                    const isConnectionRequest = n.category === 'partner_request' || 
-                                                n.isPartnerRequest === true || 
-                                                (n.title && (n.title.toLowerCase().includes('request') || n.title.toLowerCase().includes('invite') || n.title.toLowerCase().includes('connection') || n.title.toLowerCase().includes('linked')));
-                    if (isConnectionRequest) return true;
+              <button 
+                type="button"
+                onClick={() => {
+                  setSelectedNotifForModal(null);
+                  setIsGlobalNotificationsOpen(true);
+                }}
+                className="w-9 h-9 rounded-xl bg-stone-50 dark:bg-[#23201d] hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-600 dark:text-stone-300 border border-stone-200/80 dark:border-[#2e2a26] transition-colors relative cursor-pointer flex items-center justify-center shrink-0"
+                title="Notification Center"
+                aria-label="Open Notification Center"
+                id="global-header-notification-bell"
+              >
+                <Bell className={`w-4 h-4 ${unreadNotifCount > 0 ? 'text-pink-600 dark:text-pink-400' : 'text-stone-600 dark:text-stone-300'}`} />
+                {unreadNotifCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 bg-pink-600 text-white text-[10px] font-semibold tabular-nums rounded-full flex items-center justify-center border border-white dark:border-[#1a1816]">
+                    {unreadNotifCount > 9 ? '9+' : unreadNotifCount}
+                  </span>
+                )}
+              </button>
 
-                    const isPartnerNotif = n.category === 'partner' || n.isPartner === true;
-                    if (isPartnerNotif) return false;
-                  }
-                  return true;
-                }).length;
+              {/* Settings Shortcut (Desktop) */}
+              <button 
+                type="button"
+                onClick={() => {
+                  setSettingsSubTab('menu');
+                  setActiveTab('settings');
+                }} 
+                className={`hidden md:flex w-9 h-9 rounded-xl transition-colors cursor-pointer items-center justify-center border shrink-0 relative ${
+                  activeTab === 'settings'
+                    ? 'bg-pink-600 text-white border-pink-600'
+                    : 'bg-stone-50 dark:bg-[#23201d] hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-600 dark:text-stone-300 border-stone-200/80 dark:border-[#2e2a26]'
+                }`}
+                title="Settings"
+                aria-label="Open Settings"
+              >
+                <SettingsIcon className="w-4 h-4" />
+                {pendingPartnerRequestCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white dark:border-[#1a1816]" />
+                )}
+              </button>
 
-                return (
-                  <button 
-                    onClick={() => {
-                      setSelectedNotifForModal(null);
-                      setIsGlobalNotificationsOpen(true);
-                    }}
-                    className="p-2 rounded-full bg-pink-50/90 hover:bg-pink-100 text-pink-700 transition-all relative cursor-pointer active:scale-95 flex items-center justify-center border border-pink-100/80 shadow-sm"
-                    title="Notification Center"
-                    aria-label="Open Notification Center"
-                    id="global-header-notification-bell"
-                  >
-                    <Bell className={`w-4 h-4 ${unreadNotifCount > 0 ? 'animate-bounce text-pink-600' : 'text-stone-600'}`} />
-                    {unreadNotifCount > 0 && (
-                      <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 bg-gradient-to-r from-rose-500 to-pink-500 text-white text-[9px] font-black rounded-full flex items-center justify-center border border-white animate-pulse">
-                        {unreadNotifCount > 9 ? '9+' : unreadNotifCount}
-                      </span>
-                    )}
-                  </button>
-                );
-              })()}
-
-              {!user.isPartner && !['cycle', 'wellness', 'edu', 'pedia', 'settings', 'music', 'privacy'].includes(activeTab) && (
-                <button 
-                  onClick={() => {
-                    setActiveTab('partner');
-                    sessionStorage.setItem('lumina_partnermode_subtab', 'requests');
-                    window.dispatchEvent(new CustomEvent('lumina-set-partner-subtab', { detail: 'requests' }));
-                  }} 
-                  className="p-1 md:p-2 text-gray-600 hover:text-pink-600 transition-colors relative cursor-pointer"
-                  title="Partner Connection Requests"
-                  aria-label="Partner Connection Requests"
-                >
-                  <span aria-hidden="true">🔔</span>
-                  {partnerRequests.filter(r => r.status === 'pending').length > 0 && (
-                    <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-white animate-pulse" />
-                  )}
-                </button>
-              )}
-
-              {!['cycle', 'wellness', 'edu', 'pedia', 'settings', 'music', 'privacy'].includes(activeTab) && (
-                <button 
-                  onClick={() => {
-                    setSettingsSubTab('notifications');
-                    setActiveTab('settings');
-                  }} 
-                  className="p-1 md:p-2 text-gray-600 hover:text-pink-600 transition-colors cursor-pointer"
-                  title="Settings"
-                  aria-label="Open Settings"
-                >
-                  <span aria-hidden="true">⚙️</span>
-                </button>
-              )}
+              {/* Primary Log Today CTA (Tablet & Desktop) */}
+              <button
+                type="button"
+                onClick={() => setIsLogModalOpen(true)}
+                className="hidden sm:inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl bg-pink-600 hover:bg-pink-700 text-white text-xs font-semibold whitespace-nowrap shrink-0 transition-colors cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Log Today</span>
+              </button>
             </div>
           </div>
         </header>
       )}
 
-      <main className={`max-w-4xl mx-auto px-4 ${activeTab === 'dashboard' && !user.isPartner ? 'mt-4' : 'mt-8'} pb-10`}>
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 md:pt-7 pb-12">
         <ErrorBoundary onReset={() => setActiveTab('dashboard')}>
           <Suspense
             fallback={
-              <div className="py-16 flex flex-col items-center justify-center gap-3 text-pink-700">
-                <div className="w-8 h-8 border-2 border-pink-200 border-t-pink-600 rounded-full animate-spin" />
-                <p className="text-xs font-semibold">Loading sanctuary view...</p>
+              <div className="py-16 flex flex-col items-center justify-center gap-3 text-stone-600 dark:text-stone-300">
+                <div className="w-8 h-8 border-2 border-stone-200 dark:border-stone-700 border-t-pink-600 rounded-full animate-spin" />
+                <p className="text-xs font-medium">Loading sanctuary view...</p>
               </div>
             }
           >
@@ -2724,20 +2788,20 @@ const App: React.FC = () => {
         </ErrorBoundary>
 
         {/* Accessible Privacy & Cookie Footer */}
-        <footer className="mt-10 pt-5 border-t border-pink-100/70 flex flex-wrap items-center justify-between gap-3 text-xs text-stone-600">
-          <span>Lumina: Bloom &amp; Balance • Your data belongs strictly to you.</span>
-          <div className="flex flex-wrap items-center gap-4 font-semibold">
+        <footer className="mt-12 pt-6 border-t border-stone-200/80 dark:border-[#2e2a26] flex flex-wrap items-center justify-between gap-3 text-xs text-stone-500 dark:text-stone-400">
+          <span>Lumina: Bloom &amp; Balance — Your health data remains private to you.</span>
+          <div className="flex flex-wrap items-center gap-5 font-medium">
             <button
               type="button"
               onClick={() => setActiveTab('privacy')}
-              className="text-pink-700 hover:underline cursor-pointer"
+              className="text-stone-700 dark:text-stone-300 hover:text-pink-700 dark:hover:text-pink-300 cursor-pointer transition-colors"
             >
               Privacy Dashboard
             </button>
             <button
               type="button"
               onClick={() => window.dispatchEvent(new CustomEvent('lumina:open-cookie-settings'))}
-              className="text-pink-700 hover:underline cursor-pointer"
+              className="text-stone-700 dark:text-stone-300 hover:text-pink-700 dark:hover:text-pink-300 cursor-pointer transition-colors"
             >
               Cookie Preferences
             </button>
@@ -2747,14 +2811,14 @@ const App: React.FC = () => {
                 setSettingsSubTab('backup_sync');
                 setActiveTab('settings');
               }}
-              className="text-pink-700 hover:underline cursor-pointer"
+              className="text-stone-700 dark:text-stone-300 hover:text-pink-700 dark:hover:text-pink-300 cursor-pointer transition-colors"
             >
               Backups &amp; Recovery
             </button>
             <button
               type="button"
               onClick={openExternalDeletionPage}
-              className="text-rose-700 hover:underline cursor-pointer"
+              className="text-rose-700 dark:text-rose-400 hover:underline cursor-pointer"
             >
               Delete Account
             </button>
@@ -2785,22 +2849,25 @@ const App: React.FC = () => {
 
       {/* Floating Mini Player (Global) */}
       {isMusicActive && (
-        <div className="fixed bottom-28 left-4 right-4 bg-white/95 backdrop-blur-2xl border border-pink-100 rounded-[2.5rem] p-4 shadow-2xl z-[60] flex items-center justify-between animate-fadeIn">
+        <div className="fixed bottom-20 md:bottom-6 left-4 right-4 md:left-auto md:right-6 md:w-[420px] bg-white/95 dark:bg-[#1a1816]/95 backdrop-blur-xl border border-stone-200/80 dark:border-[#2e2a26] rounded-2xl p-3.5 shadow-lg z-[60] flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 flex-1 min-w-0">
-            <div className={`w-12 h-12 rounded-full bg-pink-100 flex items-center justify-center text-2xl ${isMusicPlaying ? 'animate-[spin_10s_linear_infinite]' : ''}`}>
-              {currentTrack?.coverEmoji || '🎵'}
+            <div className="w-10 h-10 rounded-xl bg-pink-50 dark:bg-pink-950/40 text-pink-600 dark:text-pink-400 border border-pink-100 dark:border-pink-900/40 flex items-center justify-center shrink-0">
+              <Disc3 className={`w-5 h-5 ${isMusicPlaying ? 'animate-[spin_10s_linear_infinite]' : ''}`} />
             </div>
             <div className="min-w-0 flex flex-col justify-center">
-              <h4 className="text-sm font-serif italic text-pink-600 truncate leading-tight">{currentTrack?.title || 'No Song Selected'}</h4>
+              <h4 className="text-sm font-serif text-stone-900 dark:text-stone-100 truncate leading-tight">
+                {currentTrack?.title || 'No Song Selected'}
+              </h4>
               <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
-                <p className="text-[9px] font-bold text-pink-300 uppercase truncate leading-none shrink-0">{currentTrack?.artist || 'Unknown'}</p>
-                <span className="text-pink-200 text-[8px] leading-none shrink-0">•</span>
+                <p className="text-xs text-stone-500 dark:text-stone-400 truncate leading-none shrink-0">
+                  {currentTrack?.artist || 'Lumina Audio'}
+                </p>
+                <span className="text-stone-300 text-xs leading-none shrink-0">·</span>
                 <select
                   value={activeMusicGenre}
                   onChange={(e) => {
                     const newGenre = e.target.value;
                     setActiveMusicGenre(newGenre);
-                    // Find first track in the new genre
                     const tempQueue = fullLibrary.filter(s => {
                       if (newGenre === 'all') return true;
                       const isLofi = newGenre === 'lo-fi' || newGenre === 'lofi chill';
@@ -2822,90 +2889,93 @@ const App: React.FC = () => {
                       }
                     }
                   }}
-                  className="text-[8px] font-black text-pink-500 bg-pink-50 hover:bg-pink-100 rounded-full px-2 py-0.5 border-none outline-none cursor-pointer uppercase tracking-wider leading-none focus:ring-1 focus:ring-pink-200"
+                  aria-label="Filter music genre"
+                  className="text-[11px] font-medium text-pink-700 dark:text-pink-300 bg-pink-50 dark:bg-pink-950/30 hover:bg-pink-100 rounded-lg px-1.5 py-0.5 border border-pink-100 dark:border-pink-900/30 outline-none cursor-pointer"
                 >
-                  <option value="all">🌈 All</option>
-                  <option value="lo-fi">☕ Lo-Fi</option>
-                  <option value="classical">🎻 Classical</option>
-                  <option value="ambient">🌌 Ambient</option>
-                  <option value="nature sounds">🍃 Nature</option>
-                  <option value="jazz">🎷 Jazz</option>
-                  <option value="pop">🎤 Pop</option>
-                  <option value="afrobeats">🌍 Afro</option>
+                  <option value="all">All</option>
+                  <option value="lo-fi">Lo-Fi</option>
+                  <option value="classical">Classical</option>
+                  <option value="ambient">Ambient</option>
+                  <option value="nature sounds">Nature</option>
+                  <option value="jazz">Jazz</option>
+                  <option value="pop">Pop</option>
+                  <option value="afrobeats">Afrobeats</option>
                 </select>
               </div>
             </div>
           </div>
           
-          <div className="flex items-center gap-2 px-2">
+          <div className="flex items-center gap-1 shrink-0">
             <button 
+              type="button"
               onClick={prevSong}
-              className="w-8 h-8 text-pink-400 hover:text-pink-600 transition-colors"
+              aria-label="Previous track"
+              className="w-8 h-8 rounded-lg text-stone-500 hover:text-stone-900 dark:hover:text-white hover:bg-stone-100 dark:hover:bg-stone-800 flex items-center justify-center transition-colors cursor-pointer"
             >
-              ⏮
+              <SkipBack className="w-4 h-4" />
             </button>
             <button 
+              type="button"
               onClick={toggleMusic} 
-              className="w-12 h-12 bg-pink-500 text-white rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition-transform"
+              aria-label={isMusicPlaying ? 'Pause' : 'Play'}
+              className="w-9 h-9 bg-pink-600 hover:bg-pink-700 text-white rounded-xl flex items-center justify-center transition-colors cursor-pointer"
             >
-              {isMusicPlaying ? '⏸' : '▶'}
+              {isMusicPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
             </button>
             <button 
+              type="button"
               onClick={nextSong}
-              className="w-8 h-8 text-pink-400 hover:text-pink-600 transition-colors"
+              aria-label="Next track"
+              className="w-8 h-8 rounded-lg text-stone-500 hover:text-stone-900 dark:hover:text-white hover:bg-stone-100 dark:hover:bg-stone-800 flex items-center justify-center transition-colors cursor-pointer"
             >
-              ⏭
+              <SkipForward className="w-4 h-4" />
             </button>
           </div>
           
-          <div className="hidden md:flex items-center gap-2 ml-4 border-l border-pink-100 pl-4 pr-3">
-            <span className="text-xs">🔊</span>
-            <input 
-              type="range" 
-              min="0" max="1" step="0.01" value={volume}
-              onChange={(e) => setVolume(parseFloat(e.target.value))}
-              className="w-20 h-1 accent-pink-400" 
-            />
-          </div>
-
           <button 
+            type="button"
             onClick={() => {
               setIsMusicPlaying(false);
               setIsMusicActive(false);
             }}
-            className="w-8 h-8 rounded-full border border-pink-100 flex items-center justify-center text-pink-400 hover:text-pink-600 hover:bg-pink-50 transition-colors shrink-0"
+            className="w-8 h-8 rounded-lg border border-stone-200/80 dark:border-[#2e2a26] flex items-center justify-center text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors shrink-0 cursor-pointer"
             title="Stop & Close Player"
+            aria-label="Close music player"
           >
-            ✕
+            <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
       {!user.isPartner && (
-        <>
-          <nav className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-3xl border-t border-white/60 flex justify-around items-center py-3 px-1 shadow-[0_-15px_40px_rgba(244,114,182,0.05),_inset_0_2px_4px_rgba(255,255,255,0.7)] z-50 rounded-t-[2.5rem]">
-            <NavItem icon="🏠" label="Home" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} theme={user.theme} />
-            <NavItem icon="📅" label="Calendar" active={activeTab === 'cycle'} onClick={() => setActiveTab('cycle')} theme={user.theme} />
-            <NavItem icon="🌸" label="Wellness" active={activeTab === 'wellness'} onClick={() => setActiveTab('wellness')} theme={user.theme} />
-            
+        <nav
+          aria-label="Mobile Navigation"
+          className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white/95 dark:bg-[#1a1816]/95 backdrop-blur-xl border-t border-stone-200/80 dark:border-[#2e2a26] grid grid-cols-7 items-center px-1 z-50"
+        >
+          <NavItem icon={<Home className="w-4 h-4" />} label="Home" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} theme={user.theme} />
+          <NavItem icon={<Calendar className="w-4 h-4" />} label="Calendar" active={activeTab === 'cycle'} onClick={() => setActiveTab('cycle')} theme={user.theme} />
+          <NavItem icon={<HeartPulse className="w-4 h-4" />} label="Wellness" active={activeTab === 'wellness'} onClick={() => setActiveTab('wellness')} theme={user.theme} />
+          
+          <div className="flex items-center justify-center">
             <button 
+              type="button"
               onClick={() => setIsLogModalOpen(true)}
-              className="flex flex-col items-center justify-center w-12 h-12 bg-gradient-to-br from-pink-500 to-rose-500 text-white rounded-full shadow-[0_4px_12px_rgba(244,114,182,0.3),_inset_0_1.5px_3px_rgba(255,255,255,0.4)] border-2 border-white hover:scale-105 active:scale-95 transition-all cursor-pointer shrink-0 z-50"
+              className="w-11 h-11 bg-pink-600 hover:bg-pink-700 text-white rounded-xl shadow-sm active:scale-95 transition-all cursor-pointer flex items-center justify-center"
               title="Log Your Day"
               aria-label="Log Today Period, Mood or Symptoms"
               id="nav-log-plus-btn"
             >
-              <span className="text-xl font-black leading-none" aria-hidden="true">+</span>
+              <Plus className="w-5 h-5" />
             </button>
+          </div>
 
-            <NavItem icon="📚" label="Learn" active={activeTab === 'edu'} onClick={() => setActiveTab('edu')} theme={user.theme} />
-            <NavItem icon="🎵" label="Music" active={activeTab === 'music'} onClick={() => setActiveTab('music')} theme={user.theme} />
-            <NavItem icon="👤" label="Settings" active={activeTab === 'settings'} onClick={() => { setSettingsSubTab('menu'); setActiveTab('settings'); }} theme={user.theme} />
-          </nav>
-        </>
+          <NavItem icon={<BookOpen className="w-4 h-4" />} label="Learn" active={activeTab === 'edu'} onClick={() => setActiveTab('edu')} theme={user.theme} />
+          <NavItem icon={<Music className="w-4 h-4" />} label="Music" active={activeTab === 'music'} onClick={() => setActiveTab('music')} theme={user.theme} />
+          <NavItem icon={<UserIcon className="w-4 h-4" />} label="Settings" active={activeTab === 'settings'} onClick={() => { setSettingsSubTab('menu'); setActiveTab('settings'); }} theme={user.theme} badge={pendingPartnerRequestCount} />
+        </nav>
       )}
 
-      {/* Simulated Phone Push Notification Lock Screen Card */}
+      {/* Notification Toast Card */}
       {simulatedNotify && (
         <div 
           onClick={() => {
@@ -2928,48 +2998,48 @@ const App: React.FC = () => {
             setIsGlobalNotificationsOpen(true);
             setSimulatedNotify(null);
           }}
-          className={`notification-drawer fixed top-4 z-[200] rounded-3xl p-4.5 cursor-pointer shadow-[0_20px_50px_rgba(0,0,0,0.18)] border backdrop-blur-3xl flex flex-col gap-2.5 overflow-hidden ${
+          className={`notification-drawer fixed top-4 z-[200] rounded-2xl p-4 cursor-pointer shadow-xl border backdrop-blur-xl flex flex-col gap-2.5 overflow-hidden ${
             simulatedNotify.isPartner 
-              ? 'bg-gradient-to-br from-slate-900/95 to-slate-800/95 text-white border-slate-700/60' 
-              : 'bg-white/95 text-gray-800 border-pink-100/80 hover:border-pink-200'
+              ? 'bg-stone-900/95 text-white border-stone-700/80' 
+              : 'bg-white/95 dark:bg-[#1a1816]/95 text-stone-800 dark:text-stone-100 border-stone-200/80 dark:border-[#2e2a26] hover:border-pink-200'
           }`}
         >
-          {/* Header */}
-          <div className="flex items-center justify-between text-[9px] uppercase tracking-widest font-black leading-none opacity-85">
-            <div className="flex items-center gap-1.5 font-sans min-w-0">
-              <span className="text-sm shrink-0">{simulatedNotify.isPartner ? '💞' : '🌸'}</span>
-              <span className="truncate">{simulatedNotify.isPartner ? 'LUMINA PARTNER SYNC' : 'LUMINA SANCTUARY'}</span>
+          <div className="flex items-center justify-between text-[11px] font-medium opacity-80">
+            <div className="flex items-center gap-1.5 min-w-0">
+              {simulatedNotify.isPartner ? (
+                <HeartHandshake className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+              ) : (
+                <Flower2 className="w-3.5 h-3.5 text-pink-600 shrink-0" />
+              )}
+              <span className="truncate">{simulatedNotify.isPartner ? 'Partner Sync' : 'Lumina Sanctuary'}</span>
             </div>
-            <div className="flex items-center gap-1 opacity-70 shrink-0">
-              <span>now</span>
-              <span>•</span>
-              <span>alert</span>
-            </div>
+            <span className="text-[11px] opacity-70 shrink-0">Just now</span>
           </div>
 
-          {/* Body */}
           <div className="flex gap-3 items-start pr-1 min-w-0">
-            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-xl shrink-0 ${
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
               simulatedNotify.isPartner 
-                ? 'bg-indigo-950/45 border border-indigo-500/30' 
-                : 'bg-rose-50 border border-rose-100/50 text-rose-500'
+                ? 'bg-indigo-950/60 border border-indigo-500/30 text-indigo-300' 
+                : 'bg-pink-50 dark:bg-pink-950/40 border border-pink-100 dark:border-pink-900/40 text-pink-600 dark:text-pink-400'
             }`}>
-              {simulatedNotify.emoji}
+              <Bell className="w-4 h-4" />
             </div>
             <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-              <h4 className={`text-[11px] font-bold tracking-tight leading-snug break-words ${simulatedNotify.isPartner ? 'text-indigo-200' : 'text-rose-600'}`}>
+              <h4 className={`text-xs font-semibold leading-snug break-words ${simulatedNotify.isPartner ? 'text-indigo-200' : 'text-stone-900 dark:text-stone-100'}`}>
                 {simulatedNotify.title}
               </h4>
-              <p className="text-[10px] leading-relaxed font-semibold tracking-tight opacity-90 break-words whitespace-pre-line">
+              <p className="text-xs leading-relaxed opacity-85 break-words whitespace-pre-line">
                 {simulatedNotify.body}
               </p>
             </div>
           </div>
 
-          {/* Action Footer */}
-          <div className="flex items-center justify-between border-t mt-1.5 pt-2 opacity-75 text-[8px] font-bold uppercase tracking-wider border-current/10">
-            <span>Tap to read full details →</span>
-            <span>📱 Slide up to close</span>
+          <div className="flex items-center justify-between border-t pt-2 opacity-75 text-[11px] font-medium border-current/10">
+            <span className="flex items-center gap-1">
+              <span>Tap to open</span>
+              <ArrowRight className="w-3 h-3" />
+            </span>
+            <span>Dismiss</span>
           </div>
         </div>
       )}
@@ -3000,13 +3070,15 @@ const App: React.FC = () => {
 
       {/* Pre-Permission Notification Privacy Consent Card */}
       {showNotifPrePrompt && (
-        <div className="fixed bottom-24 left-4 right-4 max-w-md mx-auto bg-white/95 backdrop-blur-2xl border border-pink-200 rounded-3xl p-4 shadow-2xl z-[180] flex flex-col gap-3 animate-fadeIn">
+        <div className="fixed bottom-20 md:bottom-6 left-4 right-4 max-w-md mx-auto bg-white/95 dark:bg-[#1a1816]/95 backdrop-blur-xl border border-stone-200/80 dark:border-[#2e2a26] rounded-2xl p-4 shadow-xl z-[180] flex flex-col gap-3">
           <div className="flex items-start gap-3">
-            <span className="text-xl shrink-0">🔔</span>
+            <div className="w-9 h-9 rounded-xl bg-pink-50 dark:bg-pink-950/40 text-pink-600 dark:text-pink-400 border border-pink-100 dark:border-pink-900/40 flex items-center justify-center shrink-0">
+              <Bell className="w-4 h-4" />
+            </div>
             <div className="flex-1 min-w-0">
-              <h4 className="text-xs font-bold text-stone-900">Enable Discreet Cycle &amp; Wellness Alerts?</h4>
-              <p className="text-[11px] text-stone-600 mt-0.5 leading-relaxed">
-                Lumina hides sensitive period &amp; health details on your lock screen by default and only shows neutral titles unless you enable previews in Settings.
+              <h4 className="text-sm font-semibold text-stone-900 dark:text-stone-100">Enable discreet cycle &amp; wellness alerts?</h4>
+              <p className="text-xs text-stone-600 dark:text-stone-400 mt-0.5 leading-relaxed">
+                Lumina hides sensitive period and health details on your lock screen by default unless you enable previews in Settings.
               </p>
             </div>
           </div>
@@ -3017,7 +3089,7 @@ const App: React.FC = () => {
                 localStorage.setItem('lumina_notif_preprompt_dismissed', 'true');
                 setShowNotifPrePrompt(false);
               }}
-              className="px-3.5 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold cursor-pointer"
+              className="h-9 px-3.5 rounded-xl bg-stone-100 dark:bg-[#23201d] hover:bg-stone-200 text-stone-700 dark:text-stone-300 text-xs font-medium cursor-pointer transition-colors"
             >
               Not Now
             </button>
@@ -3033,7 +3105,7 @@ const App: React.FC = () => {
                   await registerNativePush(true);
                 } catch {}
               }}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 text-white text-xs font-bold shadow-sm cursor-pointer"
+              className="h-9 px-4 rounded-xl bg-pink-600 hover:bg-pink-700 text-white text-xs font-semibold cursor-pointer transition-colors"
             >
               Allow Alerts
             </button>
@@ -3054,22 +3126,23 @@ const App: React.FC = () => {
   );
 };
 
-const NavItem: React.FC<{ icon: string, label: string, active: boolean, onClick: () => void, theme: AppTheme, badge?: number }> = ({ icon, label, active, onClick, theme, badge }) => {
+const NavItem: React.FC<{ icon: React.ReactNode, label: string, active: boolean, onClick: () => void, theme: AppTheme, badge?: number }> = ({ icon, label, active, onClick, badge }) => {
   return (
     <button 
+      type="button"
       onClick={onClick}
       aria-label={label}
       aria-current={active ? 'page' : undefined}
-      className={`flex flex-col items-center gap-1 py-2 px-3 rounded-[1.25rem] transition-all duration-300 relative cursor-pointer ${
+      className={`flex flex-col items-center justify-center gap-0.5 py-1.5 px-1 rounded-xl transition-colors relative cursor-pointer ${
         active 
-          ? 'bg-gradient-to-br from-pink-400/10 to-rose-400/10 text-pink-700 scale-[1.04] font-black shadow-[inset_0_2px_4px_rgba(255,255,255,0.7),_inset_0_-1.5px_2px_rgba(0,0,0,0.03),_0_6px_15px_rgba(244,114,182,0.06)] border border-pink-100/40' 
-          : 'text-gray-600 opacity-85 hover:text-pink-700 hover:scale-[1.02]'
+          ? 'text-pink-700 dark:text-pink-300 font-semibold' 
+          : 'text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200 font-medium'
       }`}
     >
-      <span className={`text-xl transition-all duration-300 ${active ? 'scale-110 drop-shadow-sm' : ''}`} aria-hidden="true">{icon}</span>
-      <span className="text-[9px] uppercase tracking-tighter font-extrabold">{label}</span>
+      <span className="flex items-center justify-center" aria-hidden="true">{icon}</span>
+      <span className="text-[10px] leading-tight whitespace-nowrap">{label}</span>
       {badge !== undefined && badge > 0 && (
-        <span className="absolute -top-1 -right-1 bg-gradient-to-r from-pink-500 to-rose-500 text-white text-[8px] font-black w-4.5 h-4.5 rounded-full flex items-center justify-center shadow-[inset_0_1px_2.5px_rgba(255,255,255,0.45),_0_2px_5px_rgba(244,114,182,0.25)] border border-white animate-pulse">
+        <span className="absolute top-0.5 right-1 bg-pink-600 text-white text-[9px] font-semibold tabular-nums min-w-[14px] h-[14px] px-1 rounded-full flex items-center justify-center border border-white dark:border-[#1a1816]">
           {badge}
         </span>
       )}

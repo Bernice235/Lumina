@@ -355,17 +355,17 @@ const Diary: React.FC<DiaryProps> = ({ entries, setEntries, user, setUser }) => 
 
     if (!hasConfiguredPin) {
       return (
-        <div className="min-h-[60vh] flex flex-col items-center justify-center p-8 bg-white dark:bg-stone-900 rounded-[3rem] shadow-sm border border-pink-50 dark:border-stone-800 animate-fadeIn">
-          <div className="w-20 h-20 bg-pink-50 dark:bg-stone-800 text-pink-500 rounded-full flex items-center justify-center mb-6 shadow-inner">
-            <ShieldCheck className="w-9 h-9" />
+        <div className="min-h-[60vh] flex flex-col items-center justify-center p-6 sm:p-10 bg-white dark:bg-[#1a1816] rounded-2xl shadow-xs border border-stone-200/80 dark:border-[#2e2a26] max-w-lg mx-auto animate-fadeIn">
+          <div className="w-16 h-16 bg-pink-50 dark:bg-pink-950/40 border border-pink-100 dark:border-pink-900/40 text-pink-600 dark:text-pink-400 rounded-2xl flex items-center justify-center mb-5">
+            <ShieldCheck className="w-8 h-8" />
           </div>
-          <h2 className="text-2xl font-serif text-pink-600 dark:text-pink-400 mb-2 italic text-center">Set Your Private Diary PIN</h2>
-          <p className="text-xs text-stone-600 dark:text-stone-300 mb-6 text-center max-w-sm leading-relaxed">
+          <h2 className="text-2xl font-serif font-bold text-stone-900 dark:text-stone-100 mb-2 text-center">Set Your Private Diary PIN</h2>
+          <p className="text-xs text-stone-600 dark:text-stone-400 mb-6 text-center max-w-sm leading-relaxed">
             For your privacy, Lumina no longer uses a shared default PIN. Create your own 4–6 digit secret PIN before opening your diary.
           </p>
 
           {error && (
-            <div role="alert" className="flex items-center gap-2 mb-4 px-4 py-2.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium">
+            <div role="alert" className="flex items-center gap-2 mb-4 px-4 py-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 text-rose-700 dark:text-rose-300 text-xs font-medium w-full max-w-xs">
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{error}</span>
             </div>
@@ -380,7 +380,7 @@ const Diary: React.FC<DiaryProps> = ({ entries, setEntries, user, setUser }) => 
               onChange={(e) => setNewPinInput(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
               placeholder="New 4–6 digit PIN"
               aria-label="New 4 to 6 digit Diary PIN"
-              className="w-full px-4 py-3.5 rounded-2xl bg-pink-50/40 dark:bg-stone-800 border border-pink-200 dark:border-stone-700 text-center text-sm font-mono tracking-[0.4em] outline-none focus:border-pink-400"
+              className="w-full h-11 px-4 rounded-xl bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] text-center text-sm font-mono tracking-[0.35em] text-stone-900 dark:text-stone-100 outline-none focus:border-pink-400 tabular-nums"
               required
             />
             <input
@@ -391,13 +391,13 @@ const Diary: React.FC<DiaryProps> = ({ entries, setEntries, user, setUser }) => 
               onChange={(e) => setConfirmPinInput(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
               placeholder="Confirm PIN"
               aria-label="Confirm Diary PIN"
-              className="w-full px-4 py-3.5 rounded-2xl bg-pink-50/40 dark:bg-stone-800 border border-pink-200 dark:border-stone-700 text-center text-sm font-mono tracking-[0.4em] outline-none focus:border-pink-400"
+              className="w-full h-11 px-4 rounded-xl bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] text-center text-sm font-mono tracking-[0.35em] text-stone-900 dark:text-stone-100 outline-none focus:border-pink-400 tabular-nums"
               required
             />
             <button
               type="submit"
               disabled={pinSaving}
-              className="w-full py-3.5 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl text-xs font-bold uppercase tracking-widest shadow-md cursor-pointer"
+              className="w-full py-3 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-xs font-semibold shadow-xs cursor-pointer transition-colors disabled:opacity-60"
             >
               {pinSaving ? 'Encrypting PIN...' : 'Save Private PIN & Open Diary'}
             </button>
@@ -407,10 +407,10 @@ const Diary: React.FC<DiaryProps> = ({ entries, setEntries, user, setUser }) => 
             <button
               type="button"
               onClick={handleBiometricUnlock}
-              className="mt-5 flex items-center gap-3 px-6 py-3 bg-white dark:bg-stone-800 border border-pink-200 dark:border-stone-700 rounded-2xl text-pink-600 hover:bg-pink-50 transition-all cursor-pointer"
+              className="mt-4 flex items-center gap-2.5 px-5 py-2.5 bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] rounded-xl text-stone-700 dark:text-stone-200 hover:border-pink-300 transition-colors cursor-pointer"
             >
-              <Fingerprint className="w-5 h-5" />
-              <span className="text-[10px] font-bold uppercase tracking-widest">Or unlock with {biometricLabel}</span>
+              <Fingerprint className="w-4 h-4 text-pink-600 dark:text-pink-400" />
+              <span className="text-xs font-semibold">Or unlock with {biometricLabel}</span>
             </button>
           )}
         </div>
@@ -418,30 +418,27 @@ const Diary: React.FC<DiaryProps> = ({ entries, setEntries, user, setUser }) => 
     }
 
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center p-8 bg-white dark:bg-stone-900 rounded-[3rem] shadow-sm border border-pink-50 dark:border-stone-800 animate-fadeIn">
-        <div className="w-20 h-20 bg-pink-50 dark:bg-stone-800 text-pink-400 rounded-full flex items-center justify-center text-4xl mb-6 shadow-inner relative">
-          <Lock className="w-8 h-8" />
-          <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-white dark:bg-stone-900 rounded-full flex items-center justify-center shadow-sm border border-pink-50 dark:border-stone-800">
-            <ShieldCheck className="w-4 h-4 text-pink-300" />
-          </div>
+      <div className="min-h-[60vh] flex flex-col items-center justify-center p-6 sm:p-10 bg-white dark:bg-[#1a1816] rounded-2xl shadow-xs border border-stone-200/80 dark:border-[#2e2a26] max-w-md mx-auto animate-fadeIn">
+        <div className="w-16 h-16 bg-pink-50 dark:bg-pink-950/40 border border-pink-100 dark:border-pink-900/40 text-pink-600 dark:text-pink-400 rounded-2xl flex items-center justify-center mb-5 relative">
+          <Lock className="w-7 h-7" />
         </div>
-        <h2 className="text-2xl font-serif text-pink-600 dark:text-pink-400 mb-2 italic">Secret Sanctuary</h2>
-        <p className="text-sm text-pink-600 dark:text-pink-300/80 mb-8 text-center italic">Your thoughts are safe here. Enter your private PIN or verify with biometrics.</p>
+        <h2 className="text-2xl font-serif font-bold text-stone-900 dark:text-stone-100 mb-1.5">Secret Sanctuary</h2>
+        <p className="text-xs text-stone-500 dark:text-stone-400 mb-6 text-center max-w-xs">Your thoughts are encrypted here. Enter your private PIN or verify with biometrics.</p>
 
-        <div className="flex gap-3.5 mb-6">
+        <div className="flex gap-3 mb-6">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className={`w-3.5 h-3.5 rounded-full border-2 border-pink-200 dark:border-stone-700 transition-all duration-300 ${pinInput.length > i ? 'bg-pink-500 border-pink-500 scale-110' : 'bg-transparent'}`}></div>
+            <div key={i} className={`w-3 h-3 rounded-full border-2 transition-colors ${pinInput.length > i ? 'bg-pink-600 border-pink-600' : 'border-stone-300 dark:border-[#342f2b] bg-transparent'}`}></div>
           ))}
         </div>
 
         {error && (
-          <div role="alert" className="flex items-center gap-2 mb-6 px-4 py-2 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700">
+          <div role="alert" className="flex items-center gap-2 mb-5 px-4 py-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 text-rose-700 dark:text-rose-300 max-w-xs">
             <AlertCircle className="w-4 h-4 shrink-0" />
-            <p className="text-[11px] font-semibold">{error}</p>
+            <p className="text-xs font-medium">{error}</p>
           </div>
         )}
 
-        <div className="grid grid-cols-3 gap-5 mb-6">
+        <div className="grid grid-cols-3 gap-3.5 mb-6">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9, 'C', 0, '✓'].map((num) => (
             <button
               key={num}
@@ -451,8 +448,10 @@ const Diary: React.FC<DiaryProps> = ({ entries, setEntries, user, setUser }) => 
                 else if (num === '✓') void handleUnlock();
                 else if (pinInput.length < 6) setPinInput(prev => prev + num);
               }}
-              className={`w-16 h-16 rounded-2xl flex items-center justify-center font-bold text-xl transition-all active:scale-95 cursor-pointer ${
-                num === '✓' ? 'bg-pink-500 text-white shadow-lg shadow-pink-100' : 'bg-pink-50/50 dark:bg-stone-800 text-pink-600 dark:text-pink-300 hover:bg-pink-100'
+              className={`w-16 h-14 rounded-xl flex items-center justify-center font-semibold text-lg transition-colors active:scale-95 cursor-pointer tabular-nums border ${
+                num === '✓'
+                  ? 'bg-pink-600 hover:bg-pink-700 text-white border-pink-600 shadow-xs'
+                  : 'bg-[#faf8f6] dark:bg-[#23201d] border-stone-200/80 dark:border-[#342f2b] text-stone-800 dark:text-stone-100 hover:bg-stone-100 dark:hover:bg-[#2b2724]'
               }`}
             >
               {num}
@@ -464,10 +463,10 @@ const Diary: React.FC<DiaryProps> = ({ entries, setEntries, user, setUser }) => 
           <button
             type="button"
             onClick={handleBiometricUnlock}
-            className="flex items-center gap-3 px-8 py-4 bg-white dark:bg-stone-800 border-2 border-pink-100 dark:border-stone-700 rounded-2xl text-pink-600 hover:bg-pink-50 transition-all active:scale-95 group cursor-pointer"
+            className="flex items-center gap-2.5 px-6 py-3 bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] rounded-xl text-stone-800 dark:text-stone-100 hover:border-pink-300 transition-colors cursor-pointer"
           >
-            <Fingerprint className="w-6 h-6 group-hover:scale-110 transition-transform" />
-            <span className="text-[10px] font-bold uppercase tracking-widest">Unlock with {biometricLabel}</span>
+            <Fingerprint className="w-5 h-5 text-pink-600 dark:text-pink-400" />
+            <span className="text-xs font-semibold">Unlock with {biometricLabel}</span>
           </button>
         )}
       </div>
@@ -475,42 +474,48 @@ const Diary: React.FC<DiaryProps> = ({ entries, setEntries, user, setUser }) => 
   }
 
   return (
-    <div className="space-y-8 animate-fadeIn max-w-4xl mx-auto">
-      <header className="text-center relative">
-        <h2 className="text-3xl font-serif text-pink-600 italic">Whispers of the Soul</h2>
-        <p className="text-sm text-pink-600 italic">Your private, blooming thoughts & diary continuation sanctuary</p>
+    <div className="space-y-6 animate-fadeIn max-w-4xl mx-auto">
+      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-1">
+        <div>
+          <h2 className="text-2xl sm:text-3xl font-serif font-bold text-stone-900 dark:text-stone-100">Whispers of the Soul</h2>
+          <p className="text-xs text-stone-500 dark:text-stone-400">Your private, encrypted journal and reflection space</p>
+        </div>
         <button
+          type="button"
           onClick={() => setIsLocked(true)}
-          className="absolute top-0 right-0 p-2.5 bg-gray-50 dark:bg-stone-800 text-gray-500 dark:text-stone-300 rounded-full hover:bg-gray-100 transition-colors text-[10px] font-bold uppercase cursor-pointer"
+          className="self-start sm:self-auto inline-flex items-center gap-1.5 px-3.5 py-2 bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] text-stone-700 dark:text-stone-200 rounded-xl hover:border-pink-300 transition-colors text-xs font-semibold cursor-pointer"
         >
-          Lock Diary
+          <Lock className="w-3.5 h-3.5 text-pink-600 dark:text-pink-400" />
+          <span>Lock Diary</span>
         </button>
       </header>
 
       {/* DRAFT RECOVERY BANNER */}
       {hasRestoredDraft && (
-        <div className="bg-gradient-to-r from-amber-500/15 via-pink-500/10 to-rose-500/15 p-4 rounded-3xl border border-amber-300/50 dark:border-amber-700/50 flex flex-col sm:flex-row justify-between items-center gap-3 animate-slideDown">
+        <div className="bg-amber-50/80 dark:bg-amber-950/30 p-4 rounded-2xl border border-amber-200/80 dark:border-amber-900/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 animate-slideDown">
           <div className="flex items-center gap-2.5">
-            <RotateCcw className="w-5 h-5 text-amber-600 dark:text-amber-400 animate-spin-slow flex-shrink-0" />
+            <RotateCcw className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
             <div>
-              <p className="text-xs font-bold text-amber-800 dark:text-amber-200">
+              <p className="text-xs font-bold text-amber-900 dark:text-amber-200">
                 Unsaved Draft Restored
               </p>
-              <p className="text-[11px] text-amber-700 dark:text-amber-300/80">
-                Lumina auto-recovered your unsaved notes from your previous session. No thoughts were lost! ✨
+              <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80">
+                Lumina auto-recovered your unsaved notes from your previous session.
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             <button
+              type="button"
               onClick={() => setHasRestoredDraft(false)}
-              className="px-3.5 py-1.5 bg-amber-500 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider shadow-sm hover:bg-amber-600 cursor-pointer"
+              className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-semibold cursor-pointer transition-colors"
             >
               Keep Writing
             </button>
             <button
+              type="button"
               onClick={handleDiscardDraft}
-              className="px-3.5 py-1.5 bg-white/80 dark:bg-stone-800 text-stone-500 rounded-xl text-[10px] font-bold uppercase tracking-wider hover:bg-rose-50 hover:text-rose-600 cursor-pointer"
+              className="px-3.5 py-1.5 bg-white dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] text-stone-600 dark:text-stone-300 rounded-lg text-xs font-semibold hover:text-rose-600 cursor-pointer transition-colors"
             >
               Discard Draft
             </button>
@@ -519,52 +524,56 @@ const Diary: React.FC<DiaryProps> = ({ entries, setEntries, user, setUser }) => 
       )}
 
       {/* EDITOR SECTION */}
-      <section ref={editorRef} className="bg-white dark:bg-stone-900 p-8 rounded-[2.5rem] shadow-sm border border-pink-100 dark:border-stone-800 space-y-6 relative overflow-hidden">
+      <section ref={editorRef} className="bg-white dark:bg-[#1a1816] p-6 sm:p-8 rounded-2xl shadow-xs border border-stone-200/80 dark:border-[#2e2a26] space-y-5 relative overflow-hidden">
         {/* Editor Top Status Header */}
-        <div className="flex justify-between items-center border-b border-pink-50 dark:border-stone-800 pb-4">
-          <div className="flex items-center gap-2">
-            <span className="px-3 py-1 bg-pink-100 dark:bg-pink-900/50 text-pink-700 dark:text-pink-300 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
-              <Sparkles className="w-3 h-3" />
+        <div className="flex flex-wrap justify-between items-center gap-2 border-b border-stone-100 dark:border-[#2e2a26] pb-4">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="px-2.5 py-1 bg-pink-50 dark:bg-pink-950/40 text-pink-700 dark:text-pink-300 border border-pink-200/70 dark:border-pink-900/40 rounded-md text-xs font-semibold flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5" />
               {currentPhaseName}
             </span>
             {editingId ? (
-              <span className="px-3 py-1 bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
-                <Edit3 className="w-3 h-3" />
-                Continuing Existing Entry
+              <span className="px-2.5 py-1 bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200/70 dark:border-purple-900/40 rounded-md text-xs font-semibold flex items-center gap-1.5">
+                <Edit3 className="w-3.5 h-3.5" />
+                Editing Entry
               </span>
             ) : (
-              <span className="px-3 py-1 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 rounded-full text-[10px] font-bold uppercase tracking-wider">
+              <span className="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/70 dark:border-emerald-900/40 rounded-md text-xs font-semibold">
                 New Entry
               </span>
             )}
           </div>
 
-          <div className="flex items-center gap-3 text-xs text-stone-400">
+          <div className="flex items-center gap-3 text-xs text-stone-500 dark:text-stone-400">
             {lastSavedAt && (
-              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1 animate-pulse">
+              <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-medium flex items-center gap-1 tabular-nums">
                 <CheckCircle2 className="w-3.5 h-3.5" /> Auto-saved {lastSavedAt}
               </span>
             )}
             {editingId && (
               <button
+                type="button"
                 onClick={handleStartNewEntry}
-                className="text-pink-500 font-bold hover:underline text-[10px] uppercase tracking-wider flex items-center gap-1 cursor-pointer"
+                className="text-pink-600 dark:text-pink-400 font-semibold hover:underline text-xs flex items-center gap-1 cursor-pointer"
               >
-                <PlusCircle className="w-3.5 h-3.5" /> Start Fresh Entry
+                <PlusCircle className="w-3.5 h-3.5" /> Start Fresh
               </button>
             )}
           </div>
         </div>
 
         <div>
-          <label className="block text-[10px] font-bold text-pink-400 uppercase mb-3 ml-2 tracking-widest">How's your mood right now?</label>
-          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+          <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300 mb-2.5">How is your mood right now?</label>
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
             {['Happy', 'Calm', 'Moody', 'Sad', 'Tired', 'Blessed', 'Inspired'].map(m => (
               <button
+                type="button"
                 key={m}
                 onClick={() => setMood(m)}
-                className={`px-4 py-2 rounded-full text-[10px] font-bold uppercase whitespace-nowrap transition-all cursor-pointer ${
-                  mood === m ? 'bg-pink-500 text-white shadow-md shadow-pink-200/50' : 'bg-pink-50 dark:bg-stone-800 text-pink-400 dark:text-pink-300 hover:bg-pink-100'
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer border ${
+                  mood === m
+                    ? 'bg-pink-600 text-white border-pink-600 shadow-xs'
+                    : 'bg-[#faf8f6] dark:bg-[#23201d] border-stone-200/80 dark:border-[#342f2b] text-stone-600 dark:text-stone-300 hover:border-pink-300'
                 }`}
               >
                 {m}
@@ -574,14 +583,17 @@ const Diary: React.FC<DiaryProps> = ({ entries, setEntries, user, setUser }) => 
         </div>
 
         <div>
-          <label className="block text-[10px] font-bold text-pink-400 uppercase mb-3 ml-2 tracking-widest">Pick a Mood Sticker</label>
-          <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide">
+          <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300 mb-2.5">Entry Icon</label>
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
             {AESTHETIC_EMOJIS.map(emoji => (
               <button
+                type="button"
                 key={emoji}
                 onClick={() => setSelectedEmoji(emoji)}
-                className={`w-10 h-10 flex-shrink-0 flex items-center justify-center text-xl rounded-xl transition-all border-2 cursor-pointer ${
-                  selectedEmoji === emoji ? 'bg-pink-100 dark:bg-pink-900/50 border-pink-400 scale-110 shadow-sm' : 'bg-pink-50/30 dark:bg-stone-800/50 border-transparent hover:border-pink-200'
+                className={`w-10 h-10 shrink-0 flex items-center justify-center text-lg rounded-xl transition-colors border cursor-pointer ${
+                  selectedEmoji === emoji
+                    ? 'bg-pink-50 dark:bg-pink-950/40 border-pink-500'
+                    : 'bg-[#faf8f6] dark:bg-[#23201d] border-stone-200/80 dark:border-[#342f2b] hover:border-pink-300'
                 }`}
               >
                 {emoji}
@@ -594,26 +606,27 @@ const Diary: React.FC<DiaryProps> = ({ entries, setEntries, user, setUser }) => 
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="Write freely... Lumina auto-saves every word as you type. Open previous entries anytime to continue from where you stopped!"
-            className="w-full h-48 bg-pink-50/30 dark:bg-stone-800/40 p-6 rounded-3xl outline-none focus:ring-2 focus:ring-pink-300 dark:focus:ring-pink-600 text-stone-700 dark:text-stone-200 font-serif italic text-lg leading-relaxed resize-none transition-all"
+            placeholder="Write freely... Lumina auto-saves every word as you type. Open previous entries anytime to continue where you left off."
+            className="w-full h-48 bg-[#faf8f6] dark:bg-[#23201d] p-5 rounded-xl border border-stone-200/80 dark:border-[#342f2b] outline-none focus:border-pink-400 text-stone-800 dark:text-stone-100 font-serif text-base leading-relaxed resize-none transition-colors"
           />
-          <div className="absolute top-4 right-4 text-4xl opacity-20 pointer-events-none">{selectedEmoji}</div>
         </div>
 
         <div className="flex gap-3">
           <button
+            type="button"
             onClick={handleSaveOrFinalize}
             disabled={!content.trim()}
-            className="flex-1 py-4 bg-gradient-to-r from-pink-400 to-rose-500 text-white rounded-2xl font-bold uppercase tracking-widest shadow-lg shadow-pink-200/60 dark:shadow-none hover:scale-[1.01] transition-all disabled:opacity-40 cursor-pointer flex items-center justify-center gap-2"
+            className="flex-1 py-3 bg-pink-600 hover:bg-pink-700 text-white rounded-xl font-semibold text-xs shadow-xs transition-colors disabled:opacity-40 cursor-pointer flex items-center justify-center gap-2"
           >
-            <span>{editingId ? 'Update & Finalize Entry' : 'Save & Publish Entry'}</span>
+            <span>{editingId ? 'Update Entry' : 'Save & Publish Entry'}</span>
             <Sparkles className="w-4 h-4" />
           </button>
 
           {editingId && (
             <button
+              type="button"
               onClick={handleStartNewEntry}
-              className="px-6 py-4 bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 rounded-2xl font-bold uppercase text-xs tracking-wider hover:bg-stone-200 transition-all cursor-pointer"
+              className="px-5 py-3 bg-stone-100 dark:bg-[#23201d] text-stone-700 dark:text-stone-200 rounded-xl font-semibold text-xs hover:bg-stone-200 dark:hover:bg-[#2b2724] transition-colors cursor-pointer"
             >
               Cancel Edit
             </button>
@@ -622,17 +635,17 @@ const Diary: React.FC<DiaryProps> = ({ entries, setEntries, user, setUser }) => 
       </section>
 
       {/* DIARY ENTRIES HISTORY LIST */}
-      <div className="space-y-6">
-        <div className="flex justify-between items-center px-2">
-          <h3 className="text-xl font-serif text-pink-600 dark:text-pink-400 italic">Previous Diary Entries</h3>
-          <span className="text-xs text-stone-400 italic">{entries.length} {entries.length === 1 ? 'entry' : 'entries'} saved</span>
+      <div className="space-y-4">
+        <div className="flex justify-between items-center px-1">
+          <h3 className="text-lg font-serif font-bold text-stone-900 dark:text-stone-100">Previous Diary Entries</h3>
+          <span className="text-xs text-stone-500 dark:text-stone-400 tabular-nums">{entries.length} {entries.length === 1 ? 'entry' : 'entries'} saved</span>
         </div>
 
         {entries.length === 0 ? (
-          <div className="p-12 text-center bg-white dark:bg-stone-900 rounded-[2.5rem] border border-pink-50 dark:border-stone-800 text-stone-400 space-y-3">
-            <Heart className="w-10 h-10 mx-auto text-pink-300 opacity-50 animate-pulse" />
-            <p className="font-serif italic text-lg text-stone-600 dark:text-stone-300">Your sanctuary is ready for your first whisper.</p>
-            <p className="text-xs text-stone-400 max-w-sm mx-auto">
+          <div className="p-10 text-center bg-white dark:bg-[#1a1816] rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] text-stone-500 dark:text-stone-400 space-y-2.5">
+            <Heart className="w-9 h-9 mx-auto text-pink-400/70" />
+            <p className="font-serif font-semibold text-base text-stone-800 dark:text-stone-200">Your sanctuary is ready for your first note</p>
+            <p className="text-xs text-stone-500 dark:text-stone-400 max-w-sm mx-auto">
               Write your thoughts above. Every entry auto-saves while you type and remains editable anytime.
             </p>
           </div>
@@ -643,29 +656,25 @@ const Diary: React.FC<DiaryProps> = ({ entries, setEntries, user, setUser }) => 
               <div
                 key={entry.id}
                 onClick={() => handleOpenEntryForEditing(entry)}
-                className={`relative p-8 rounded-[2.5rem] shadow-sm border transition-all cursor-pointer group overflow-hidden ${
+                className={`relative p-6 rounded-2xl shadow-xs border transition-colors cursor-pointer group ${
                   isCurrentlyEditing
-                    ? 'bg-gradient-to-r from-pink-50/90 to-rose-50/60 dark:from-stone-800 dark:to-stone-800/90 border-pink-400 dark:border-pink-600 ring-2 ring-pink-300'
-                    : 'bg-white dark:bg-stone-900 border-pink-100 dark:border-stone-800 border-l-4 border-l-pink-300 hover:border-l-pink-500 hover:shadow-md'
+                    ? 'bg-pink-50/40 dark:bg-[#23201d] border-pink-500 ring-1 ring-pink-400'
+                    : 'bg-white dark:bg-[#1a1816] border-stone-200/80 dark:border-[#2e2a26] border-l-4 border-l-pink-500 hover:border-pink-300 dark:hover:border-pink-800'
                 }`}
               >
-                <div className="absolute -top-4 -right-4 text-8xl opacity-[0.03] rotate-12 pointer-events-none group-hover:opacity-[0.08] transition-opacity">
-                  {entry.emoji || '✨'}
-                </div>
-
-                <div className="flex flex-wrap justify-between items-center gap-2 mb-4 relative z-10">
+                <div className="flex flex-wrap justify-between items-center gap-2 mb-3">
                   <div className="flex items-center gap-3">
                     <span className="text-2xl">{entry.emoji || '✨'}</span>
                     <div>
-                      <p className="text-xs font-bold text-stone-800 dark:text-stone-100">{entry.date}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-[10px] text-pink-500 font-semibold flex items-center gap-1">
+                      <p className="text-xs font-bold text-stone-900 dark:text-stone-100">{entry.date}</p>
+                      <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                        <span className="text-[11px] text-pink-600 dark:text-pink-400 font-medium flex items-center gap-1 tabular-nums">
                           <Calendar className="w-3 h-3" />
                           Created {entry.createdAt || entry.date}
                         </span>
                         {entry.updatedAt && (
-                          <span className="text-[10px] text-stone-400 flex items-center gap-1 font-mono">
-                            • <Clock className="w-3 h-3" /> Last edited {entry.updatedAt}
+                          <span className="text-[11px] text-stone-400 flex items-center gap-1 tabular-nums">
+                            · <Clock className="w-3 h-3" /> Edited {entry.updatedAt}
                           </span>
                         )}
                       </div>
@@ -674,16 +683,17 @@ const Diary: React.FC<DiaryProps> = ({ entries, setEntries, user, setUser }) => 
 
                   <div className="flex items-center gap-2">
                     {entry.cyclePhase && (
-                      <span className="text-[9px] px-3 py-1 bg-pink-100/80 dark:bg-pink-900/40 text-pink-700 dark:text-pink-300 rounded-full font-bold uppercase tracking-wider">
+                      <span className="text-[10px] px-2.5 py-0.5 bg-pink-50 dark:bg-pink-950/40 text-pink-700 dark:text-pink-300 border border-pink-200/70 dark:border-pink-900/40 rounded-md font-semibold">
                         {entry.cyclePhase}
                       </span>
                     )}
-                    <span className="text-[10px] px-3 py-1 bg-pink-50 dark:bg-stone-800 text-pink-500 rounded-full font-bold uppercase">
+                    <span className="text-[10px] px-2.5 py-0.5 bg-[#faf8f6] dark:bg-[#23201d] text-stone-700 dark:text-stone-300 border border-stone-200/80 dark:border-[#342f2b] rounded-md font-semibold">
                       {entry.mood}
                     </span>
                     <button
+                      type="button"
                       onClick={(e) => handleDeleteEntry(entry.id, e)}
-                      className="text-stone-300 hover:text-rose-500 p-1.5 rounded-full transition-colors opacity-0 group-hover:opacity-100 hover:bg-stone-100 dark:hover:bg-stone-800"
+                      className="text-stone-400 hover:text-rose-600 p-1.5 rounded-lg transition-colors opacity-80 group-hover:opacity-100 hover:bg-stone-100 dark:hover:bg-[#23201d] cursor-pointer"
                       title="Delete entry"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -691,17 +701,17 @@ const Diary: React.FC<DiaryProps> = ({ entries, setEntries, user, setUser }) => 
                   </div>
                 </div>
 
-                <p className="text-stone-700 dark:text-stone-200 font-serif italic text-lg leading-relaxed whitespace-pre-wrap relative z-10 my-3">
+                <p className="text-stone-700 dark:text-stone-200 font-serif text-base leading-relaxed whitespace-pre-wrap my-2">
                   "{entry.content}"
                 </p>
 
-                <div className="mt-4 pt-3 border-t border-pink-50 dark:border-stone-800/80 flex items-center justify-between text-xs text-pink-500 font-bold">
+                <div className="mt-3 pt-3 border-t border-stone-100 dark:border-[#2e2a26] flex items-center justify-between text-xs text-pink-600 dark:text-pink-400 font-semibold">
                   <span className="flex items-center gap-1.5">
                     <Edit3 className="w-3.5 h-3.5" />
-                    {isCurrentlyEditing ? 'Currently Editing in Canvas Above' : 'Tap entry to continue writing & edit'}
+                    {isCurrentlyEditing ? 'Currently Editing Above' : 'Tap entry to continue writing'}
                   </span>
-                  <span className="text-[10px] uppercase tracking-wider opacity-80 group-hover:underline">
-                    Continue Writing →
+                  <span className="text-xs opacity-80 group-hover:underline">
+                    Continue →
                   </span>
                 </div>
               </div>

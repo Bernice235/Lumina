@@ -27,7 +27,12 @@ import {
   Share2,
   ListMusic,
   Download,
-  ThumbsUp
+  ThumbsUp,
+  Lock,
+  Repeat,
+  X,
+  FolderPlus,
+  Headphones
 } from 'lucide-react';
 
 interface MusicRoomProps {
@@ -529,181 +534,182 @@ const MusicRoom: React.FC<MusicRoomProps> = ({
   }, [currentSongIndex]);
 
   return (
-    <div className="space-y-8 animate-fadeIn pb-36">
-      {/* HEADER SECTION WITH DYNAMIC QUOTE */}
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-gradient-to-br from-white to-pink-50/20 p-6 rounded-[3rem] border border-pink-100/30">
+    <div className="space-y-6 animate-fadeIn pb-36">
+      {/* HEADER SECTION */}
+      <header className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-white dark:bg-[#1a1816] p-5 md:p-6 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-xs">
         <div>
-          <h2 className="text-4xl font-serif text-pink-500 italic flex items-center gap-2">
-            <Music className="text-pink-400 shrink-0" size={28} />
-            Lumina Music Hub 🎵
+          <h2 className="text-2xl md:text-3xl font-serif text-stone-900 dark:text-stone-100 flex items-center gap-2.5 tracking-tight">
+            <Music className="text-pink-600 dark:text-pink-400 shrink-0" size={24} />
+            Lumina Music Hub
           </h2>
-          <p className="text-xs text-pink-400 mt-1 uppercase tracking-widest font-black flex items-center gap-1">
-            <Radio className="animate-pulse text-rose-500" size={13} />
-            Tailored Wellness Audio • {user.isPregnancyMode ? "Pregnancy Sanctuary" : "Cycle Syncing"}
+          <p className="text-xs text-stone-500 dark:text-stone-400 mt-1 font-medium flex items-center gap-1.5">
+            <Radio className="text-pink-600 dark:text-pink-400 shrink-0" size={13} />
+            Tailored wellness audio • {user.isPregnancyMode ? "Pregnancy Sanctuary" : "Cycle Syncing"}
           </p>
         </div>
-        
-        {/* TAB SWITCHERS GRID */}
-        <div className="flex bg-pink-50/40 p-1 rounded-2xl border border-pink-100/50 w-full md:w-auto overflow-x-auto scrollbar-hide shrink-0 gap-1 select-none">
-          <button 
+
+        {/* TAB SWITCHERS */}
+        <div className="flex bg-[#faf8f6] dark:bg-[#23201d] p-1 rounded-xl border border-stone-200/80 dark:border-[#342f2b] w-full lg:w-auto overflow-x-auto scrollbar-hide shrink-0 gap-1 select-none">
+          <button
             type="button"
             onClick={() => { setActiveTab('discover'); setSelectedPlaylistInfo(null); }}
-            className={`px-4 py-2.5 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all flex items-center gap-1 ${activeTab === 'discover' ? 'bg-pink-500 text-white shadow-md shadow-pink-150' : 'text-pink-400 hover:bg-pink-100/30'}`}
+            className={`px-3.5 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer ${activeTab === 'discover' ? 'bg-pink-600 text-white shadow-xs' : 'text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-[#2e2a26]'}`}
           >
-            <Compass size={12} />
+            <Compass size={14} />
             Discover
           </button>
-          
-          <button 
+
+          <button
             type="button"
             onClick={() => { setActiveTab('playlists'); }}
-            className={`px-4 py-2.5 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all flex items-center gap-1 ${activeTab === 'playlists' ? 'bg-pink-500 text-white shadow-md shadow-pink-150' : 'text-pink-400 hover:bg-pink-100/30'}`}
+            className={`px-3.5 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer ${activeTab === 'playlists' ? 'bg-pink-600 text-white shadow-xs' : 'text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-[#2e2a26]'}`}
           >
-            <ListMusic size={12} />
+            <ListMusic size={14} />
             Playlists
           </button>
 
-          <button 
+          <button
             type="button"
             onClick={() => { setActiveTab('favorites'); }}
-            className={`px-4 py-2.5 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all flex items-center gap-1 ${activeTab === 'favorites' ? 'bg-pink-500 text-white shadow-md shadow-pink-150' : 'text-pink-400 hover:bg-pink-100/30'}`}
+            className={`px-3.5 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer ${activeTab === 'favorites' ? 'bg-pink-600 text-white shadow-xs' : 'text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-[#2e2a26]'}`}
           >
-            <Heart size={12} />
+            <Heart size={14} />
             Liked
           </button>
 
-          <button 
+          <button
             type="button"
             onClick={() => { setActiveTab('recent'); }}
-            className={`px-4 py-2.5 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all flex items-center gap-1 ${activeTab === 'recent' ? 'bg-pink-500 text-white shadow-md shadow-pink-150' : 'text-pink-400 hover:bg-pink-100/30'}`}
+            className={`px-3.5 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer ${activeTab === 'recent' ? 'bg-pink-600 text-white shadow-xs' : 'text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-[#2e2a26]'}`}
           >
-            <Clock size={12} />
+            <Clock size={14} />
             Recent
           </button>
 
-          <button 
+          <button
             type="button"
             onClick={() => { setActiveTab('mood'); }}
-            className={`px-4 py-2.5 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all flex items-center gap-1 ${activeTab === 'mood' ? 'bg-pink-500 text-white shadow-md shadow-pink-150' : 'text-pink-400 hover:bg-pink-100/30'}`}
+            className={`px-3.5 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer ${activeTab === 'mood' ? 'bg-pink-600 text-white shadow-xs' : 'text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-[#2e2a26]'}`}
           >
-            <Sparkles size={12} />
+            <Sparkles size={14} />
             Lumina AI
           </button>
         </div>
       </header>
 
       {/* SEARCH AND ADD EXPANDER BAR */}
-      <section className="bg-white p-5 rounded-[2.5rem] shadow-sm border border-pink-50 flex flex-col md:flex-row gap-4 items-center">
+      <section className="bg-white dark:bg-[#1a1816] p-4 rounded-2xl shadow-xs border border-stone-200/80 dark:border-[#2e2a26] flex flex-col md:flex-row gap-3 items-center">
         <div className="relative flex-1 w-full">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-pink-300" size={16} />
-          <input 
-            type="text" 
-            placeholder="Search matching Cardi B, SZA, Tems, Burna Boy, Classical, Jazz..."
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" size={16} />
+          <input
+            type="text"
+            placeholder="Search tracks, artists, classical, jazz, lo-fi..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full text-xs font-serif italic pl-11 pr-5 py-3.5 bg-pink-50/30 rounded-2xl border border-pink-100/50 outline-none focus:border-pink-300 focus:bg-white transition-all text-pink-700"
+            className="w-full h-11 text-sm pl-10 pr-4 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl border border-stone-200/80 dark:border-[#342f2b] outline-none focus:border-pink-400 dark:focus:border-pink-500 transition-all text-stone-800 dark:text-stone-100 placeholder:text-stone-400"
           />
         </div>
         <button
           type="button"
           onClick={() => setShowAddForm(!showAddForm)}
-          className="w-full md:w-auto px-6 py-3.5 bg-pink-50 hover:bg-pink-100/50 text-pink-500 rounded-2xl text-[9px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer border border-pink-100"
+          className="w-full md:w-auto h-11 px-4 bg-[#faf8f6] dark:bg-[#23201d] hover:bg-stone-100 dark:hover:bg-[#2e2a26] text-stone-700 dark:text-stone-200 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer border border-stone-200/80 dark:border-[#342f2b] whitespace-nowrap shrink-0"
         >
-          {showAddForm ? '✕ Hide Form' : '➕ Add Custom Track'}
+          {showAddForm ? <><X size={14} /> Close Form</> : <><Plus size={14} /> Add Custom Track</>}
         </button>
       </section>
 
       {/* CREATE CUSTOM SONG TRACK EXPANDABLE PANEL */}
       {showAddForm && (
-        <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-pink-100 animate-slideDownBlock space-y-4 w-full">
-          <div className="inline-block px-4 py-1 text-[9px] font-black bg-pink-500 text-white rounded-full uppercase tracking-widest">
-            Add Custom Sovereign Track
+        <div className="bg-white dark:bg-[#1a1816] p-5 md:p-6 rounded-2xl shadow-xs border border-stone-200/80 dark:border-[#2e2a26] animate-slideDownBlock space-y-4 w-full">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-stone-800 dark:text-stone-100">Add Custom Audio Track</h3>
+            <span className="text-[11px] font-medium text-pink-600 dark:text-pink-400 bg-pink-50 dark:bg-pink-950/30 border border-pink-200/70 dark:border-pink-900/40 px-2.5 py-0.5 rounded-md">
+              Personal Library
+            </span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
-              <span className="text-[9px] font-bold text-pink-400 uppercase tracking-wider pl-1 font-sans">Song Title</span>
-              <input 
-                type="text" 
-                placeholder="e.g. Lavender Sleep Whispers" 
-                value={newTitle} 
+              <label className="text-xs font-semibold text-stone-600 dark:text-stone-300">Song Title</label>
+              <input
+                type="text"
+                placeholder="e.g. Lavender Sleep Whispers"
+                value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
-                className="p-3 bg-pink-50/40 rounded-xl outline-none border border-pink-50 text-xs text-pink-700 focus:border-pink-200"
+                className="h-11 px-3.5 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl outline-none border border-stone-200/80 dark:border-[#342f2b] text-sm text-stone-800 dark:text-stone-100 focus:border-pink-400"
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <span className="text-[9px] font-bold text-pink-400 uppercase tracking-wider pl-1 font-sans">Artist / Performer</span>
-              <input 
-                type="text" 
-                placeholder="e.g. Solfeggio Solitude" 
-                value={newArtist} 
+              <label className="text-xs font-semibold text-stone-600 dark:text-stone-300">Artist / Performer</label>
+              <input
+                type="text"
+                placeholder="e.g. Solfeggio Solitude"
+                value={newArtist}
                 onChange={(e) => setNewArtist(e.target.value)}
-                className="p-3 bg-pink-50/40 rounded-xl outline-none border border-pink-50 text-xs text-pink-700 focus:border-pink-200"
+                className="h-11 px-3.5 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl outline-none border border-stone-200/80 dark:border-[#342f2b] text-sm text-stone-800 dark:text-stone-100 focus:border-pink-400"
               />
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="flex flex-col gap-1.5">
-              <span className="text-[9px] font-bold text-pink-400 uppercase tracking-wider pl-1 font-sans">Cover Emoji</span>
-              <input 
-                type="text" 
-                placeholder="e.g. 🧘, 🌧️, 🎷" 
-                value={newEmoji} 
+              <label className="text-xs font-semibold text-stone-600 dark:text-stone-300">Cover Icon</label>
+              <input
+                type="text"
+                placeholder="e.g. 🧘, 🌧️, 🎷"
+                value={newEmoji}
                 onChange={(e) => setNewEmoji(e.target.value)}
-                className="p-3 bg-pink-50/40 rounded-xl outline-none border border-pink-50 text-xs text-pink-700 focus:border-pink-200 text-center"
+                className="h-11 px-3.5 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl outline-none border border-stone-200/80 dark:border-[#342f2b] text-sm text-stone-800 dark:text-stone-100 focus:border-pink-400 text-center"
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <span className="text-[9px] font-bold text-pink-400 uppercase tracking-wider pl-1 font-sans">Target Genre Category</span>
+              <label className="text-xs font-semibold text-stone-600 dark:text-stone-300">Genre Category</label>
               <select
                 value={newGenre}
                 onChange={(e) => setNewGenre(e.target.value)}
-                className="p-3 bg-pink-50/40 rounded-xl outline-none border border-pink-50 text-xs text-pink-700 focus:border-pink-200"
+                className="h-11 px-3.5 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl outline-none border border-stone-200/80 dark:border-[#342f2b] text-sm text-stone-800 dark:text-stone-100 focus:border-pink-400"
               >
                 {CATEGORIES.filter(c => c.id !== 'all').map(c => (
-                  <option key={c.id} value={c.id}>{c.emoji} {c.label}</option>
+                  <option key={c.id} value={c.id}>{c.label}</option>
                 ))}
               </select>
             </div>
             <div className="flex flex-col gap-1.5 md:col-span-1">
-              <span className="text-[9px] font-bold text-pink-400 uppercase tracking-wider pl-1 font-sans">Song URL (Standard MP3 Link)</span>
-              <input 
-                type="text" 
-                placeholder="https://example.com/audio.mp3" 
-                value={newUrl} 
+              <label className="text-xs font-semibold text-stone-600 dark:text-stone-300">Audio URL (MP3)</label>
+              <input
+                type="text"
+                placeholder="https://example.com/audio.mp3"
+                value={newUrl}
                 onChange={(e) => setNewUrl(e.target.value)}
-                className="p-3 bg-pink-50/40 rounded-xl outline-none border border-pink-50 text-xs text-pink-700 focus:border-pink-200"
+                className="h-11 px-3.5 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl outline-none border border-stone-200/80 dark:border-[#342f2b] text-sm text-stone-800 dark:text-stone-100 focus:border-pink-400"
               />
             </div>
           </div>
-          <button 
+          <button
             type="button"
             onClick={handleAddSong}
             disabled={!newTitle}
-            className="w-full py-3.5 bg-gradient-to-r from-pink-500 to-rose-400 hover:opacity-90 active:scale-98 text-white rounded-2xl text-[9px] font-black uppercase tracking-widest disabled:opacity-50 transition-all cursor-pointer"
+            className="w-full h-11 bg-pink-600 hover:bg-pink-700 active:scale-[0.99] text-white rounded-xl text-xs font-semibold disabled:opacity-50 transition-all cursor-pointer"
           >
-            Add To Sanctuary Soundbank 📥
+            Add to Soundbank
           </button>
         </div>
       )}
 
-      {/* TAB CONTENTS */}
-
       {/* TAB 1: DISCOVER TAB */}
       {activeTab === 'discover' && (
         <>
-          {/* HIGH-TOUCH DYNAMIC TRENDING HERO FOR DIVERSE ARTISTS */}
-          <section className="space-y-4">
+          {/* FEATURED RELEASES */}
+          <section className="space-y-3">
             <div className="flex justify-between items-center px-1">
-              <h3 className="text-xl font-serif text-pink-500 italic flex items-center gap-1">
-                <Flame size={18} className="text-orange-400 animate-pulse" />
-                Featured & Popular Releases 
+              <h3 className="text-lg font-serif text-stone-900 dark:text-stone-100 flex items-center gap-2">
+                <Flame size={18} className="text-pink-600 dark:text-pink-400" />
+                Featured & Popular Releases
               </h3>
-              <span className="text-[9px] font-black text-pink-400 bg-pink-50 border border-pink-100/50 px-3 py-1 rounded-full uppercase tracking-widest">
-                🔥 Hot Picks
+              <span className="text-[11px] font-medium text-pink-600 dark:text-pink-400 bg-pink-50 dark:bg-pink-950/30 border border-pink-200/70 dark:border-pink-900/40 px-2.5 py-0.5 rounded-md">
+                Curated Picks
               </span>
             </div>
-            
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
               {trendingSongs.map((song) => {
                 const songIdx = fullLibrary.indexOf(song);
                 const isCurrent = currentSongIndex === songIdx;
@@ -711,41 +717,42 @@ const MusicRoom: React.FC<MusicRoomProps> = ({
                 const isLocked = isSongPremiumLocked(song);
 
                 return (
-                  <div 
-                    key={song.id} 
+                  <div
+                    key={song.id}
                     onClick={() => handleSongSelect(songIdx)}
-                    className="group relative aspect-square bg-gradient-to-br from-white to-pink-50/10 rounded-[2.2rem] border border-pink-100/40 overflow-hidden cursor-pointer hover:shadow-xl hover:shadow-pink-100/40 transition-all hover:scale-[1.03]"
+                    className={`group relative aspect-square bg-white dark:bg-[#1a1816] rounded-2xl border overflow-hidden cursor-pointer transition-all hover:shadow-md ${isCurrent ? 'border-pink-500 ring-1 ring-pink-500/30' : 'border-stone-200/80 dark:border-[#2e2a26] hover:border-pink-300 dark:hover:border-pink-700'}`}
                   >
-                    <div className="absolute inset-0 bg-gradient-to-t from-pink-900/90 via-pink-700/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-4">
-                      <p className="text-white font-serif italic text-xs truncate leading-snug">{song.title}</p>
-                      <p className="text-pink-200 text-[8px] uppercase font-black tracking-widest truncate mt-0.5">{song.artist}</p>
-                      <div className="text-[7px] text-pink-100 uppercase tracking-tight truncate border-t border-pink-400/30 mt-1 pt-1 italic font-serif">
-                        📻 Album: {(song as any).album}
+                    <div className="absolute inset-0 bg-stone-900/85 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3.5">
+                      <p className="text-white font-semibold text-xs truncate leading-snug">{song.title}</p>
+                      <p className="text-stone-300 text-[11px] truncate mt-0.5">{song.artist}</p>
+                      <div className="text-[10px] text-stone-400 truncate border-t border-white/15 mt-1.5 pt-1">
+                        {(song as any).album}
                       </div>
-                    </div>
-                    
-                    <div className="w-full h-full flex flex-col items-center justify-center p-4">
-                      {isLocked && (
-                        <div className="absolute top-3 left-3 w-6 h-6 bg-pink-100 dark:bg-stone-800 rounded-full flex items-center justify-center text-[10px] shadow-sm z-10 text-pink-600">
-                          🔒
-                        </div>
-                      )}
-                      <div className="text-4xl mb-2 transition-transform duration-300 group-hover:scale-125">
-                        {song.coverEmoji}
-                      </div>
-                      <span className="text-[10px] font-serif italic text-pink-600 font-black truncate max-w-full block group-hover:opacity-0 transition-opacity">{song.title}</span>
-                      <span className="text-[8px] text-gray-400 font-bold uppercase tracking-wider truncate max-w-full block group-hover:opacity-0 transition-opacity">{song.artist}</span>
                     </div>
 
-                    <button 
+                    <div className="w-full h-full flex flex-col items-center justify-center p-3.5 text-center">
+                      {isLocked && (
+                        <div className="absolute top-2.5 left-2.5 w-6 h-6 bg-stone-100 dark:bg-[#23201d] rounded-full flex items-center justify-center z-10 text-stone-600 dark:text-stone-300">
+                          <Lock size={11} />
+                        </div>
+                      )}
+                      <div className="text-3xl mb-2 transition-transform duration-300 group-hover:scale-110">
+                        {song.coverEmoji}
+                      </div>
+                      <span className="text-xs font-semibold text-stone-800 dark:text-stone-100 truncate max-w-full block group-hover:opacity-0 transition-opacity">{song.title}</span>
+                      <span className="text-[11px] text-stone-500 dark:text-stone-400 truncate max-w-full block group-hover:opacity-0 transition-opacity">{song.artist}</span>
+                    </div>
+
+                    <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         onToggleFavorite(song.id);
                       }}
-                      className="absolute top-3 right-3 w-7 h-7 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center text-xs shadow-sm z-10 hover:scale-110 active:scale-95 transition-all text-pink-500"
+                      aria-label={isFav ? 'Remove from favorites' : 'Add to favorites'}
+                      className="absolute top-2.5 right-2.5 w-7 h-7 bg-white/90 dark:bg-[#23201d]/90 border border-stone-200/70 dark:border-[#342f2b] rounded-full flex items-center justify-center z-10 hover:scale-105 active:scale-95 transition-all text-pink-600 dark:text-pink-400 cursor-pointer"
                     >
-                      {isFav ? '💖' : '🤍'}
+                      <Heart size={13} className={isFav ? 'fill-pink-600 dark:fill-pink-400' : ''} />
                     </button>
                   </div>
                 );
@@ -753,40 +760,40 @@ const MusicRoom: React.FC<MusicRoomProps> = ({
             </div>
           </section>
 
-          {/* DYNAMIC SCROLLABLE CATEGORIES/GENRES */}
-          <section className="space-y-4">
-            <h3 className="text-xl font-serif text-pink-500 italic pl-1">Browse Sanctuary Genres</h3>
-            <div className="flex gap-3 overflow-x-auto pb-3 scrollbar-hide select-none">
+          {/* SCROLLABLE CATEGORIES */}
+          <section className="space-y-3">
+            <h3 className="text-lg font-serif text-stone-900 dark:text-stone-100 px-1">Browse Genres</h3>
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide select-none">
               {CATEGORIES.map((cat) => (
                 <button
                   key={cat.id}
                   type="button"
                   onClick={() => handleCategoryChange(cat.id)}
-                  className={`flex items-center gap-2.5 px-5 py-3 rounded-2xl border transition-all whitespace-nowrap text-xs font-black uppercase tracking-wider shrink-0 cursor-pointer ${activeCategory === cat.id ? 'bg-gradient-to-r from-pink-500 to-rose-450 text-white border-pink-500 shadow-md shadow-pink-100' : 'bg-white text-pink-400 border-pink-50 hover:border-pink-200'}`}
+                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl border transition-all whitespace-nowrap text-xs font-medium shrink-0 cursor-pointer ${activeCategory === cat.id ? 'bg-pink-600 text-white border-pink-600 shadow-xs' : 'bg-white dark:bg-[#1a1816] text-stone-600 dark:text-stone-300 border-stone-200/80 dark:border-[#2e2a26] hover:border-pink-300 dark:hover:border-pink-700'}`}
                 >
-                  <span className="text-sm">{cat.emoji}</span>
-                  <span>{cat.id === 'all' ? 'All' : cat.id}</span>
+                  <span>{cat.emoji}</span>
+                  <span>{cat.label}</span>
                 </button>
               ))}
             </div>
           </section>
 
-          {/* DENSE SEARCH LIST */}
-          <section className="space-y-4">
+          {/* TRACK LIST */}
+          <section className="space-y-3">
             <div className="flex justify-between items-center px-1">
-              <h4 className="text-sm font-bold text-pink-900 tracking-wide uppercase">
-                {activeCategory === 'all' ? 'Lumina Full Sanctuary Library' : `${activeCategory} Collection`} ({filteredSongs.length})
+              <h4 className="text-sm font-semibold text-stone-800 dark:text-stone-100">
+                {activeCategory === 'all' ? 'Full Audio Library' : `${CATEGORIES.find(c => c.id === activeCategory)?.label || activeCategory} Collection`} <span className="text-stone-400 font-normal tabular-nums">({filteredSongs.length})</span>
               </h4>
-              <span className="text-[8px] text-gray-400 font-mono">Tap Track to Play</span>
+              <span className="text-xs text-stone-400 dark:text-stone-500">Tap track to play</span>
             </div>
 
             {filteredSongs.length === 0 ? (
-              <div className="text-center py-20 bg-white rounded-[3rem] border border-pink-50">
-                <span className="text-4xl block mb-2">🐚</span>
-                <p className="text-xs text-pink-400 italic font-serif">Empty echo... We could not find any songs matching "{searchQuery}" in {activeCategory}.</p>
+              <div className="text-center py-16 bg-white dark:bg-[#1a1816] rounded-2xl border border-stone-200/80 dark:border-[#2e2a26]">
+                <Music size={28} className="mx-auto text-stone-300 dark:text-stone-600 mb-2" />
+                <p className="text-sm text-stone-500 dark:text-stone-400">No tracks matched "{searchQuery}" in this category.</p>
               </div>
             ) : (
-              <div className="grid gap-3.5">
+              <div className="grid gap-2.5">
                 {filteredSongs.map((song) => {
                   const songIdx = fullLibrary.indexOf(song);
                   const isCurrent = currentSongIndex === songIdx;
@@ -794,33 +801,34 @@ const MusicRoom: React.FC<MusicRoomProps> = ({
                   const isLocked = isSongPremiumLocked(song);
 
                   return (
-                    <div 
+                    <div
                       key={song.id}
                       onClick={() => handleSongSelect(songIdx)}
-                      className={`group bg-white p-4.5 rounded-[2rem] border transition-all duration-300 flex items-center justify-between cursor-pointer relative ${isCurrent ? 'border-pink-300 ring-2 ring-pink-100 bg-pink-50/10' : 'border-pink-50 hover:border-pink-200'}`}
+                      className={`group bg-white dark:bg-[#1a1816] p-3.5 rounded-2xl border transition-all flex items-center justify-between gap-3 cursor-pointer relative ${isCurrent ? 'border-pink-500 ring-1 ring-pink-500/20 bg-pink-50/30 dark:bg-pink-950/10' : 'border-stone-200/80 dark:border-[#2e2a26] hover:border-pink-300 dark:hover:border-pink-700'}`}
                     >
-                      <div className="flex items-center gap-4.5">
-                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl shadow-inner transition-all duration-300 ${isCurrent ? 'bg-pink-100 scale-105 rotate-3' : 'bg-pink-50/40 group-hover:scale-105'}`}>
+                      <div className="flex items-center gap-3.5 min-w-0">
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0 border transition-all ${isCurrent ? 'bg-pink-50 dark:bg-pink-950/30 border-pink-200 dark:border-pink-800' : 'bg-[#faf8f6] dark:bg-[#23201d] border-stone-200/60 dark:border-[#342f2b]'}`}>
                           {song.coverEmoji}
                         </div>
-                        <div>
-                          <h5 className={`font-serif text-sm font-bold truncate leading-snug flex items-center gap-1.5 ${isCurrent ? 'text-pink-600' : 'text-gray-700'}`}>
-                            {song.title}
+                        <div className="min-w-0">
+                          <h5 className={`text-sm font-semibold truncate leading-snug flex items-center gap-1.5 ${isCurrent ? 'text-pink-600 dark:text-pink-400' : 'text-stone-800 dark:text-stone-100'}`}>
+                            <span className="truncate">{song.title}</span>
                             {isLocked && (
-                              <span className="text-[9px] bg-pink-50 dark:bg-stone-850 border border-pink-100/40 text-pink-500 px-1.5 py-0.5 rounded-full font-black uppercase tracking-wider">🔒 Prem</span>
+                              <span className="text-[10px] bg-stone-100 dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] text-stone-600 dark:text-stone-300 px-1.5 py-0.5 rounded font-medium inline-flex items-center gap-1 shrink-0">
+                                <Lock size={9} /> Pro
+                              </span>
                             )}
                           </h5>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-[10px] font-bold text-pink-400 uppercase tracking-widest">{song.artist}</span>
-                            <span className="text-gray-300 text-[9px] font-thin">•</span>
-                            <span className="text-[9px] text-gray-400 font-serif italic">Album: {(song as any).album}</span>
+                          <div className="flex items-center gap-1.5 mt-0.5 text-xs text-stone-500 dark:text-stone-400 truncate">
+                            <span className="font-medium truncate">{song.artist}</span>
+                            <span className="text-stone-300 dark:text-stone-600">•</span>
+                            <span className="truncate">{(song as any).album}</span>
                           </div>
                         </div>
                       </div>
 
-                      {/* RIGHT MENU DROPDOWNS AND PLAY BUTTONS */}
-                      <div className="flex items-center gap-4">
-                        {/* PLAYLIST ADD OPTION */}
+                      {/* ACTIONS */}
+                      <div className="flex items-center gap-2 shrink-0">
                         <div className="relative">
                           <button
                             type="button"
@@ -828,15 +836,15 @@ const MusicRoom: React.FC<MusicRoomProps> = ({
                               e.stopPropagation();
                               setActiveDropdownSongId(activeDropdownSongId === song.id ? null : song.id);
                             }}
-                            className="p-2 border border-pink-50 text-pink-400 hover:text-pink-600 rounded-xl hover:bg-pink-50/50 transition-colors"
-                            title="Add to Custom Playlist"
+                            className="p-2 border border-stone-200/80 dark:border-[#342f2b] text-stone-500 dark:text-stone-400 hover:text-pink-600 dark:hover:text-pink-400 rounded-xl hover:bg-stone-50 dark:hover:bg-[#23201d] transition-colors cursor-pointer"
+                            title="Add to Playlist"
                           >
                             <ListPlus size={15} />
                           </button>
 
                           {activeDropdownSongId === song.id && (
-                            <div className="absolute right-0 mt-2 w-48 bg-white border border-pink-100 rounded-2xl shadow-xl py-2 z-30 animate-fadeIn text-left">
-                              <p className="px-3.5 py-1 text-[8px] font-black text-pink-400 uppercase tracking-widest border-b border-pink-50">Add to Playlist</p>
+                            <div className="absolute right-0 mt-2 w-52 bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] rounded-xl shadow-lg py-1.5 z-30 animate-fadeIn text-left">
+                              <p className="px-3.5 py-1.5 text-[11px] font-semibold text-stone-400 dark:text-stone-500 border-b border-stone-100 dark:border-[#2e2a26]">Add to Playlist</p>
                               {playlists.map(pl => (
                                 <button
                                   key={pl.id}
@@ -845,12 +853,12 @@ const MusicRoom: React.FC<MusicRoomProps> = ({
                                     e.stopPropagation();
                                     addSongToPlaylist(song.id, pl.id);
                                   }}
-                                  className="w-full text-left px-4 py-2 text-xs text-gray-600 hover:bg-pink-50 hover:text-pink-600 transition-colors truncate"
+                                  className="w-full text-left px-3.5 py-2 text-xs text-stone-700 dark:text-stone-200 hover:bg-stone-50 dark:hover:bg-[#23201d] hover:text-pink-600 dark:hover:text-pink-400 transition-colors truncate cursor-pointer"
                                 >
                                   {pl.name}
                                 </button>
                               ))}
-                              <div className="border-t border-pink-50 mt-1 pt-1">
+                              <div className="border-t border-stone-100 dark:border-[#2e2a26] mt-1 pt-1">
                                 <button
                                   type="button"
                                   onClick={(e) => {
@@ -858,33 +866,33 @@ const MusicRoom: React.FC<MusicRoomProps> = ({
                                     setShowCreatePlaylistModal(true);
                                     setActiveDropdownSongId(null);
                                   }}
-                                  className="w-full text-left px-4 py-2 text-[10px] font-bold text-pink-500 hover:text-pink-700 transition-colors uppercase tracking-wider"
+                                  className="w-full text-left px-3.5 py-2 text-xs font-semibold text-pink-600 dark:text-pink-400 hover:bg-stone-50 dark:hover:bg-[#23201d] transition-colors flex items-center gap-1.5 cursor-pointer"
                                 >
-                                  ➕ Create Playlist
+                                  <FolderPlus size={13} /> New Playlist
                                 </button>
                               </div>
                             </div>
                           )}
                         </div>
 
-                        {/* FAVORITING */}
-                        <button 
+                        <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             onToggleFavorite(song.id);
                           }}
-                          className="text-xl hover:scale-125 transition-transform"
+                          aria-label={isFav ? 'Remove from favorites' : 'Add to favorites'}
+                          className="p-2 rounded-xl hover:bg-stone-50 dark:hover:bg-[#23201d] transition-colors text-stone-400 hover:text-pink-600 cursor-pointer"
                         >
-                          {isFav ? '💖' : '🤍'}
+                          <Heart size={16} className={isFav ? 'fill-pink-600 text-pink-600 dark:fill-pink-400 dark:text-pink-400' : ''} />
                         </button>
 
-                        {/* Play/pause button */}
-                        <button 
+                        <button
                           type="button"
-                          className={`w-9 h-9 rounded-full flex items-center justify-center text-xs shadow-md transition-all ${isCurrent && isMusicPlaying ? 'bg-rose-500 text-white animate-pulse' : 'bg-pink-50 text-pink-400 hover:bg-pink-500 hover:text-white'}`}
+                          aria-label={isCurrent && isMusicPlaying ? 'Pause' : 'Play'}
+                          className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer ${isCurrent && isMusicPlaying ? 'bg-pink-600 text-white' : 'bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] text-stone-600 dark:text-stone-300 hover:bg-pink-600 hover:text-white hover:border-pink-600'}`}
                         >
-                          {isCurrent && isMusicPlaying ? <Pause size={13} /> : <Play size={13} />}
+                          {isCurrent && isMusicPlaying ? <Pause size={14} /> : <Play size={14} className="ml-0.5" />}
                         </button>
                       </div>
                     </div>
@@ -898,52 +906,45 @@ const MusicRoom: React.FC<MusicRoomProps> = ({
 
       {/* TAB 2: PLAYLISTS TAB */}
       {activeTab === 'playlists' && (
-        <fieldset className="space-y-6">
-          <legend className="px-4 py-1 text-[9px] font-black bg-pink-500 text-white rounded-full uppercase tracking-widest">
-            Personalized Soundboards & Playlists
-          </legend>
-
-          <div className="flex md:flex-row flex-col justify-between items-start md:items-center gap-4">
+        <div className="space-y-5">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <div>
-              <h3 className="text-xl font-serif text-pink-500 italic pl-1">Your Custom Playlists</h3>
-              <p className="text-[10px] text-gray-400 mt-0.5">Organize tracks to balance cortisol spikes and maintain optimal baseline levels.</p>
+              <h3 className="text-lg font-serif text-stone-900 dark:text-stone-100">Your Playlists</h3>
+              <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">Curate soundscapes for rest, focus, and hormonal balance.</p>
             </div>
-            
+
             <button
               type="button"
               onClick={() => setShowCreatePlaylistModal(true)}
-              className="px-6 py-3 bg-gradient-to-r from-pink-500 to-rose-450 text-white rounded-2xl text-[9px] font-black uppercase tracking-widest shadow-md transition-all active:scale-95 cursor-pointer"
+              className="h-10 px-4 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-xs font-semibold transition-all active:scale-[0.98] cursor-pointer flex items-center gap-1.5 shrink-0"
             >
-              ➕ Create New Playlist
+              <Plus size={14} /> Create Playlist
             </button>
           </div>
 
-          {/* DYNAMIC PLAYLIST GENERATOR MODAL VIEW */}
           {showCreatePlaylistModal && (
-            <div className="bg-pink-50/65 p-6 rounded-[2.5rem] border border-pink-100 animate-fadeIn space-y-4">
-              <h4 className="font-serif italic text-pink-500">Design New Personalized Playlist</h4>
-              <div className="relative">
-                <input 
-                  type="text" 
-                  placeholder="e.g. My Late Night Womb Relaxer" 
-                  value={newPlaylistName}
-                  onChange={(e) => setNewPlaylistName(e.target.value)}
-                  className="w-full p-4 bg-white rounded-2xl border border-pink-200 font-sans text-xs text-pink-700 outline-none focus:border-pink-300"
-                />
-              </div>
+            <div className="bg-white dark:bg-[#1a1816] p-5 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-xs animate-fadeIn space-y-4">
+              <h4 className="font-serif text-base text-stone-900 dark:text-stone-100">New Playlist</h4>
+              <input
+                type="text"
+                placeholder="e.g. Evening Womb Rest"
+                value={newPlaylistName}
+                onChange={(e) => setNewPlaylistName(e.target.value)}
+                className="w-full h-11 px-3.5 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl border border-stone-200/80 dark:border-[#342f2b] text-sm text-stone-800 dark:text-stone-100 outline-none focus:border-pink-400"
+              />
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={createPlaylist}
-                  disabled={!newPlaylistName}
-                  className="px-6 py-3 bg-pink-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50"
+                  disabled={!newPlaylistName.trim()}
+                  className="h-10 px-5 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-xs font-semibold disabled:opacity-50 cursor-pointer"
                 >
-                  Confirm Playlist
+                  Save Playlist
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowCreatePlaylistModal(false)}
-                  className="px-6 py-3 bg-gray-100 text-gray-400 rounded-xl text-[10px] font-black uppercase tracking-widest"
+                  className="h-10 px-5 bg-stone-100 dark:bg-[#23201d] text-stone-600 dark:text-stone-300 rounded-xl text-xs font-semibold cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -951,51 +952,50 @@ const MusicRoom: React.FC<MusicRoomProps> = ({
             </div>
           )}
 
-          {/* SELECT PLAYLIST COMPONENT HEADER */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {playlists.map((pl) => {
-              const matchedSongs = pl.songs.map(id => fullLibrary.find(s => s.id === id)).filter(Boolean) as Song[];
               const isSelected = selectedPlaylistInfo?.id === pl.id;
 
               return (
-                <div 
+                <div
                   key={pl.id}
                   onClick={() => setSelectedPlaylistInfo(pl)}
-                  className={`bg-white p-6 rounded-[2.5rem] border transition-all duration-300 cursor-pointer relative ${isSelected ? 'border-pink-300 shadow-md shadow-pink-100/50' : 'border-pink-50 hover:border-pink-150'}`}
+                  className={`bg-white dark:bg-[#1a1816] p-5 rounded-2xl border transition-all cursor-pointer relative ${isSelected ? 'border-pink-500 ring-1 ring-pink-500/20 shadow-xs' : 'border-stone-200/80 dark:border-[#2e2a26] hover:border-pink-300 dark:hover:border-pink-700'}`}
                 >
-                  <div className="flex justify-between items-start mb-6">
-                    <span className="text-3xl leading-none">💿</span>
-                    
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] flex items-center justify-center text-pink-600 dark:text-pink-400">
+                      <Disc size={20} />
+                    </div>
+
                     <div className="flex gap-1.5">
-                      {/* DOWNLOAD BUTTON */}
                       <button
                         type="button"
                         onClick={(e) => togglePlaylistOffline(pl.id, e)}
-                        className={`p-2 rounded-xl transition-colors ${pl.isOffline ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-gray-50 text-gray-400 border border-gray-100 hover:text-pink-500'}`}
-                        title={pl.isOffline ? 'Downloaded Offline' : 'Download Playlist'}
+                        className={`p-2 rounded-xl border transition-colors cursor-pointer ${pl.isOffline ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/40' : 'bg-[#faf8f6] dark:bg-[#23201d] text-stone-500 dark:text-stone-400 border-stone-200/80 dark:border-[#342f2b] hover:text-pink-600'}`}
+                        title={pl.isOffline ? 'Downloaded Offline' : 'Save Offline'}
                       >
-                        {pl.isOffline ? <Check size={13} className="stroke-[3]" /> : <Download size={13} />}
+                        {pl.isOffline ? <Check size={14} /> : <Download size={14} />}
                       </button>
 
                       <button
                         type="button"
                         onClick={(e) => deletePlaylist(pl.id, e)}
-                        className="p-2 bg-rose-50 hover:bg-rose-100/60 text-rose-500 border border-rose-100 rounded-xl transition-colors"
+                        className="p-2 bg-[#faf8f6] dark:bg-[#23201d] hover:bg-rose-50 dark:hover:bg-rose-950/30 text-stone-500 hover:text-rose-600 dark:text-stone-400 dark:hover:text-rose-400 border border-stone-200/80 dark:border-[#342f2b] rounded-xl transition-colors cursor-pointer"
                         title="Delete Playlist"
                       >
-                        <Trash2 size={13} />
+                        <Trash2 size={14} />
                       </button>
                     </div>
                   </div>
 
-                  <h4 className="font-serif italic text-pink-900 font-bold text-sm tracking-tight truncate leading-snug">{pl.name}</h4>
-                  <p className="text-[9px] font-bold text-pink-300 uppercase tracking-widest mt-1">{pl.songs.length} Tracks</p>
+                  <h4 className="font-semibold text-stone-900 dark:text-stone-100 text-sm truncate">{pl.name}</h4>
+                  <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5 tabular-nums">{pl.songs.length} tracks</p>
 
-                  <div className="mt-4 border-t border-pink-50/50 pt-4 flex justify-between items-center">
-                    <span className="text-[8px] uppercase tracking-wider font-mono px-2.5 py-1 bg-pink-50 text-pink-400 rounded-full font-bold">
-                      {pl.isOffline ? '📥 Offline Saved' : '☁️ Cloud Synced'}
+                  <div className="mt-4 border-t border-stone-100 dark:border-[#2e2a26] pt-3.5 flex justify-between items-center">
+                    <span className="text-[11px] font-medium px-2.5 py-0.5 bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/70 dark:border-[#342f2b] text-stone-600 dark:text-stone-300 rounded-md">
+                      {pl.isOffline ? 'Offline Saved' : 'Synced'}
                     </span>
-                    
+
                     <button
                       type="button"
                       onClick={(e) => {
@@ -1003,10 +1003,9 @@ const MusicRoom: React.FC<MusicRoomProps> = ({
                         playPlaylist(pl);
                       }}
                       disabled={pl.songs.length === 0}
-                      className="px-4 py-2 bg-pink-50 hover:bg-pink-100/60 text-pink-600 rounded-full text-[9px] font-black uppercase tracking-widest disabled:opacity-50 flex items-center gap-1"
+                      className="px-3 py-1.5 bg-pink-600 hover:bg-pink-700 text-white rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center gap-1 cursor-pointer"
                     >
-                      <Play size={10} />
-                      Play List
+                      <Play size={11} /> Play
                     </button>
                   </div>
                 </div>
@@ -1014,73 +1013,68 @@ const MusicRoom: React.FC<MusicRoomProps> = ({
             })}
           </div>
 
-          {/* PLAYLIST DRILLDOWN VIEW DETAILS */}
           {selectedPlaylistInfo && (
-            <div className="bg-white p-7 rounded-[3rem] border border-pink-100/80 animate-fadeIn space-y-6 mt-6">
-              <div className="flex justify-between items-center border-b border-pink-50 pb-4">
+            <div className="bg-white dark:bg-[#1a1816] p-5 md:p-6 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-xs animate-fadeIn space-y-4">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-stone-100 dark:border-[#2e2a26] pb-4">
                 <div>
-                  <h4 className="font-serif text-lg text-pink-600 font-black italic">{selectedPlaylistInfo.name}</h4>
-                  <p className="text-[9px] text-gray-500 uppercase tracking-widest">Selected playlist tracks • {selectedPlaylistInfo.isOffline ? '📥 Local Storage Downloaded' : '☁️ Active Stream'}</p>
+                  <h4 className="font-serif text-lg text-stone-900 dark:text-stone-100">{selectedPlaylistInfo.name}</h4>
+                  <p className="text-xs text-stone-500 dark:text-stone-400">{selectedPlaylistInfo.isOffline ? 'Saved for offline listening' : 'Active stream'}</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => playPlaylist(selectedPlaylistInfo)}
                   disabled={selectedPlaylistInfo.songs.length === 0}
-                  className="px-6 py-2.5 bg-pink-500 hover:bg-pink-600 text-white rounded-full text-xs font-black uppercase tracking-widest shadow-md shadow-pink-150 flex items-center gap-1.5"
+                  className="h-10 px-4 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                 >
-                  <Play size={12} />
-                  Play Full Playlist
+                  <Play size={13} /> Play All
                 </button>
               </div>
 
               {selectedPlaylistInfo.songs.length === 0 ? (
-                <div className="text-center py-10 bg-pink-50/20 rounded-[2rem] border border-dashed border-pink-100">
-                  <p className="text-xs text-pink-400 font-serif italic mb-2">This playlist is crying for tunes! 🐚</p>
+                <div className="text-center py-10 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl border border-dashed border-stone-200 dark:border-[#342f2b]">
+                  <p className="text-sm text-stone-500 dark:text-stone-400 mb-2">This playlist has no tracks yet.</p>
                   <button
                     type="button"
                     onClick={() => setActiveTab('discover')}
-                    className="text-[9px] font-black text-pink-500 uppercase tracking-wider underline cursor-pointer"
+                    className="text-xs font-semibold text-pink-600 dark:text-pink-400 hover:underline cursor-pointer"
                   >
-                    Go browse Discover tab to add songs!
+                    Browse Discover to add tracks
                   </button>
                 </div>
               ) : (
-                <div className="divide-y divide-pink-50/40">
+                <div className="divide-y divide-stone-100 dark:divide-[#2e2a26]">
                   {selectedPlaylistInfo.songs.map(songId => {
                     const found = fullLibrary.find(s => s.id === songId);
                     if (!found) return null;
                     const songIdx = fullLibrary.indexOf(found);
                     const isCurrent = currentSongIndex === songIdx;
-
                     const isLocked = isSongPremiumLocked(found);
 
                     return (
-                      <div 
+                      <div
                         key={songId}
                         onClick={() => handleSongSelect(songIdx)}
-                        className="py-3 flex items-center justify-between group cursor-pointer hover:bg-pink-50/10 transition-colors"
+                        className="py-3 flex items-center justify-between group cursor-pointer hover:bg-[#faf8f6] dark:hover:bg-[#23201d] px-2 -mx-2 rounded-xl transition-colors"
                       >
-                        <div className="flex items-center gap-3">
-                          <span className="text-2xl">{found.coverEmoji}</span>
-                          <div>
-                            <h5 className={`font-serif text-xs font-bold flex items-center gap-1.5 ${isCurrent ? 'text-pink-600' : 'text-gray-700'}`}>
-                              {found.title}
-                              {isLocked && <span className="text-[7px] bg-pink-100 text-pink-600 px-1 rounded-full uppercase tracking-wider font-bold">🔒 Limit</span>}
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span className="text-2xl shrink-0">{found.coverEmoji}</span>
+                          <div className="min-w-0">
+                            <h5 className={`text-sm font-semibold flex items-center gap-1.5 truncate ${isCurrent ? 'text-pink-600 dark:text-pink-400' : 'text-stone-800 dark:text-stone-100'}`}>
+                              <span className="truncate">{found.title}</span>
+                              {isLocked && <span className="text-[10px] bg-stone-100 dark:bg-[#23201d] text-stone-600 dark:text-stone-300 px-1.5 py-0.5 rounded font-medium">Pro</span>}
                             </h5>
-                            <p className="text-[9px] text-pink-300 font-bold uppercase tracking-wider">{found.artist}</p>
+                            <p className="text-xs text-stone-500 dark:text-stone-400 truncate">{found.artist}</p>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={(e) => removeSongFromPlaylist(found.id, selectedPlaylistInfo.id, e)}
-                            className="p-1 px-2.5 bg-gray-50 group-hover:bg-rose-50 text-gray-400 group-hover:text-rose-500 rounded-xl text-[9px] font-black uppercase transition-all"
-                            title="Remove Song from Playlist"
-                          >
-                            Remove ✕
-                          </button>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => removeSongFromPlaylist(found.id, selectedPlaylistInfo.id, e)}
+                          className="px-2.5 py-1.5 bg-[#faf8f6] dark:bg-[#23201d] hover:bg-rose-50 dark:hover:bg-rose-950/30 text-stone-500 dark:text-stone-400 hover:text-rose-600 dark:hover:text-rose-400 border border-stone-200/80 dark:border-[#342f2b] rounded-lg text-xs font-medium transition-all cursor-pointer shrink-0"
+                          title="Remove from Playlist"
+                        >
+                          Remove
+                        </button>
                       </div>
                     );
                   })}
@@ -1088,61 +1082,62 @@ const MusicRoom: React.FC<MusicRoomProps> = ({
               )}
             </div>
           )}
-        </fieldset>
+        </div>
       )}
 
       {/* TAB 3: FAVORITES TAB */}
       {activeTab === 'favorites' && (
-        <fieldset className="space-y-4">
-          <legend className="px-4 py-1 text-[9px] font-black bg-pink-500 text-white rounded-full uppercase tracking-widest">
-            Your Premium Liked Grooves
-          </legend>
-
-          <h3 className="text-xl font-serif text-pink-500 italic pl-1">Favorite Sanctuary Hits ({favoriteSongsCollected.length})</h3>
+        <div className="space-y-4">
+          <h3 className="text-lg font-serif text-stone-900 dark:text-stone-100 px-1">
+            Liked Tracks <span className="text-stone-400 text-sm font-sans font-normal tabular-nums">({favoriteSongsCollected.length})</span>
+          </h3>
 
           {favoriteSongsCollected.length === 0 ? (
-            <div className="text-center py-24 bg-white rounded-[3rem] border border-pink-50">
-              <span className="text-4xl block mb-2">🐚</span>
-              <p className="text-xs text-pink-400 italic font-serif">You haven't liked any songs yet. Press '💖' on Discover cards to unlock quick lists!</p>
+            <div className="text-center py-16 bg-white dark:bg-[#1a1816] rounded-2xl border border-stone-200/80 dark:border-[#2e2a26]">
+              <Heart size={28} className="mx-auto text-stone-300 dark:text-stone-600 mb-2" />
+              <p className="text-sm text-stone-500 dark:text-stone-400">You haven&apos;t liked any tracks yet. Tap the heart icon on any song to save it here.</p>
             </div>
           ) : (
-            <div className="grid gap-3">
+            <div className="grid gap-2.5">
               {favoriteSongsCollected.map((song) => {
                 const songIdx = fullLibrary.indexOf(song);
                 const isCurrent = currentSongIndex === songIdx;
                 const isLocked = isSongPremiumLocked(song);
 
                 return (
-                  <div 
+                  <div
                     key={song.id}
                     onClick={() => handleSongSelect(songIdx)}
-                    className={`bg-white p-4 rounded-3xl border flex items-center justify-between cursor-pointer transition-all ${isCurrent ? 'border-pink-300 bg-pink-50/10' : 'border-pink-50 hover:border-pink-150'}`}
+                    className={`bg-white dark:bg-[#1a1816] p-3.5 rounded-2xl border flex items-center justify-between cursor-pointer transition-all ${isCurrent ? 'border-pink-500 ring-1 ring-pink-500/20' : 'border-stone-200/80 dark:border-[#2e2a26] hover:border-pink-300 dark:hover:border-pink-700'}`}
                   >
-                    <div className="flex items-center gap-4">
-                      <span className="text-2xl">{song.coverEmoji}</span>
-                      <div>
-                        <h4 className={`font-serif text-sm font-bold flex items-center gap-1.5 ${isCurrent ? 'text-pink-700' : 'text-gray-700'}`}>
-                          {song.title}
-                          {isLocked && <span className="text-[7px] bg-pink-100 text-pink-600 px-1 rounded-full uppercase tracking-wider font-bold">🔒 Premium</span>}
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      <span className="text-2xl shrink-0">{song.coverEmoji}</span>
+                      <div className="min-w-0">
+                        <h4 className={`text-sm font-semibold flex items-center gap-1.5 truncate ${isCurrent ? 'text-pink-600 dark:text-pink-400' : 'text-stone-800 dark:text-stone-100'}`}>
+                          <span className="truncate">{song.title}</span>
+                          {isLocked && <span className="text-[10px] bg-stone-100 dark:bg-[#23201d] text-stone-600 dark:text-stone-300 px-1.5 py-0.5 rounded font-medium">Pro</span>}
                         </h4>
-                        <p className="text-[9px] text-pink-300 font-bold uppercase tracking-wider">{song.artist}</p>
+                        <p className="text-xs text-stone-500 dark:text-stone-400 truncate">{song.artist}</p>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 shrink-0">
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           onToggleFavorite(song.id);
                         }}
-                        className="text-xl hover:scale-125 transition-transform"
+                        className="p-2 rounded-xl hover:bg-stone-50 dark:hover:bg-[#23201d] text-pink-600 dark:text-pink-400 cursor-pointer"
                       >
-                        💖
+                        <Heart size={16} className="fill-pink-600 dark:fill-pink-400" />
                       </button>
-                      
-                      <button className="w-8 h-8 rounded-full bg-pink-500 text-white flex items-center justify-center shadow-sm">
-                        {isCurrent && isMusicPlaying ? <Pause size={12} /> : <Play size={12} />}
+
+                      <button
+                        type="button"
+                        className="w-9 h-9 rounded-xl bg-pink-600 text-white flex items-center justify-center cursor-pointer"
+                      >
+                        {isCurrent && isMusicPlaying ? <Pause size={14} /> : <Play size={14} className="ml-0.5" />}
                       </button>
                     </div>
                   </div>
@@ -1150,303 +1145,289 @@ const MusicRoom: React.FC<MusicRoomProps> = ({
               })}
             </div>
           )}
-        </fieldset>
+        </div>
       )}
 
       {/* TAB 4: RECENTLY PLAYED TAB */}
       {activeTab === 'recent' && (
-        <fieldset className="space-y-4">
-          <legend className="px-4 py-1 text-[9px] font-black bg-pink-500 text-white rounded-full uppercase tracking-widest">
-            History Archives
-          </legend>
-
-          <h3 className="text-xl font-serif text-pink-500 italic pl-1">Recently Played Songs</h3>
+        <div className="space-y-4">
+          <h3 className="text-lg font-serif text-stone-900 dark:text-stone-100 px-1">Recently Played</h3>
 
           {recentSongsCollected.length === 0 ? (
-            <div className="text-center py-20 bg-white rounded-[3rem] border border-pink-50">
-              <span className="text-3xl block mb-2">📻</span>
-              <p className="text-xs text-pink-400 italic">No history logged yet. Listen to tracks to activate logger.</p>
+            <div className="text-center py-16 bg-white dark:bg-[#1a1816] rounded-2xl border border-stone-200/80 dark:border-[#2e2a26]">
+              <Clock size={28} className="mx-auto text-stone-300 dark:text-stone-600 mb-2" />
+              <p className="text-sm text-stone-500 dark:text-stone-400">No listening history yet. Play a track to start your log.</p>
             </div>
           ) : (
-            <div className="grid gap-3">
+            <div className="grid gap-2.5">
               {recentSongsCollected.map((song) => {
                 const songIdx = fullLibrary.indexOf(song);
                 const isCurrent = currentSongIndex === songIdx;
                 const isLocked = isSongPremiumLocked(song);
 
                 return (
-                  <div 
+                  <div
                     key={song.id}
                     onClick={() => handleSongSelect(songIdx)}
-                    className="bg-white p-4.5 rounded-3xl border border-pink-50 flex justify-between items-center cursor-pointer hover:border-pink-200"
+                    className={`bg-white dark:bg-[#1a1816] p-3.5 rounded-2xl border flex justify-between items-center cursor-pointer transition-all ${isCurrent ? 'border-pink-500 ring-1 ring-pink-500/20' : 'border-stone-200/80 dark:border-[#2e2a26] hover:border-pink-300 dark:hover:border-pink-700'}`}
                   >
-                    <div className="flex items-center gap-3.5">
-                      <span className="text-2xl">{song.coverEmoji}</span>
-                      <div>
-                        <h4 className="font-serif text-xs font-bold text-pink-900 leading-snug flex items-center gap-1.5">
-                          {song.title}
-                          {isLocked && <span className="text-[7px] bg-pink-100 text-pink-600 px-1.5 py-0.5 rounded-full uppercase tracking-wider font-bold">🔒 Prem</span>}
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      <span className="text-2xl shrink-0">{song.coverEmoji}</span>
+                      <div className="min-w-0">
+                        <h4 className="text-sm font-semibold text-stone-800 dark:text-stone-100 leading-snug flex items-center gap-1.5 truncate">
+                          <span className="truncate">{song.title}</span>
+                          {isLocked && <span className="text-[10px] bg-stone-100 dark:bg-[#23201d] text-stone-600 dark:text-stone-300 px-1.5 py-0.5 rounded font-medium">Pro</span>}
                         </h4>
-                        <p className="text-[9px] text-pink-300 font-bold uppercase tracking-widest">{song.artist}</p>
+                        <p className="text-xs text-stone-500 dark:text-stone-400 truncate">{song.artist}</p>
                       </div>
                     </div>
-                    <button className="w-8 h-8 rounded-full bg-pink-50 text-pink-400 flex items-center justify-center">
-                      {isCurrent && isMusicPlaying ? <Pause size={12} /> : <Play size={12} />}
+                    <button
+                      type="button"
+                      className="w-9 h-9 rounded-xl bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] text-stone-600 dark:text-stone-300 flex items-center justify-center shrink-0 cursor-pointer"
+                    >
+                      {isCurrent && isMusicPlaying ? <Pause size={14} /> : <Play size={14} className="ml-0.5" />}
                     </button>
                   </div>
                 );
               })}
             </div>
           )}
-        </fieldset>
+        </div>
       )}
 
       {/* TAB 5: LUMINA MOOD RECOMMENDATIONS */}
       {activeTab === 'mood' && (
-        <fieldset className="space-y-6">
-          <legend className="px-4 py-1 text-[9px] font-black bg-pink-500 text-white rounded-full uppercase tracking-widest">
-            Lumina Smart Cycle recommendations
-          </legend>
-
-          {/* DYNAMIC WELCOME BANNER EXPLAINING MODE */}
-          <section className="bg-gradient-to-br from-pink-500 to-rose-400 p-8 rounded-[3.2rem] text-white space-y-4 shadow-xl shadow-pink-100 relative overflow-hidden">
-            <div className="absolute right-4 bottom-0 opacity-10 text-9xl pointer-events-none select-none">
-              ☕
-            </div>
-            
-            <span className="px-3.5 py-1 text-[8px] font-black bg-white/20 uppercase tracking-widest rounded-full">
-              💫 Recommended Focus: {recommendationDetail.vibe}
+        <div className="space-y-6">
+          <section className="bg-white dark:bg-[#1a1816] p-6 md:p-8 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-xs space-y-4">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium bg-pink-50 dark:bg-pink-950/30 text-pink-600 dark:text-pink-400 border border-pink-200/70 dark:border-pink-900/40 rounded-md">
+              <Headphones size={13} /> Recommended Focus: {recommendationDetail.vibe}
             </span>
 
-            <h3 className="text-2.5xl font-serif italic text-white font-bold leading-tight">
+            <h3 className="text-2xl md:text-3xl font-serif text-stone-900 dark:text-stone-100 leading-tight">
               {recommendationDetail.title}
             </h3>
-            
-            <p className="text-xs text-pink-100 font-serif leading-relaxed mt-2 max-w-2xl">
+
+            <p className="text-sm text-stone-600 dark:text-stone-300 leading-relaxed max-w-2xl">
               {recommendationDetail.desc}
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-3 mt-4 border-t border-white/20 pt-4">
+            <div className="pt-2 border-t border-stone-100 dark:border-[#2e2a26]">
               <button
                 type="button"
                 onClick={generateLuminaMoodPlaylist}
-                className="px-6 py-3 bg-white hover:bg-pink-50 text-pink-600 rounded-2xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-1 shadow-md shadow-pink-900/10 cursor-pointer"
+                className="h-11 px-5 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer transition-all"
               >
-                <Sparkles size={11} className="text-pink-500" />
-                Auto-Generate Cycle Playlist 🪄
+                <Sparkles size={14} />
+                Auto-Generate Cycle Playlist
               </button>
             </div>
           </section>
 
-          {/* CHOSEN SONGS GRID */}
-          <section className="space-y-4">
-            <h4 className="text-sm font-bold text-pink-900 uppercase pl-1">Feminine Energetics Selection</h4>
-            <div className="grid gap-3.5">
+          <section className="space-y-3">
+            <h4 className="text-sm font-semibold text-stone-800 dark:text-stone-100 px-1">Phase-Aligned Selection</h4>
+            <div className="grid gap-2.5">
               {fullLibrary.filter(s => recommendationDetail.targetGenres.some(g => s.tags.includes(g))).slice(0, 5).map(song => {
                 const songIdx = fullLibrary.indexOf(song);
-                const isCurrent = currentSongIndex === songIdx;
                 const isLocked = isSongPremiumLocked(song);
 
                 return (
-                  <div 
+                  <div
                     key={song.id}
                     onClick={() => handleSongSelect(songIdx)}
-                    className="bg-white p-4.5 rounded-[2.2rem] border border-pink-50 flex items-center justify-between cursor-pointer hover:border-pink-200"
+                    className="bg-white dark:bg-[#1a1816] p-3.5 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] flex items-center justify-between cursor-pointer hover:border-pink-300 dark:hover:border-pink-700 transition-all"
                   >
-                    <div className="flex items-center gap-4">
-                      <span className="text-3xl">{song.coverEmoji}</span>
-                      <div>
-                        <h5 className="font-serif text-sm font-bold text-pink-900 leading-none flex items-center gap-1.5">
-                          {song.title}
-                          {isLocked && <span className="text-[7px] bg-pink-100 text-pink-600 px-1.5 py-0.5 rounded-full uppercase tracking-wider font-bold">🔒 Prem</span>}
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      <span className="text-2xl shrink-0">{song.coverEmoji}</span>
+                      <div className="min-w-0">
+                        <h5 className="text-sm font-semibold text-stone-800 dark:text-stone-100 leading-snug flex items-center gap-1.5 truncate">
+                          <span className="truncate">{song.title}</span>
+                          {isLocked && <span className="text-[10px] bg-stone-100 dark:bg-[#23201d] text-stone-600 dark:text-stone-300 px-1.5 py-0.5 rounded font-medium">Pro</span>}
                         </h5>
-                        <p className="text-[9px] text-pink-400 font-bold uppercase tracking-widest mt-1.5">{song.artist}</p>
+                        <p className="text-xs text-stone-500 dark:text-stone-400 truncate mt-0.5">{song.artist}</p>
                       </div>
                     </div>
-                    <span className="text-[8px] font-bold text-pink-300 uppercase tracking-wider bg-pink-50 px-2.5 py-1 rounded-full">
-                      Match Vibe
+                    <span className="text-xs font-medium text-pink-600 dark:text-pink-400 bg-pink-50 dark:bg-pink-950/30 border border-pink-200/60 dark:border-pink-900/40 px-2.5 py-1 rounded-md shrink-0">
+                      Match
                     </span>
                   </div>
                 );
               })}
             </div>
           </section>
-        </fieldset>
+        </div>
       )}
 
-      {/* FULL IMMERSIVE PLAYER CONTROL BAR - FIXED AT FOOTER */}
-      <footer className="fixed bottom-24 left-1/2 -translate-x-1/2 w-[92%] max-w-4xl bg-white/95 backdrop-blur-2xl border border-pink-100 rounded-[2.8rem] p-5 shadow-[0_25px_60px_rgba(244,114,182,0.18)] z-[60] flex flex-col md:flex-row items-center gap-4 transition-all duration-300">
-        
-        {/* SONG META COVER INFO */}
-        <div 
-          onClick={() => setLyricsVisble(!lyricsVisible)} 
-          className="flex items-center gap-3.5 flex-1 min-w-0 w-full md:w-auto cursor-pointer select-none group"
+      {/* PLAYER CONTROL BAR */}
+      <footer className="fixed bottom-20 md:bottom-5 left-1/2 -translate-x-1/2 w-[94%] max-w-4xl bg-white/95 dark:bg-[#1a1816]/95 backdrop-blur-xl border border-stone-200/90 dark:border-[#2e2a26] rounded-2xl p-4 shadow-lg z-[60] flex flex-col md:flex-row items-center gap-4 transition-all duration-300">
+        {/* SONG META */}
+        <div
+          onClick={() => setLyricsVisble(!lyricsVisible)}
+          className="flex items-center gap-3 flex-1 min-w-0 w-full md:w-auto cursor-pointer select-none group"
         >
-          <div className={`w-13 h-13 rounded-2xl bg-gradient-to-br from-pink-100 to-rose-100 flex items-center justify-center text-3xl shadow-md transition-all duration-500 border border-white ${isMusicPlaying ? 'animate-[spin_12s_linear_infinite]' : 'group-hover:rotate-12'}`}>
+          <div className="w-12 h-12 rounded-xl bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] flex items-center justify-center text-2xl shrink-0">
             {currentSong?.coverEmoji || '🎵'}
           </div>
           <div className="min-w-0">
-            <h4 className="text-sm font-serif italic text-pink-600 font-black truncate flex items-center gap-2">
-              {currentSong?.title || 'No Track Loaded'}
-              {lyricsVisible ? (
-                <span className="text-[8px] px-1.5 py-0.5 bg-pink-500 text-white rounded uppercase tracking-wider scale-90">Hide Lyrics</span>
-              ) : (
-                <span className="text-[8px] px-1.5 py-0.5 bg-pink-50 text-pink-400 border border-pink-100 rounded uppercase tracking-wider scale-90">Show Lyrics</span>
-              )}
+            <h4 className="text-sm font-semibold text-stone-900 dark:text-stone-100 truncate flex items-center gap-2">
+              <span className="truncate">{currentSong?.title || 'No Track Loaded'}</span>
+              <span className={`text-[10px] px-2 py-0.5 rounded font-medium shrink-0 ${lyricsVisible ? 'bg-pink-600 text-white' : 'bg-stone-100 dark:bg-[#23201d] text-stone-600 dark:text-stone-300'}`}>
+                {lyricsVisible ? 'Hide Lyrics' : 'Lyrics'}
+              </span>
             </h4>
-            <p className="text-[9px] font-black text-pink-300 uppercase tracking-widest truncate mt-0.5">
-              {currentSong?.artist || 'Select a Song'} • {currentSong?.source === 'internal' ? 'Internal' : 'Licensed Service'}
+            <p className="text-xs text-stone-500 dark:text-stone-400 truncate mt-0.5">
+              {currentSong?.artist || 'Select a Song'}
             </p>
           </div>
         </div>
 
-        {/* PROGRESS SEEK SLIDER CONTROLS */}
+        {/* SEEK SLIDER */}
         <div className="flex flex-col items-center gap-1 w-full md:w-1/3 shrink-0">
-          <div className="flex items-center justify-between text-[9px] font-mono font-bold text-gray-400 w-full px-1">
+          <div className="flex items-center justify-between text-[11px] font-mono text-stone-400 dark:text-stone-500 w-full tabular-nums">
             <span>{formatTime(currentTime)}</span>
             <span>{formatTime(duration)}</span>
           </div>
-          
-          <input 
+
+          <input
             type="range"
             min="0"
             max={duration || 100}
             value={currentTime}
             onChange={handleSeek}
-            className="w-full accent-pink-500 h-1.5 bg-pink-100 rounded-lg cursor-pointer transition-all"
+            className="w-full accent-pink-600 h-1.5 bg-stone-200 dark:bg-[#342f2b] rounded-lg cursor-pointer"
           />
         </div>
 
-        {/* MUSIC CONTROLLERS PANEL */}
-        <div className="flex items-center gap-3 w-full md:w-auto justify-center select-none">
-          {/* SHUFFLE */}
+        {/* PLAYBACK CONTROLS */}
+        <div className="flex items-center gap-2 w-full md:w-auto justify-center select-none">
           <button
             type="button"
             onClick={() => setIsShuffle(!isShuffle)}
-            className={`p-2 rounded-xl transition-all ${isShuffle ? 'text-pink-600 bg-pink-50 scale-110 border border-pink-100/40' : 'text-gray-400 hover:text-pink-500'}`}
+            className={`p-2 rounded-xl transition-all cursor-pointer ${isShuffle ? 'text-pink-600 dark:text-pink-400 bg-pink-50 dark:bg-pink-950/30 border border-pink-200/70 dark:border-pink-900/40' : 'text-stone-400 hover:text-stone-700 dark:hover:text-stone-200'}`}
             title="Shuffle"
           >
-            <Sparkles size={14} className="animate-pulse" />
+            <Sparkles size={15} />
           </button>
 
-          {/* PREVIOUS */}
-          <button 
+          <button
             type="button"
             onClick={onPrev}
-            className="p-2.5 text-pink-400 hover:text-pink-600 hover:bg-pink-50 rounded-full transition-colors font-bold"
+            className="p-2 text-stone-600 dark:text-stone-300 hover:text-pink-600 dark:hover:text-pink-400 hover:bg-stone-100 dark:hover:bg-[#23201d] rounded-xl transition-colors cursor-pointer"
+            aria-label="Previous track"
           >
-            <SkipBack size={18} className="stroke-[2.5]" />
+            <SkipBack size={18} />
           </button>
 
-          {/* PLAY/PAUSE CORE ENGINE PORT */}
-          <button 
+          <button
             type="button"
             onClick={onTogglePlay}
-            className="w-13 h-13 bg-gradient-to-br from-pink-500 to-rose-450 hover:opacity-90 hover:scale-105 active:scale-95 text-white rounded-full flex items-center justify-center shadow-lg shadow-pink-200 border-4 border-white transition-all transition-transform cursor-pointer"
+            className="w-11 h-11 bg-pink-600 hover:bg-pink-700 active:scale-95 text-white rounded-full flex items-center justify-center shadow-sm transition-all cursor-pointer"
+            aria-label={isMusicPlaying ? 'Pause' : 'Play'}
           >
-            {isMusicPlaying ? <Pause size={20} className="stroke-[2.5]" /> : <Play size={20} className="ml-0.5 stroke-[2.5]" />}
+            {isMusicPlaying ? <Pause size={18} /> : <Play size={18} className="ml-0.5" />}
           </button>
 
-          {/* NEXT */}
-          <button 
+          <button
             type="button"
             onClick={onNext}
-            className="p-2.5 text-pink-400 hover:text-pink-600 hover:bg-pink-50 rounded-full transition-colors font-bold"
+            className="p-2 text-stone-600 dark:text-stone-300 hover:text-pink-600 dark:hover:text-pink-400 hover:bg-stone-100 dark:hover:bg-[#23201d] rounded-xl transition-colors cursor-pointer"
+            aria-label="Next track"
           >
-            <SkipForward size={18} className="stroke-[2.5]" />
+            <SkipForward size={18} />
           </button>
 
-          {/* REPEAT BUTTON FLIPPER */}
           <button
             type="button"
             onClick={() => setIsRepeat(isRepeat === 'off' ? 'all' : isRepeat === 'all' ? 'one' : 'off')}
-            className={`p-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${isRepeat !== 'off' ? 'text-pink-600 bg-pink-50 border border-pink-100/40' : 'text-gray-400 hover:text-pink-500'}`}
+            className={`px-2 py-1.5 rounded-xl text-[11px] font-semibold flex items-center gap-1 transition-all cursor-pointer ${isRepeat !== 'off' ? 'text-pink-600 dark:text-pink-400 bg-pink-50 dark:bg-pink-950/30 border border-pink-200/70 dark:border-pink-900/40' : 'text-stone-400 hover:text-stone-700 dark:hover:text-stone-200'}`}
             title={`Repeat: ${isRepeat}`}
           >
-            🔂 {isRepeat}
+            <Repeat size={13} />
+            <span className="capitalize">{isRepeat}</span>
           </button>
         </div>
 
-        {/* VOLUME & LYRICS MINI TOGGLES */}
-        <div className="flex items-center gap-2 border-l border-pink-100 pl-4 w-full md:w-auto justify-end">
-          <button 
+        {/* VOLUME */}
+        <div className="hidden md:flex items-center gap-2 border-l border-stone-200 dark:border-[#2e2a26] pl-3 w-auto justify-end">
+          <button
             type="button"
-            onClick={toggleMute} 
-            className="text-pink-400 hover:text-pink-600 p-1.5 transition-colors"
+            onClick={toggleMute}
+            className="text-stone-500 dark:text-stone-400 hover:text-pink-600 dark:hover:text-pink-400 p-1.5 transition-colors cursor-pointer"
+            aria-label={isMuted ? 'Unmute' : 'Mute'}
           >
             {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
           </button>
-          <input 
-            type="range" 
-            min="0" 
-            max="1" 
-            step="0.05" 
-            value={isMuted ? 0 : volume} 
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.05"
+            value={isMuted ? 0 : volume}
             onChange={handleVolumeChange}
-            className="w-16 h-1 accent-pink-450 cursor-pointer"
+            className="w-16 h-1 accent-pink-600 cursor-pointer"
           />
         </div>
       </footer>
 
-      {/* LYRICS POP DRAWER WITH ESTABLISHED LITERACY */}
+      {/* LYRICS DRAWER */}
       {lyricsVisible && (
-        <fieldset className="bg-white p-6.5 rounded-[2.5rem] border border-pink-100 shadow-xl space-y-4 animate-fadeIn">
-          <legend className="px-4 py-1 text-[9px] font-black bg-pink-500 text-white rounded-full uppercase tracking-widest flex items-center gap-1">
-            <Sparkles size={11} /> Lumina Syncing Lyrics & Visual Equalizer
-          </legend>
-          
-          <div className="flex justify-between items-center text-[10px] font-bold text-gray-400 uppercase tracking-widest border-b border-pink-50 pb-3">
-            <span>Now Reading: {currentSong?.title}</span>
-            <span className="text-pink-500 animate-pulse">● Live Equalizer Connected</span>
+        <div className="bg-white dark:bg-[#1a1816] p-6 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-sm space-y-4 animate-fadeIn">
+          <div className="flex justify-between items-center text-xs text-stone-500 dark:text-stone-400 border-b border-stone-100 dark:border-[#2e2a26] pb-3">
+            <span className="font-semibold text-stone-800 dark:text-stone-100 flex items-center gap-1.5">
+              <Sparkles size={14} className="text-pink-600 dark:text-pink-400" />
+              {currentSong?.title} — Guided Lyrics
+            </span>
+            <span className="text-emerald-600 dark:text-emerald-400 font-medium">Synced</span>
           </div>
 
-          <div className="max-h-56 overflow-y-auto scrollbar-hide py-2 text-center text-xs text-pink-700/80 font-serif italic leading-relaxed space-y-4 font-black">
+          <div className="max-h-56 overflow-y-auto scrollbar-hide py-2 text-center text-sm text-stone-600 dark:text-stone-300 font-serif italic leading-relaxed space-y-3">
             {computedLyrics.map((lyr, idx) => (
-              <p key={idx} className={idx === 2 ? 'text-pink-600 font-bold tracking-wide scale-105 border-y border-pink-50/50 py-2' : ''}>
+              <p key={idx} className={idx === 2 ? 'text-pink-600 dark:text-pink-400 font-semibold border-y border-stone-100 dark:border-[#2e2a26] py-2' : ''}>
                 {lyr}
               </p>
             ))}
           </div>
 
-          <div className="flex items-center gap-2 text-gray-400 text-[8px] font-black uppercase tracking-widest border-t border-pink-50 pt-3">
-            <span>🛡️ COPYRIGHT NOTICE: DIRECT STREAM PROVIDED FROM OPEN LICENSED ARCHIVE.ORG / SOUNDHELIX ASSETS TO PROMPT ZERO-TRUST LICENSING VIOLATIONS.</span>
-          </div>
-        </fieldset>
+          <p className="text-[11px] text-stone-400 dark:text-stone-500 border-t border-stone-100 dark:border-[#2e2a26] pt-3">
+            Streams provided via open-licensed audio assets.
+          </p>
+        </div>
       )}
 
-      {/* PREMIUM SONG LOCK POPUP MODAL */}
+      {/* PREMIUM TRACK MODAL */}
       {lockedSongAttempt && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-[110] animate-fadeIn">
-          <div className="bg-white dark:bg-stone-900 p-8 rounded-[2.5rem] border border-pink-100 dark:border-stone-850 max-w-sm w-full mx-4 text-center space-y-6 shadow-2xl animate-scaleUp text-gray-700 dark:text-stone-200">
-            <div className="w-20 h-20 bg-pink-50 dark:bg-stone-800 text-pink-500 rounded-full flex items-center justify-center text-4xl mx-auto shadow-inner animate-bounce">
-              🎵
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[110] p-4 animate-fadeIn">
+          <div className="bg-white dark:bg-[#1a1816] p-6 md:p-7 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] max-w-sm w-full text-center space-y-5 shadow-xl text-stone-700 dark:text-stone-200">
+            <div className="w-14 h-14 bg-pink-50 dark:bg-pink-950/30 border border-pink-200/70 dark:border-pink-900/40 text-pink-600 dark:text-pink-400 rounded-2xl flex items-center justify-center mx-auto">
+              <Lock size={24} />
             </div>
 
-            <div className="space-y-2">
-              <h4 className="text-xl font-serif font-bold italic text-pink-600 dark:text-pink-400">
+            <div className="space-y-1.5">
+              <h4 className="text-xl font-serif text-stone-900 dark:text-stone-100">
                 Unlock Premium Track
               </h4>
-              <p className="text-xs text-gray-400 dark:text-stone-500 font-bold uppercase tracking-wider">
-                "{lockedSongAttempt.title}" • {lockedSongAttempt.artist}
+              <p className="text-xs text-stone-500 dark:text-stone-400 font-medium">
+                &ldquo;{lockedSongAttempt.title}&rdquo; • {lockedSongAttempt.artist}
               </p>
-              <p className="text-xs text-gray-500 dark:text-stone-405 leading-relaxed pt-2">
-                This relaxing acoustic track is part of the **Premium Sound Therapy Suite**. Access our entire library of prenatal bonding tracks, lofi cycles, classical flow enhancers, and high-frequency Gregorian chants.
+              <p className="text-xs text-stone-600 dark:text-stone-300 leading-relaxed pt-2">
+                This acoustic track is part of the Premium Sound Therapy Suite with prenatal, lo-fi, and sleep soundscapes.
               </p>
             </div>
 
-            <div className="space-y-2 pt-2">
+            <div className="space-y-2 pt-1">
               <button
+                type="button"
                 onClick={() => {
                   setLockedSongAttempt(null);
                   window.dispatchEvent(new CustomEvent('lumina-set-active-tab', { detail: { tab: 'settings', subTab: 'billing' } }));
                 }}
-                className="w-full py-4 bg-gradient-to-r from-pink-500 to-rose-450 text-white rounded-2xl text-[10px] uppercase tracking-widest font-black shadow-lg shadow-pink-100 dark:shadow-none hover:scale-[1.02] active:scale-95 transition-all cursor-pointer"
+                className="w-full h-11 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-xs font-semibold transition-all cursor-pointer"
               >
-                💎 Unlock with Paystack
+                Unlock with Lumina Pro
               </button>
               <button
+                type="button"
                 onClick={() => setLockedSongAttempt(null)}
-                className="w-full py-3 bg-gray-50 dark:bg-stone-800 hover:bg-gray-100 dark:hover:bg-stone-750 rounded-xl text-[9px] uppercase tracking-wider font-bold text-gray-400 dark:text-stone-400 transition-all cursor-pointer"
+                className="w-full h-10 bg-stone-100 dark:bg-[#23201d] hover:bg-stone-200/70 dark:hover:bg-[#2e2a26] rounded-xl text-xs font-medium text-stone-600 dark:text-stone-300 transition-all cursor-pointer"
               >
                 Maybe Later
               </button>

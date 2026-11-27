@@ -402,37 +402,32 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
   };
 
   return (
-    <div id="onboarding_container" className={`min-h-screen ${currentThemeInfo?.bg || 'bg-gradient-to-br from-pink-50 to-indigo-50/30'} flex items-center justify-center p-4 relative overflow-hidden transition-colors duration-500 font-sans`}>
-      {/* Soft background glow circles */}
-      <div className="absolute top-[-10%] left-[-10%] w-[45%] h-[45%] rounded-full blur-[120px] opacity-25 bg-pink-300 dark:bg-pink-900/10 transition-all duration-700 animate-pulse"></div>
-      <div className="absolute bottom-[-10%] right-[-10%] w-[45%] h-[45%] rounded-full blur-[120px] opacity-20 bg-indigo-300 dark:bg-indigo-900/10 transition-all duration-700 animate-pulse"></div>
-
-      <div id="onboarding_card" className="bg-white/80 dark:bg-stone-900/90 backdrop-blur-2xl px-6 py-8 md:px-10 md:py-10 rounded-[2.5rem] shadow-[0_20px_50px_rgba(244,63,94,0.04)] border border-white/50 dark:border-stone-800/50 w-full max-w-lg z-10 flex flex-col justify-between min-h-[580px] relative transition-all">
+    <div id="onboarding_container" className="min-h-screen bg-[#faf8f6] dark:bg-[#11100f] flex items-center justify-center p-4 sm:p-6 transition-colors duration-300 font-sans">
+      <div id="onboarding_card" className="bg-white dark:bg-[#1a1816] px-6 py-7 sm:p-10 rounded-2xl shadow-sm border border-stone-200/80 dark:border-[#2e2a26] w-full max-w-xl flex flex-col justify-between min-h-[560px] relative transition-all">
         
         {/* Step progress header */}
         <div className="space-y-3">
-          <div className="flex justify-between items-center text-[10px] font-black tracking-widest uppercase text-pink-500 transition-colors">
-            <span className="flex items-center gap-1.5 font-bold tracking-widest">
-              <Sparkles size={12} className="text-pink-500 animate-pulse" />
-              LUMINA ONBOARDING FLOW
+          <div className="flex justify-between items-center text-xs font-medium text-stone-500 dark:text-stone-400">
+            <span className="font-semibold text-pink-700 dark:text-pink-400 tracking-wide text-xs">
+              Sanctuary setup
             </span>
-            <span className="font-serif italic font-bold">
+            <span className="tabular-nums font-medium text-stone-600 dark:text-stone-300">
               Step {step} of {totalSteps}
             </span>
           </div>
           
-          <div className="w-full h-1 bg-gray-100 dark:bg-stone-850 rounded-full overflow-hidden">
+          <div className="w-full h-1.5 bg-stone-100 dark:bg-[#23201d] rounded-full overflow-hidden">
             <motion.div 
-              className="h-full bg-gradient-to-r from-pink-400 via-rose-450 to-indigo-500"
+              className="h-full bg-pink-600 rounded-full"
               initial={{ width: '0%' }}
               animate={{ width: `${(step / totalSteps) * 100}%` }}
-              transition={{ type: 'spring', stiffness: 100 }}
-            ></motion.div>
+              transition={{ type: 'spring', stiffness: 120, damping: 20 }}
+            />
           </div>
         </div>
 
         {/* Step display container */}
-        <div className="my-6 flex-grow flex flex-col justify-center min-h-[350px]">
+        <div className="my-6 flex-grow flex flex-col justify-center min-h-[340px]">
           <AnimatePresence mode="wait" custom={step}>
             
             {/* STEP 1: Welcome */}
@@ -444,20 +439,20 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                 exit="exit"
                 custom={1}
                 variants={slideVariants}
-                className="space-y-6 text-center"
+                className="space-y-5 text-center"
                 id="onboarding_step_1"
               >
                 <div className="flex justify-center">
-                  <div className="w-20 h-20 rounded-full bg-pink-50 dark:bg-pink-950/20 flex items-center justify-center text-rose-500 shadow-inner">
-                    <Sparkles size={36} className="text-pink-500 animate-spin-slow" />
+                  <div className="w-16 h-16 rounded-2xl bg-pink-50 border border-pink-200/70 flex items-center justify-center text-pink-600">
+                    <Sparkles size={28} strokeWidth={1.75} />
                   </div>
                 </div>
-                <div className="space-y-3">
-                  <h1 className="text-3xl md:text-4xl font-serif italic text-stone-900 dark:text-stone-100 font-bold leading-tight">
-                    Welcome to Lumina 🌸
+                <div className="space-y-2">
+                  <h1 className="text-3xl sm:text-4xl font-serif text-stone-900 dark:text-stone-100 font-semibold tracking-tight leading-tight">
+                    Welcome to Lumina
                   </h1>
-                  <p className="text-base text-stone-500 dark:text-stone-400 font-serif italic">
-                    Your cycle, your sanctuary.
+                  <p className="text-sm sm:text-base text-stone-600 dark:text-stone-400 max-w-md mx-auto leading-relaxed">
+                    Let&apos;s tailor your cycle predictions, wellness reminders, and personal companion in a few quick steps.
                   </p>
                 </div>
               </motion.div>
@@ -476,20 +471,20 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                 id="onboarding_step_2"
               >
                 <div className="space-y-2 text-center md:text-left">
-                  <div className="inline-flex w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-950/20 items-center justify-center text-pink-500 mb-1">
+                  <div className="inline-flex w-11 h-11 rounded-xl bg-pink-50 dark:bg-pink-950/30 border border-pink-200/70 dark:border-pink-900/50 items-center justify-center text-pink-600 dark:text-pink-400 mb-1">
                     <UserIcon size={20} />
                   </div>
-                  <h2 className="text-2xl font-serif italic text-stone-900 dark:text-stone-100 font-bold">
+                  <h2 className="text-2xl font-serif text-stone-900 dark:text-stone-100 font-semibold">
                     What should we call you?
                   </h2>
-                  <p className="text-xs text-stone-400 dark:text-stone-500">
+                  <p className="text-sm text-stone-500 dark:text-stone-400">
                     Tell us your name and optionally your birthday to tailor predictions.
                   </p>
                 </div>
 
                 <div className="space-y-4">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black tracking-widest uppercase text-pink-400">Name</label>
+                    <label className="text-xs font-semibold text-stone-700 dark:text-stone-300">First name</label>
                     <input
                       type="text"
                       value={name}
@@ -498,24 +493,24 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                         if (validationError) setValidationError(null);
                       }}
                       placeholder="e.g. Sarah"
-                      className="w-full bg-white dark:bg-stone-950 border border-stone-200 dark:border-stone-850 px-5 py-3.5 rounded-2xl text-sm font-bold text-stone-800 dark:text-stone-100 outline-none focus:border-pink-400 dark:focus:border-pink-500 transition-colors shadow-inner"
+                      className="w-full h-11 bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] px-4 rounded-xl text-sm font-medium text-stone-900 dark:text-stone-100 outline-none focus:border-pink-500 transition-colors"
                       autoFocus
                     />
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black tracking-widest uppercase text-stone-400">Date of Birth <span className="text-stone-300 font-normal font-sans tracking-normal italic">(Optional)</span></label>
+                    <label className="text-xs font-semibold text-stone-700 dark:text-stone-300">Date of birth <span className="text-stone-400 dark:text-stone-500 font-normal">(Optional)</span></label>
                     <input
                       type="date"
                       value={dob}
                       onChange={(e) => setDob(e.target.value)}
-                      className="w-full bg-white dark:bg-stone-950 border border-stone-200 dark:border-stone-850 px-5 py-3.5 rounded-2xl text-sm font-bold text-stone-800 dark:text-stone-100 outline-none focus:border-pink-400 dark:focus:border-pink-500 transition-colors shadow-inner"
+                      className="w-full h-11 bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] px-4 rounded-xl text-sm font-medium text-stone-900 dark:text-stone-100 outline-none focus:border-pink-500 transition-colors tabular-nums"
                     />
                   </div>
 
                   {validationError && (
-                    <p className="text-[10px] text-rose-500 font-bold tracking-wide animate-pulse">
-                      ⚠️ {validationError}
+                    <p className="text-xs text-rose-600 dark:text-rose-400 font-medium">
+                      {validationError}
                     </p>
                   )}
                 </div>
@@ -535,19 +530,19 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                 id="onboarding_step_3"
               >
                 <div className="space-y-1 text-center md:text-left">
-                  <div className="inline-flex w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-950/20 items-center justify-center text-pink-500 mb-1">
+                  <div className="inline-flex w-11 h-11 rounded-xl bg-pink-50 dark:bg-pink-950/30 border border-pink-200/70 dark:border-pink-900/50 items-center justify-center text-pink-600 dark:text-pink-400 mb-1">
                     <Sparkles size={20} />
                   </div>
-                  <h2 className="text-2xl font-serif italic text-stone-900 dark:text-stone-100 font-bold">
-                    Choose Your Wellness Avatar Companion
+                  <h2 className="text-2xl font-serif text-stone-900 dark:text-stone-100 font-semibold">
+                    Choose your companion
                   </h2>
-                  <p className="text-xs text-stone-400 dark:text-stone-500">
+                  <p className="text-sm text-stone-500 dark:text-stone-400">
                     Select a visual companion to encourage, guide, and walk with you every day.
                   </p>
                 </div>
 
-                {/* Preview Box with Alive Companion Extending Beyond Circular Frame */}
-                <div className="bg-gradient-to-r from-pink-50/90 via-rose-50/70 to-amber-50/50 p-4 sm:p-5 rounded-3xl border border-pink-100 flex flex-col sm:flex-row items-center gap-4 shadow-sm text-left relative overflow-hidden">
+                {/* Preview Box */}
+                <div className="bg-[#faf8f6] dark:bg-[#23201d] p-4 sm:p-5 rounded-2xl border border-stone-200/80 dark:border-[#342f2b] flex flex-col sm:flex-row items-center gap-4 text-left relative">
                   <div className="shrink-0 relative">
                     <AvatarVisual
                       avatar={{
@@ -570,32 +565,31 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                     <button
                       type="button"
                       onClick={() => handleSelectAvatarWithVoice(selectedAvatarId)}
-                      className="absolute -bottom-2 -right-2 px-2 py-1 rounded-full bg-pink-500 hover:bg-pink-600 text-white text-[9px] font-black uppercase tracking-wider shadow-md flex items-center gap-1 active:scale-95 transition-all cursor-pointer"
-                      title="Tap to make companion speak and wave"
+                      className="absolute -bottom-2 -right-2 px-2.5 py-1 rounded-lg bg-pink-600 hover:bg-pink-700 text-white text-[11px] font-semibold shadow-sm flex items-center gap-1 transition-colors cursor-pointer whitespace-nowrap"
+                      title="Tap to preview companion voice"
                     >
-                      {isCompanionSpeaking ? <VolumeX className="w-2.5 h-2.5 animate-spin" /> : <Volume2 className="w-2.5 h-2.5" />}
-                      <span>{isCompanionSpeaking ? 'Speaking' : 'Wave 👋'}</span>
+                      {isCompanionSpeaking ? <VolumeX className="w-3 h-3" /> : <Volume2 className="w-3 h-3" />}
+                      <span>{isCompanionSpeaking ? 'Speaking' : 'Greet'}</span>
                     </button>
                   </div>
 
                   <div className="flex-1 min-w-0 space-y-2">
                     <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <h4 className="font-serif font-black text-base text-pink-700">
-                        {AVATAR_PRESETS[selectedAvatarId]?.name} • {AVATAR_PRESETS[selectedAvatarId]?.title}
+                      <h4 className="font-serif font-semibold text-base text-stone-900 dark:text-stone-100">
+                        {AVATAR_PRESETS[selectedAvatarId]?.name} · {AVATAR_PRESETS[selectedAvatarId]?.title}
                       </h4>
-                      <span className="text-[9px] font-black uppercase tracking-wider text-pink-600 bg-white px-2.5 py-0.5 rounded-full border border-pink-100 shadow-xs">
-                        {AVATAR_PRESETS[selectedAvatarId]?.emoji} {AVATAR_PRESETS[selectedAvatarId]?.defaultPersonality}
+                      <span className="text-[11px] font-medium text-pink-700 dark:text-pink-300 bg-white dark:bg-[#1a1816] px-2.5 py-0.5 rounded-lg border border-stone-200/80 dark:border-[#2e2a26]">
+                        {AVATAR_PRESETS[selectedAvatarId]?.defaultPersonality}
                       </span>
                     </div>
 
                     {/* Interactive Introduction Speech Bubble */}
-                    <div className="bg-white/90 backdrop-blur-xs p-3 rounded-2xl border border-pink-100/80 shadow-xs relative">
-                      <div className="absolute -top-1.5 left-6 w-3 h-3 bg-white border-t border-l border-pink-100 transform rotate-45" />
-                      <p className="text-xs text-stone-800 font-medium leading-relaxed italic">
-                        "{getAvatarIntroduction(selectedAvatarId, name?.trim() || 'friend', AVATAR_PRESETS[selectedAvatarId]?.defaultPersonality).displayText}"
+                    <div className="bg-white dark:bg-[#1a1816] p-3 rounded-xl border border-stone-200/80 dark:border-[#2e2a26] relative">
+                      <p className="text-xs text-stone-700 dark:text-stone-300 font-medium leading-relaxed">
+                        &ldquo;{getAvatarIntroduction(selectedAvatarId, name?.trim() || 'friend', AVATAR_PRESETS[selectedAvatarId]?.defaultPersonality).displayText}&rdquo;
                       </p>
                       
-                      <div className="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-pink-50 text-[10px]">
+                      <div className="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-stone-100 dark:border-[#2e2a26] text-xs">
                         <button
                           type="button"
                           onClick={() => {
@@ -606,11 +600,12 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                               handleSelectAvatarWithVoice(selectedAvatarId);
                             }
                           }}
-                          className="flex items-center gap-1.5 font-bold text-pink-600 hover:text-pink-700 cursor-pointer"
+                          className="flex items-center gap-1.5 font-semibold text-pink-600 dark:text-pink-400 hover:text-pink-700 cursor-pointer whitespace-nowrap"
                         >
-                          <span>{isCompanionSpeaking ? '⏹️ Stop Voice' : '🔊 Hear Introduction'}</span>
+                          {isCompanionSpeaking ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                          <span>{isCompanionSpeaking ? 'Stop voice' : 'Hear introduction'}</span>
                         </button>
-                        <span className="text-[9px] text-stone-400">
+                        <span className="text-[11px] text-stone-500 dark:text-stone-400 truncate">
                           {AVATAR_PRESETS[selectedAvatarId]?.bio}
                         </span>
                       </div>
@@ -628,10 +623,10 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                         key={id}
                         type="button"
                         onClick={() => handleSelectAvatarWithVoice(id)}
-                        className={`p-2.5 rounded-2xl border text-center transition-all cursor-pointer relative overflow-visible ${
+                        className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer relative ${
                           isSelected
-                            ? 'bg-pink-50/90 border-pink-400 ring-2 ring-pink-300 shadow-md scale-[1.02]'
-                            : 'bg-white border-stone-200 hover:bg-stone-50 hover:border-pink-200'
+                            ? 'bg-pink-50/70 dark:bg-pink-950/30 border-pink-500 ring-1 ring-pink-500/40'
+                            : 'bg-white dark:bg-[#23201d] border-stone-200/80 dark:border-[#342f2b] hover:border-pink-300'
                         }`}
                       >
                         <AvatarVisual
@@ -647,11 +642,11 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                           size="sm"
                           className="mx-auto mb-1"
                         />
-                        <span className="font-serif font-bold text-xs text-stone-800 block truncate">
+                        <span className="font-serif font-semibold text-xs text-stone-900 dark:text-stone-100 block truncate">
                           {preset.name}
                         </span>
-                        <span className="text-[8.5px] text-pink-600 font-semibold block truncate">
-                          {preset.emoji} {preset.title.split('The ')[1] || preset.title}
+                        <span className="text-[11px] text-pink-600 dark:text-pink-400 font-medium block truncate">
+                          {preset.title.split('The ')[1] || preset.title}
                         </span>
                       </button>
                     );
@@ -659,9 +654,9 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                 </div>
 
                 {/* Skin Tone Selector */}
-                <div className="space-y-1 pt-1">
-                  <label className="text-[9px] font-black uppercase tracking-wider text-pink-400 block text-left">
-                    Preferred Skin Tone
+                <div className="space-y-1.5 pt-1">
+                  <label className="text-xs font-semibold text-stone-600 dark:text-stone-400 block text-left">
+                    Preferred skin tone
                   </label>
                   <div className="flex gap-2 justify-center sm:justify-start overflow-x-auto pb-1">
                     {(Object.keys(SKIN_TONE_PALETTES) as SkinTone[]).map((tone) => (
@@ -669,8 +664,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                         key={tone}
                         type="button"
                         onClick={() => setSelectedSkinTone(tone)}
-                        className={`w-6 h-6 rounded-full border-2 transition-all cursor-pointer ${
-                          selectedSkinTone === tone ? 'border-pink-500 scale-110 shadow-sm' : 'border-white'
+                        className={`w-6 h-6 rounded-full border-2 transition-all cursor-pointer shrink-0 ${
+                          selectedSkinTone === tone ? 'border-pink-600 ring-2 ring-pink-300/60' : 'border-white dark:border-[#2e2a26]'
                         }`}
                         style={{ backgroundColor: SKIN_TONE_PALETTES[tone].base }}
                         title={SKIN_TONE_PALETTES[tone].label}
@@ -694,27 +689,27 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                 id="onboarding_step_4"
               >
                 <div className="space-y-2">
-                  <div className="inline-flex w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-950/20 items-center justify-center text-pink-500 mb-1">
+                  <div className="inline-flex w-11 h-11 rounded-xl bg-pink-50 dark:bg-pink-950/30 border border-pink-200/70 dark:border-pink-900/50 items-center justify-center text-pink-600 dark:text-pink-400 mb-1">
                     <Calendar size={20} />
                   </div>
-                  <h2 className="text-2xl font-serif italic text-stone-900 dark:text-stone-100 font-bold">
+                  <h2 className="text-2xl font-serif text-stone-900 dark:text-stone-100 font-semibold">
                     When did your last period start?
                   </h2>
-                  <p className="text-xs text-stone-400 dark:text-stone-500">
-                    Your previous period starting date is the foundation of your cycle forecasting.
+                  <p className="text-sm text-stone-500 dark:text-stone-400">
+                    Your previous period start date is the foundation of your cycle forecasting.
                   </p>
                 </div>
 
-                <div className="p-5 bg-pink-50/10 dark:bg-stone-950/20 rounded-3xl border border-pink-100/10 space-y-3">
+                <div className="p-5 bg-[#faf8f6] dark:bg-[#23201d] rounded-2xl border border-stone-200/80 dark:border-[#342f2b] space-y-3">
                   <input
                     type="date"
                     max={new Date().toISOString().split('T')[0]}
                     value={lastPeriodStart}
                     onChange={(e) => setLastPeriodStart(e.target.value)}
-                    className="w-full bg-white dark:bg-stone-950 px-5 py-3.5 border border-pink-100 dark:border-stone-850 rounded-2xl text-sm font-bold text-pink-600 outline-none text-center shadow-inner cursor-pointer"
+                    className="w-full h-11 bg-white dark:bg-[#1a1816] px-4 border border-stone-200/80 dark:border-[#342f2b] rounded-xl text-sm font-semibold text-stone-900 dark:text-stone-100 outline-none focus:border-pink-500 text-center cursor-pointer tabular-nums"
                   />
-                  <p className="text-[10px] text-stone-400 italic font-serif">
-                    🌸 Tap to select the calendar date your last flow began.
+                  <p className="text-xs text-stone-500 dark:text-stone-400">
+                    Select the calendar date your last flow began.
                   </p>
                 </div>
               </motion.div>
@@ -733,13 +728,13 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                 id="onboarding_step_5"
               >
                 <div className="space-y-2 text-center md:text-left">
-                  <div className="inline-flex w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-950/20 items-center justify-center text-pink-500 mb-1">
+                  <div className="inline-flex w-11 h-11 rounded-xl bg-pink-50 dark:bg-pink-950/30 border border-pink-200/70 dark:border-pink-900/50 items-center justify-center text-pink-600 dark:text-pink-400 mb-1">
                     <RefreshCw size={20} />
                   </div>
-                  <h2 className="text-2xl font-serif italic text-stone-900 dark:text-stone-100 font-bold">
+                  <h2 className="text-2xl font-serif text-stone-900 dark:text-stone-100 font-semibold">
                     How long is your average cycle?
                   </h2>
-                  <p className="text-xs text-stone-400 dark:text-stone-500">
+                  <p className="text-sm text-stone-500 dark:text-stone-400">
                     The number of days between the start of one period and the start of the next.
                   </p>
                 </div>
@@ -750,15 +745,15 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                       key={days}
                       type="button"
                       onClick={() => setCycleLength(days)}
-                      className={`p-3 border rounded-2xl flex flex-col items-center justify-center text-center transition-all cursor-pointer ${
+                      className={`p-3 border rounded-xl flex flex-col items-center justify-center text-center transition-all cursor-pointer tabular-nums ${
                         cycleLength === days
-                          ? 'border-pink-400 bg-pink-50/20 text-pink-950 dark:text-pink-100 font-bold shadow-sm'
-                          : 'border-stone-100 dark:border-stone-850 bg-white dark:bg-stone-950 text-stone-600 dark:text-stone-300 hover:border-pink-200'
+                          ? 'border-pink-600 bg-pink-50/70 dark:bg-pink-950/30 text-pink-900 dark:text-pink-200 font-semibold'
+                          : 'border-stone-200/80 dark:border-[#342f2b] bg-[#faf8f6] dark:bg-[#23201d] text-stone-700 dark:text-stone-300 hover:border-pink-300'
                       }`}
                     >
-                      <span className="text-xs font-bold font-sans">{days} Days</span>
+                      <span className="text-xs font-semibold">{days} days</span>
                       {days === 28 && (
-                        <span className="text-[8px] text-pink-400 font-mono tracking-tight uppercase mt-0.5">Default</span>
+                        <span className="text-[10px] text-pink-600 dark:text-pink-400 font-medium mt-0.5">Typical</span>
                       )}
                     </button>
                   ))}
@@ -779,13 +774,13 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                 id="onboarding_step_6"
               >
                 <div className="space-y-2 text-center md:text-left">
-                  <div className="inline-flex w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-950/20 items-center justify-center text-pink-500 mb-1">
+                  <div className="inline-flex w-11 h-11 rounded-xl bg-pink-50 dark:bg-pink-950/30 border border-pink-200/70 dark:border-pink-900/50 items-center justify-center text-pink-600 dark:text-pink-400 mb-1">
                     <Droplets size={20} />
                   </div>
-                  <h2 className="text-2xl font-serif italic text-stone-900 dark:text-stone-100 font-bold">
+                  <h2 className="text-2xl font-serif text-stone-900 dark:text-stone-100 font-semibold">
                     How many days does your period usually last?
                   </h2>
-                  <p className="text-xs text-stone-400 dark:text-stone-500">
+                  <p className="text-sm text-stone-500 dark:text-stone-400">
                     Typical bleeding flow lasts between 2 and 10 days.
                   </p>
                 </div>
@@ -796,13 +791,13 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                       key={days}
                       type="button"
                       onClick={() => setPeriodLength(days)}
-                      className={`p-4 border rounded-2xl flex flex-col items-center justify-center text-center transition-all cursor-pointer ${
+                      className={`p-4 border rounded-xl flex flex-col items-center justify-center text-center transition-all cursor-pointer tabular-nums ${
                         periodLength === days
-                          ? 'border-pink-400 bg-pink-50/20 text-pink-950 dark:text-pink-100 font-bold shadow-sm'
-                          : 'border-stone-100 dark:border-stone-850 bg-white dark:bg-stone-950 text-stone-600 dark:text-stone-300 hover:border-pink-200'
+                          ? 'border-pink-600 bg-pink-50/70 dark:bg-pink-950/30 text-pink-900 dark:text-pink-200 font-semibold'
+                          : 'border-stone-200/80 dark:border-[#342f2b] bg-[#faf8f6] dark:bg-[#23201d] text-stone-700 dark:text-stone-300 hover:border-pink-300'
                       }`}
                     >
-                      <span className="text-xs font-bold font-sans">{days} Days</span>
+                      <span className="text-xs font-semibold">{days} days</span>
                     </button>
                   ))}
                 </div>
@@ -822,14 +817,14 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                 id="onboarding_step_7"
               >
                 <div className="space-y-2 text-center md:text-left">
-                  <div className="inline-flex w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-950/20 items-center justify-center text-pink-500 mb-1">
+                  <div className="inline-flex w-11 h-11 rounded-xl bg-pink-50 dark:bg-pink-950/30 border border-pink-200/70 dark:border-pink-900/50 items-center justify-center text-pink-600 dark:text-pink-400 mb-1">
                     <Activity size={20} />
                   </div>
-                  <h2 className="text-2xl font-serif italic text-stone-900 dark:text-stone-100 font-bold">
+                  <h2 className="text-2xl font-serif text-stone-900 dark:text-stone-100 font-semibold">
                     What would you like help with?
                   </h2>
-                  <p className="text-xs text-stone-400 dark:text-stone-500">
-                    Select all that apply to help customize your sanctuary journey.
+                  <p className="text-sm text-stone-500 dark:text-stone-400">
+                    Select all that apply to personalize your sanctuary journey.
                   </p>
                 </div>
 
@@ -852,17 +847,17 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                         key={goal}
                         type="button"
                         onClick={() => toggleGoal(goal)}
-                        className={`p-3 border rounded-2xl flex items-center justify-between text-left transition-all cursor-pointer ${
+                        className={`p-3 border rounded-xl flex items-center justify-between text-left transition-all cursor-pointer ${
                           isSel
-                            ? 'border-pink-300 bg-pink-50/15 text-pink-950 dark:text-pink-100 font-bold'
-                            : 'border-stone-100 dark:border-stone-850 bg-white dark:bg-stone-950 text-stone-600 dark:text-stone-300 hover:border-pink-200'
+                            ? 'border-pink-500 bg-pink-50/70 dark:bg-pink-950/30 text-pink-900 dark:text-pink-200 font-semibold'
+                            : 'border-stone-200/80 dark:border-[#342f2b] bg-[#faf8f6] dark:bg-[#23201d] text-stone-700 dark:text-stone-300 hover:border-pink-300'
                         }`}
                       >
-                        <span className="text-[10px] font-bold pr-1">{goal}</span>
+                        <span className="text-xs font-medium pr-1">{goal}</span>
                         <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
-                          isSel ? 'bg-pink-500 border-pink-500 text-white' : 'border-gray-200 dark:border-stone-700'
+                          isSel ? 'bg-pink-600 border-pink-600 text-white' : 'border-stone-300 dark:border-stone-600'
                         }`}>
-                          {isSel && <Check size={10} strokeWidth={4} />}
+                          {isSel && <Check size={10} strokeWidth={3.5} />}
                         </div>
                       </button>
                     );
@@ -884,13 +879,13 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                 id="onboarding_step_8"
               >
                 <div className="space-y-2 text-center md:text-left">
-                  <div className="inline-flex w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-950/20 items-center justify-center text-pink-500 mb-1">
+                  <div className="inline-flex w-11 h-11 rounded-xl bg-pink-50 dark:bg-pink-950/30 border border-pink-200/70 dark:border-pink-900/50 items-center justify-center text-pink-600 dark:text-pink-400 mb-1">
                     <Bell size={20} />
                   </div>
-                  <h2 className="text-2xl font-serif italic text-stone-900 dark:text-stone-100 font-bold">
+                  <h2 className="text-2xl font-serif text-stone-900 dark:text-stone-100 font-semibold">
                     Which reminders would you like to receive?
                   </h2>
-                  <p className="text-xs text-stone-400 dark:text-stone-500">
+                  <p className="text-sm text-stone-500 dark:text-stone-400">
                     Select your preferred gentle nudges. You can edit these anytime.
                   </p>
                 </div>
@@ -910,17 +905,17 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                         key={rem}
                         type="button"
                         onClick={() => toggleReminder(rem)}
-                        className={`p-3.5 border rounded-2xl flex items-center justify-between text-left transition-all cursor-pointer ${
+                        className={`p-3.5 border rounded-xl flex items-center justify-between text-left transition-all cursor-pointer ${
                           isSel
-                            ? 'border-pink-300 bg-pink-50/15 text-pink-950 dark:text-pink-100 font-bold'
-                            : 'border-stone-100 dark:border-stone-850 bg-white dark:bg-stone-950 text-stone-600 dark:text-stone-300 hover:border-pink-200'
+                            ? 'border-pink-500 bg-pink-50/70 dark:bg-pink-950/30 text-pink-900 dark:text-pink-200 font-semibold'
+                            : 'border-stone-200/80 dark:border-[#342f2b] bg-[#faf8f6] dark:bg-[#23201d] text-stone-700 dark:text-stone-300 hover:border-pink-300'
                         }`}
                       >
-                        <span className="text-[10px] font-bold">{rem}</span>
+                        <span className="text-xs font-medium pr-1">{rem}</span>
                         <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
-                          isSel ? 'bg-pink-500 border-pink-500 text-white' : 'border-gray-200 dark:border-stone-700'
+                          isSel ? 'bg-pink-600 border-pink-600 text-white' : 'border-stone-300 dark:border-stone-600'
                         }`}>
-                          {isSel && <Check size={10} strokeWidth={4} />}
+                          {isSel && <Check size={10} strokeWidth={3.5} />}
                         </div>
                       </button>
                     );
@@ -942,14 +937,14 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                 id="onboarding_step_9"
               >
                 <div className="space-y-2 text-center md:text-left">
-                  <div className="inline-flex w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-950/20 items-center justify-center text-pink-500 mb-1">
-                    <Heart size={20} className="text-pink-500" />
+                  <div className="inline-flex w-11 h-11 rounded-xl bg-pink-50 dark:bg-pink-950/30 border border-pink-200/70 dark:border-pink-900/50 items-center justify-center text-pink-600 dark:text-pink-400 mb-1">
+                    <Heart size={20} />
                   </div>
-                  <h2 className="text-2xl font-serif italic text-stone-900 dark:text-stone-100 font-bold">
+                  <h2 className="text-2xl font-serif text-stone-900 dark:text-stone-100 font-semibold">
                     Would you like to use Partner Mode?
                   </h2>
-                  <p className="text-xs text-stone-400 dark:text-stone-500">
-                    Share your calendar, symptoms, and self-care comfort items with your trusted person.
+                  <p className="text-sm text-stone-500 dark:text-stone-400">
+                    Share your calendar, symptoms, and comfort preferences with a trusted person.
                   </p>
                 </div>
 
@@ -958,34 +953,34 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                     <button
                       type="button"
                       onClick={() => setPartnerMode('yes')}
-                      className={`p-5 border-2 rounded-2xl flex flex-col items-center justify-center text-center transition-all cursor-pointer ${
+                      className={`p-5 border rounded-2xl flex flex-col items-center justify-center text-center transition-all cursor-pointer gap-2 ${
                         partnerMode === 'yes'
-                          ? 'border-pink-400 bg-pink-50/20 font-bold text-pink-950 dark:text-pink-100'
-                          : 'border-stone-100 dark:border-stone-850 bg-white dark:bg-stone-950 text-stone-500'
+                          ? 'border-pink-600 bg-pink-50/70 dark:bg-pink-950/30 font-semibold text-pink-900 dark:text-pink-200'
+                          : 'border-stone-200/80 dark:border-[#342f2b] bg-[#faf8f6] dark:bg-[#23201d] text-stone-600 dark:text-stone-300 hover:border-pink-300'
                       }`}
                     >
-                      <span className="text-2xl mb-1">💞</span>
-                      <span className="text-xs font-bold">Yes</span>
+                      <Heart size={20} className="text-pink-600 dark:text-pink-400" />
+                      <span className="text-sm font-semibold">Yes, interested</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => setPartnerMode('no')}
-                      className={`p-5 border-2 rounded-2xl flex flex-col items-center justify-center text-center transition-all cursor-pointer ${
+                      className={`p-5 border rounded-2xl flex flex-col items-center justify-center text-center transition-all cursor-pointer gap-2 ${
                         partnerMode === 'no'
-                          ? 'border-stone-400 bg-stone-50/10 font-bold text-stone-950 dark:text-stone-100'
-                          : 'border-stone-100 dark:border-stone-850 bg-white dark:bg-stone-950 text-stone-500'
+                          ? 'border-stone-600 bg-stone-100 dark:bg-[#2a2622] font-semibold text-stone-900 dark:text-stone-100'
+                          : 'border-stone-200/80 dark:border-[#342f2b] bg-[#faf8f6] dark:bg-[#23201d] text-stone-600 dark:text-stone-300 hover:border-stone-300'
                       }`}
                     >
-                      <span className="text-2xl mb-1">🕊️</span>
-                      <span className="text-xs font-bold">Not Right Now</span>
+                      <Clock size={20} className="text-stone-500 dark:text-stone-400" />
+                      <span className="text-sm font-semibold">Not right now</span>
                     </button>
                   </div>
 
                   {partnerMode === 'yes' && (
-                    <div className="p-4 bg-pink-50/30 dark:bg-stone-950/20 border border-pink-100/30 rounded-2xl animate-fadeIn">
-                      <p className="text-center text-xs text-pink-600 font-serif italic">
-                        "You can connect a trusted partner later in Settings."
+                    <div className="p-4 bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] rounded-xl animate-fadeIn">
+                      <p className="text-center text-xs text-stone-600 dark:text-stone-300">
+                        You can invite and manage partner permissions anytime from Settings.
                       </p>
                     </div>
                   )}
@@ -1006,25 +1001,25 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                 id="onboarding_step_10"
               >
                 <div className="space-y-2 text-center md:text-left">
-                  <div className="inline-flex w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-950/20 items-center justify-center text-pink-500 mb-1">
+                  <div className="inline-flex w-11 h-11 rounded-xl bg-pink-50 dark:bg-pink-950/30 border border-pink-200/70 dark:border-pink-900/50 items-center justify-center text-pink-600 dark:text-pink-400 mb-1">
                     <Sparkle size={20} />
                   </div>
-                  <h2 className="text-2xl font-serif italic text-stone-900 dark:text-stone-100 font-bold">
+                  <h2 className="text-2xl font-serif text-stone-900 dark:text-stone-100 font-semibold">
                     What helps you relax?
                   </h2>
-                  <p className="text-xs text-stone-400 dark:text-stone-500">
-                    Select all that apply. We will seed custom items into your sanctuary space.
+                  <p className="text-sm text-stone-500 dark:text-stone-400">
+                    Select all that apply. We will tailor your sanctuary modules accordingly.
                   </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 max-h-[240px] overflow-y-auto pr-1 pb-1">
                   {[
-                    { label: 'Music', icon: <Music size={13} className="text-pink-400" /> },
-                    { label: 'Meditation', icon: <Wind size={13} className="text-indigo-400" /> },
-                    { label: 'Sleep sounds', icon: <Moon size={13} className="text-blue-400" /> },
-                    { label: 'Journaling', icon: <PenTool size={13} className="text-amber-400" /> },
-                    { label: 'Breathing exercises', icon: <Wind size={13} className="text-teal-400" /> },
-                    { label: 'Wellness tips', icon: <Sparkles size={13} className="text-purple-400" /> }
+                    { label: 'Music', icon: <Music size={14} className="text-pink-600 dark:text-pink-400" /> },
+                    { label: 'Meditation', icon: <Wind size={14} className="text-indigo-600 dark:text-indigo-400" /> },
+                    { label: 'Sleep sounds', icon: <Moon size={14} className="text-blue-600 dark:text-blue-400" /> },
+                    { label: 'Journaling', icon: <PenTool size={14} className="text-amber-600 dark:text-amber-400" /> },
+                    { label: 'Breathing exercises', icon: <Wind size={14} className="text-teal-600 dark:text-teal-400" /> },
+                    { label: 'Wellness tips', icon: <Sparkles size={14} className="text-purple-600 dark:text-purple-400" /> }
                   ].map((item) => {
                     const isSel = sanctuaryPrefs.includes(item.label);
                     return (
@@ -1032,20 +1027,20 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                         key={item.label}
                         type="button"
                         onClick={() => toggleSanctuary(item.label)}
-                        className={`p-3 border rounded-2xl flex items-center justify-between text-left transition-all cursor-pointer ${
+                        className={`p-3 border rounded-xl flex items-center justify-between text-left transition-all cursor-pointer ${
                           isSel
-                            ? 'border-pink-300 bg-pink-50/15 text-pink-950 dark:text-pink-100 font-bold'
-                            : 'border-stone-100 dark:border-stone-850 bg-white dark:bg-stone-950 text-stone-600 dark:text-stone-300 hover:border-pink-200'
+                            ? 'border-pink-500 bg-pink-50/70 dark:bg-pink-950/30 text-pink-900 dark:text-pink-200 font-semibold'
+                            : 'border-stone-200/80 dark:border-[#342f2b] bg-[#faf8f6] dark:bg-[#23201d] text-stone-700 dark:text-stone-300 hover:border-pink-300'
                         }`}
                       >
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
                           {item.icon}
-                          <span className="text-[10px] font-bold">{item.label}</span>
+                          <span className="text-xs font-medium truncate">{item.label}</span>
                         </div>
                         <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
-                          isSel ? 'bg-pink-500 border-pink-500 text-white' : 'border-gray-200 dark:border-stone-700'
+                          isSel ? 'bg-pink-600 border-pink-600 text-white' : 'border-stone-300 dark:border-stone-600'
                         }`}>
-                          {isSel && <Check size={10} strokeWidth={4} />}
+                          {isSel && <Check size={10} strokeWidth={3.5} />}
                         </div>
                       </button>
                     );
@@ -1067,28 +1062,28 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                 id="onboarding_step_11"
               >
                 <div className="space-y-2 text-center md:text-left">
-                  <div className="inline-flex w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-950/20 items-center justify-center text-pink-500 mb-1">
+                  <div className="inline-flex w-11 h-11 rounded-xl bg-pink-50 dark:bg-pink-950/30 border border-pink-200/70 dark:border-pink-900/50 items-center justify-center text-pink-600 dark:text-pink-400 mb-1">
                     <ShieldCheck size={20} />
                   </div>
-                  <h2 className="text-2xl font-serif italic text-stone-900 dark:text-stone-100 font-bold">
+                  <h2 className="text-2xl font-serif text-stone-900 dark:text-stone-100 font-semibold">
                     Allow Lumina to send reminders and wellness updates?
                   </h2>
-                  <p className="text-xs text-stone-400 dark:text-stone-500">
+                  <p className="text-sm text-stone-500 dark:text-stone-400">
                     Stay closely synchronized with daily self-care goals and phase predictions.
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 gap-3">
+                <div className="grid grid-cols-1 gap-2.5">
                   <button
                     type="button"
                     onClick={() => {
                       setNotificationsAllowed(true);
                       handleNext();
                     }}
-                    className="w-full py-4.5 bg-gradient-to-r from-pink-500 to-rose-450 hover:opacity-95 active:scale-98 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+                    className="w-full h-11 px-4 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-sm font-semibold transition-colors cursor-pointer flex items-center justify-center gap-2"
                   >
-                    <Bell size={14} />
-                    Allow Notifications
+                    <Bell size={15} />
+                    Allow notifications
                   </button>
 
                   <button
@@ -1097,9 +1092,9 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                       setNotificationsAllowed(false);
                       handleNext();
                     }}
-                    className="w-full py-4 bg-gray-100 hover:bg-gray-200/70 text-gray-500 rounded-2xl text-xs font-bold uppercase tracking-widest transition-all cursor-pointer"
+                    className="w-full h-11 px-4 bg-stone-100 dark:bg-[#23201d] hover:bg-stone-200 dark:hover:bg-[#2e2a26] text-stone-700 dark:text-stone-200 rounded-xl text-sm font-medium transition-colors cursor-pointer"
                   >
-                    Maybe Later
+                    Maybe later
                   </button>
                 </div>
               </motion.div>
@@ -1114,19 +1109,19 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
                 exit="exit"
                 custom={1}
                 variants={slideVariants}
-                className="space-y-6 text-center"
+                className="space-y-5 text-center"
                 id="onboarding_step_12"
               >
                 <div className="flex justify-center">
-                  <div className="w-20 h-20 rounded-full bg-pink-100 dark:bg-pink-950/30 flex items-center justify-center text-3xl animate-bounce">
-                    🌸
+                  <div className="w-16 h-16 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                    <Check size={28} strokeWidth={2.25} />
                   </div>
                 </div>
-                <div className="space-y-3">
-                  <h1 className="text-3xl font-serif italic text-stone-900 dark:text-stone-100 font-bold leading-tight">
-                    You're all set 🌸
+                <div className="space-y-2">
+                  <h1 className="text-3xl font-serif text-stone-900 dark:text-stone-100 font-semibold leading-tight">
+                    You&apos;re all set
                   </h1>
-                  <p className="text-base text-stone-500 dark:text-stone-400 font-serif italic">
+                  <p className="text-sm text-stone-600 dark:text-stone-400">
                     Lumina is ready to become your sanctuary.
                   </p>
                 </div>
@@ -1137,18 +1132,18 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
         </div>
 
         {/* Navigation bottom bar */}
-        <div className="border-t border-stone-100 dark:border-stone-850 pt-5 mt-4 flex items-center justify-between gap-4">
+        <div className="border-t border-stone-200/70 dark:border-[#2e2a26] pt-5 mt-4 flex items-center justify-between gap-4">
           {step > 1 ? (
             <button
               type="button"
               onClick={handleBack}
-              className="flex items-center gap-1 text-xs font-bold text-stone-400 hover:text-pink-500 uppercase tracking-wider transition-colors cursor-pointer shrink-0"
+              className="flex items-center gap-1.5 text-sm font-medium text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-stone-100 transition-colors cursor-pointer shrink-0 whitespace-nowrap"
             >
               <ChevronLeft size={16} />
               Back
             </button>
           ) : (
-            <div></div>
+            <div />
           )}
 
           {step < totalSteps ? (
@@ -1156,17 +1151,17 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ user, setUse
               <button
                 type="button"
                 onClick={handleNext}
-                className="flex items-center gap-1.5 px-6 py-3 bg-pink-500 text-white rounded-2xl text-xs font-black uppercase tracking-wider shadow-md hover:bg-pink-600 active:scale-95 transition-all cursor-pointer"
+                className="flex items-center gap-1.5 h-10 px-5 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-sm font-semibold transition-colors cursor-pointer whitespace-nowrap"
               >
-                {step === 1 ? 'Get Started' : 'Continue'}
-                <ChevronRight size={14} />
+                {step === 1 ? 'Get started' : 'Continue'}
+                <ChevronRight size={15} />
               </button>
             ) : null
           ) : (
             <button
               type="button"
               onClick={handleNext}
-              className="px-8 py-3 bg-gradient-to-r from-pink-500 to-indigo-500 hover:opacity-95 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg active:scale-98 transition-all cursor-pointer"
+              className="h-10 px-6 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-sm font-semibold transition-colors cursor-pointer whitespace-nowrap"
             >
               Enter Lumina
             </button>

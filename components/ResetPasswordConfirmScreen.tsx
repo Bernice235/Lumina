@@ -137,44 +137,44 @@ export const ResetPasswordConfirmScreen: React.FC<ResetPasswordConfirmScreenProp
   };
 
   return (
-    <div className="space-y-5 animate-fadeIn w-full" data-testid="reset-password-confirm-screen">
+    <div className="space-y-6 animate-fadeIn w-full" data-testid="reset-password-confirm-screen">
       {stage !== 'completed' && (
         <button
           type="button"
           onClick={() => onBackToSignIn(verifiedEmail || undefined)}
-          className="inline-flex items-center gap-1.5 text-[10px] font-sans font-bold uppercase tracking-widest text-pink-700 hover:text-pink-900 cursor-pointer"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-stone-600 hover:text-stone-900 transition-colors cursor-pointer"
         >
-          <ArrowLeft size={12} aria-hidden="true" /> Back to Sign In
+          <ArrowLeft size={14} aria-hidden="true" /> Back to sign in
         </button>
       )}
 
-      <div className="text-center space-y-1.5">
-        <div className="w-11 h-11 rounded-2xl bg-pink-50 border border-pink-100 text-pink-600 flex items-center justify-center mx-auto shadow-xs">
+      <div className="space-y-2 text-left">
+        <div className="w-10 h-10 rounded-xl bg-pink-50 border border-pink-200/70 text-pink-600 flex items-center justify-center">
           {stage === 'completed' ? (
-            <CheckCircle2 size={22} className="text-emerald-600" aria-hidden="true" />
+            <CheckCircle2 size={20} className="text-emerald-600" aria-hidden="true" />
           ) : stage === 'invalid' ? (
-            <AlertTriangle size={20} className="text-rose-600" aria-hidden="true" />
+            <AlertTriangle size={18} className="text-rose-600" aria-hidden="true" />
           ) : (
-            <KeyRound size={20} aria-hidden="true" />
+            <KeyRound size={18} aria-hidden="true" />
           )}
         </div>
-        <p className="text-[9px] font-extrabold uppercase tracking-[0.22em] text-pink-500">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-pink-700 pt-1">
           {LUMINA_BRAND_NAME}
         </p>
-        <h2 className="text-2xl font-serif text-pink-950 font-bold italic">
+        <h2 className="text-2xl font-serif font-semibold text-stone-900 tracking-tight">
           {stage === 'completed'
-            ? 'Password Updated'
+            ? 'Password updated'
             : stage === 'invalid'
-              ? 'Reset Link Unavailable'
-              : 'Create New Password'}
+              ? 'Reset link unavailable'
+              : 'Create new password'}
         </h2>
       </div>
 
       {stage === 'verifying' && (
         <div className="py-10 flex flex-col items-center justify-center gap-3 text-center">
-          <div className="w-9 h-9 border-3 border-pink-100 border-t-pink-500 rounded-full animate-spin" />
-          <p className="text-xs font-medium text-stone-600">
-            Verifying your secure reset link with Firebase...
+          <div className="w-8 h-8 border-2 border-stone-200 border-t-pink-600 rounded-full animate-spin" />
+          <p className="text-sm font-medium text-stone-600">
+            Verifying your secure reset link...
           </p>
         </div>
       )}
@@ -183,7 +183,7 @@ export const ResetPasswordConfirmScreen: React.FC<ResetPasswordConfirmScreenProp
         <div className="space-y-4 animate-fadeIn">
           <div
             role="alert"
-            className="w-full bg-rose-50 text-rose-800 text-[11px] text-center font-medium p-4 rounded-2xl border border-rose-200 leading-relaxed"
+            className="w-full bg-rose-50 text-rose-800 text-xs font-medium p-4 rounded-xl border border-rose-200 leading-relaxed"
           >
             {error}
           </div>
@@ -196,9 +196,9 @@ export const ResetPasswordConfirmScreen: React.FC<ResetPasswordConfirmScreenProp
                   onResetConsumed?.();
                   onRequestNewLink();
                 }}
-                className="w-full py-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl font-bold text-xs uppercase tracking-[0.15em] shadow-md shadow-pink-100 hover:opacity-95 active:scale-95 transition-all cursor-pointer"
+                className="w-full h-11 px-4 bg-pink-600 hover:bg-pink-700 text-white rounded-xl font-semibold text-sm transition-colors cursor-pointer"
               >
-                Request New Reset Link
+                Request new reset link
               </button>
             )}
 
@@ -206,10 +206,10 @@ export const ResetPasswordConfirmScreen: React.FC<ResetPasswordConfirmScreenProp
               <button
                 type="button"
                 onClick={runVerification}
-                className="w-full py-3.5 bg-white border border-pink-200 text-pink-700 hover:bg-pink-50/40 rounded-2xl font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full h-11 px-4 bg-white border border-stone-200 text-stone-800 hover:bg-stone-50 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors"
               >
-                <RefreshCw size={13} aria-hidden="true" />
-                <span>Try Verification Again</span>
+                <RefreshCw size={14} aria-hidden="true" />
+                <span>Try verification again</span>
               </button>
             )}
 
@@ -219,9 +219,9 @@ export const ResetPasswordConfirmScreen: React.FC<ResetPasswordConfirmScreenProp
                 onResetConsumed?.();
                 onBackToSignIn();
               }}
-              className="w-full py-3.5 bg-white border border-stone-200 text-stone-700 hover:bg-stone-50 rounded-2xl font-bold text-[10px] uppercase tracking-widest cursor-pointer"
+              className="w-full h-11 px-4 bg-white border border-stone-200 text-stone-700 hover:bg-stone-50 rounded-xl font-medium text-sm cursor-pointer transition-colors"
             >
-              Back to Sign In
+              Back to sign in
             </button>
           </div>
         </div>
@@ -230,11 +230,11 @@ export const ResetPasswordConfirmScreen: React.FC<ResetPasswordConfirmScreenProp
       {stage === 'ready' && (
         <form onSubmit={handleConfirmSubmit} className="space-y-4 animate-fadeIn" noValidate>
           {verifiedEmail && (
-            <div className="bg-pink-50/50 border border-pink-100 rounded-2xl px-4 py-2.5 text-center">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-pink-700">
-                Verified Account
+            <div className="bg-stone-50 border border-stone-200/80 rounded-xl px-4 py-3 text-left">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-stone-500">
+                Verified account
               </p>
-              <p className="text-xs font-semibold text-stone-800 break-all mt-0.5">
+              <p className="text-sm font-medium text-stone-900 break-all mt-0.5">
                 {verifiedEmail}
               </p>
             </div>
@@ -243,7 +243,7 @@ export const ResetPasswordConfirmScreen: React.FC<ResetPasswordConfirmScreenProp
           {error && (
             <div
               role="alert"
-              className="w-full bg-rose-50 text-rose-700 text-[11px] text-center font-medium p-3.5 rounded-2xl border border-rose-200 leading-relaxed"
+              className="w-full bg-rose-50 text-rose-800 text-xs font-medium p-3.5 rounded-xl border border-rose-200 leading-relaxed"
             >
               {error}
             </div>
@@ -252,29 +252,29 @@ export const ResetPasswordConfirmScreen: React.FC<ResetPasswordConfirmScreenProp
           <div className="space-y-1.5 text-left">
             <label
               htmlFor="reset-new-password"
-              className="block text-[10px] font-bold text-pink-800 uppercase tracking-wider px-1"
+              className="block text-xs font-medium text-stone-700"
             >
-              New Password
+              New password
             </label>
             <div className="relative">
               <input
                 id="reset-new-password"
                 type={showNewPassword ? 'text' : 'password'}
                 autoComplete="new-password"
-                placeholder="Enter new strong password"
+                placeholder="Enter a strong password"
                 value={newPassword}
                 onChange={(e) => {
                   setNewPassword(e.target.value);
                   if (error) setError('');
                 }}
-                className="w-full pl-4 pr-11 py-3.5 bg-white/85 border border-pink-200 rounded-2xl text-xs font-semibold text-stone-900 placeholder:text-stone-400 outline-none focus:border-pink-400 transition-colors"
+                className="w-full h-11 pl-3.5 pr-11 bg-white border border-stone-200 rounded-xl text-sm text-stone-900 placeholder:text-stone-400 outline-none focus:border-pink-500 transition-colors"
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowNewPassword((prev) => !prev)}
                 aria-label={showNewPassword ? 'Hide new password' : 'Show new password'}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-pink-600 cursor-pointer"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700 p-1 cursor-pointer"
               >
                 {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
@@ -284,9 +284,9 @@ export const ResetPasswordConfirmScreen: React.FC<ResetPasswordConfirmScreenProp
           <div className="space-y-1.5 text-left">
             <label
               htmlFor="reset-confirm-password"
-              className="block text-[10px] font-bold text-pink-800 uppercase tracking-wider px-1"
+              className="block text-xs font-medium text-stone-700"
             >
-              Confirm New Password
+              Confirm new password
             </label>
             <div className="relative">
               <input
@@ -299,14 +299,14 @@ export const ResetPasswordConfirmScreen: React.FC<ResetPasswordConfirmScreenProp
                   setConfirmPassword(e.target.value);
                   if (error) setError('');
                 }}
-                className="w-full pl-4 pr-11 py-3.5 bg-white/85 border border-pink-200 rounded-2xl text-xs font-semibold text-stone-900 placeholder:text-stone-400 outline-none focus:border-pink-400 transition-colors"
+                className="w-full h-11 pl-3.5 pr-11 bg-white border border-stone-200 rounded-xl text-sm text-stone-900 placeholder:text-stone-400 outline-none focus:border-pink-500 transition-colors"
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword((prev) => !prev)}
                 aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-pink-600 cursor-pointer"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700 p-1 cursor-pointer"
               >
                 {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
@@ -314,16 +314,16 @@ export const ResetPasswordConfirmScreen: React.FC<ResetPasswordConfirmScreenProp
           </div>
 
           {/* Password Strength & Requirement Checklist */}
-          <div className="p-3.5 rounded-2xl bg-pink-50/35 border border-pink-100 space-y-2 text-left">
-            <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider">
-              <span className="text-stone-600">Password Strength</span>
+          <div className="p-4 rounded-xl bg-stone-50 border border-stone-200/80 space-y-2.5 text-left">
+            <div className="flex items-center justify-between text-xs font-medium">
+              <span className="text-stone-600">Password strength</span>
               <span
                 className={
                   strength.label === 'Strong'
-                    ? 'text-emerald-700'
+                    ? 'text-emerald-700 font-semibold'
                     : strength.label === 'Good'
-                      ? 'text-amber-700'
-                      : 'text-rose-700'
+                      ? 'text-amber-700 font-semibold'
+                      : 'text-rose-700 font-semibold'
                 }
               >
                 {strength.label}
@@ -338,26 +338,26 @@ export const ResetPasswordConfirmScreen: React.FC<ResetPasswordConfirmScreenProp
                       ? strength.valid
                         ? 'bg-emerald-500'
                         : 'bg-amber-400'
-                      : 'bg-pink-100'
+                      : 'bg-stone-200'
                   }`}
                 />
               ))}
             </div>
-            <ul className="grid grid-cols-2 gap-x-2 gap-y-1 pt-1 text-[10px] font-medium text-stone-600">
-              <li className={`flex items-center gap-1 ${strength.checks.minLength ? 'text-emerald-700 font-semibold' : ''}`}>
-                <Check size={11} aria-hidden="true" /> 8+ characters
+            <ul className="grid grid-cols-2 gap-x-3 gap-y-1.5 pt-1 text-xs text-stone-600">
+              <li className={`flex items-center gap-1.5 ${strength.checks.minLength ? 'text-emerald-700 font-medium' : ''}`}>
+                <Check size={12} aria-hidden="true" /> 8+ characters
               </li>
-              <li className={`flex items-center gap-1 ${strength.checks.hasUpper && strength.checks.hasLower ? 'text-emerald-700 font-semibold' : ''}`}>
-                <Check size={11} aria-hidden="true" /> Upper &amp; lowercase
+              <li className={`flex items-center gap-1.5 ${strength.checks.hasUpper && strength.checks.hasLower ? 'text-emerald-700 font-medium' : ''}`}>
+                <Check size={12} aria-hidden="true" /> Upper &amp; lowercase
               </li>
-              <li className={`flex items-center gap-1 ${strength.checks.hasNumber ? 'text-emerald-700 font-semibold' : ''}`}>
-                <Check size={11} aria-hidden="true" /> At least 1 number
+              <li className={`flex items-center gap-1.5 ${strength.checks.hasNumber ? 'text-emerald-700 font-medium' : ''}`}>
+                <Check size={12} aria-hidden="true" /> At least 1 number
               </li>
-              <li className={`flex items-center gap-1 ${strength.checks.hasSymbol ? 'text-emerald-700 font-semibold' : ''}`}>
-                <Check size={11} aria-hidden="true" /> Special symbol
+              <li className={`flex items-center gap-1.5 ${strength.checks.hasSymbol ? 'text-emerald-700 font-medium' : ''}`}>
+                <Check size={12} aria-hidden="true" /> Special symbol
               </li>
-              <li className={`flex items-center gap-1 col-span-2 ${passwordsMatch ? 'text-emerald-700 font-semibold' : ''}`}>
-                <Check size={11} aria-hidden="true" /> Passwords match
+              <li className={`flex items-center gap-1.5 col-span-2 ${passwordsMatch ? 'text-emerald-700 font-medium' : ''}`}>
+                <Check size={12} aria-hidden="true" /> Passwords match
               </li>
             </ul>
           </div>
@@ -365,30 +365,30 @@ export const ResetPasswordConfirmScreen: React.FC<ResetPasswordConfirmScreenProp
           <button
             type="submit"
             disabled={submitting || !strength.valid || !passwordsMatch}
-            className="w-full py-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl font-bold text-xs uppercase tracking-[0.15em] shadow-md shadow-pink-100 hover:opacity-95 active:scale-95 transition-all disabled:opacity-55 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
+            className="w-full h-11 px-4 bg-pink-600 hover:bg-pink-700 text-white rounded-xl font-semibold text-sm transition-colors disabled:opacity-55 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
           >
             {submitting ? (
               <>
                 <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" aria-hidden="true" />
-                <span>Updating Password...</span>
+                <span>Updating password...</span>
               </>
             ) : (
-              <span>Save New Password</span>
+              <span>Save new password</span>
             )}
           </button>
         </form>
       )}
 
       {stage === 'completed' && (
-        <div className="space-y-4 animate-fadeIn text-center">
+        <div className="space-y-4 animate-fadeIn">
           <div
             role="status"
-            className="w-full bg-emerald-50 text-emerald-900 p-4 rounded-2xl border border-emerald-200 space-y-1.5"
+            className="w-full bg-emerald-50 text-emerald-900 p-4 rounded-xl border border-emerald-200 space-y-1"
           >
-            <p className="text-xs font-bold text-emerald-800">
+            <p className="text-sm font-semibold text-emerald-900">
               Your {LUMINA_BRAND_NAME} password has been changed.
             </p>
-            <p className="text-[11px] text-emerald-700 leading-relaxed">
+            <p className="text-xs text-emerald-800 leading-relaxed">
               You can now sign in with your new password across web, iOS, and Android.
             </p>
           </div>
@@ -396,9 +396,9 @@ export const ResetPasswordConfirmScreen: React.FC<ResetPasswordConfirmScreenProp
           <button
             type="button"
             onClick={() => onBackToSignIn(verifiedEmail || undefined, true)}
-            className="w-full py-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl font-bold text-xs uppercase tracking-[0.15em] shadow-md shadow-pink-100 hover:opacity-95 active:scale-95 transition-all cursor-pointer"
+            className="w-full h-11 px-4 bg-pink-600 hover:bg-pink-700 text-white rounded-xl font-semibold text-sm transition-colors cursor-pointer"
           >
-            Sign In Now
+            Sign in now
           </button>
         </div>
       )}

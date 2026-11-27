@@ -83,26 +83,26 @@ export const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({
   };
 
   return (
-    <div className="space-y-5 animate-fadeIn w-full" data-testid="forgot-password-screen">
+    <div className="space-y-6 animate-fadeIn w-full" data-testid="forgot-password-screen">
       <button
         type="button"
         onClick={onBackToSignIn}
-        className="inline-flex items-center gap-1.5 text-[10px] font-sans font-bold uppercase tracking-widest text-pink-700 hover:text-pink-900 cursor-pointer"
+        className="inline-flex items-center gap-1.5 text-xs font-medium text-stone-600 hover:text-stone-900 transition-colors cursor-pointer"
       >
-        <ArrowLeft size={12} aria-hidden="true" /> Back to Sign In
+        <ArrowLeft size={14} aria-hidden="true" /> Back to sign in
       </button>
 
-      <div className="text-center space-y-1.5">
-        <div className="w-11 h-11 rounded-2xl bg-pink-50 border border-pink-100 text-pink-600 flex items-center justify-center mx-auto shadow-xs">
-          <Mail size={20} aria-hidden="true" />
+      <div className="space-y-2 text-left">
+        <div className="w-10 h-10 rounded-xl bg-pink-50 border border-pink-200/70 text-pink-600 flex items-center justify-center">
+          <Mail size={18} aria-hidden="true" />
         </div>
-        <p className="text-[9px] font-extrabold uppercase tracking-[0.22em] text-pink-500">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-pink-700 pt-1">
           {LUMINA_BRAND_NAME}
         </p>
-        <h2 className="text-2xl font-serif text-pink-950 font-bold italic">
-          Reset Your Password
+        <h2 className="text-2xl font-serif font-semibold text-stone-900 tracking-tight">
+          Reset your password
         </h2>
-        <p className="text-xs text-stone-600 leading-relaxed px-2">
+        <p className="text-sm text-stone-600 leading-relaxed">
           Enter the email associated with your account and we&apos;ll send secure recovery instructions.
         </p>
       </div>
@@ -110,7 +110,7 @@ export const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({
       {error && (
         <div
           role="alert"
-          className="w-full bg-rose-50 text-rose-700 text-[11px] text-center font-medium p-3.5 rounded-2xl border border-rose-200 animate-fadeIn leading-relaxed"
+          className="w-full bg-rose-50 text-rose-800 text-xs font-medium p-3.5 rounded-xl border border-rose-200 animate-fadeIn leading-relaxed"
         >
           {error}
         </div>
@@ -120,19 +120,19 @@ export const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({
         <div className="space-y-4 animate-fadeIn">
           <div
             role="status"
-            className="w-full bg-emerald-50/90 text-emerald-900 p-4 rounded-2xl border border-emerald-200 space-y-2 text-center"
+            className="w-full bg-emerald-50 text-emerald-900 p-4 rounded-xl border border-emerald-200 space-y-1.5"
           >
-            <div className="flex items-center justify-center gap-1.5 text-emerald-700 font-bold text-xs">
+            <div className="flex items-center gap-2 text-emerald-800 font-semibold text-sm">
               <CheckCircle2 size={16} aria-hidden="true" />
-              <span>Reset Request Sent</span>
+              <span>Reset request sent</span>
             </div>
-            <p className="text-[11px] leading-relaxed text-emerald-800">{successMessage}</p>
+            <p className="text-xs leading-relaxed text-emerald-800">{successMessage}</p>
           </div>
 
-          <div className="bg-pink-50/40 border border-pink-100 rounded-2xl p-3.5 text-[11px] text-stone-600 space-y-1.5">
-            <p className="font-bold text-pink-900 text-[10px] uppercase tracking-wider flex items-center gap-1.5">
-              <ShieldCheck size={13} className="text-pink-600" aria-hidden="true" />
-              Helpful Tips
+          <div className="bg-stone-50 border border-stone-200/80 rounded-xl p-4 text-xs text-stone-600 space-y-1.5">
+            <p className="font-semibold text-stone-800 flex items-center gap-1.5">
+              <ShieldCheck size={14} className="text-pink-600" aria-hidden="true" />
+              Helpful tips
             </p>
             <p className="leading-relaxed">
               Check your Spam or Promotions folder if you don&apos;t see the message within a couple of minutes. Reset links expire automatically for your privacy.
@@ -144,29 +144,29 @@ export const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({
               type="button"
               disabled={loading || cooldownSec > 0}
               onClick={handleSubmit}
-              className="w-full py-3.5 bg-white border border-pink-200 text-pink-700 hover:bg-pink-50/50 rounded-2xl font-bold text-[10px] uppercase tracking-widest transition-all disabled:opacity-55 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full h-11 px-4 bg-white border border-stone-200 text-stone-800 hover:bg-stone-50 rounded-xl font-semibold text-sm transition-colors disabled:opacity-55 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
             >
               {cooldownSec > 0 ? (
                 <>
-                  <Clock size={13} aria-hidden="true" />
-                  <span>Resend available in {cooldownSec}s</span>
+                  <Clock size={14} aria-hidden="true" />
+                  <span className="tabular-nums">Resend available in {cooldownSec}s</span>
                 </>
               ) : (
-                <span>Send Another Reset Link</span>
+                <span>Send another reset link</span>
               )}
             </button>
 
             <button
               type="button"
               onClick={onBackToSignIn}
-              className="w-full py-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl font-bold text-xs uppercase tracking-[0.15em] shadow-md shadow-pink-100 hover:opacity-95 active:scale-95 transition-all cursor-pointer"
+              className="w-full h-11 px-4 bg-pink-600 hover:bg-pink-700 text-white rounded-xl font-semibold text-sm transition-colors cursor-pointer"
             >
-              Return to Sign In
+              Return to sign in
             </button>
           </div>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-3.5 pt-1" noValidate>
+        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           <div className="hidden" aria-hidden="true">
             <label htmlFor="forgot-pw-website">Website</label>
             <input
@@ -183,9 +183,9 @@ export const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({
           <div className="space-y-1.5 text-left">
             <label
               htmlFor="forgot-password-email"
-              className="block text-[10px] font-bold text-pink-800 uppercase tracking-wider px-1"
+              className="block text-xs font-medium text-stone-700"
             >
-              Email Address
+              Email address
             </label>
             <input
               id="forgot-password-email"
@@ -198,7 +198,7 @@ export const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({
                 onEmailChange?.(e.target.value);
                 if (error) setError('');
               }}
-              className="w-full px-5 py-4 bg-white/85 border border-pink-200 rounded-2xl text-xs font-semibold text-stone-900 placeholder:text-stone-400 outline-none focus:border-pink-400 transition-colors"
+              className="w-full h-11 px-3.5 bg-white border border-stone-200 rounded-xl text-sm text-stone-900 placeholder:text-stone-400 outline-none focus:border-pink-500 transition-colors"
               required
             />
           </div>
@@ -206,17 +206,17 @@ export const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({
           <button
             type="submit"
             disabled={loading || cooldownSec > 0}
-            className="w-full py-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl font-bold text-xs uppercase tracking-[0.15em] shadow-md shadow-pink-100 hover:opacity-95 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
+            className="w-full h-11 px-4 bg-pink-600 hover:bg-pink-700 text-white rounded-xl font-semibold text-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
           >
             {loading ? (
               <>
                 <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" aria-hidden="true" />
-                <span>Sending Reset Link...</span>
+                <span>Sending reset link...</span>
               </>
             ) : cooldownSec > 0 ? (
-              <span>Please wait {cooldownSec}s</span>
+              <span className="tabular-nums">Please wait {cooldownSec}s</span>
             ) : (
-              <span>Send Reset Link</span>
+              <span>Send reset link</span>
             )}
           </button>
 
@@ -224,9 +224,9 @@ export const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({
             <button
               type="button"
               onClick={onBackToSignIn}
-              className="text-[10px] font-bold uppercase tracking-widest text-pink-600 hover:underline cursor-pointer"
+              className="text-xs font-medium text-pink-700 hover:underline cursor-pointer"
             >
-              Remembered your password? Sign In
+              Remembered your password? Sign in
             </button>
           </div>
         </form>

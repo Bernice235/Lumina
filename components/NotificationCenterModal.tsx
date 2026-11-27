@@ -203,38 +203,40 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
   };
 
   return (
-    <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-md flex justify-end animate-fadeIn" onClick={onClose}>
-      <div className="w-full max-w-md bg-white dark:bg-stone-900 h-full shadow-2xl flex flex-col overflow-hidden animate-slideLeft" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[200] bg-stone-950/60 backdrop-blur-sm flex justify-end animate-fadeIn" onClick={onClose}>
+      <div className="w-full max-w-md bg-white dark:bg-[#1a1816] h-full shadow-2xl flex flex-col overflow-hidden animate-slideLeft border-l border-stone-200 dark:border-[#2e2a26]" onClick={(e) => e.stopPropagation()}>
         {/* Modal Header */}
-        <div className="p-5 bg-gradient-to-r from-pink-500 via-rose-500 to-purple-600 text-white flex justify-between items-center shadow-lg relative">
+        <div className="p-5 bg-gradient-to-r from-pink-600 via-rose-600 to-purple-700 text-white flex justify-between items-center border-b border-white/10">
           <div className="flex items-center gap-3">
             {selectedNotif ? (
               <button
+                type="button"
                 onClick={() => setSelectedNotif(null)}
-                className="p-2 rounded-full bg-white/20 hover:bg-white/30 text-white transition-all cursor-pointer"
+                className="p-2 rounded-xl bg-white/15 hover:bg-white/25 text-white transition-colors cursor-pointer"
                 title="Back to list"
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
             ) : (
-              <div className="p-2.5 bg-white/20 rounded-2xl backdrop-blur-md">
-                <Bell className="w-5 h-5 text-white animate-bounce" />
+              <div className="p-2.5 bg-white/15 rounded-xl">
+                <Bell className="w-5 h-5 text-white" />
               </div>
             )}
             <div>
-              <h3 className="font-serif italic font-bold text-xl leading-tight">
+              <h3 className="font-serif font-semibold text-xl leading-tight">
                 {selectedNotif ? 'Notification Details' : 'Notification Center'}
               </h3>
-              <p className="text-xs text-pink-100 opacity-90">
+              <p className="text-xs text-pink-100 tabular-nums">
                 {selectedNotif
                   ? (selectedNotif.phaseInfo || 'Full Details')
-                  : unreadCount > 0 ? `${unreadCount} unread update${unreadCount > 1 ? 's' : ''}` : 'All caught up ✨'}
+                  : unreadCount > 0 ? `${unreadCount} unread update${unreadCount > 1 ? 's' : ''}` : 'All caught up'}
               </p>
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-2 rounded-full bg-white/20 hover:bg-white/30 text-white transition-all cursor-pointer"
+            className="p-2 rounded-xl bg-white/15 hover:bg-white/25 text-white transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -242,25 +244,25 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
 
         {/* DETAILS VIEW */}
         {selectedNotif ? (
-          <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-pink-50/20 dark:bg-stone-950/40">
+          <div className="flex-1 overflow-y-auto p-5 space-y-5 bg-[#faf8f6] dark:bg-[#11100f]">
             {/* Header Badge & Emoji */}
-            <div className="flex flex-col items-center text-center p-6 bg-white dark:bg-stone-800 rounded-3xl border border-pink-100/60 dark:border-stone-700 shadow-sm relative overflow-hidden">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-pink-100 to-rose-100 dark:from-stone-700 dark:to-stone-600 flex items-center justify-center text-4xl mb-4 shadow-inner">
+            <div className="flex flex-col items-center text-center p-6 bg-white dark:bg-[#1a1816] rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-xs">
+              <div className="w-16 h-16 rounded-2xl bg-[#faf8f6] dark:bg-[#23201d] flex items-center justify-center text-3xl mb-4 border border-stone-200/80 dark:border-[#342f2b]">
                 {selectedNotif.emoji || '🌸'}
               </div>
 
               {selectedNotif.phaseInfo && (
-                <span className="px-3.5 py-1 bg-pink-100 dark:bg-pink-900/50 text-pink-700 dark:text-pink-300 rounded-full text-xs font-bold uppercase tracking-wider mb-2">
+                <span className="px-3 py-1 bg-pink-50 dark:bg-pink-950/40 text-pink-700 dark:text-pink-300 rounded-lg text-xs font-semibold mb-2 border border-pink-200/60 dark:border-pink-900/50">
                   {selectedNotif.phaseInfo}
                 </span>
               )}
 
-              <h2 className="text-xl font-bold text-stone-800 dark:text-stone-100 leading-snug">
+              <h2 className="text-lg font-serif font-semibold text-stone-900 dark:text-stone-100 leading-snug">
                 {selectedNotif.title}
               </h2>
 
-              <p className="text-xs text-stone-400 mt-2 font-mono flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5 text-pink-400" />
+              <p className="text-xs text-stone-500 dark:text-stone-400 mt-2 flex items-center gap-1.5 tabular-nums">
+                <Calendar className="w-3.5 h-3.5 text-pink-500" />
                 {new Date(selectedNotif.timestamp).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
                 {' • '}
                 {new Date(selectedNotif.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -268,19 +270,19 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
             </div>
 
             {/* Message Body Box */}
-            <div className="bg-white dark:bg-stone-800 p-6 rounded-3xl border border-pink-100/60 dark:border-stone-700 shadow-sm space-y-3">
-              <h4 className="text-xs font-bold text-pink-500 uppercase tracking-widest flex items-center gap-1.5">
+            <div className="bg-white dark:bg-[#1a1816] p-5 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-xs space-y-2.5">
+              <h4 className="text-xs font-semibold text-pink-600 dark:text-pink-400 flex items-center gap-1.5">
                 <Sparkles className="w-4 h-4" /> Message Content
               </h4>
-              <p className="text-sm text-stone-700 dark:text-stone-200 leading-relaxed font-serif italic text-base">
+              <p className="text-sm text-stone-700 dark:text-stone-200 leading-relaxed font-serif">
                 "{selectedNotif.body}"
               </p>
             </div>
 
             {/* Phase Information & Detailed Wellness Tip */}
-            <div className="bg-gradient-to-br from-pink-500/10 via-rose-500/5 to-purple-500/10 p-6 rounded-3xl border border-pink-200/50 dark:border-pink-900/30 space-y-3">
-              <div className="flex items-center gap-2 text-pink-600 dark:text-pink-400 font-bold text-xs uppercase tracking-wider">
-                <Heart className="w-4 h-4 fill-pink-400/20" />
+            <div className="bg-white dark:bg-[#1a1816] p-5 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] space-y-2.5">
+              <div className="flex items-center gap-2 text-pink-600 dark:text-pink-400 font-semibold text-xs">
+                <Heart className="w-4 h-4" />
                 <span>Phase Insights & Wellness Advice</span>
               </div>
               <p className="text-xs text-stone-600 dark:text-stone-300 leading-relaxed">
@@ -289,17 +291,19 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
             </div>
 
             {/* Action Buttons */}
-            <div className="space-y-3 pt-2">
+            <div className="space-y-2.5 pt-2">
               <button
+                type="button"
                 onClick={() => handleActionClick(selectedNotif)}
-                className="w-full py-3.5 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl font-bold text-xs uppercase tracking-wider shadow-lg shadow-pink-200/50 dark:shadow-none hover:scale-[1.02] transition-transform flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-3 bg-pink-600 hover:bg-pink-700 text-white rounded-xl font-semibold text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
               >
-                <span>Open Relevant Feature</span>
+                <span>Open Feature</span>
                 <ExternalLink className="w-4 h-4" />
               </button>
               <button
+                type="button"
                 onClick={() => setSelectedNotif(null)}
-                className="w-full py-3 bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 rounded-2xl font-bold text-xs uppercase tracking-wider hover:bg-stone-200 transition-colors cursor-pointer"
+                className="w-full py-3 bg-white dark:bg-[#23201d] text-stone-700 dark:text-stone-200 border border-stone-200/80 dark:border-[#342f2b] rounded-xl font-semibold text-xs hover:bg-stone-50 dark:hover:bg-[#2c2824] transition-colors cursor-pointer"
               >
                 Back to All Notifications
               </button>
@@ -308,16 +312,17 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
         ) : (
           <>
             {/* Action Toolbar & Filters */}
-            <div className="bg-pink-50/50 dark:bg-stone-800/60 border-b border-pink-100/30">
-              <div className="px-4 py-2 flex gap-1.5 overflow-x-auto scrollbar-hide text-xs">
+            <div className="bg-[#faf8f6] dark:bg-[#23201d] border-b border-stone-200/80 dark:border-[#2e2a26]">
+              <div className="px-4 py-2.5 flex gap-1.5 overflow-x-auto scrollbar-hide text-xs">
                 {availableCategories.map(cat => (
                   <button
                     key={cat.id}
+                    type="button"
                     onClick={() => setCategoryFilter(cat.id)}
-                    className={`px-3 py-1.5 rounded-full font-bold uppercase text-[10px] tracking-wider transition-all whitespace-nowrap cursor-pointer ${
+                    className={`px-3 py-1.5 rounded-xl font-semibold text-xs transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                       categoryFilter === cat.id
-                        ? 'bg-pink-500 text-white shadow-sm'
-                        : 'bg-white dark:bg-stone-800 text-stone-500 hover:text-pink-600'
+                        ? 'bg-pink-600 text-white'
+                        : 'bg-white dark:bg-[#1a1816] text-stone-600 dark:text-stone-300 border border-stone-200/80 dark:border-[#342f2b] hover:text-pink-600'
                     }`}
                   >
                     {cat.label}
@@ -325,18 +330,20 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
                 ))}
               </div>
 
-              <div className="px-4 py-2 flex justify-between items-center text-xs border-t border-pink-100/30">
+              <div className="px-4 py-2 flex justify-between items-center text-xs border-t border-stone-200/70 dark:border-[#2e2a26]">
                 <button
+                  type="button"
                   onClick={handleMarkAllRead}
                   disabled={unreadCount === 0}
-                  className="text-pink-600 dark:text-pink-400 font-medium hover:underline flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:no-underline"
+                  className="text-pink-600 dark:text-pink-400 font-semibold hover:underline flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:no-underline"
                 >
                   <CheckCheck className="w-3.5 h-3.5" /> Mark all read
                 </button>
                 <button
+                  type="button"
                   onClick={handleClearAll}
                   disabled={notifications.length === 0}
-                  className="text-stone-400 hover:text-rose-500 font-medium hover:underline flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:no-underline"
+                  className="text-stone-500 dark:text-stone-400 hover:text-rose-600 font-semibold hover:underline flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:no-underline"
                 >
                   <Trash2 className="w-3.5 h-3.5" /> Clear all
                 </button>
@@ -344,20 +351,21 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
             </div>
 
             {/* Notification List */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            <div className="flex-1 overflow-y-auto p-4 space-y-2.5 bg-[#faf8f6] dark:bg-[#11100f]">
               {filteredNotifications.length === 0 ? (
-                <div className="py-20 text-center text-stone-400 dark:text-stone-500 space-y-4">
-                  <Sparkles className="w-10 h-10 mx-auto opacity-30 text-pink-400 animate-pulse" />
-                  <p className="text-sm font-medium text-stone-600 dark:text-stone-300">No notifications in this filter</p>
-                  <p className="text-xs text-stone-400 max-w-xs mx-auto">
-                    Your daily phase notifications, wellness tips, and partner alerts are saved here automatically.
+                <div className="py-16 text-center text-stone-500 dark:text-stone-400 space-y-4">
+                  <Sparkles className="w-9 h-9 mx-auto text-pink-500 opacity-60" />
+                  <p className="text-sm font-semibold text-stone-800 dark:text-stone-200">No notifications in this filter</p>
+                  <p className="text-xs text-stone-500 dark:text-stone-400 max-w-xs mx-auto">
+                    Your daily phase notifications, wellness tips, and partner alerts appear here automatically.
                   </p>
                   <button
+                    type="button"
                     onClick={handleSyncNotificationsNow}
-                    className="px-4 py-2 bg-pink-50 dark:bg-stone-800 text-pink-600 dark:text-pink-400 hover:bg-pink-100 dark:hover:bg-stone-700 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 mx-auto cursor-pointer border border-pink-100 dark:border-stone-700"
+                    className="px-4 py-2 bg-white dark:bg-[#1a1816] text-pink-600 dark:text-pink-400 hover:bg-stone-50 dark:hover:bg-[#23201d] rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5 mx-auto cursor-pointer border border-stone-200/80 dark:border-[#342f2b]"
                   >
                     <RefreshCw className="w-3.5 h-3.5" />
-                    <span>Sync Daily Updates Now</span>
+                    <span>Sync Daily Updates</span>
                   </button>
                 </div>
               ) : (
@@ -365,55 +373,57 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
                   <div
                     key={notif.id}
                     onClick={() => handleSelectNotif(notif)}
-                    className={`p-4 rounded-2xl border transition-all cursor-pointer relative group ${
+                    className={`p-4 rounded-2xl border transition-colors cursor-pointer relative group ${
                       !notif.isRead
-                        ? 'bg-gradient-to-r from-pink-50/90 to-rose-50/40 dark:from-stone-800 dark:to-stone-800/80 border-pink-200/80 dark:border-pink-900/50 shadow-sm'
-                        : 'bg-white dark:bg-stone-800/40 border-stone-100 dark:border-stone-800 opacity-80 hover:opacity-100'
+                        ? 'bg-white dark:bg-[#1a1816] border-pink-300/80 dark:border-pink-900/60 shadow-xs'
+                        : 'bg-white/80 dark:bg-[#1a1816]/60 border-stone-200/80 dark:border-[#2e2a26] opacity-80 hover:opacity-100'
                     }`}
                   >
                     {!notif.isRead && (
-                      <span className="absolute top-4 right-4 w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse" />
+                      <span className="absolute top-4 right-4 w-2 h-2 rounded-full bg-rose-600" />
                     )}
 
                     <div className="flex items-start gap-3">
-                      <span className="text-3xl flex-shrink-0 leading-none pt-0.5">{notif.emoji || '🌸'}</span>
+                      <span className="text-2xl flex-shrink-0 leading-none pt-0.5">{notif.emoji || '🌸'}</span>
                       <div className="flex-1 min-w-0 pr-3">
                         {notif.phaseInfo && (
-                          <span className="inline-block px-2 py-0.5 bg-pink-100 dark:bg-pink-900/40 text-pink-700 dark:text-pink-300 rounded-md text-[9px] font-bold uppercase tracking-wider mb-1">
+                          <span className="inline-block px-2 py-0.5 bg-pink-50 dark:bg-pink-950/40 text-pink-700 dark:text-pink-300 rounded-md text-[11px] font-semibold mb-1 border border-pink-200/60 dark:border-pink-900/50">
                             {notif.phaseInfo}
                           </span>
                         )}
-                        <h4 className="text-xs font-bold text-stone-800 dark:text-stone-100 leading-snug">
+                        <h4 className="text-xs font-semibold text-stone-900 dark:text-stone-100 leading-snug">
                           {notif.title}
                         </h4>
-                        <p className="text-[11px] text-stone-600 dark:text-stone-300 mt-1 leading-relaxed line-clamp-2">
+                        <p className="text-xs text-stone-600 dark:text-stone-300 mt-1 leading-relaxed line-clamp-2">
                           {notif.body}
                         </p>
 
                         {(notif.category === 'partner_request' || notif.isPartnerRequest || (notif.title && (notif.title.toLowerCase().includes('request') || notif.title.toLowerCase().includes('invite')))) && (
                           <button
+                            type="button"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleActionClick(notif);
                             }}
-                            className="mt-2.5 w-full py-2 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider shadow-sm hover:scale-[1.01] transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                            className="mt-2.5 w-full py-2 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                           >
-                            <span>Review & Approve Request 💖</span>
+                            <span>Review & Approve Request</span>
                           </button>
                         )}
 
-                        <div className="flex items-center justify-between mt-2 pt-1 border-t border-stone-100 dark:border-stone-800/50">
-                          <p className="text-[9px] text-stone-400 font-mono">
+                        <div className="flex items-center justify-between mt-2.5 pt-1.5 border-t border-stone-200/60 dark:border-[#2e2a26]">
+                          <p className="text-[11px] text-stone-400 dark:text-stone-500 tabular-nums">
                             {new Date(notif.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' })} • {new Date(notif.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </p>
-                          <span className="text-[10px] text-pink-500 font-bold flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
-                            Tap to read <ChevronRight className="w-3 h-3" />
+                          <span className="text-xs text-pink-600 dark:text-pink-400 font-semibold flex items-center gap-0.5">
+                            Read <ChevronRight className="w-3.5 h-3.5" />
                           </span>
                         </div>
                       </div>
                       <button
+                        type="button"
                         onClick={(e) => handleDeleteNotif(notif.id, e)}
-                        className="text-stone-300 hover:text-rose-500 p-1.5 rounded-full transition-colors opacity-60 hover:opacity-100 hover:bg-stone-100 dark:hover:bg-stone-700"
+                        className="text-stone-400 hover:text-rose-600 p-1.5 rounded-lg transition-colors hover:bg-stone-100 dark:hover:bg-[#23201d] cursor-pointer"
                         title="Delete notification"
                       >
                         <Trash2 className="w-3.5 h-3.5" />

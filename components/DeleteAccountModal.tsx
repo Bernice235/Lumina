@@ -67,26 +67,26 @@ export const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
 
   if (deletionReceipt) {
     return (
-      <div className="fixed inset-0 bg-stone-900/70 backdrop-blur-md z-[200] flex items-center justify-center p-4 animate-fadeIn">
-        <div className="bg-white rounded-[2.5rem] p-6 sm:p-8 max-w-md w-full space-y-5 border border-emerald-100 shadow-2xl text-center">
-          <div className="w-16 h-16 bg-emerald-50 border border-emerald-200 rounded-full flex items-center justify-center mx-auto text-emerald-600">
-            <CheckCircle2 size={32} />
+      <div className="fixed inset-0 bg-stone-950/70 backdrop-blur-sm z-[200] flex items-center justify-center p-4 animate-fadeIn">
+        <div className="bg-white dark:bg-[#1a1816] rounded-2xl p-6 sm:p-8 max-w-md w-full space-y-5 border border-stone-200/80 dark:border-[#2e2a26] shadow-2xl text-center">
+          <div className="w-14 h-14 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50 rounded-2xl flex items-center justify-center mx-auto text-emerald-600 dark:text-emerald-400">
+            <CheckCircle2 size={28} />
           </div>
           <div className="space-y-2">
-            <h3 className="font-serif font-bold text-xl text-stone-900">Account Permanently Deleted</h3>
-            <p className="text-xs text-stone-600 leading-relaxed">
+            <h3 className="font-serif font-bold text-xl text-stone-900 dark:text-stone-100">Account Permanently Deleted</h3>
+            <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
               Your Lumina profile, cycle and health logs, diary entries, partner connections, device backups, and local encrypted keys have been permanently erased.
             </p>
           </div>
-          <div className="bg-stone-50 border border-stone-200 rounded-2xl p-4 text-left text-[11px] text-stone-600 space-y-1">
-            <p>
-              <strong className="text-stone-800">Completed At:</strong>{' '}
+          <div className="bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] rounded-xl p-4 text-left text-[11px] text-stone-600 dark:text-stone-300 space-y-1.5">
+            <p className="tabular-nums">
+              <strong className="text-stone-800 dark:text-stone-100">Completed At:</strong>{' '}
               {new Date(deletionReceipt.deletedAt).toLocaleString()}
             </p>
             <p>
-              <strong className="text-stone-800">Cloud &amp; Session Status:</strong> All active sessions and authentication access have been revoked.
+              <strong className="text-stone-800 dark:text-stone-100">Cloud &amp; Session Status:</strong> All active sessions and authentication access have been revoked.
             </p>
-            <p className="text-[10px] text-stone-500 pt-1">
+            <p className="text-[10px] text-stone-500 dark:text-stone-400 pt-1">
               Note: Independent app-store or payment processor tax/transaction receipts (Apple App Store, Google Play, or Paystack) remain subject to statutory financial retention rules outside Lumina.
             </p>
           </div>
@@ -98,7 +98,7 @@ export const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
               onClose();
               onDeleted();
             }}
-            className="w-full py-3.5 bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs uppercase tracking-wider rounded-2xl transition-all cursor-pointer"
+            className="w-full py-3 bg-stone-900 dark:bg-stone-100 hover:bg-stone-800 dark:hover:bg-white text-white dark:text-stone-900 font-semibold text-xs rounded-xl transition-colors cursor-pointer"
           >
             Finish &amp; Exit
           </button>
@@ -108,46 +108,46 @@ export const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 bg-stone-900/70 backdrop-blur-md z-[200] flex items-center justify-center p-4 animate-fadeIn">
+    <div className="fixed inset-0 bg-stone-950/70 backdrop-blur-sm z-[200] flex items-center justify-center p-4 animate-fadeIn">
       <form
         onSubmit={handleConfirmDelete}
-        className="bg-white rounded-[2.5rem] p-6 sm:p-7 max-w-md w-full space-y-4 border border-rose-100 shadow-2xl max-h-[92vh] overflow-y-auto text-left"
+        className="bg-white dark:bg-[#1a1816] rounded-2xl p-6 sm:p-7 max-w-md w-full space-y-4 border border-stone-200/80 dark:border-[#2e2a26] shadow-2xl max-h-[92vh] overflow-y-auto text-left"
       >
-        <div className="flex items-center gap-3 text-rose-600">
-          <div className="p-3 bg-rose-100/70 rounded-2xl shrink-0">
-            <ShieldAlert size={24} />
+        <div className="flex items-center gap-3 text-rose-600 dark:text-rose-400">
+          <div className="p-2.5 bg-rose-50 dark:bg-rose-950/40 border border-rose-200/70 dark:border-rose-900/40 rounded-xl shrink-0">
+            <ShieldAlert size={22} />
           </div>
           <div>
-            <h3 className="font-serif font-bold text-lg text-stone-900">Delete Account Permanently?</h3>
-            <p className="text-[10px] font-bold text-rose-600 uppercase tracking-widest">
-              Verified Reauthentication Required • Irreversible
+            <h3 className="font-serif font-bold text-lg text-stone-900 dark:text-stone-100">Delete Account Permanently?</h3>
+            <p className="text-[11px] font-semibold text-rose-600 dark:text-rose-400">
+              Verified reauthentication required · Irreversible
             </p>
           </div>
         </div>
 
-        <div className="space-y-2 text-xs text-stone-700 bg-rose-50/60 p-4 rounded-2xl border border-rose-100">
-          <p className="font-bold text-rose-900">Immediate permanent erasure applies to:</p>
-          <ul className="list-disc pl-5 space-y-1 text-[11px] text-rose-900/90">
+        <div className="space-y-2 text-xs text-stone-700 dark:text-stone-300 bg-rose-50/70 dark:bg-rose-950/25 p-4 rounded-xl border border-rose-200/80 dark:border-rose-900/40">
+          <p className="font-bold text-rose-900 dark:text-rose-200">Immediate permanent erasure applies to:</p>
+          <ul className="list-disc pl-5 space-y-1 text-[11px] text-rose-900/90 dark:text-rose-200/90">
             <li>Cycle history, predictions, symptoms, mood &amp; pregnancy logs</li>
             <li>Private diary entries, PINs, 2FA keys, and local encrypted vaults</li>
             <li>Partner Circle connections, shared summaries, invites, and gifts</li>
             <li>Your Firebase authentication credentials and active sessions</li>
           </ul>
-          <p className="text-[10px] text-stone-600 pt-1 border-t border-rose-200/70">
+          <p className="text-[10px] text-stone-600 dark:text-stone-400 pt-1.5 border-t border-rose-200/70 dark:border-rose-900/40">
             <strong>Legal retention notice:</strong> Financial transaction records processed directly by Apple App Store, Google Play, or Paystack may be retained strictly as required by tax and accounting law.
           </p>
         </div>
 
         {errorMsg && (
-          <div role="alert" className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-800 font-medium">
+          <div role="alert" className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 text-xs text-rose-800 dark:text-rose-300 font-medium">
             {errorMsg}
           </div>
         )}
 
         {isPasswordAccount && (
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-stone-800 flex items-center gap-1.5">
-              <Lock size={13} className="text-rose-600" />
+            <label className="text-xs font-semibold text-stone-800 dark:text-stone-200 flex items-center gap-1.5">
+              <Lock size={13} className="text-rose-600 dark:text-rose-400" />
               <span>Verify your current password</span>
             </label>
             <input
@@ -157,31 +157,31 @@ export const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
               placeholder="Enter current password"
               autoComplete="current-password"
               required
-              className="w-full bg-stone-50 border border-stone-200 px-4 py-2.5 rounded-2xl text-xs text-stone-900 focus:border-rose-400 outline-none"
+              className="w-full h-11 bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] px-4 rounded-xl text-xs text-stone-900 dark:text-stone-100 focus:border-rose-400 outline-none"
             />
           </div>
         )}
 
         {isOAuthAccount && (
-          <div className="p-3 rounded-2xl bg-indigo-50/60 border border-indigo-100 text-[11px] text-indigo-900">
+          <div className="p-3 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200/70 dark:border-indigo-900/40 text-[11px] text-indigo-900 dark:text-indigo-200">
             When you click <strong>Verify &amp; Delete</strong>, a secure {providers.includes('google.com') ? 'Google' : 'Apple'} confirmation window will appear to verify your identity before any data is erased.
           </div>
         )}
 
         <div className="space-y-1.5">
-          <label className="text-xs font-bold text-stone-800 block">
-            Type <span className="font-mono text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">DELETE</span> to confirm:
+          <label className="text-xs font-semibold text-stone-800 dark:text-stone-200 block">
+            Type <span className="font-mono text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 px-1.5 py-0.5 rounded border border-rose-200 dark:border-rose-900/40">DELETE</span> to confirm
           </label>
           <input
             type="text"
             value={confirmInput}
             onChange={(e) => setConfirmInput(e.target.value)}
             placeholder="Type DELETE"
-            className="w-full bg-stone-50 border border-stone-200 px-4 py-2.5 rounded-2xl text-xs font-mono font-bold text-stone-900 focus:border-rose-400 outline-none"
+            className="w-full h-11 bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] px-4 rounded-xl text-xs font-mono font-bold text-stone-900 dark:text-stone-100 focus:border-rose-400 outline-none"
           />
         </div>
 
-        <label className="flex items-start gap-2.5 text-[11px] text-stone-700 cursor-pointer select-none">
+        <label className="flex items-start gap-2.5 text-[11px] text-stone-700 dark:text-stone-300 cursor-pointer select-none">
           <input
             type="checkbox"
             checked={acknowledgedRetention}
@@ -197,7 +197,7 @@ export const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
           <button
             type="button"
             onClick={onOpenExternalPage}
-            className="text-[11px] font-semibold text-pink-700 hover:underline inline-flex items-center gap-1 cursor-pointer"
+            className="text-[11px] font-semibold text-pink-700 dark:text-pink-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
           >
             <ExternalLink size={12} />
             <span>View Public Web Account Deletion &amp; Retention Policy</span>
@@ -214,14 +214,14 @@ export const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
               setConfirmInput('');
               onClose();
             }}
-            className="flex-1 py-3 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs rounded-xl transition-all cursor-pointer disabled:opacity-50"
+            className="flex-1 py-3 bg-stone-100 dark:bg-[#23201d] hover:bg-stone-200 dark:hover:bg-[#2b2724] text-stone-700 dark:text-stone-200 font-semibold text-xs rounded-xl transition-colors cursor-pointer disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={!canSubmit}
-            className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-md shadow-rose-200 flex items-center justify-center gap-1.5"
+            className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-xs rounded-xl transition-colors cursor-pointer shadow-xs flex items-center justify-center gap-1.5"
           >
             <Trash2 size={14} />
             <span>{isDeleting ? 'Verifying & Deleting...' : 'Verify & Delete'}</span>

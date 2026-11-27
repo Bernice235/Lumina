@@ -1,9 +1,8 @@
-
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, Symptom, PeriodLog } from '../types';
 import { SYMPTOMS } from '../constants';
-import { Calendar, Activity, History, Plus, X } from 'lucide-react';
+import { Calendar, Activity, History, Plus, X, Droplets, Pill, Thermometer, Scale } from 'lucide-react';
 import { trackLogPeriod } from '../services/analyticsService';
 import { formatYMD, parseYMDToLocalDate } from '../services/cycleSyncService';
 
@@ -40,8 +39,6 @@ const LogModal: React.FC<LogModalProps> = ({
   const [isProtected, setIsProtected] = useState(true);
 
   const today = new Date().toDateString();
-  const isPeriodLogged = user.periodDates?.includes(today);
-  const currentLog = user.periodLogs?.find(l => l.date === today);
 
   const combinedTimeline = useMemo(() => {
     const sLogs = symptoms.map(s => ({ ...s, logType: 'symptom' as const }));
@@ -55,143 +52,167 @@ const LogModal: React.FC<LogModalProps> = ({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center p-4">
+      <div className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center sm:p-4">
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="absolute inset-0 bg-pink-900/20 backdrop-blur-sm"
+          className="absolute inset-0 bg-stone-950/45 backdrop-blur-xs"
         />
         
         <motion.div 
-          initial={{ y: '100%' }}
-          animate={{ y: 0 }}
-          exit={{ y: '100%' }}
-          transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-          className="relative bg-white w-full max-w-lg rounded-t-[3rem] sm:rounded-[3rem] overflow-hidden shadow-2xl"
+          initial={{ y: 24, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: 24, opacity: 0 }}
+          transition={{ duration: 0.18 }}
+          className="relative bg-white dark:bg-[#1a1816] w-full max-w-lg rounded-t-2xl sm:rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] overflow-hidden shadow-2xl max-h-[92vh] flex flex-col"
         >
           {/* Header */}
-          <div className="p-8 pb-4 flex justify-between items-center">
+          <div className="px-6 pt-6 pb-4 flex justify-between items-center border-b border-stone-100 dark:border-[#2e2a26]">
             <div>
-              <h3 className="text-2xl font-serif text-pink-500 italic">Daily Log</h3>
-              <p className="text-[10px] font-bold text-pink-300 uppercase tracking-widest">How are you feeling today?</p>
+              <h3 className="text-xl font-serif text-stone-900 dark:text-stone-100">Daily Log</h3>
+              <p className="text-xs text-stone-500 dark:text-stone-400">Record your cycle, symptoms, and wellbeing</p>
             </div>
             <button 
+              type="button"
               onClick={onClose}
-              className="w-10 h-10 rounded-full bg-pink-50 flex items-center justify-center text-pink-400 hover:bg-pink-100 transition-colors"
+              aria-label="Close daily log"
+              className="w-9 h-9 rounded-xl bg-stone-100 dark:bg-[#23201d] flex items-center justify-center text-stone-600 dark:text-stone-300 hover:bg-stone-200 transition-colors cursor-pointer"
             >
-              <X size={20} />
+              <X size={18} />
             </button>
           </div>
 
-          {/* Tabs */}
-          <div className="px-8 flex gap-2 overflow-x-auto scrollbar-hide pb-4">
-            {[
-              { id: 'period', label: 'Period', icon: Calendar },
-              { id: 'symptoms', label: 'Symptoms', icon: Activity },
-              { id: 'timeline', label: 'Timeline', icon: History },
-              { id: 'other', label: 'Other', icon: Plus },
-            ].map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all flex-shrink-0 ${activeTab === tab.id ? 'bg-pink-400 text-white shadow-md' : 'text-pink-300 hover:bg-pink-50'}`}
-              >
-                <tab.icon size={14} />
-                <span className="text-[10px] font-bold uppercase tracking-widest">{tab.label}</span>
-              </button>
-            ))}
+          {/* Segmented Tabs */}
+          <div className="px-6 pt-4">
+            <div className="grid grid-cols-4 gap-1 bg-stone-100 dark:bg-[#23201d] p-1 rounded-xl border border-stone-200/70 dark:border-[#2e2a26]">
+              {[
+                { id: 'period', label: 'Period', icon: Calendar },
+                { id: 'symptoms', label: 'Symptoms', icon: Activity },
+                { id: 'timeline', label: 'Timeline', icon: History },
+                { id: 'other', label: 'Other', icon: Plus },
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                    activeTab === tab.id 
+                      ? 'bg-white dark:bg-[#1a1816] text-pink-700 dark:text-pink-300 shadow-xs' 
+                      : 'text-stone-600 dark:text-stone-400 hover:text-stone-900'
+                  }`}
+                >
+                  <tab.icon size={13} />
+                  <span>{tab.label}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Content */}
-          <div className="p-8 pt-4">
+          <div className="p-6 overflow-y-auto">
             {activeTab === 'period' && (
-              <div className="space-y-6 animate-fadeIn">
-                <div className="text-center">
-                  <div className="text-5xl mb-4">🩸</div>
-                  <h4 className="text-lg font-serif text-pink-600 italic mb-2">Log Your Period</h4>
-                  <p className="text-[10px] font-bold text-pink-300 uppercase tracking-widest mb-6">Select the dates of your flow</p>
-                  
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2 text-left">
-                        <label className="text-[10px] font-bold text-pink-300 uppercase ml-2">Start Date</label>
-                        <input 
-                          type="date" 
-                          value={startDate}
-                          onChange={(e) => setStartDate(e.target.value)}
-                          className="w-full bg-pink-50/50 p-4 rounded-2xl outline-none text-pink-600 font-bold text-sm border border-transparent focus:border-pink-200"
-                        />
-                      </div>
-                      <div className="space-y-2 text-left">
-                        <label className="text-[10px] font-bold text-pink-300 uppercase ml-2">End Date</label>
-                        <input 
-                          type="date" 
-                          value={endDate}
-                          onChange={(e) => setEndDate(e.target.value)}
-                          className="w-full bg-pink-50/50 p-4 rounded-2xl outline-none text-pink-600 font-bold text-sm border border-transparent focus:border-pink-200"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-3">
-                      <label className="text-[10px] font-bold text-pink-300 uppercase block text-left ml-2">Flow Intensity</label>
-                      <div className="flex justify-between gap-2">
-                        {(['spotting', 'light', 'medium', 'heavy'] as const).map(intensity => (
-                          <button
-                            key={intensity}
-                            onClick={() => setSelectedIntensity(intensity)}
-                            className={`flex-1 py-3 rounded-2xl border-2 transition-all ${selectedIntensity === intensity ? 'border-pink-400 bg-pink-50 text-pink-600 shadow-sm' : 'border-gray-50 text-gray-400 hover:border-pink-100'}`}
-                          >
-                            <span className="text-[9px] font-bold uppercase tracking-widest">{intensity}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="space-y-2 text-left">
-                      <label className="text-[10px] font-bold text-pink-300 uppercase ml-2">Notes (Optional)</label>
-                      <textarea 
-                        placeholder="How are you feeling during this period?"
-                        value={periodNotes}
-                        onChange={(e) => setPeriodNotes(e.target.value)}
-                        className="w-full bg-pink-50/50 p-4 rounded-2xl outline-none text-pink-600 text-sm border border-transparent focus:border-pink-200 min-h-[80px] resize-none"
+              <div className="space-y-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-100 dark:border-rose-900/40 flex items-center justify-center shrink-0">
+                    <Droplets className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-base font-serif text-stone-900 dark:text-stone-100">Log Your Period</h4>
+                    <p className="text-xs text-stone-500 dark:text-stone-400">Select flow dates and intensity</p>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5 text-left">
+                      <label className="text-xs font-semibold text-stone-700 dark:text-stone-300">Start Date</label>
+                      <input 
+                        type="date" 
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        className="w-full h-11 bg-stone-50 dark:bg-[#23201d] px-3.5 rounded-xl outline-none text-stone-900 dark:text-stone-100 font-medium text-sm border border-stone-200 dark:border-[#2e2a26] focus:border-pink-500"
                       />
                     </div>
-
-                    <button
-                      onClick={() => {
-                        const startLocal = parseYMDToLocalDate(startDate);
-                        let endLocal = parseYMDToLocalDate(endDate);
-                        if (endLocal < startLocal) {
-                          endLocal = startLocal;
-                        }
-                        onLogFullPeriod(startLocal.toDateString(), endLocal.toDateString(), selectedIntensity);
-                        trackLogPeriod();
-                        onClose();
-                      }}
-                      className="w-full py-5 bg-gradient-to-r from-pink-400 to-rose-400 text-white rounded-3xl font-bold text-lg shadow-xl shadow-pink-100 hover:scale-[1.02] active:scale-95 transition-all"
-                    >
-                      SAVE PERIOD LOG
-                    </button>
+                    <div className="space-y-1.5 text-left">
+                      <label className="text-xs font-semibold text-stone-700 dark:text-stone-300">End Date</label>
+                      <input 
+                        type="date" 
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        className="w-full h-11 bg-stone-50 dark:bg-[#23201d] px-3.5 rounded-xl outline-none text-stone-900 dark:text-stone-100 font-medium text-sm border border-stone-200 dark:border-[#2e2a26] focus:border-pink-500"
+                      />
+                    </div>
                   </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-stone-700 dark:text-stone-300 block text-left">Flow Intensity</label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {(['spotting', 'light', 'medium', 'heavy'] as const).map(intensity => (
+                        <button
+                          key={intensity}
+                          type="button"
+                          onClick={() => setSelectedIntensity(intensity)}
+                          className={`h-10 rounded-xl border text-xs font-semibold capitalize transition-colors cursor-pointer ${
+                            selectedIntensity === intensity 
+                              ? 'border-pink-500 bg-pink-50 dark:bg-pink-950/40 text-pink-700 dark:text-pink-300' 
+                              : 'border-stone-200 dark:border-[#2e2a26] text-stone-600 dark:text-stone-400 hover:border-pink-200'
+                          }`}
+                        >
+                          {intensity}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5 text-left">
+                    <label className="text-xs font-semibold text-stone-700 dark:text-stone-300">Notes (Optional)</label>
+                    <textarea 
+                      placeholder="Add optional notes about flow or comfort..."
+                      value={periodNotes}
+                      onChange={(e) => setPeriodNotes(e.target.value)}
+                      className="w-full bg-stone-50 dark:bg-[#23201d] p-3.5 rounded-xl outline-none text-stone-900 dark:text-stone-100 text-sm border border-stone-200 dark:border-[#2e2a26] focus:border-pink-500 min-h-[80px] resize-none"
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const startLocal = parseYMDToLocalDate(startDate);
+                      let endLocal = parseYMDToLocalDate(endDate);
+                      if (endLocal < startLocal) {
+                        endLocal = startLocal;
+                      }
+                      onLogFullPeriod(startLocal.toDateString(), endLocal.toDateString(), selectedIntensity);
+                      trackLogPeriod();
+                      onClose();
+                    }}
+                    className="w-full h-11 bg-pink-600 hover:bg-pink-700 text-white rounded-xl font-semibold text-sm transition-colors cursor-pointer"
+                  >
+                    Save Period Log
+                  </button>
                 </div>
               </div>
             )}
 
             {activeTab === 'symptoms' && (
-              <div className="grid grid-cols-3 gap-3 animate-fadeIn max-h-[350px] overflow-y-auto pr-2 scrollbar-hide">
+              <div className="grid grid-cols-3 gap-2.5 max-h-[360px] overflow-y-auto pr-1 scrollbar-hide">
                 {SYMPTOMS.map(s => {
                   const isLogged = symptoms.some(sym => sym.type === s.id && sym.date === today);
                   return (
                     <button
                       key={s.id}
+                      type="button"
                       onClick={() => onLogSymptom(s.id as any, 2)}
-                      className={`flex flex-col items-center gap-2 p-4 rounded-3xl border transition-all ${isLogged ? 'bg-pink-400 border-pink-400 text-white shadow-md' : 'bg-white border-gray-100 text-gray-400 hover:border-pink-200'}`}
+                      className={`flex flex-col items-center justify-center gap-1.5 p-3.5 rounded-xl border transition-colors cursor-pointer ${
+                        isLogged 
+                          ? 'bg-pink-600 border-pink-600 text-white' 
+                          : 'bg-stone-50 dark:bg-[#23201d] border-stone-200 dark:border-[#2e2a26] text-stone-700 dark:text-stone-300 hover:border-pink-300'
+                      }`}
                     >
-                      <span className="text-2xl">{s.emoji}</span>
-                      <span className="text-[8px] font-bold uppercase text-center leading-tight">{s.label}</span>
+                      <span className="text-xl">{s.emoji}</span>
+                      <span className="text-xs font-medium text-center leading-tight">{s.label}</span>
                     </button>
                   );
                 })}
@@ -199,16 +220,22 @@ const LogModal: React.FC<LogModalProps> = ({
             )}
 
             {activeTab === 'timeline' && (
-              <div className="space-y-4 animate-fadeIn max-h-[350px] overflow-y-auto pr-2 scrollbar-hide">
+              <div className="space-y-3 max-h-[360px] overflow-y-auto pr-1 scrollbar-hide">
                 {combinedTimeline.length > 0 ? (
                   combinedTimeline.map((item) => (
-                    <div key={item.id} className="flex items-center gap-4 p-4 bg-pink-50/30 rounded-2xl border border-pink-50">
-                      <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm text-xl">
-                        {item.logType === 'period' ? '🩸' : getSymptomInfo((item as Symptom).type)?.emoji}
+                    <div key={item.id} className="flex items-center gap-3.5 p-3.5 bg-stone-50 dark:bg-[#23201d] rounded-xl border border-stone-200/70 dark:border-[#2e2a26]">
+                      <div className="w-10 h-10 rounded-xl bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] flex items-center justify-center text-lg shrink-0">
+                        {item.logType === 'period' ? (
+                          <Droplets className="w-4 h-4 text-rose-600" />
+                        ) : (
+                          getSymptomInfo((item as Symptom).type)?.emoji
+                        )}
                       </div>
                       <div>
-                        <p className="text-[10px] font-bold text-pink-300 uppercase">{new Date(item.date).toLocaleDateString('default', { month: 'short', day: 'numeric' })}</p>
-                        <p className="text-sm font-serif text-pink-600 italic">
+                        <p className="text-xs font-medium text-stone-500 dark:text-stone-400 tabular-nums">
+                          {new Date(item.date).toLocaleDateString('default', { month: 'short', day: 'numeric' })}
+                        </p>
+                        <p className="text-sm font-semibold text-stone-900 dark:text-stone-100 capitalize">
                           {item.logType === 'period' ? `Period (${(item as any).intensity})` : getSymptomInfo((item as Symptom).type)?.label}
                         </p>
                       </div>
@@ -216,29 +243,30 @@ const LogModal: React.FC<LogModalProps> = ({
                   ))
                 ) : (
                   <div className="text-center py-12">
-                    <p className="text-pink-300 italic">No logs yet.</p>
+                    <p className="text-sm text-stone-500 dark:text-stone-400">No logs recorded yet.</p>
                   </div>
                 )}
               </div>
             )}
 
             {activeTab === 'other' && (
-              <div className="space-y-6 animate-fadeIn max-h-[400px] overflow-y-auto pr-2 scrollbar-hide">
+              <div className="space-y-5 max-h-[400px] overflow-y-auto pr-1 scrollbar-hide">
                 {/* Mood Section */}
-                <div className="space-y-4">
-                  <h4 className="text-[10px] font-bold text-pink-300 uppercase tracking-widest ml-2">Daily Mood</h4>
+                <div className="space-y-3">
+                  <h4 className="text-xs font-semibold text-stone-700 dark:text-stone-300">Daily Mood</h4>
                   <div className="grid grid-cols-4 gap-2">
                     {(['happy', 'calm', 'excited', 'tired', 'sad', 'anxious', 'angry', 'irritable'] as const).map(mood => (
                       <button
                         key={mood}
+                        type="button"
                         onClick={() => onLogMood(mood, moodNote)}
-                        className="flex flex-col items-center gap-1 p-3 rounded-2xl bg-pink-50/50 hover:bg-pink-100 transition-colors"
+                        className="flex flex-col items-center gap-1 p-2.5 rounded-xl bg-stone-50 dark:bg-[#23201d] border border-stone-200/70 dark:border-[#2e2a26] hover:border-pink-300 transition-colors cursor-pointer"
                       >
-                        <span className="text-xl">
+                        <span className="text-lg">
                           {mood === 'happy' ? '😊' : mood === 'calm' ? '😌' : mood === 'excited' ? '🤩' : mood === 'tired' ? '😴' : 
                            mood === 'sad' ? '😢' : mood === 'anxious' ? '😰' : mood === 'angry' ? '😡' : '😤'}
                         </span>
-                        <span className="text-[8px] font-bold uppercase text-pink-400">{mood}</span>
+                        <span className="text-[11px] font-medium capitalize text-stone-700 dark:text-stone-300">{mood}</span>
                       </button>
                     ))}
                   </div>
@@ -247,18 +275,19 @@ const LogModal: React.FC<LogModalProps> = ({
                     placeholder="Add a mood note..."
                     value={moodNote}
                     onChange={(e) => setMoodNote(e.target.value)}
-                    className="w-full bg-pink-50/30 p-3 rounded-2xl outline-none text-pink-600 text-xs border border-transparent focus:border-pink-200"
+                    className="w-full h-10 bg-stone-50 dark:bg-[#23201d] px-3.5 rounded-xl outline-none text-stone-900 dark:text-stone-100 text-xs border border-stone-200 dark:border-[#2e2a26] focus:border-pink-500"
                   />
                 </div>
 
                 {/* Sexual Activity Section */}
-                <div className="space-y-4 pt-4 border-t border-pink-50">
-                  <h4 className="text-[10px] font-bold text-pink-300 uppercase tracking-widest ml-2">Sexual Activity</h4>
-                  <div className="flex items-center justify-between bg-pink-50/30 p-4 rounded-2xl">
-                    <span className="text-xs font-medium text-pink-600">Protected?</span>
+                <div className="space-y-3 pt-4 border-t border-stone-200/70 dark:border-[#2e2a26]">
+                  <h4 className="text-xs font-semibold text-stone-700 dark:text-stone-300">Intimacy Log</h4>
+                  <div className="flex items-center justify-between bg-stone-50 dark:bg-[#23201d] px-4 py-3 rounded-xl border border-stone-200/70 dark:border-[#2e2a26]">
+                    <span className="text-xs font-medium text-stone-700 dark:text-stone-300">Protected?</span>
                     <button 
+                      type="button"
                       onClick={() => setIsProtected(!isProtected)}
-                      className={`px-4 py-1 rounded-full text-[10px] font-bold uppercase transition-all ${isProtected ? 'bg-teal-400 text-white' : 'bg-rose-400 text-white'}`}
+                      className={`px-3.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${isProtected ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'}`}
                     >
                       {isProtected ? 'Yes' : 'No'}
                     </button>
@@ -266,36 +295,38 @@ const LogModal: React.FC<LogModalProps> = ({
                   <div className="flex gap-2">
                     <input 
                       type="text"
-                      placeholder="Activity notes..."
+                      placeholder="Optional notes..."
                       value={sexNote}
                       onChange={(e) => setSexNote(e.target.value)}
-                      className="flex-1 bg-pink-50/30 p-3 rounded-2xl outline-none text-pink-600 text-xs border border-transparent focus:border-pink-200"
+                      className="flex-1 h-10 bg-stone-50 dark:bg-[#23201d] px-3.5 rounded-xl outline-none text-stone-900 dark:text-stone-100 text-xs border border-stone-200 dark:border-[#2e2a26] focus:border-pink-500"
                     />
                     <button 
+                      type="button"
                       onClick={() => onLogSexualActivity(isProtected, sexNote)}
-                      className="px-6 bg-pink-400 text-white rounded-2xl font-bold text-[10px] uppercase shadow-md shadow-pink-100"
+                      className="px-5 h-10 bg-pink-600 hover:bg-pink-700 text-white rounded-xl font-semibold text-xs transition-colors cursor-pointer"
                     >
                       Log
                     </button>
                   </div>
                 </div>
 
-                {/* Other Placeholders */}
-                <div className="grid grid-cols-2 gap-3 pt-4 border-t border-pink-50">
+                {/* Additional Trackers */}
+                <div className="grid grid-cols-2 gap-2.5 pt-4 border-t border-stone-200/70 dark:border-[#2e2a26]">
                   {[
-                    { label: 'Birth Control', emoji: '💊', color: 'blue' },
-                    { label: 'Temperature', emoji: '🌡️', color: 'orange' },
-                    { label: 'Water Intake', emoji: '💧', color: 'cyan' },
-                    { label: 'Weight', emoji: '⚖️', color: 'purple' },
+                    { label: 'Birth Control', icon: <Pill className="w-4 h-4 text-sky-600" /> },
+                    { label: 'Temperature', icon: <Thermometer className="w-4 h-4 text-amber-600" /> },
+                    { label: 'Water Intake', icon: <Droplets className="w-4 h-4 text-cyan-600" /> },
+                    { label: 'Weight', icon: <Scale className="w-4 h-4 text-purple-600" /> },
                   ].map(item => (
                     <button
                       key={item.label}
-                      className={`flex items-center gap-3 p-3 bg-white rounded-2xl border border-gray-100 hover:border-pink-200 transition-colors group`}
+                      type="button"
+                      className="flex items-center gap-2.5 p-3 bg-stone-50 dark:bg-[#23201d] rounded-xl border border-stone-200/70 dark:border-[#2e2a26] hover:border-pink-300 transition-colors cursor-pointer"
                     >
-                      <div className="w-8 h-8 rounded-full bg-pink-50 flex items-center justify-center text-sm group-hover:scale-110 transition-transform">
-                        {item.emoji}
+                      <div className="w-8 h-8 rounded-lg bg-white dark:bg-[#1a1816] border border-stone-200/70 dark:border-[#2e2a26] flex items-center justify-center shrink-0">
+                        {item.icon}
                       </div>
-                      <span className="text-[9px] font-bold text-gray-400 uppercase">{item.label}</span>
+                      <span className="text-xs font-medium text-stone-700 dark:text-stone-300">{item.label}</span>
                     </button>
                   ))}
                 </div>
@@ -309,3 +340,4 @@ const LogModal: React.FC<LogModalProps> = ({
 };
 
 export default LogModal;
+

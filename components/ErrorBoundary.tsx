@@ -65,42 +65,42 @@ export class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div className="min-h-[350px] w-full flex items-center justify-center p-6 bg-gradient-to-br from-rose-50/70 via-pink-50/40 to-indigo-50/50 text-gray-800 rounded-3xl border border-pink-100 shadow-sm animate-fadeIn my-4">
-          <div className="max-w-md w-full bg-white/90 backdrop-blur-md p-8 rounded-[2.5rem] border border-pink-100/80 shadow-lg text-center space-y-5">
-            <div className="w-16 h-16 bg-gradient-to-tr from-pink-100 to-rose-200 text-rose-500 rounded-3xl mx-auto flex items-center justify-center shadow-inner">
-              <Sparkles size={28} className="text-pink-500 animate-pulse" />
+        <div className="min-h-[350px] w-full flex items-center justify-center p-6 bg-[#faf8f6] dark:bg-[#11100f] text-stone-900 dark:text-stone-100 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] my-4">
+          <div className="max-w-md w-full bg-white dark:bg-[#1a1816] p-7 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-sm text-center space-y-5">
+            <div className="w-14 h-14 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 rounded-2xl mx-auto flex items-center justify-center border border-rose-200/70 dark:border-rose-900/50">
+              <Sparkles size={24} />
             </div>
 
             <div className="space-y-2">
-              <h3 className="text-xl font-serif font-bold text-gray-800 italic">
-                We encountered a gentle pause
+              <h3 className="text-xl font-serif font-semibold text-stone-900 dark:text-stone-100">
+                We encountered an unexpected view state
               </h3>
-              <p className="text-xs text-gray-500 leading-relaxed font-sans">
-                Lumina protected your health logs and caught an unexpected rendering state. Your records remain safe.
+              <p className="text-sm text-stone-600 dark:text-stone-300 leading-relaxed">
+                Lumina protected your health logs and caught a rendering issue. Your records remain intact.
               </p>
             </div>
 
             {this.state.error && (
-              <div className="p-3 bg-pink-50/50 rounded-2xl border border-pink-100 text-left text-[11px] text-pink-700/80 font-mono overflow-x-auto max-h-24">
-                <p className="font-semibold flex items-center gap-1 text-[10px] text-rose-600 mb-1">
-                  <AlertCircle size={12} /> Notice
+              <div className="p-3.5 bg-[#faf8f6] dark:bg-[#23201d] rounded-xl border border-stone-200/80 dark:border-[#342f2b] text-left text-xs text-rose-700 dark:text-rose-300 font-mono overflow-x-auto max-h-24">
+                <p className="font-sans font-semibold flex items-center gap-1.5 text-xs text-rose-600 dark:text-rose-400 mb-1">
+                  <AlertCircle size={13} /> Details
                 </p>
                 {this.state.error.message || 'Temporary display glitch'}
               </div>
             )}
 
-            <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
+            <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
               <button
                 type="button"
                 onClick={this.handleReload}
-                className="flex-1 py-3 px-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl text-xs font-bold uppercase tracking-wider shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="flex-1 py-2.5 px-4 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer"
               >
                 <RotateCcw size={14} /> Refresh View
               </button>
               <button
                 type="button"
                 onClick={this.handleGoHome}
-                className="py-3 px-4 bg-white hover:bg-pink-50 text-gray-700 rounded-2xl text-xs font-bold border border-pink-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                className="py-2.5 px-4 bg-[#faf8f6] dark:bg-[#23201d] hover:bg-stone-100 dark:hover:bg-[#2c2824] text-stone-700 dark:text-stone-200 rounded-xl text-xs font-semibold border border-stone-200/80 dark:border-[#342f2b] transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <Home size={14} /> Home
               </button>
@@ -109,7 +109,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <button
               type="button"
               onClick={this.handleResetCache}
-              className="text-[10px] text-gray-400 hover:text-pink-500 transition-colors font-medium underline underline-offset-2 cursor-pointer pt-1"
+              className="text-xs text-stone-500 dark:text-stone-400 hover:text-pink-600 dark:hover:text-pink-400 transition-colors font-medium underline underline-offset-2 cursor-pointer pt-1"
             >
               Clear display cache & reload
             </button>

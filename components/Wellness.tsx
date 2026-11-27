@@ -86,53 +86,57 @@ const Wellness: React.FC<WellnessProps> = ({ symptoms, user, setUser, waterIntak
   };
 
   return (
-    <div className="space-y-8 animate-fadeIn pb-12 text-gray-800">
-      {/* Redesigned Glassmorphic Screen Header */}
-      <header className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 text-center md:text-left bg-white/40 backdrop-blur-xl p-6 md:p-8 rounded-[2.5rem] border border-white/60 shadow-[inset_0_2px_4px_rgba(255,255,255,0.6),_0_12px_36px_rgba(244,114,182,0.03)]">
+    <div className="space-y-6 pb-12 text-stone-800 dark:text-stone-200">
+      {/* Unboxed Editorial Header */}
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 pb-1">
         <div>
-          <h2 className="text-3xl font-serif text-pink-600 font-bold tracking-tight">Wellness</h2>
-          <p className="text-xs text-stone-500 font-serif italic mt-1">Nourish your body and mind</p>
+          <h2 className="text-2xl sm:text-3xl font-serif text-stone-900 dark:text-stone-100 font-normal tracking-tight">Wellness</h2>
+          <p className="text-xs sm:text-sm text-stone-500 dark:text-stone-400 mt-0.5">Track restorative habits, rituals, and cycle-aligned movement.</p>
         </div>
-      </header>
+      </div>
 
-      {/* Glassmorphic Top Tab Navigation */}
-      <div className="flex flex-wrap md:flex-nowrap bg-pink-100/30 p-1.5 rounded-[2rem] border border-white/60 shadow-[inset_0_2px_4px_rgba(255,255,255,0.5),_0_4px_15px_rgba(244,114,182,0.03)] backdrop-blur-md gap-1 md:gap-0">
+      {/* Segmented Top Tab Navigation */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 bg-stone-100 dark:bg-[#23201d] p-1 rounded-xl border border-stone-200/80 dark:border-[#2e2a26] gap-1">
         <button 
+          type="button"
           onClick={() => setActiveTab('trackers')}
-          className={`flex-1 py-3 rounded-[1.8rem] text-[10px] font-black uppercase tracking-widest transition-all duration-300 cursor-pointer min-w-[110px] ${
+          className={`py-2.5 px-3 rounded-lg text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
             activeTab === 'trackers' 
-              ? 'bg-gradient-to-br from-pink-400 to-rose-400 text-white shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),_inset_0_-2px_4px_rgba(0,0,0,0.15),_0_6px_15px_rgba(244,114,182,0.25)] scale-[1.01]' 
-              : 'text-pink-400 hover:text-pink-600'
+              ? 'bg-white dark:bg-[#1a1816] text-pink-700 dark:text-pink-300 shadow-xs' 
+              : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'
           }`}
         >
-          Score & Trackers
+          Score &amp; Trackers
         </button>
         <button 
+          type="button"
           onClick={() => setActiveTab('rituals')}
-          className={`flex-1 py-3 rounded-[1.8rem] text-[10px] font-black uppercase tracking-widest transition-all duration-300 cursor-pointer min-w-[110px] ${
+          className={`py-2.5 px-3 rounded-lg text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
             activeTab === 'rituals' 
-              ? 'bg-gradient-to-br from-pink-400 to-rose-400 text-white shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),_inset_0_-2px_4px_rgba(0,0,0,0.15),_0_6px_15px_rgba(244,114,182,0.25)] scale-[1.01]' 
-              : 'text-pink-400 hover:text-pink-600'
+              ? 'bg-white dark:bg-[#1a1816] text-pink-700 dark:text-pink-300 shadow-xs' 
+              : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'
           }`}
         >
-          Divine Rituals
+          Supplement Rituals
         </button>
         <button 
+          type="button"
           onClick={() => setActiveTab('endo')}
-          className={`flex-1 py-3 rounded-[1.8rem] text-[10px] font-black uppercase tracking-widest transition-all duration-300 cursor-pointer min-w-[110px] ${
+          className={`py-2.5 px-3 rounded-lg text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
             activeTab === 'endo' 
-              ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),_inset_0_-2px_4px_rgba(0,0,0,0.15),_0_6px_15px_rgba(99,102,241,0.25)] scale-[1.01]' 
-              : 'text-indigo-400 hover:text-indigo-600'
+              ? 'bg-white dark:bg-[#1a1816] text-indigo-700 dark:text-indigo-300 shadow-xs' 
+              : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'
           }`}
         >
           Endo Care
         </button>
         <button 
+          type="button"
           onClick={() => setActiveTab('yoga')}
-          className={`flex-1 py-3 rounded-[1.8rem] text-[10px] font-black uppercase tracking-widest transition-all duration-300 cursor-pointer min-w-[110px] ${
+          className={`py-2.5 px-3 rounded-lg text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
             activeTab === 'yoga' 
-              ? 'bg-gradient-to-br from-pink-400 to-rose-400 text-white shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),_inset_0_-2px_4px_rgba(0,0,0,0.15),_0_6px_15px_rgba(244,114,182,0.25)] scale-[1.01]' 
-              : 'text-pink-400 hover:text-pink-600'
+              ? 'bg-white dark:bg-[#1a1816] text-pink-700 dark:text-pink-300 shadow-xs' 
+              : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'
           }`}
         >
           Yoga Guide
@@ -141,22 +145,15 @@ const Wellness: React.FC<WellnessProps> = ({ symptoms, user, setUser, waterIntak
 
       {/* TAB 1: DAILY TRACKERS & WELLNESS SCORE */}
       {activeTab === 'trackers' && (
-        <div className="space-y-6 animate-fadeIn">
-          {/* Glassmorphic Wellness Score Circular Chart */}
-          <section className="bg-gradient-to-br from-pink-50/60 via-rose-50/40 to-amber-50/40 border border-white rounded-[2.5rem] p-8 text-center relative overflow-hidden shadow-sm backdrop-blur-md">
-            <div className="relative z-10 flex flex-col items-center space-y-4">
-              <div className="space-y-1">
-                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-pink-400 block">Endocrine & Physical Vitality</span>
-                <h3 className="text-2xl font-serif italic text-pink-600 font-bold">Your Wellness Score</h3>
-              </div>
-
-              {/* Dynamic Circular Indicator with Soft Shadow */}
-              <div className="relative w-36 h-36 flex items-center justify-center">
-                {/* SVG Progress Circle */}
-                <svg className="w-full h-full transform -rotate-90">
+        <div className="space-y-6">
+          {/* Wellness Score Summary */}
+          <section className="bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] rounded-2xl p-6 sm:p-8 shadow-sm">
+            <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
+              <div className="relative w-36 h-36 flex items-center justify-center shrink-0">
+                <svg viewBox="0 0 144 144" className="w-full h-full transform -rotate-90">
                   <circle 
                     cx="72" cy="72" r="60" 
-                    fill="none" stroke="rgba(244,114,182,0.1)" strokeWidth="10" 
+                    fill="none" stroke="currentColor" className="text-stone-100 dark:text-[#23201d]" strokeWidth="10" 
                   />
                   <circle 
                     cx="72" cy="72" r="60" 
@@ -164,118 +161,125 @@ const Wellness: React.FC<WellnessProps> = ({ symptoms, user, setUser, waterIntak
                     strokeDasharray={2 * Math.PI * 60}
                     strokeDashoffset={2 * Math.PI * 60 * (1 - wellnessScore / 100)}
                     strokeLinecap="round"
-                    className="transition-all duration-1000 ease-out"
+                    className="transition-all duration-700 ease-out"
                   />
                   <defs>
                     <linearGradient id="pinkOrangeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#f472b6" />
-                      <stop offset="100%" stopColor="#fb923c" />
+                      <stop offset="0%" stopColor="#db2777" />
+                      <stop offset="100%" stopColor="#f59e0b" />
                     </linearGradient>
                   </defs>
                 </svg>
 
                 <div className="absolute inset-0 flex flex-col items-center justify-center space-y-0.5">
-                  <span className="text-3xl font-serif italic text-pink-600 font-bold leading-none">{wellnessScore}</span>
-                  <span className="text-[8px] font-black text-pink-400 uppercase tracking-widest">Glow Index</span>
+                  <span className="text-3xl font-serif text-stone-900 dark:text-stone-100 leading-none tabular-nums">{wellnessScore}</span>
+                  <span className="text-[11px] font-medium text-stone-500 dark:text-stone-400">of 100</span>
                 </div>
               </div>
 
-              <p className="text-xs text-gray-500 font-serif italic leading-relaxed max-w-md">
-                {wellnessScore >= 80 
-                  ? "A celestial glow! Your endocrine rhythm is perfectly synced and nourished today." 
-                  : wellnessScore >= 60 
-                    ? "Glow in progress. Small daily comforts will help stabilize your physical sanctuary." 
-                    : "Time for self-nurture. Give your temple sweet water, deep sleep, and comforting rest."
-                }
-              </p>
+              <div className="space-y-2 text-center sm:text-left">
+                <span className="text-xs font-semibold text-pink-700 dark:text-pink-400 block">Daily Balance Score</span>
+                <h3 className="text-2xl font-serif text-stone-900 dark:text-stone-100 font-normal">Your Wellness Overview</h3>
+                <p className="text-sm text-stone-600 dark:text-stone-400 leading-relaxed max-w-lg">
+                  {wellnessScore >= 80 
+                    ? "Your sleep, hydration, and daily movement are well-aligned today." 
+                    : wellnessScore >= 60 
+                      ? "Steady progress. Small adjustments to rest or hydration will lift your balance." 
+                      : "Prioritize restorative sleep, hydration, and gentle recovery today."
+                  }
+                </p>
+              </div>
             </div>
           </section>
 
-          {/* Fully Interactive Sliders and Selection Grid */}
-          <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Interactive Sliders and Selection Grid */}
+          <section className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {/* 1. Sleep Tracker */}
-            <div className="bg-white/75 backdrop-blur-md border border-pink-50 p-6 rounded-[2rem] shadow-sm space-y-4">
+            <div className="bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] p-6 rounded-2xl shadow-sm space-y-4">
               <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-pink-50 flex items-center justify-center text-pink-500 shadow-inner">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-pink-50 dark:bg-pink-950/40 text-pink-600 dark:text-pink-400 border border-pink-100 dark:border-pink-900/40 flex items-center justify-center">
                     <Moon size={16} />
                   </div>
                   <div>
-                    <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">Divine Sleep</h4>
-                    <p className="text-[9px] text-gray-400">Essential hormone stabilization</p>
+                    <h4 className="text-sm font-semibold text-stone-900 dark:text-stone-100">Restorative Sleep</h4>
+                    <p className="text-xs text-stone-500 dark:text-stone-400">Hormone recovery target</p>
                   </div>
                 </div>
-                <span className="text-sm font-serif italic font-bold text-pink-600">{sleepHours} hrs</span>
+                <span className="text-sm font-semibold text-pink-700 dark:text-pink-300 tabular-nums">{sleepHours} hrs</span>
               </div>
               
-              <div className="space-y-1 pt-1">
+              <div className="space-y-1.5 pt-1">
                 <input 
                   type="range" min="4" max="11" step="0.1"
                   value={sleepHours}
                   onChange={(e) => setSleepHours(parseFloat(e.target.value))}
-                  className="w-full accent-pink-400 cursor-pointer"
+                  aria-label="Restorative sleep hours"
+                  className="w-full accent-pink-600 cursor-pointer"
                 />
-                <div className="flex justify-between text-[8px] text-gray-400 uppercase font-bold">
+                <div className="flex justify-between text-[11px] text-stone-500 dark:text-stone-400 tabular-nums">
                   <span>4 hrs</span>
-                  <span>7-9 hrs (Optimal)</span>
+                  <span>7–9 hrs optimal</span>
                   <span>11 hrs</span>
                 </div>
               </div>
             </div>
 
             {/* 2. Exercise Tracker */}
-            <div className="bg-white/75 backdrop-blur-md border border-pink-50 p-6 rounded-[2rem] shadow-sm space-y-4">
+            <div className="bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] p-6 rounded-2xl shadow-sm space-y-4">
               <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-pink-50 flex items-center justify-center text-pink-500 shadow-inner">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-pink-50 dark:bg-pink-950/40 text-pink-600 dark:text-pink-400 border border-pink-100 dark:border-pink-900/40 flex items-center justify-center">
                     <Dumbbell size={16} />
                   </div>
                   <div>
-                    <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">Exercise / Movement</h4>
-                    <p className="text-[9px] text-gray-400">Cortisol release & circulation</p>
+                    <h4 className="text-sm font-semibold text-stone-900 dark:text-stone-100">Exercise &amp; Movement</h4>
+                    <p className="text-xs text-stone-500 dark:text-stone-400">Circulation &amp; stress release</p>
                   </div>
                 </div>
-                <span className="text-sm font-serif italic font-bold text-pink-600">{exerciseMinutes} mins</span>
+                <span className="text-sm font-semibold text-pink-700 dark:text-pink-300 tabular-nums">{exerciseMinutes} mins</span>
               </div>
               
-              <div className="space-y-1 pt-1">
+              <div className="space-y-1.5 pt-1">
                 <input 
                   type="range" min="0" max="120" step="5"
                   value={exerciseMinutes}
                   onChange={(e) => setExerciseMinutes(parseInt(e.target.value))}
-                  className="w-full accent-pink-400 cursor-pointer"
+                  aria-label="Exercise minutes"
+                  className="w-full accent-pink-600 cursor-pointer"
                 />
-                <div className="flex justify-between text-[8px] text-gray-400 uppercase font-bold">
+                <div className="flex justify-between text-[11px] text-stone-500 dark:text-stone-400 tabular-nums">
                   <span>Rest</span>
-                  <span>30 mins (Healthy)</span>
+                  <span>30 mins target</span>
                   <span>120 mins</span>
                 </div>
               </div>
             </div>
 
             {/* 3. Water Intake Slider */}
-            <div className="bg-white/75 backdrop-blur-md border border-pink-50 p-6 rounded-[2rem] shadow-sm space-y-4">
+            <div className="bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] p-6 rounded-2xl shadow-sm space-y-4">
               <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-pink-50 flex items-center justify-center text-pink-500 shadow-inner">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 border border-sky-100 dark:border-sky-900/40 flex items-center justify-center">
                     <Droplet size={16} />
                   </div>
                   <div>
-                    <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">Hydration</h4>
-                    <p className="text-[9px] text-gray-400">Optimal hydration levels</p>
+                    <h4 className="text-sm font-semibold text-stone-900 dark:text-stone-100">Hydration</h4>
+                    <p className="text-xs text-stone-500 dark:text-stone-400">Daily fluid intake</p>
                   </div>
                 </div>
-                <span className="text-sm font-serif italic font-bold text-pink-600">{waterIntake} of 8 glasses</span>
+                <span className="text-sm font-semibold text-sky-700 dark:text-sky-300 tabular-nums">{waterIntake} / 8 glasses</span>
               </div>
               
-              <div className="space-y-1 pt-1">
+              <div className="space-y-1.5 pt-1">
                 <input 
                   type="range" min="0" max="8" step="1"
                   value={waterIntake}
                   onChange={(e) => setWaterIntake(parseInt(e.target.value))}
-                  className="w-full accent-pink-400 cursor-pointer"
+                  aria-label="Water intake glasses"
+                  className="w-full accent-sky-600 cursor-pointer"
                 />
-                <div className="flex justify-between text-[8px] text-gray-400 uppercase font-bold">
+                <div className="flex justify-between text-[11px] text-stone-500 dark:text-stone-400 tabular-nums">
                   <span>0 glasses</span>
                   <span>4 glasses</span>
                   <span>8 glasses</span>
@@ -284,68 +288,69 @@ const Wellness: React.FC<WellnessProps> = ({ symptoms, user, setUser, waterIntak
             </div>
 
             {/* 4. Mindfulness Meditation */}
-            <div className="bg-white/75 backdrop-blur-md border border-pink-50 p-6 rounded-[2rem] shadow-sm space-y-4">
+            <div className="bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] p-6 rounded-2xl shadow-sm space-y-4">
               <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-pink-50 flex items-center justify-center text-pink-500 shadow-inner">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-pink-50 dark:bg-pink-950/40 text-pink-600 dark:text-pink-400 border border-pink-100 dark:border-pink-900/40 flex items-center justify-center">
                     <Compass size={16} />
                   </div>
                   <div>
-                    <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">Mindfulness / Calm</h4>
-                    <p className="text-[9px] text-gray-400">Stress mitigation</p>
+                    <h4 className="text-sm font-semibold text-stone-900 dark:text-stone-100">Mindfulness &amp; Calm</h4>
+                    <p className="text-xs text-stone-500 dark:text-stone-400">Nervous system recovery</p>
                   </div>
                 </div>
-                <span className="text-sm font-serif italic font-bold text-pink-600">{mindfulnessMinutes} mins</span>
+                <span className="text-sm font-semibold text-pink-700 dark:text-pink-300 tabular-nums">{mindfulnessMinutes} mins</span>
               </div>
               
-              <div className="space-y-1 pt-1">
+              <div className="space-y-1.5 pt-1">
                 <input 
                   type="range" min="0" max="60" step="5"
                   value={mindfulnessMinutes}
                   onChange={(e) => setMindfulnessMinutes(parseInt(e.target.value))}
-                  className="w-full accent-pink-400 cursor-pointer"
+                  aria-label="Mindfulness minutes"
+                  className="w-full accent-pink-600 cursor-pointer"
                 />
-                <div className="flex justify-between text-[8px] text-gray-400 uppercase font-bold">
+                <div className="flex justify-between text-[11px] text-stone-500 dark:text-stone-400 tabular-nums">
                   <span>0 mins</span>
-                  <span>15 mins (Zen)</span>
+                  <span>15 mins target</span>
                   <span>60 mins</span>
                 </div>
               </div>
             </div>
 
             {/* 5. Anti-Inflammatory Nutrition */}
-            <div className="bg-white/75 backdrop-blur-md border border-pink-50 p-6 rounded-[2rem] shadow-sm md:col-span-2 space-y-4">
-              <div className="flex justify-between items-center pb-2 border-b border-pink-50/50">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-pink-50 flex items-center justify-center text-pink-500 shadow-inner">
+            <div className="bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] p-6 rounded-2xl shadow-sm md:col-span-2 space-y-4">
+              <div className="flex justify-between items-center pb-3 border-b border-stone-100 dark:border-[#2e2a26]">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/40 flex items-center justify-center">
                     <Apple size={16} />
                   </div>
                   <div>
-                    <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">Nourishing Nutrition</h4>
-                    <p className="text-[9px] text-gray-400">Eat anti-inflammatory meals</p>
+                    <h4 className="text-sm font-semibold text-stone-900 dark:text-stone-100">Daily Nutrition</h4>
+                    <p className="text-xs text-stone-500 dark:text-stone-400">Support hormone balance with whole foods</p>
                   </div>
                 </div>
-                <span className="text-xs font-serif italic text-pink-500 font-bold">{nutritionScore} Diet</span>
+                <span className="text-xs font-semibold text-pink-700 dark:text-pink-300">{nutritionScore}</span>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {[
-                  { value: 'Anti-inflammatory', label: '🌿 Anti-Inflam', desc: 'No processed sugar' },
-                  { value: 'Balanced', label: '🥗 Balanced', desc: 'Healthy proteins & carbs' },
-                  { value: 'Heavy Cravings', label: '🍫 Cravings Alert', desc: 'Slightly higher sugar' }
+                  { value: 'Anti-inflammatory', label: 'Anti-Inflammatory', desc: 'Whole foods, low refined sugar' },
+                  { value: 'Balanced', label: 'Balanced', desc: 'Steady protein and complex carbs' },
+                  { value: 'Heavy Cravings', label: 'High Cravings', desc: 'Higher sugar or comfort foods' }
                 ].map((nut) => (
                   <button
                     key={nut.value}
                     type="button"
                     onClick={() => setNutritionScore(nut.value)}
-                    className={`p-3 rounded-2xl border text-center transition-all cursor-pointer ${
+                    className={`p-3.5 rounded-xl border text-left transition-colors cursor-pointer ${
                       nutritionScore === nut.value
-                        ? 'border-pink-400 bg-pink-50/20 text-pink-600 shadow-inner'
-                        : 'border-gray-100 hover:border-pink-200 text-gray-500'
+                        ? 'border-pink-500 bg-pink-50/70 dark:bg-pink-950/30 text-pink-900 dark:text-pink-200'
+                        : 'border-stone-200 dark:border-[#2e2a26] bg-stone-50/50 dark:bg-[#23201d] hover:border-pink-300 text-stone-700 dark:text-stone-300'
                     }`}
                   >
-                    <p className="text-[10px] font-bold uppercase">{nut.label}</p>
-                    <p className="text-[7.5px] opacity-70 font-sans mt-0.5 leading-tight">{nut.desc}</p>
+                    <p className="text-xs font-semibold">{nut.label}</p>
+                    <p className="text-[11px] opacity-75 mt-0.5 leading-snug">{nut.desc}</p>
                   </button>
                 ))}
               </div>
@@ -354,78 +359,80 @@ const Wellness: React.FC<WellnessProps> = ({ symptoms, user, setUser, waterIntak
         </div>
       )}
 
-      {/* TAB 2: DIVINE SANCTUARY RITUALS (Supplements) */}
+      {/* TAB 2: SUPPLEMENT RITUALS */}
       {activeTab === 'rituals' && (
-        <div className="space-y-8 animate-fadeIn">
-          {/* AI Advisor Card */}
-          <section className="bg-gradient-to-br from-pink-400 to-rose-400 p-8 rounded-[2.5rem] text-white shadow-xl relative overflow-hidden">
-            <div className="relative z-10 space-y-4">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-2xl border border-white/30">✨</div>
-                <div>
-                  <h3 className="text-xl font-serif italic">Your Personal Supplement Ritual</h3>
-                  <p className="text-[10px] uppercase font-bold tracking-widest opacity-80">Based on today's symptoms</p>
-                </div>
+        <div className="space-y-6">
+          <section className="bg-gradient-to-br from-pink-600 to-rose-600 p-6 sm:p-8 rounded-2xl text-white shadow-sm space-y-4">
+            <div className="flex items-center gap-3.5">
+              <div className="w-11 h-11 bg-white/15 rounded-xl flex items-center justify-center border border-white/25 shrink-0">
+                <Sparkles className="w-5 h-5" />
               </div>
-              
-              {todaysSymptoms.length > 0 ? (
-                <div className="space-y-4">
-                  <div className="flex flex-wrap gap-2">
-                    {todaysSymptoms.map(s => (
-                      <span key={s} className="bg-white/20 px-3 py-1 rounded-full text-[10px] font-bold uppercase border border-white/20">
-                        {s.replace('_', ' ')}
-                      </span>
-                    ))}
-                  </div>
-                  <button 
-                    onClick={handleAskAI}
-                    disabled={loading}
-                    className="w-full py-3.5 bg-white text-pink-500 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:scale-[1.01] transition-transform disabled:opacity-50 cursor-pointer"
-                  >
-                    {loading ? 'Consulting the Sanctuary...' : 'Get Wellness Plan'}
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-3 pt-2">
-                  <p className="text-xs italic opacity-90">Log your symptoms in the Cycle tab to get a personalized ritual recommendation, darling!</p>
-                  <button 
-                    onClick={handleAskAI}
-                    disabled={loading}
-                    className="w-full py-3 bg-white/10 hover:bg-white/20 text-white rounded-2xl font-bold uppercase text-[9px] tracking-widest border border-white/20 transition-all cursor-pointer"
-                  >
-                    {loading ? 'Consulting the Sanctuary...' : 'Consult General Hormone Advice 🧠'}
-                  </button>
-                </div>
-              )}
-
-              {aiAdvice && (
-                <div className="p-6 bg-white/10 backdrop-blur-md rounded-3xl border border-white/20 animate-fadeIn">
-                  <p className="text-sm font-serif italic leading-relaxed whitespace-pre-wrap">"{aiAdvice}"</p>
-                </div>
-              )}
+              <div>
+                <h3 className="text-xl font-serif text-white">Personalized Supplement Guidance</h3>
+                <p className="text-xs text-pink-100">Tailored to your logged symptoms today</p>
+              </div>
             </div>
-            <span className="absolute -bottom-10 -right-10 text-[12rem] opacity-10">💊</span>
+            
+            {todaysSymptoms.length > 0 ? (
+              <div className="space-y-3">
+                <div className="flex flex-wrap gap-2">
+                  {todaysSymptoms.map(s => (
+                    <span key={s} className="bg-white/15 px-2.5 py-1 rounded-lg text-xs font-medium border border-white/20 capitalize">
+                      {s.replace('_', ' ')}
+                    </span>
+                  ))}
+                </div>
+                <button 
+                  type="button"
+                  onClick={handleAskAI}
+                  disabled={loading}
+                  className="w-full h-11 bg-white text-pink-700 hover:bg-pink-50 rounded-xl font-semibold text-sm transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  {loading ? 'Preparing recommendations...' : 'Generate Supplement Guidance'}
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3 pt-1">
+                <p className="text-xs text-pink-100">Log your symptoms in the Calendar or Daily Log for tailored support, or request general cycle guidance.</p>
+                <button 
+                  type="button"
+                  onClick={handleAskAI}
+                  disabled={loading}
+                  className="w-full h-11 bg-white/15 hover:bg-white/25 text-white rounded-xl font-semibold text-xs border border-white/25 transition-colors cursor-pointer"
+                >
+                  {loading ? 'Preparing recommendations...' : 'Get General Hormone Support Guidance'}
+                </button>
+              </div>
+            )}
+
+            {aiAdvice && (
+              <div className="p-5 bg-white/15 rounded-xl border border-white/20">
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">{aiAdvice}</p>
+              </div>
+            )}
           </section>
 
           {/* Supplement Library */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {SUPPLEMENTS.map(supp => (
-              <div key={supp.id} className="bg-white/75 backdrop-blur-md p-8 rounded-[2rem] border border-pink-50 hover:border-pink-200 transition-all group shadow-sm">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-14 h-14 bg-pink-50 rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110 transition-transform shadow-inner">{supp.emoji}</div>
-                  <div>
-                    <h4 className="text-lg font-serif text-pink-600 italic leading-none font-bold">{supp.name}</h4>
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {supp.bestFor.map(b => (
-                        <span key={b} className="text-[8px] bg-pink-100/60 text-pink-500 px-2 py-0.5 rounded-full font-bold uppercase">{b.replace('_', ' ')}</span>
-                      ))}
+              <div key={supp.id} className="bg-white dark:bg-[#1a1816] p-6 rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] hover:border-pink-200 transition-colors shadow-sm flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center gap-3.5 mb-3">
+                    <div className="w-11 h-11 bg-pink-50 dark:bg-pink-950/40 rounded-xl border border-pink-100 dark:border-pink-900/40 flex items-center justify-center text-xl shrink-0">{supp.emoji}</div>
+                    <div>
+                      <h4 className="text-base font-serif text-stone-900 dark:text-stone-100 font-semibold leading-snug">{supp.name}</h4>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {supp.bestFor.map(b => (
+                          <span key={b} className="text-[11px] bg-stone-100 dark:bg-[#23201d] text-stone-600 dark:text-stone-300 px-2 py-0.5 rounded-md font-medium capitalize">{b.replace('_', ' ')}</span>
+                        ))}
+                      </div>
                     </div>
                   </div>
+                  <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed mb-4">{supp.description}</p>
                 </div>
-                <p className="text-xs text-gray-500 italic leading-relaxed mb-4">{supp.description}</p>
-                <div className="pt-4 border-t border-pink-50">
-                  <span className="text-[10px] font-bold text-pink-700 uppercase tracking-widest block mb-1">Divine Dosage</span>
-                  <p className="text-xs text-pink-700 font-serif italic">{supp.dosage}</p>
+                <div className="pt-3 border-t border-stone-100 dark:border-[#2e2a26]">
+                  <span className="text-xs font-semibold text-pink-700 dark:text-pink-400 block mb-0.5">Typical Guidance</span>
+                  <p className="text-xs text-stone-700 dark:text-stone-300">{supp.dosage}</p>
                 </div>
               </div>
             ))}
@@ -435,7 +442,7 @@ const Wellness: React.FC<WellnessProps> = ({ symptoms, user, setUser, waterIntak
 
       {/* TAB 3: ENDOMETRIOSIS DEDICATED CARE SANCTUARY */}
       {activeTab === 'endo' && (
-        <div className="space-y-6 animate-fadeIn">
+        <div className="space-y-6">
           <EndometriosisCare user={user} setUser={setUser} />
         </div>
       )}

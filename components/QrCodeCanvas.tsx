@@ -50,7 +50,7 @@ export const QrCodeCanvas: React.FC<QrCodeCanvasProps> = ({
 
   if (error) {
     return (
-      <div className="flex items-center justify-center w-full h-full text-xs text-rose-700 bg-rose-50 rounded-xl p-3 text-center">
+      <div className="flex items-center justify-center w-full h-full text-xs text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 rounded-xl p-3 text-center">
         Unable to render QR code
       </div>
     );
@@ -59,7 +59,7 @@ export const QrCodeCanvas: React.FC<QrCodeCanvasProps> = ({
   if (!dataUrl) {
     return (
       <div
-        className="w-full h-full rounded-xl bg-pink-50/60 animate-pulse flex items-center justify-center text-[11px] font-semibold text-pink-700"
+        className="w-full h-full rounded-xl bg-stone-100 dark:bg-[#23201d] flex items-center justify-center text-xs font-medium text-stone-500 dark:text-stone-400"
         aria-label="Generating QR code"
       >
         Generating QR...

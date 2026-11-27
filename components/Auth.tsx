@@ -51,19 +51,22 @@ import {
 } from '../services/biometricService';
 import { 
   Fingerprint, 
-  Scan, 
   Lock, 
   Check, 
   X, 
   Delete, 
   Mail, 
-  ArrowLeft, 
+  ArrowLeft,
+  ArrowRight,
   ShieldCheck, 
-  Sparkles,
-  Heart,
   Smartphone,
   ChevronRight,
-  KeyRound
+  KeyRound,
+  HeartHandshake,
+  CloudDownload,
+  Calendar,
+  Flower2,
+  UserPlus
 } from 'lucide-react';
 
 interface AuthProps {
@@ -970,623 +973,486 @@ const Auth: React.FC<AuthProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-[#fffafb] flex items-center justify-center p-4 relative overflow-hidden select-none">
-      {/* Elegantly Crafted Ambient Background Blobs */}
-      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-pink-150 rounded-full blur-[100px] opacity-35"></div>
-      <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-rose-100 rounded-full blur-[120px] opacity-40"></div>
-      
-      {/* Device Frame Wrapper to simulate true mobile application look */}
-      <div className="bg-white/70 backdrop-blur-3xl px-6 py-10 md:p-12 rounded-[3.25rem] shadow-[0_24px_60px_rgba(251,113,133,0.08)] w-full max-w-md z-10 border border-white/60 flex flex-col items-center min-h-[620px] justify-between relative animate-fadeIn">
-        
-        {/* App Branding Header */}
-        <div className="text-center mt-2">
-          <div className="w-12 h-12 bg-gradient-to-tr from-pink-400 to-rose-450 rounded-2xl flex items-center justify-center shadow-md shadow-pink-100/50 mx-auto mb-3 hover:rotate-6 transition-transform duration-350">
-            <Heart className="text-white fill-white" size={20} />
-          </div>
-          <h1 className="text-4xl font-serif text-pink-500 font-extrabold italic tracking-tight">Lumina</h1>
-          <p className="text-pink-400 uppercase tracking-[0.26em] text-[9px] font-bold mt-1">Lumina | Bloom &amp; Balance</p>
-        </div>
-
-        {/* Dynamic view switcher based on App Open Experience Design */}
-        <div className="w-full flex-1 flex flex-col justify-center my-6 space-y-6">
-          
-          {/* Output Errors & Notices in user-friendly dialogue */}
-          {error && (
-            <div role="alert" className="w-full bg-rose-50 text-rose-700 text-[11px] text-center font-medium p-4 rounded-2xl border border-rose-200 animate-fadeIn leading-relaxed">
-              {error}
-            </div>
-          )}
-          {notice && (
-            <div role="status" className="w-full bg-emerald-50 text-emerald-800 text-[11px] text-center font-medium p-4 rounded-2xl border border-emerald-200 animate-fadeIn leading-relaxed">
-              {notice}
-            </div>
-          )}
-
-
-          {pendingRestoreUser && (
-            <div className="space-y-6 animate-fadeIn py-4">
-              <div className="text-center space-y-3">
-                <span className="text-5xl animate-bounce inline-block">
-                  {pendingRestoreUser.isPartner ? "💞" : "☁️"}
+    <div className="min-h-screen bg-[#faf8f6] dark:bg-[#11100f] flex items-center justify-center p-4 sm:p-6 lg:p-8 select-none transition-colors">
+      <div className="w-full max-w-4xl bg-white dark:bg-[#1a1816] rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-[0_12px_40px_rgba(24,20,18,0.06)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.4)] overflow-hidden grid grid-cols-1 lg:grid-cols-12 animate-fadeIn">
+        {/* Desktop Editorial Brand Column */}
+        <aside className="hidden lg:flex lg:col-span-5 bg-[#faf8f6] dark:bg-[#151311] border-r border-stone-200/70 dark:border-[#2e2a26] p-10 flex-col justify-between">
+          <div className="space-y-8">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-pink-600 text-white flex items-center justify-center">
+                <Flower2 size={20} strokeWidth={1.75} aria-hidden="true" />
+              </div>
+              <div>
+                <span className="font-serif text-xl font-semibold text-stone-900 dark:text-stone-100 tracking-tight block leading-none">
+                  Lumina
                 </span>
-                <h2 className="text-2xl font-serif text-pink-950 font-black tracking-tight leading-tight">
-                  {pendingRestoreUser.isPartner ? "Restore your Lumina Partner connection?" : "Restore your Lumina data?"}
-                </h2>
-                <div className="w-12 h-0.5 bg-gradient-to-r from-pink-400 to-rose-450 mx-auto my-2" />
-                <p className="text-xs text-gray-500 italic font-serif leading-relaxed px-1">
-                  {pendingRestoreUser.isPartner ? (
-                    <span>
-                      Welcome back, <strong className="text-pink-600 font-bold">{pendingRestoreUser.name}</strong>! We discovered your secure Partner backup containing your companion linkages, companion settings, and reminder templates.
-                    </span>
-                  ) : (
-                    <span>
-                      Welcome, <strong className="text-pink-600 font-bold">{pendingRestoreUser.name}</strong>! We discovered a secure Cloud Backup synced to your profile containing your period history, cycle logs, moods, symptoms, and preferences.
-                    </span>
-                  )}
-                </p>
-              </div>
-
-              {pendingRestoreUser.isPartner ? (
-                <div className="bg-indigo-50/20 border border-indigo-100/50 p-4 rounded-2xl text-left text-[11px] text-gray-600 space-y-2">
-                  <p className="font-sans font-bold uppercase tracking-wider text-[8px] text-[#db2777]">🎁 Available Companion Backups:</p>
-                  <ul className="grid grid-cols-2 gap-x-2 gap-y-1 list-disc list-inside font-medium font-serif italic text-gray-500">
-                    <li>Partner connection sync</li>
-                    <li>Support custom tips</li>
-                    <li>Shared profile configs</li>
-                    <li>Assigned comfort cards</li>
-                  </ul>
-                </div>
-              ) : (
-                <div className="bg-pink-50/15 border border-pink-100/50 p-4 rounded-2xl text-left text-[11px] text-gray-600 space-y-2">
-                  <p className="font-sans font-bold uppercase tracking-wider text-[8px] text-pink-500">🎁 Available Cloud Backups:</p>
-                  <ul className="grid grid-cols-2 gap-x-2 gap-y-1 list-disc list-inside font-medium font-serif italic text-gray-500">
-                    <li>Cycle & period history</li>
-                    <li>Symptom & mood logs</li>
-                    <li>Contraceptive profiles</li>
-                    <li>Diary entries & logs</li>
-                  </ul>
-                </div>
-              )}
-
-              <div className="space-y-3.5 pt-3">
-                <button
-                  type="button"
-                  id="btn-confirm-restore"
-                  onClick={async () => {
-                    localStorage.setItem('lumina_remember_me', rememberMe ? 'true' : 'false');
-                    await saveEncryptedSessionUser(pendingRestoreUser, rememberMe);
-                    onLogin(pendingRestoreUser, rememberMe);
-                    setPendingRestoreUser(null);
-                  }}
-                  className={`w-full py-4 bg-gradient-to-r ${pendingRestoreUser.isPartner ? "from-[#db2777] to-rose-400" : "from-pink-400 to-rose-450"} text-white font-bold rounded-2xl text-[10px] uppercase tracking-widest shadow-md shadow-pink-100 hover:scale-[1.01] active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer`}
-                >
-                  📥 {pendingRestoreUser.isPartner ? "Restore Partner Link" : "Restore from Cloud Backup"}
-                </button>
-
-                <button
-                  type="button"
-                  id="btn-cancel-restore"
-                  onClick={async () => {
-                    const emptyUser: User = {
-                      id: pendingRestoreUser.id,
-                      name: pendingRestoreUser.name || 'Lumina Member',
-                      email: pendingRestoreUser.email || '',
-                      partnerName: '',
-                      cycleLength: 28,
-                      periodLength: 5,
-                      lastPeriodStart: new Date().toISOString(),
-                      isPartner: pendingRestoreUser.isPartner,
-                      isPregnancyMode: false,
-                      theme: 'rose',
-                      isPartnerLinked: false,
-                      sharingSettings: { ...DEFAULT_PRIVATE_SHARING_SETTINGS },
-                      waterGoal: 8,
-                      onboardingCompleted: false,
-                      partnerOnboardingCompleted: false
-                    };
-                    localStorage.setItem('lumina_remember_me', rememberMe ? 'true' : 'false');
-                    await saveEncryptedSessionUser(emptyUser, rememberMe);
-                    onLogin(emptyUser, rememberMe);
-                    setPendingRestoreUser(null);
-                  }}
-                  className="w-full py-4.5 bg-white border border-pink-100 rounded-2xl text-pink-500 hover:text-pink-600 font-bold text-[10px] uppercase tracking-widest hover:bg-pink-50/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  {pendingRestoreUser.isPartner ? "Start with New Connection" : "🌱 Continue as New User"}
-                </button>
+                <span className="text-[11px] font-medium text-stone-500 dark:text-stone-400 tracking-wider uppercase mt-1 block">
+                  Bloom &amp; Balance
+                </span>
               </div>
             </div>
-          )}
 
-          {/* PARTNER INVITATION DETECTED FLOW */}
-          {!pendingRestoreUser && screen === 'partner_invite' && (
-            <div className="space-y-6 animate-fadeIn py-4">
-              <div className="text-center space-y-3">
-                <span className="text-5xl animate-bounce inline-block">💞</span>
-                <h2 className="text-2xl font-serif text-pink-950 font-black tracking-tight leading-tight px-2">
-                  🌸 {inviteSenderName || 'Your Partner'} invited you to join their Lumina Partner Circle.
-                </h2>
-                <div className="w-12 h-0.5 bg-gradient-to-r from-pink-400 to-rose-450 mx-auto my-2" />
-                <p className="text-xs text-gray-500 italic font-serif leading-relaxed px-1">
-                  Connect securely with your partner via <strong className="text-pink-600">Lumina Partner Circle</strong> to stay in perfect sync.
-                </p>
-                <div className="bg-pink-50/50 py-3 px-6 rounded-2xl border border-pink-100 inline-block">
-                  <p className="text-[10px] text-pink-400 uppercase tracking-widest font-black mb-1">Invitation Code</p>
-                  <span className="text-lg font-mono font-bold text-pink-600 tracking-wider">
+            <div className="space-y-3">
+              <h2 className="text-3xl font-serif font-semibold text-stone-900 dark:text-stone-100 leading-tight tracking-tight">
+                Your cycle, your sanctuary.
+              </h2>
+              <p className="text-sm text-stone-600 dark:text-stone-400 leading-relaxed">
+                Private cycle forecasting, symptom care, pregnancy milestones, and restorative soundscapes built around biological privacy.
+              </p>
+            </div>
+
+            <ul className="space-y-4 pt-2 border-t border-stone-200/70 dark:border-[#2e2a26]">
+              <li className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-white dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] text-pink-600 dark:text-pink-400 flex items-center justify-center shrink-0 mt-0.5">
+                  <Calendar size={15} strokeWidth={1.75} aria-hidden="true" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-stone-900 dark:text-stone-100">Cycle &amp; fertility clarity</p>
+                  <p className="text-xs text-stone-500 dark:text-stone-400 leading-relaxed">Calibrated phase predictions and daily symptom insights.</p>
+                </div>
+              </li>
+              <li className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-white dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] text-pink-600 dark:text-pink-400 flex items-center justify-center shrink-0 mt-0.5">
+                  <HeartHandshake size={15} strokeWidth={1.75} aria-hidden="true" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-stone-900 dark:text-stone-100">Selective partner sync</p>
+                  <p className="text-xs text-stone-500 dark:text-stone-400 leading-relaxed">Share only the specific updates you explicitly approve.</p>
+                </div>
+              </li>
+              <li className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-white dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] text-pink-600 dark:text-pink-400 flex items-center justify-center shrink-0 mt-0.5">
+                  <Lock size={15} strokeWidth={1.75} aria-hidden="true" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-stone-900 dark:text-stone-100">On-device encryption</p>
+                  <p className="text-xs text-stone-500 dark:text-stone-400 leading-relaxed">Protected by native biometrics, 2FA, and encrypted local vaults.</p>
+                </div>
+              </li>
+            </ul>
+          </div>
+
+          <div className="pt-6 border-t border-stone-200/70 dark:border-[#2e2a26] flex items-center gap-2.5 text-xs text-stone-500 dark:text-stone-400">
+            <ShieldCheck size={15} className="text-emerald-600 dark:text-emerald-400 shrink-0" aria-hidden="true" />
+            <span>Health records remain private and never sold.</span>
+          </div>
+        </aside>
+
+        {/* Auth Interaction Column */}
+        <div className="lg:col-span-7 px-6 py-8 sm:p-10 flex flex-col justify-between min-h-[560px]">
+          {/* Compact Mobile Header (hidden on desktop where aside renders brand) */}
+          <div className="flex items-center justify-between lg:hidden pb-4 border-b border-stone-100 dark:border-[#2e2a26]">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-pink-600 text-white flex items-center justify-center">
+                <Flower2 size={18} strokeWidth={1.75} aria-hidden="true" />
+              </div>
+              <div>
+                <h1 className="text-xl font-serif text-stone-900 dark:text-stone-100 font-semibold leading-none">Lumina</h1>
+                <p className="text-[11px] text-stone-500 dark:text-stone-400 font-medium mt-0.5">Bloom &amp; Balance</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Dynamic view switcher */}
+          <div className="w-full flex-1 flex flex-col justify-center my-6 space-y-5 max-w-md mx-auto">
+            {error && (
+              <div role="alert" className="w-full bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-200 text-xs font-medium p-3.5 rounded-xl border border-rose-200 dark:border-rose-900/50 animate-fadeIn leading-relaxed">
+                {error}
+              </div>
+            )}
+            {notice && (
+              <div role="status" className="w-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-200 text-xs font-medium p-3.5 rounded-xl border border-emerald-200 dark:border-emerald-900/50 animate-fadeIn leading-relaxed">
+                {notice}
+              </div>
+            )}
+
+            {pendingRestoreUser && (
+              <div className="space-y-5 animate-fadeIn">
+                <div className="space-y-2">
+                  <div className="w-11 h-11 rounded-xl bg-pink-50 dark:bg-pink-950/30 border border-pink-200/70 dark:border-pink-900/50 text-pink-600 dark:text-pink-400 flex items-center justify-center">
+                    {pendingRestoreUser.isPartner ? <HeartHandshake size={20} /> : <CloudDownload size={20} />}
+                  </div>
+                  <h2 className="text-2xl font-serif text-stone-900 dark:text-stone-100 font-semibold tracking-tight leading-snug">
+                    {pendingRestoreUser.isPartner ? 'Restore your partner connection?' : 'Restore your Lumina data?'}
+                  </h2>
+                  <p className="text-sm text-stone-600 dark:text-stone-400 leading-relaxed">
+                    {pendingRestoreUser.isPartner ? (
+                      <>
+                        Welcome back, <strong className="text-stone-900 dark:text-stone-100 font-semibold">{pendingRestoreUser.name}</strong>. We found your synced Partner settings and comfort preferences.
+                      </>
+                    ) : (
+                      <>
+                        Welcome back, <strong className="text-stone-900 dark:text-stone-100 font-semibold">{pendingRestoreUser.name}</strong>. We found an encrypted Cloud Backup with your cycle history, logs, and preferences.
+                      </>
+                    )}
+                  </p>
+                </div>
+
+                <div className="bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] p-4 rounded-xl text-xs text-stone-600 dark:text-stone-300 space-y-2">
+                  <p className="font-semibold text-stone-800 dark:text-stone-100">
+                    {pendingRestoreUser.isPartner ? 'Available companion data' : 'Available cloud backup'}
+                  </p>
+                  <ul className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-stone-600 dark:text-stone-300">
+                    {pendingRestoreUser.isPartner ? (
+                      <>
+                        <li className="flex items-center gap-1.5"><Check size={12} className="text-pink-600 dark:text-pink-400" /> Partner sync link</li>
+                        <li className="flex items-center gap-1.5"><Check size={12} className="text-pink-600 dark:text-pink-400" /> Support custom tips</li>
+                        <li className="flex items-center gap-1.5"><Check size={12} className="text-pink-600 dark:text-pink-400" /> Shared profile settings</li>
+                        <li className="flex items-center gap-1.5"><Check size={12} className="text-pink-600 dark:text-pink-400" /> Comfort cards</li>
+                      </>
+                    ) : (
+                      <>
+                        <li className="flex items-center gap-1.5"><Check size={12} className="text-pink-600 dark:text-pink-400" /> Cycle &amp; period history</li>
+                        <li className="flex items-center gap-1.5"><Check size={12} className="text-pink-600 dark:text-pink-400" /> Symptom &amp; mood logs</li>
+                        <li className="flex items-center gap-1.5"><Check size={12} className="text-pink-600 dark:text-pink-400" /> Contraceptive profiles</li>
+                        <li className="flex items-center gap-1.5"><Check size={12} className="text-pink-600 dark:text-pink-400" /> Diary entries</li>
+                      </>
+                    )}
+                  </ul>
+                </div>
+
+                <div className="space-y-2.5 pt-1">
+                  <button
+                    type="button"
+                    id="btn-confirm-restore"
+                    onClick={async () => {
+                      localStorage.setItem('lumina_remember_me', rememberMe ? 'true' : 'false');
+                      await saveEncryptedSessionUser(pendingRestoreUser, rememberMe);
+                      onLogin(pendingRestoreUser, rememberMe);
+                      setPendingRestoreUser(null);
+                    }}
+                    className="w-full h-11 px-4 bg-pink-600 hover:bg-pink-700 text-white font-semibold rounded-xl text-sm transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <CloudDownload size={16} />
+                    <span>{pendingRestoreUser.isPartner ? 'Restore partner link' : 'Restore from cloud backup'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    id="btn-cancel-restore"
+                    onClick={async () => {
+                      const emptyUser: User = {
+                        id: pendingRestoreUser.id,
+                        name: pendingRestoreUser.name || 'Lumina Member',
+                        email: pendingRestoreUser.email || '',
+                        partnerName: '',
+                        cycleLength: 28,
+                        periodLength: 5,
+                        lastPeriodStart: new Date().toISOString(),
+                        isPartner: pendingRestoreUser.isPartner,
+                        isPregnancyMode: false,
+                        theme: 'rose',
+                        isPartnerLinked: false,
+                        sharingSettings: { ...DEFAULT_PRIVATE_SHARING_SETTINGS },
+                        waterGoal: 8,
+                        onboardingCompleted: false,
+                        partnerOnboardingCompleted: false
+                      };
+                      localStorage.setItem('lumina_remember_me', rememberMe ? 'true' : 'false');
+                      await saveEncryptedSessionUser(emptyUser, rememberMe);
+                      onLogin(emptyUser, rememberMe);
+                      setPendingRestoreUser(null);
+                    }}
+                    className="w-full h-11 px-4 bg-white dark:bg-[#23201d] border border-stone-200 dark:border-[#342f2b] rounded-xl text-stone-700 dark:text-stone-200 hover:bg-stone-50 dark:hover:bg-[#2a2622] font-medium text-sm transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    {pendingRestoreUser.isPartner ? 'Start with new connection' : 'Continue as new user'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* PARTNER INVITATION DETECTED FLOW */}
+            {!pendingRestoreUser && screen === 'partner_invite' && (
+              <div className="space-y-5 animate-fadeIn">
+                <div className="space-y-2">
+                  <div className="w-11 h-11 rounded-xl bg-pink-50 dark:bg-pink-950/30 border border-pink-200/70 dark:border-pink-900/50 text-pink-600 dark:text-pink-400 flex items-center justify-center">
+                    <HeartHandshake size={20} />
+                  </div>
+                  <h2 className="text-2xl font-serif text-stone-900 dark:text-stone-100 font-semibold tracking-tight leading-snug">
+                    {inviteSenderName || 'Your partner'} invited you to Lumina Partner Circle
+                  </h2>
+                  <p className="text-sm text-stone-600 dark:text-stone-400 leading-relaxed">
+                    Connect securely with <strong className="text-stone-900 dark:text-stone-100">Lumina Partner Circle</strong> to receive approved updates and support prompts.
+                  </p>
+                </div>
+
+                <div className="bg-[#faf8f6] dark:bg-[#23201d] py-3 px-4 rounded-xl border border-stone-200/80 dark:border-[#342f2b] flex items-center justify-between">
+                  <span className="text-xs font-medium text-stone-500 dark:text-stone-400">Invitation code</span>
+                  <span className="text-base font-mono font-semibold text-stone-900 dark:text-stone-100 tracking-wider tabular-nums">
                     {initialInviteCode}
                   </span>
                 </div>
-              </div>
 
-              <div className="space-y-3.5 pt-3">
-                <button
-                  type="button"
-                  id="btn-partner-signup"
-                  onClick={() => {
-                    setRegisterRole('partner');
-                    setWelcomeStep('auth_creation');
-                    setScreen('email_signup');
-                  }}
-                  className="w-full py-4 bg-gradient-to-r from-pink-400 to-rose-450 hover:scale-[1.01] active:scale-95 text-white font-bold rounded-2xl text-[10px] uppercase tracking-widest shadow-md shadow-pink-150 flex items-center justify-center gap-2 cursor-pointer transition-all"
-                >
-                  <Sparkles size={13} />
-                  <span>Create Account</span>
-                </button>
-
-                <button
-                  type="button"
-                  id="btn-partner-login"
-                  onClick={() => {
-                    setRegisterRole('partner');
-                    setScreen('email_login');
-                  }}
-                  className="w-full py-4 bg-white border border-pink-100 rounded-2xl hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-3 text-pink-850 font-bold text-[10px] uppercase tracking-widest cursor-pointer shadow-sm hover:bg-rose-50/30 transition-all"
-                >
-                  <span>✉️ Sign In</span>
-                </button>
-
-                {onClearInvite && (
+                <div className="space-y-2.5 pt-1">
                   <button
                     type="button"
-                    onClick={onClearInvite}
-                    className="w-full py-2.5 bg-transparent text-gray-400 hover:text-gray-600 text-[9px] uppercase tracking-widest font-bold transition-colors cursor-pointer"
+                    id="btn-partner-signup"
+                    onClick={() => {
+                      setRegisterRole('partner');
+                      setWelcomeStep('auth_creation');
+                      setScreen('email_signup');
+                    }}
+                    className="w-full h-11 px-4 bg-pink-600 hover:bg-pink-700 text-white font-semibold rounded-xl text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors"
                   >
-                    ✕ Decline / Use Tracker Mode
+                    <UserPlus size={16} />
+                    <span>Create companion account</span>
                   </button>
-                )}
-              </div>
-            </div>
-          )}
 
-          {/* 1. RETURNING USER FLOW */}
-          {!pendingRestoreUser && screen === 'returning' && (
-            <div className="space-y-6 animate-fadeIn">
-              <div className="text-center space-y-1.5">
-                <h2 className="text-2xl font-serif text-pink-900 font-semibold">Welcome back, {getDisplayName()} 💕</h2>
-                <p className="text-[11px] text-gray-500 italic font-serif">Verify with {biometricLabel} or sign in to unlock your sanctuary.</p>
-              </div>
-
-              {/* Real Biometric & PIN Options */}
-              <div className="space-y-3 pt-2">
-                {biometricAvailable && (
                   <button
                     type="button"
-                    onClick={() => handleBiometricAuth('face')}
-                    disabled={loading}
-                    className="w-full py-4.5 bg-white hover:bg-rose-50/40 border border-pink-100/60 rounded-2xl flex items-center px-6 gap-4 hover:scale-[1.01] active:scale-95 hover:border-pink-300 shadow-sm cursor-pointer transition-all"
+                    id="btn-partner-login"
+                    onClick={() => {
+                      setRegisterRole('partner');
+                      setScreen('email_login');
+                    }}
+                    className="w-full h-11 px-4 bg-white dark:bg-[#23201d] border border-stone-200 dark:border-[#342f2b] rounded-xl hover:bg-stone-50 dark:hover:bg-[#2a2622] flex items-center justify-center gap-2 text-stone-800 dark:text-stone-100 font-semibold text-sm cursor-pointer transition-colors"
                   >
-                    <div className="w-9 h-9 bg-pink-50 text-pink-500 rounded-xl flex items-center justify-center">
-                      <Fingerprint size={18} />
-                    </div>
-                    <div className="text-left flex-1">
-                      <p className="text-[10px] font-bold text-pink-900 uppercase tracking-wider">{biometricLabel}</p>
-                      <p className="text-[8px] text-gray-500">Verify identity with native device hardware</p>
-                    </div>
-                    <ChevronRight size={14} className="text-pink-200" />
+                    <Mail size={16} className="text-stone-500 dark:text-stone-400" />
+                    <span>Sign in</span>
                   </button>
-                )}
 
-                {userHasConfiguredPin(getTargetUser()) && (
-                  <button
-                    type="button"
-                    onClick={() => handleBiometricAuth('passcode')}
-                    disabled={loading}
-                    className="w-full py-4.5 bg-white hover:bg-rose-50/40 border border-pink-100/60 rounded-2xl flex items-center px-6 gap-4 hover:scale-[1.01] active:scale-95 hover:border-pink-300 shadow-sm cursor-pointer transition-all"
-                  >
-                    <div className="w-9 h-9 bg-pink-50 text-pink-500 rounded-xl flex items-center justify-center">
-                      <Lock size={16} />
-                    </div>
-                    <div className="text-left flex-1">
-                      <p className="text-[10px] font-bold text-pink-900 uppercase tracking-wider">Security PIN</p>
-                      <p className="text-[8px] text-gray-500">Unlock with your private 4–6 digit PIN</p>
-                    </div>
-                    <ChevronRight size={14} className="text-pink-200" />
-                  </button>
-                )}
-              </div>
-
-              <div className="text-center pt-2 flex flex-col gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setScreen('email_login');
-                    setError('');
-                    setNotice('');
-                  }}
-                  className="text-[10px] font-sans font-bold uppercase tracking-widest text-pink-500 hover:text-pink-600 transition-colors cursor-pointer"
-                >
-                  Sign In with Email &amp; Password
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setScreen('welcome');
-                    setError('');
-                    setNotice('');
-                  }}
-                  className="text-[9px] font-serif font-semibold italic text-pink-400 hover:text-pink-600 transition-colors cursor-pointer"
-                >
-                  Switch Account or Setup New Device ✈
-                </button>
-              </div>
-            </div>
-          )}
-
-
-          {/* 2. NO ACCOUNT / FIRST TIME USER */}
-          {!pendingRestoreUser && screen === 'welcome' && (
-            <div className="space-y-8 animate-fadeIn text-center py-6">
-              <div className="space-y-3">
-                <span className="text-5xl animate-bounce inline-block">🌸</span>
-                <h2 className="text-3xl font-serif text-pink-950 font-black tracking-tight leading-tight">Welcome to Lumina</h2>
-                <div className="w-12 h-0.5 bg-gradient-to-r from-pink-300 to-rose-400 mx-auto my-1" />
-                <p className="text-xs text-pink-700 font-medium italic font-serif leading-relaxed px-1">
-                  Your cycle, your sanctuary.
-                </p>
-              </div>
-
-              <div className="space-y-3.5 pt-4">
-                <button
-                  type="button"
-                  id="btn-welcome-signup"
-                  onClick={() => {
-                    setRegisterRole('tracker');
-                    setScreen('email_signup');
-                    setError('');
-                    setNotice('');
-                  }}
-                  className="w-full py-4.5 bg-gradient-to-r from-pink-400 to-rose-450 hover:scale-[1.01] active:scale-95 text-white font-bold rounded-2xl text-[10px] uppercase tracking-[0.15em] shadow-md shadow-pink-150 flex items-center justify-center gap-2 cursor-pointer transition-all"
-                >
-                  <Sparkles size={12} />
-                  <span>Create Account</span>
-                </button>
-
-                <button
-                  type="button"
-                  id="btn-welcome-signin"
-                  onClick={() => {
-                    setScreen('email_login');
-                    setError('');
-                    setNotice('');
-                  }}
-                  className="w-full py-4.5 bg-white border border-pink-150 rounded-2xl hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-3 text-pink-850 font-bold text-[10px] uppercase tracking-[0.15em] cursor-pointer shadow-sm hover:bg-rose-50/20 transition-all"
-                >
-                  <span>✉️ Sign In</span>
-                </button>
-              </div>
-            </div>
-          )}
-
-
-          {/* Welcome Screen after Scan */}
-          {!pendingRestoreUser && screen === 'scan_welcome' && (
-            <div className="space-y-6 text-center animate-fadeIn max-w-sm mx-auto" id="scan-welcome-screen">
-              <div className="space-y-3">
-                <span className="text-4xl animate-bounce inline-block">🌸</span>
-                <h2 className="text-3xl font-serif text-pink-950 font-black tracking-tight leading-tight">Welcome to Lumina</h2>
-                <p className="text-sm text-pink-700 font-medium italic font-serif">Your cycle, your sanctuary.</p>
-              </div>
-
-              <div className="w-12 h-0.5 bg-pink-200/80 mx-auto my-4" />
-
-              <div className="space-y-3.5 text-left bg-pink-50/20 p-5 rounded-3xl border border-pink-100/50">
-                <div className="flex items-center gap-3 text-[10px] font-bold text-pink-950 uppercase tracking-widest">
-                  <span className="text-pink-500">✨</span>
-                  <span>Track your cycle</span>
-                </div>
-                <div className="flex items-center gap-3 text-[10px] font-bold text-pink-950 uppercase tracking-widest">
-                  <span className="text-pink-500">✨</span>
-                  <span>Understand your body</span>
-                </div>
-                <div className="flex items-center gap-3 text-[10px] font-bold text-pink-950 uppercase tracking-widest">
-                  <span className="text-pink-500">✨</span>
-                  <span>Stay connected to your wellness journey</span>
+                  {onClearInvite && (
+                    <button
+                      type="button"
+                      onClick={onClearInvite}
+                      className="w-full py-2 bg-transparent text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200 text-xs font-medium transition-colors cursor-pointer"
+                    >
+                      Decline and use Tracker Mode
+                    </button>
+                  )}
                 </div>
               </div>
+            )}
 
-              <div className="space-y-2.5 pt-2">
-                <button
-                  type="button"
-                  id="btn-scan-create-account"
-                  onClick={() => {
-                    setScreen('welcome');
-                    setWelcomeStep('choose_experience');
-                  }}
-                  className="w-full py-4.5 bg-gradient-to-r from-pink-500 to-rose-450 hover:scale-[1.01] active:scale-95 text-white font-bold rounded-2xl text-[9px] uppercase tracking-widest shadow-md shadow-pink-100 flex items-center justify-center gap-2 cursor-pointer transition-all"
-                >
-                  Create Account
-                </button>
-
-                <button
-                  type="button"
-                  id="btn-scan-apple"
-                  onClick={handleAppleLogin}
-                  disabled={loading}
-                  className="w-full py-4 bg-black text-white rounded-2xl hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-3 font-bold text-[9px] uppercase tracking-widest cursor-pointer shadow-sm hover:opacity-90 transition-all"
-                >
-                  <Smartphone size={14} className="text-white fill-white" />
-                  <span>Continue with Apple</span>
-                </button>
-
-                <button
-                  type="button"
-                  id="btn-scan-email"
-                  onClick={() => {
-                    setScreen('email_signup');
-                    setError('');
-                    setNotice('');
-                  }}
-                  className="w-full py-4 bg-white border border-pink-100 text-pink-500 rounded-2xl hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-3 font-bold text-[9px] uppercase tracking-widest cursor-pointer shadow-sm hover:bg-pink-50/10 transition-all"
-                >
-                  Continue with Email
-                </button>
-              </div>
-
-              <div className="text-center pt-3 border-t border-pink-50">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setScreen('email_login');
-                    setError('');
-                    setNotice('');
-                  }}
-                  className="text-[10px] font-sans font-bold uppercase tracking-widest text-pink-500 hover:text-pink-600 transition-colors cursor-pointer"
-                >
-                  Already have an account? Log In
-                </button>
-              </div>
-            </div>
-          )}
-
-
-          {/* 3. EMAIL LOGIN PAGE */}
-          {!pendingRestoreUser && !pending2faChallenge && screen === 'email_login' && (
-            <div className="space-y-4 animate-fadeIn">
-              <button
-                type="button"
-                onClick={() => {
-                  setScreen('welcome');
-                  setError('');
-                  setNotice('');
-                }}
-                className="inline-flex items-center gap-1.5 text-[10px] font-sans font-bold uppercase tracking-widest text-pink-700 hover:text-pink-800 cursor-pointer"
-              >
-                <ArrowLeft size={12} /> Back
-              </button>
-
-              <div className="text-center space-y-1">
-                <h3 className="text-xl font-serif text-pink-950 font-bold italic">Secure Entry</h3>
-                <p className="text-xs text-stone-600">Sign in with your verified email &amp; password.</p>
-              </div>
-
-              <form onSubmit={handleEmailFormSubmit} className="space-y-3 pt-1">
-                {/* Spam / Bot Honeypot */}
-                <div className="hidden" aria-hidden="true">
-                  <label htmlFor="auth-login-website">Website</label>
-                  <input
-                    id="auth-login-website"
-                    name="website"
-                    type="text"
-                    tabIndex={-1}
-                    autoComplete="off"
-                    value={honeypot}
-                    onChange={(e) => setHoneypot(e.target.value)}
-                  />
+            {/* 1. RETURNING USER FLOW */}
+            {!pendingRestoreUser && screen === 'returning' && (
+              <div className="space-y-5 animate-fadeIn">
+                <div className="space-y-1.5">
+                  <h2 className="text-2xl font-serif text-stone-900 dark:text-stone-100 font-semibold tracking-tight">
+                    Welcome back, {getDisplayName()}
+                  </h2>
+                  <p className="text-sm text-stone-600 dark:text-stone-400">
+                    Verify with {biometricLabel} or sign in to unlock your sanctuary.
+                  </p>
                 </div>
-                <input
-                  type="email"
-                  aria-label="Email Address"
-                  placeholder="EMAIL ADDRESS"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-5 py-4 bg-white/80 border border-pink-200 rounded-2xl text-xs font-semibold text-stone-900 placeholder:text-stone-500 outline-none focus:border-pink-400 transition-colors"
-                  required
-                />
-                <input
-                  type="password"
-                  aria-label="Security Password"
-                  placeholder="SECURITY PASSWORD"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-5 py-4 bg-white/80 border border-pink-200 rounded-2xl text-xs font-semibold text-stone-900 placeholder:text-stone-500 outline-none focus:border-pink-400 transition-colors"
-                  required
-                />
 
-                <div className="flex justify-between items-center px-1 pt-0.5">
-                  <label className="flex items-center gap-2 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={rememberMe}
-                      onChange={(e) => setRememberMe(e.target.checked)}
-                      className="accent-pink-600 w-3.5 h-3.5 rounded border-pink-300"
-                    />
-                    <span className="text-[10px] font-bold text-stone-600 uppercase tracking-wider">Remember Me</span>
-                  </label>
+                <div className="space-y-2.5 pt-1">
+                  {biometricAvailable && (
+                    <button
+                      type="button"
+                      onClick={() => handleBiometricAuth('face')}
+                      disabled={loading}
+                      className="w-full p-4 bg-white dark:bg-[#23201d] hover:bg-stone-50 dark:hover:bg-[#2a2622] border border-stone-200 dark:border-[#342f2b] rounded-xl flex items-center gap-3.5 cursor-pointer transition-colors"
+                    >
+                      <div className="w-10 h-10 bg-pink-50 dark:bg-pink-950/30 border border-pink-200/70 dark:border-pink-900/50 text-pink-600 dark:text-pink-400 rounded-lg flex items-center justify-center shrink-0">
+                        <Fingerprint size={18} />
+                      </div>
+                      <div className="text-left flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-stone-900 dark:text-stone-100">{biometricLabel}</p>
+                        <p className="text-xs text-stone-500 dark:text-stone-400">Verify identity with device hardware</p>
+                      </div>
+                      <ChevronRight size={16} className="text-stone-400 shrink-0" />
+                    </button>
+                  )}
+
+                  {userHasConfiguredPin(getTargetUser()) && (
+                    <button
+                      type="button"
+                      onClick={() => handleBiometricAuth('passcode')}
+                      disabled={loading}
+                      className="w-full p-4 bg-white dark:bg-[#23201d] hover:bg-stone-50 dark:hover:bg-[#2a2622] border border-stone-200 dark:border-[#342f2b] rounded-xl flex items-center gap-3.5 cursor-pointer transition-colors"
+                    >
+                      <div className="w-10 h-10 bg-stone-100 dark:bg-[#2e2a26] text-stone-700 dark:text-stone-200 rounded-lg flex items-center justify-center shrink-0">
+                        <Lock size={17} />
+                      </div>
+                      <div className="text-left flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-stone-900 dark:text-stone-100">Security PIN</p>
+                        <p className="text-xs text-stone-500 dark:text-stone-400">Unlock with your 4–6 digit PIN</p>
+                      </div>
+                      <ChevronRight size={16} className="text-stone-400 shrink-0" />
+                    </button>
+                  )}
+                </div>
+
+                <div className="pt-3 border-t border-stone-100 dark:border-[#2e2a26] flex flex-col gap-2.5 text-center">
                   <button
                     type="button"
                     onClick={() => {
+                      setScreen('email_login');
                       setError('');
                       setNotice('');
-                      setScreen('forgot_password');
                     }}
-                    className="text-[10px] font-bold text-pink-700 hover:text-pink-900 uppercase tracking-wider transition-colors cursor-pointer"
+                    className="text-sm font-semibold text-pink-700 dark:text-pink-400 hover:underline transition-colors cursor-pointer"
                   >
-                    Forgot password?
+                    Sign in with email &amp; password
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setScreen('welcome');
+                      setError('');
+                      setNotice('');
+                    }}
+                    className="text-xs font-medium text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200 transition-colors cursor-pointer"
+                  >
+                    Switch account or set up new device
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* 2. NO ACCOUNT / FIRST TIME USER */}
+            {!pendingRestoreUser && screen === 'welcome' && (
+              <div className="space-y-6 animate-fadeIn">
+                <div className="space-y-2">
+                  <span className="text-xs font-semibold tracking-wide text-pink-700 dark:text-pink-400 block">
+                    Private cycle &amp; wellness
+                  </span>
+                  <h2 className="text-3xl font-serif text-stone-900 dark:text-stone-100 font-semibold tracking-tight leading-tight">
+                    Welcome to Lumina
+                  </h2>
+                  <p className="text-sm text-stone-600 dark:text-stone-400 leading-relaxed">
+                    Sign in to access your encrypted health logs or create a new personal sanctuary.
+                  </p>
+                </div>
+
+                <div className="space-y-3 pt-1">
+                  <button
+                    type="button"
+                    id="btn-welcome-signup"
+                    onClick={() => {
+                      setRegisterRole('tracker');
+                      setScreen('email_signup');
+                      setError('');
+                      setNotice('');
+                    }}
+                    className="w-full h-12 px-5 bg-pink-600 hover:bg-pink-700 text-white font-semibold rounded-xl text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors"
+                  >
+                    <span>Create account</span>
+                    <ArrowRight size={16} />
+                  </button>
+
+                  <button
+                    type="button"
+                    id="btn-welcome-signin"
+                    onClick={() => {
+                      setScreen('email_login');
+                      setError('');
+                      setNotice('');
+                    }}
+                    className="w-full h-12 px-5 bg-white dark:bg-[#23201d] border border-stone-200 dark:border-[#342f2b] rounded-xl hover:bg-stone-50 dark:hover:bg-[#2a2622] flex items-center justify-center gap-2 text-stone-800 dark:text-stone-100 font-semibold text-sm cursor-pointer transition-colors"
+                  >
+                    <Mail size={16} className="text-stone-500 dark:text-stone-400" />
+                    <span>Sign in with email</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Welcome Screen after Scan */}
+            {!pendingRestoreUser && screen === 'scan_welcome' && (
+              <div className="space-y-5 animate-fadeIn" id="scan-welcome-screen">
+                <div className="space-y-1.5">
+                  <h2 className="text-3xl font-serif text-stone-900 dark:text-stone-100 font-semibold tracking-tight leading-tight">
+                    Welcome to Lumina
+                  </h2>
+                  <p className="text-sm text-stone-600 dark:text-stone-400">Your cycle, your sanctuary.</p>
+                </div>
+
+                <ul className="space-y-2.5 bg-[#faf8f6] dark:bg-[#23201d] p-4 rounded-xl border border-stone-200/80 dark:border-[#342f2b] text-xs font-medium text-stone-700 dark:text-stone-300">
+                  <li className="flex items-center gap-2.5">
+                    <Check size={14} className="text-pink-600 dark:text-pink-400 shrink-0" />
+                    <span>Track your cycle and phase shifts</span>
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <Check size={14} className="text-pink-600 dark:text-pink-400 shrink-0" />
+                    <span>Understand symptoms, mood, and fertility</span>
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <Check size={14} className="text-pink-600 dark:text-pink-400 shrink-0" />
+                    <span>Stay connected to your wellness journey</span>
+                  </li>
+                </ul>
+
+                <div className="space-y-2.5">
+                  <button
+                    type="button"
+                    id="btn-scan-create-account"
+                    onClick={() => {
+                      setScreen('welcome');
+                      setWelcomeStep('choose_experience');
+                    }}
+                    className="w-full h-11 px-4 bg-pink-600 hover:bg-pink-700 text-white font-semibold rounded-xl text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors"
+                  >
+                    Create account
+                  </button>
+
+                  <button
+                    type="button"
+                    id="btn-scan-apple"
+                    onClick={handleAppleLogin}
+                    disabled={loading}
+                    className="w-full h-11 px-4 bg-stone-900 dark:bg-stone-800 hover:bg-stone-800 dark:hover:bg-stone-700 text-white rounded-xl flex items-center justify-center gap-2 font-semibold text-sm cursor-pointer transition-colors"
+                  >
+                    <Smartphone size={15} />
+                    <span>Continue with Apple</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    id="btn-scan-email"
+                    onClick={() => {
+                      setScreen('email_signup');
+                      setError('');
+                      setNotice('');
+                    }}
+                    className="w-full h-11 px-4 bg-white dark:bg-[#23201d] border border-stone-200 dark:border-[#342f2b] text-stone-800 dark:text-stone-100 rounded-xl hover:bg-stone-50 dark:hover:bg-[#2a2622] flex items-center justify-center gap-2 font-semibold text-sm cursor-pointer transition-colors"
+                  >
+                    Continue with email
                   </button>
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl font-bold text-xs tracking-[0.15em] shadow-md shadow-pink-100 hover:opacity-95 active:scale-95 transition-all text-center cursor-pointer"
-                >
-                  {loading ? "UNLOCKING SANCTUARY..." : "SECURE ENTRY"}
-                </button>
-              </form>
+                <div className="text-center pt-2 border-t border-stone-100 dark:border-[#2e2a26]">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setScreen('email_login');
+                      setError('');
+                      setNotice('');
+                    }}
+                    className="text-xs font-semibold text-pink-700 dark:text-pink-400 hover:underline transition-colors cursor-pointer"
+                  >
+                    Already have an account? Sign in
+                  </button>
+                </div>
+              </div>
+            )}
 
-              <div className="text-center pt-1">
+            {/* 3. EMAIL LOGIN PAGE */}
+            {!pendingRestoreUser && !pending2faChallenge && screen === 'email_login' && (
+              <div className="space-y-5 animate-fadeIn">
                 <button
                   type="button"
                   onClick={() => {
-                    setScreen('email_signup');
+                    setScreen('welcome');
                     setError('');
                     setNotice('');
                   }}
-                  className="text-[10px] font-bold uppercase tracking-widest text-pink-600 hover:underline cursor-pointer"
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 transition-colors cursor-pointer"
                 >
-                  Need an account? Create one
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* 3B. DEDICATED FORGOT PASSWORD SCREEN */}
-          {!pendingRestoreUser && !pending2faChallenge && screen === 'forgot_password' && (
-            <ForgotPasswordScreen
-              initialEmail={email}
-              onEmailChange={(val) => setEmail(val)}
-              onBackToSignIn={() => {
-                setError('');
-                setNotice('');
-                setPassword('');
-                setScreen('email_login');
-              }}
-            />
-          )}
-
-          {/* 3C. PASSWORD RESET COMPLETION SCREEN (FIREBASE oobCode) */}
-          {!pendingRestoreUser && !pending2faChallenge && screen === 'reset_password_confirm' && (
-            <ResetPasswordConfirmScreen
-              oobCode={activeResetCode}
-              onRequestNewLink={() => {
-                setActiveResetCode(null);
-                onClearPasswordReset?.(false);
-                setError('');
-                setNotice('');
-                setScreen('forgot_password');
-              }}
-              onResetConsumed={() => {
-                setActiveResetCode(null);
-              }}
-              onBackToSignIn={(prefillEmail, didCompleteReset) => {
-                setActiveResetCode(null);
-                onClearPasswordReset?.(Boolean(didCompleteReset));
-                if (prefillEmail) setEmail(prefillEmail);
-                setPassword('');
-                setError('');
-                setNotice(
-                  didCompleteReset
-                    ? 'Your password has been updated. Please sign in with your new password.'
-                    : ''
-                );
-                setScreen('email_login');
-              }}
-            />
-          )}
-
-          {/* TWO-FACTOR AUTHENTICATION CHALLENGE */}
-          {pending2faChallenge && (
-            <div className="space-y-4 animate-fadeIn">
-              <div className="text-center space-y-1.5">
-                <div className="w-12 h-12 rounded-2xl bg-pink-50 border border-pink-200 text-pink-700 flex items-center justify-center mx-auto">
-                  <KeyRound size={22} aria-hidden="true" />
-                </div>
-                <h3 className="text-xl font-serif text-pink-950 font-bold">Two-Factor Verification</h3>
-                <p className="text-xs text-stone-600">
-                  {useRecoveryCode
-                    ? 'Enter one of your 8-character backup recovery codes.'
-                    : 'Enter the 6-digit code from your authenticator app.'}
-                </p>
-              </div>
-
-              <form onSubmit={handleVerify2faSubmit} className="space-y-3">
-                <input
-                  type="text"
-                  inputMode={useRecoveryCode ? 'text' : 'numeric'}
-                  maxLength={useRecoveryCode ? 12 : 6}
-                  aria-label={useRecoveryCode ? 'Recovery code' : '6-digit two-factor code'}
-                  placeholder={useRecoveryCode ? 'ABCD-EFGH' : '123456'}
-                  value={twoFactorInput}
-                  onChange={(e) => setTwoFactorInput(e.target.value)}
-                  className="w-full px-5 py-4 bg-white border border-pink-200 rounded-2xl text-center text-base font-mono font-bold tracking-[0.3em] text-stone-900 outline-none focus:border-pink-400"
-                  required
-                />
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl font-bold text-xs uppercase tracking-widest shadow-md cursor-pointer"
-                >
-                  {loading ? 'VERIFYING...' : 'VERIFY & ENTER SANCTUARY'}
-                </button>
-                <div className="flex items-center justify-between pt-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setUseRecoveryCode(!useRecoveryCode);
-                      setTwoFactorInput('');
-                      setError('');
-                    }}
-                    className="text-xs font-bold text-pink-700 hover:underline cursor-pointer"
-                  >
-                    {useRecoveryCode ? 'Use authenticator app code' : 'Use a recovery code instead'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPending2faChallenge(null);
-                      setTwoFactorInput('');
-                      setError('');
-                    }}
-                    className="text-xs font-bold text-stone-600 hover:underline cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
-          {/* 4. EMAIL SIGNUP PAGE */}
-          {!pendingRestoreUser && !pending2faChallenge && screen === 'email_signup' && (() => {
-            const strength = evaluatePasswordStrength(password);
-            return (
-              <div className="space-y-4 animate-fadeIn w-full">
-                <button
-                  type="button"
-                  onClick={() => setScreen('welcome')}
-                  className="inline-flex items-center gap-1.5 text-[10px] font-sans font-bold uppercase tracking-widest text-pink-700 hover:text-pink-900 cursor-pointer"
-                >
-                  <ArrowLeft size={12} /> Back
+                  <ArrowLeft size={14} /> Back
                 </button>
 
-                <div className="text-center space-y-1">
-                  <h3 className="text-xl font-serif text-pink-950 font-bold italic">Create Account</h3>
-                  <p className="text-xs text-stone-600">Nurture and align with your companion.</p>
+                <div className="space-y-1">
+                  <h3 className="text-2xl font-serif text-stone-900 dark:text-stone-100 font-semibold tracking-tight">Sign in</h3>
+                  <p className="text-sm text-stone-600 dark:text-stone-400">Sign in with your verified email and password.</p>
                 </div>
 
-                <form onSubmit={handleEmailFormSubmit} className="space-y-4 pt-1">
+                <form onSubmit={handleEmailFormSubmit} className="space-y-4">
                   <div className="hidden" aria-hidden="true">
-                    <label htmlFor="auth-signup-website">Website</label>
+                    <label htmlFor="auth-login-website">Website</label>
                     <input
-                      id="auth-signup-website"
+                      id="auth-login-website"
                       name="website"
                       type="text"
                       tabIndex={-1}
@@ -1595,246 +1461,448 @@ const Auth: React.FC<AuthProps> = ({
                       onChange={(e) => setHoneypot(e.target.value)}
                     />
                   </div>
-                  <div className="max-h-[300px] overflow-y-auto pr-1.5 space-y-3.5">
-                    
-                    {/* Account Role */}
-                    <div className="space-y-1 bg-rose-50/40 p-2.5 rounded-2xl border border-pink-100">
-                      <p className="text-[10px] font-extrabold text-pink-700 uppercase tracking-widest text-center">Select Account Role</p>
-                      <div className="grid grid-cols-2 gap-2 bg-pink-100/40 p-1 rounded-xl border border-pink-200/50">
-                        <button
-                          type="button"
-                          onClick={() => setRegisterRole('tracker')}
-                          className={`py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                            registerRole === 'tracker' ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-sm' : 'text-pink-800 hover:text-pink-950'
-                          }`}
-                        >
-                          🌸 Tracker Mode
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setRegisterRole('partner')}
-                          className={`py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                            registerRole === 'partner' ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-sm' : 'text-pink-800 hover:text-pink-950'
-                          }`}
-                        >
-                          🧸 Companion Mode
-                        </button>
-                      </div>
+
+                  <div className="space-y-1.5">
+                    <label htmlFor="login-email-input" className="block text-xs font-medium text-stone-700 dark:text-stone-300">
+                      Email address
+                    </label>
+                    <input
+                      id="login-email-input"
+                      type="email"
+                      aria-label="Email Address"
+                      placeholder="you@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full h-11 px-3.5 bg-white dark:bg-[#23201d] border border-stone-200 dark:border-[#342f2b] rounded-xl text-sm text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 outline-none focus:border-pink-500 transition-colors"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label htmlFor="login-password-input" className="block text-xs font-medium text-stone-700 dark:text-stone-300">
+                      Password
+                    </label>
+                    <input
+                      id="login-password-input"
+                      type="password"
+                      aria-label="Security Password"
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full h-11 px-3.5 bg-white dark:bg-[#23201d] border border-stone-200 dark:border-[#342f2b] rounded-xl text-sm text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 outline-none focus:border-pink-500 transition-colors"
+                      required
+                    />
+                  </div>
+
+                  <div className="flex justify-between items-center pt-0.5">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={rememberMe}
+                        onChange={(e) => setRememberMe(e.target.checked)}
+                        className="accent-pink-600 w-4 h-4 rounded border-stone-300"
+                      />
+                      <span className="text-xs font-medium text-stone-600 dark:text-stone-300">Remember this device</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setError('');
+                        setNotice('');
+                        setScreen('forgot_password');
+                      }}
+                      className="text-xs font-semibold text-pink-700 dark:text-pink-400 hover:underline transition-colors cursor-pointer"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full h-11 px-4 bg-pink-600 hover:bg-pink-700 text-white rounded-xl font-semibold text-sm transition-colors text-center cursor-pointer disabled:opacity-60"
+                  >
+                    {loading ? 'Signing in...' : 'Sign in'}
+                  </button>
+                </form>
+
+                <div className="text-center pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setScreen('email_signup');
+                      setError('');
+                      setNotice('');
+                    }}
+                    className="text-xs font-medium text-pink-700 dark:text-pink-400 hover:underline cursor-pointer"
+                  >
+                    Need an account? Create one
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* 3B. DEDICATED FORGOT PASSWORD SCREEN */}
+            {!pendingRestoreUser && !pending2faChallenge && screen === 'forgot_password' && (
+              <ForgotPasswordScreen
+                initialEmail={email}
+                onEmailChange={(val) => setEmail(val)}
+                onBackToSignIn={() => {
+                  setError('');
+                  setNotice('');
+                  setPassword('');
+                  setScreen('email_login');
+                }}
+              />
+            )}
+
+            {/* 3C. PASSWORD RESET COMPLETION SCREEN (FIREBASE oobCode) */}
+            {!pendingRestoreUser && !pending2faChallenge && screen === 'reset_password_confirm' && (
+              <ResetPasswordConfirmScreen
+                oobCode={activeResetCode}
+                onRequestNewLink={() => {
+                  setActiveResetCode(null);
+                  onClearPasswordReset?.(false);
+                  setError('');
+                  setNotice('');
+                  setScreen('forgot_password');
+                }}
+                onResetConsumed={() => {
+                  setActiveResetCode(null);
+                }}
+                onBackToSignIn={(prefillEmail, didCompleteReset) => {
+                  setActiveResetCode(null);
+                  onClearPasswordReset?.(Boolean(didCompleteReset));
+                  if (prefillEmail) setEmail(prefillEmail);
+                  setPassword('');
+                  setError('');
+                  setNotice(
+                    didCompleteReset
+                      ? 'Your password has been updated. Please sign in with your new password.'
+                      : ''
+                  );
+                  setScreen('email_login');
+                }}
+              />
+            )}
+
+            {/* TWO-FACTOR AUTHENTICATION CHALLENGE */}
+            {pending2faChallenge && (
+              <div className="space-y-4 animate-fadeIn">
+                <div className="space-y-1.5">
+                  <div className="w-10 h-10 rounded-xl bg-pink-50 dark:bg-pink-950/30 border border-pink-200/70 dark:border-pink-900/50 text-pink-600 dark:text-pink-400 flex items-center justify-center">
+                    <KeyRound size={18} aria-hidden="true" />
+                  </div>
+                  <h3 className="text-2xl font-serif text-stone-900 dark:text-stone-100 font-semibold">Two-factor verification</h3>
+                  <p className="text-sm text-stone-600 dark:text-stone-400">
+                    {useRecoveryCode
+                      ? 'Enter one of your 8-character backup recovery codes.'
+                      : 'Enter the 6-digit code from your authenticator app.'}
+                  </p>
+                </div>
+
+                <form onSubmit={handleVerify2faSubmit} className="space-y-3">
+                  <input
+                    type="text"
+                    inputMode={useRecoveryCode ? 'text' : 'numeric'}
+                    maxLength={useRecoveryCode ? 12 : 6}
+                    aria-label={useRecoveryCode ? 'Recovery code' : '6-digit two-factor code'}
+                    placeholder={useRecoveryCode ? 'ABCD-EFGH' : '123456'}
+                    value={twoFactorInput}
+                    onChange={(e) => setTwoFactorInput(e.target.value)}
+                    className="w-full h-12 px-4 bg-white dark:bg-[#23201d] border border-stone-200 dark:border-[#342f2b] rounded-xl text-center text-lg font-mono font-semibold tracking-[0.28em] tabular-nums text-stone-900 dark:text-stone-100 outline-none focus:border-pink-500"
+                    required
+                  />
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full h-11 px-4 bg-pink-600 hover:bg-pink-700 text-white rounded-xl font-semibold text-sm cursor-pointer transition-colors"
+                  >
+                    {loading ? 'Verifying...' : 'Verify & continue'}
+                  </button>
+                  <div className="flex items-center justify-between pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUseRecoveryCode(!useRecoveryCode);
+                        setTwoFactorInput('');
+                        setError('');
+                      }}
+                      className="text-xs font-semibold text-pink-700 dark:text-pink-400 hover:underline cursor-pointer"
+                    >
+                      {useRecoveryCode ? 'Use authenticator app code' : 'Use a recovery code instead'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPending2faChallenge(null);
+                        setTwoFactorInput('');
+                        setError('');
+                      }}
+                      className="text-xs font-medium text-stone-600 dark:text-stone-400 hover:underline cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {/* 4. EMAIL SIGNUP PAGE */}
+            {!pendingRestoreUser && !pending2faChallenge && screen === 'email_signup' && (() => {
+              const strength = evaluatePasswordStrength(password);
+              return (
+                <div className="space-y-4 animate-fadeIn w-full">
+                  <button
+                    type="button"
+                    onClick={() => setScreen('welcome')}
+                    className="inline-flex items-center gap-1.5 text-xs font-medium text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 transition-colors cursor-pointer"
+                  >
+                    <ArrowLeft size={14} /> Back
+                  </button>
+
+                  <div className="space-y-1">
+                    <h3 className="text-2xl font-serif text-stone-900 dark:text-stone-100 font-semibold tracking-tight">Create account</h3>
+                    <p className="text-sm text-stone-600 dark:text-stone-400">Set up your private cycle or companion profile.</p>
+                  </div>
+
+                  <form onSubmit={handleEmailFormSubmit} className="space-y-4">
+                    <div className="hidden" aria-hidden="true">
+                      <label htmlFor="auth-signup-website">Website</label>
+                      <input
+                        id="auth-signup-website"
+                        name="website"
+                        type="text"
+                        tabIndex={-1}
+                        autoComplete="off"
+                        value={honeypot}
+                        onChange={(e) => setHoneypot(e.target.value)}
+                      />
                     </div>
-
-                    {/* Required Fields Group */}
-                    <div className="space-y-3">
-                      <p className="text-[10px] font-extrabold text-stone-600 uppercase tracking-widest border-b border-pink-100 pb-1">Required Information</p>
-                      
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="space-y-1">
-                          <label htmlFor="signup-first-name" className="text-[10px] font-bold text-pink-700 uppercase tracking-wider px-1">First Name</label>
-                          <input
-                            id="signup-first-name"
-                            type="text"
-                            placeholder="FIRST NAME"
-                            value={firstName}
-                            onChange={(e) => setFirstName(e.target.value)}
-                            className="w-full px-4 py-3 bg-white/80 border border-pink-200 rounded-xl text-xs font-semibold text-stone-900 outline-none focus:border-pink-400 transition-colors"
-                            required
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label htmlFor="signup-last-name" className="text-[10px] font-bold text-pink-700 uppercase tracking-wider px-1">Last Name</label>
-                          <input
-                            id="signup-last-name"
-                            type="text"
-                            placeholder="LAST NAME"
-                            value={lastName}
-                            onChange={(e) => setLastName(e.target.value)}
-                            className="w-full px-4 py-3 bg-white/80 border border-pink-200 rounded-xl text-xs font-semibold text-stone-900 outline-none focus:border-pink-400 transition-colors"
-                            required
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-1">
-                        <label htmlFor="signup-display-name" className="text-[10px] font-bold text-pink-700 uppercase tracking-wider px-1">Display Name</label>
-                        <input
-                          id="signup-display-name"
-                          type="text"
-                          placeholder="DISPLAY NAME"
-                          value={displayName}
-                          onChange={(e) => setDisplayName(e.target.value)}
-                          className="w-full px-4 py-3 bg-white/80 border border-pink-200 rounded-xl text-xs font-semibold text-stone-900 outline-none focus:border-pink-400 transition-colors"
-                          required
-                        />
-                      </div>
-
-                      {registerRole !== 'partner' && (
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="space-y-1">
-                            <label htmlFor="signup-age" className="text-[10px] font-bold text-pink-700 uppercase tracking-wider px-1">Age</label>
-                            <input
-                              id="signup-age"
-                              type="number"
-                              placeholder="AGE"
-                              min="13"
-                              max="120"
-                              value={age}
-                              onChange={(e) => setAge(e.target.value)}
-                              className="w-full px-4 py-3 bg-white/80 border border-pink-200 rounded-xl text-xs font-semibold text-stone-900 outline-none focus:border-pink-400 transition-colors"
-                              required
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <label htmlFor="signup-dob" className="text-[10px] font-bold text-pink-700 uppercase tracking-wider px-1">Date of Birth</label>
-                            <input
-                              id="signup-dob"
-                              type="date"
-                              value={dob}
-                              onChange={(e) => setDob(e.target.value)}
-                              className="w-full px-4 py-3 bg-white/80 border border-pink-200 rounded-xl text-xs font-semibold text-stone-900 outline-none focus:border-pink-400 transition-colors"
-                              required
-                            />
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="space-y-1">
-                        <label htmlFor="signup-email" className="text-[10px] font-bold text-pink-700 uppercase tracking-wider px-1">Email Address</label>
-                        <input
-                          id="signup-email"
-                          type="email"
-                          placeholder="EMAIL ADDRESS"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          className="w-full px-4 py-3 bg-white/80 border border-pink-200 rounded-xl text-xs font-semibold text-stone-900 outline-none focus:border-pink-400 transition-colors"
-                          required
-                        />
-                      </div>
-
+                    <div className="max-h-[320px] overflow-y-auto pr-1 space-y-4 custom-scrollbar">
+                      {/* Account Role */}
                       <div className="space-y-1.5">
-                        <div className="flex items-center justify-between px-1">
-                          <label htmlFor="signup-password" className="text-[10px] font-bold text-pink-700 uppercase tracking-wider">Choose Strong Password</label>
-                          {password.length > 0 && (
-                            <span className={`text-[10px] font-bold ${
-                              strength.valid ? 'text-emerald-700' : strength.score >= 2 ? 'text-amber-700' : 'text-rose-700'
-                            }`}>
-                              {strength.label}
-                            </span>
-                          )}
+                        <span className="block text-xs font-medium text-stone-700 dark:text-stone-300">Account type</span>
+                        <div className="grid grid-cols-2 gap-1.5 bg-stone-100 dark:bg-[#23201d] p-1 rounded-xl border border-stone-200/60 dark:border-[#342f2b]">
+                          <button
+                            type="button"
+                            onClick={() => setRegisterRole('tracker')}
+                            className={`h-9 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
+                              registerRole === 'tracker' ? 'bg-white dark:bg-[#1a1816] text-stone-900 dark:text-stone-100 shadow-xs' : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100'
+                            }`}
+                          >
+                            <Flower2 size={14} className={registerRole === 'tracker' ? 'text-pink-600 dark:text-pink-400' : 'text-stone-400'} />
+                            <span>Tracker</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setRegisterRole('partner')}
+                            className={`h-9 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
+                              registerRole === 'partner' ? 'bg-white dark:bg-[#1a1816] text-stone-900 dark:text-stone-100 shadow-xs' : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100'
+                            }`}
+                          >
+                            <HeartHandshake size={14} className={registerRole === 'partner' ? 'text-pink-600 dark:text-pink-400' : 'text-stone-400'} />
+                            <span>Partner</span>
+                          </button>
                         </div>
-                        <input
-                          id="signup-password"
-                          type="password"
-                          placeholder="STRONG PASSWORD"
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          className="w-full px-4 py-3 bg-white/80 border border-pink-200 rounded-xl text-xs font-semibold text-stone-900 outline-none focus:border-pink-400 transition-colors"
-                          required
-                        />
-                        <p className="text-[10px] text-stone-600 px-1">
-                          Use 8+ chars with upper/lowercase, a number, and a symbol.
-                        </p>
                       </div>
-                    </div>
 
-                    {/* Optional Fields Group */}
-                    <div className="space-y-3">
-                      <p className="text-[10px] font-extrabold text-stone-600 uppercase tracking-widest border-b border-pink-100 pb-1">Optional Details</p>
+                      {/* Required Fields Group */}
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-2 gap-2.5">
+                          <div className="space-y-1">
+                            <label htmlFor="signup-first-name" className="block text-xs font-medium text-stone-700 dark:text-stone-300">First name</label>
+                            <input
+                              id="signup-first-name"
+                              type="text"
+                              placeholder="First name"
+                              value={firstName}
+                              onChange={(e) => setFirstName(e.target.value)}
+                              className="w-full h-10 px-3 bg-white dark:bg-[#23201d] border border-stone-200 dark:border-[#342f2b] rounded-xl text-sm text-stone-900 dark:text-stone-100 outline-none focus:border-pink-500 transition-colors"
+                              required
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label htmlFor="signup-last-name" className="block text-xs font-medium text-stone-700 dark:text-stone-300">Last name</label>
+                            <input
+                              id="signup-last-name"
+                              type="text"
+                              placeholder="Last name"
+                              value={lastName}
+                              onChange={(e) => setLastName(e.target.value)}
+                              className="w-full h-10 px-3 bg-white dark:bg-[#23201d] border border-stone-200 dark:border-[#342f2b] rounded-xl text-sm text-stone-900 dark:text-stone-100 outline-none focus:border-pink-500 transition-colors"
+                              required
+                            />
+                          </div>
+                        </div>
 
-                      <div className="grid grid-cols-2 gap-2">
                         <div className="space-y-1">
-                          <label htmlFor="signup-country" className="text-[10px] font-bold text-stone-600 uppercase tracking-wider px-1">Country</label>
+                          <label htmlFor="signup-display-name" className="block text-xs font-medium text-stone-700 dark:text-stone-300">Display name</label>
+                          <input
+                            id="signup-display-name"
+                            type="text"
+                            placeholder="How Lumina greets you"
+                            value={displayName}
+                            onChange={(e) => setDisplayName(e.target.value)}
+                            className="w-full h-10 px-3 bg-white dark:bg-[#23201d] border border-stone-200 dark:border-[#342f2b] rounded-xl text-sm text-stone-900 dark:text-stone-100 outline-none focus:border-pink-500 transition-colors"
+                            required
+                          />
+                        </div>
+
+                        {registerRole !== 'partner' && (
+                          <div className="grid grid-cols-2 gap-2.5">
+                            <div className="space-y-1">
+                              <label htmlFor="signup-age" className="block text-xs font-medium text-stone-700 dark:text-stone-300">Age</label>
+                              <input
+                                id="signup-age"
+                                type="number"
+                                placeholder="25"
+                                min="13"
+                                max="120"
+                                value={age}
+                                onChange={(e) => setAge(e.target.value)}
+                                className="w-full h-10 px-3 bg-white dark:bg-[#23201d] border border-stone-200 dark:border-[#342f2b] rounded-xl text-sm tabular-nums text-stone-900 dark:text-stone-100 outline-none focus:border-pink-500 transition-colors"
+                                required
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label htmlFor="signup-dob" className="block text-xs font-medium text-stone-700 dark:text-stone-300">Date of birth</label>
+                              <input
+                                id="signup-dob"
+                                type="date"
+                                value={dob}
+                                onChange={(e) => setDob(e.target.value)}
+                                className="w-full h-10 px-3 bg-white dark:bg-[#23201d] border border-stone-200 dark:border-[#342f2b] rounded-xl text-sm tabular-nums text-stone-900 dark:text-stone-100 outline-none focus:border-pink-500 transition-colors"
+                                required
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="space-y-1">
+                          <label htmlFor="signup-email" className="block text-xs font-medium text-stone-700 dark:text-stone-300">Email address</label>
+                          <input
+                            id="signup-email"
+                            type="email"
+                            placeholder="you@example.com"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="w-full h-10 px-3 bg-white dark:bg-[#23201d] border border-stone-200 dark:border-[#342f2b] rounded-xl text-sm text-stone-900 dark:text-stone-100 outline-none focus:border-pink-500 transition-colors"
+                            required
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <label htmlFor="signup-password" className="text-xs font-medium text-stone-700 dark:text-stone-300">Password</label>
+                            {password.length > 0 && (
+                              <span className={`text-xs font-semibold ${
+                                strength.valid ? 'text-emerald-700 dark:text-emerald-400' : strength.score >= 2 ? 'text-amber-700 dark:text-amber-400' : 'text-rose-700 dark:text-rose-400'
+                              }`}>
+                                {strength.label}
+                              </span>
+                            )}
+                          </div>
+                          <input
+                            id="signup-password"
+                            type="password"
+                            placeholder="8+ characters with symbol & number"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="w-full h-10 px-3 bg-white dark:bg-[#23201d] border border-stone-200 dark:border-[#342f2b] rounded-xl text-sm text-stone-900 dark:text-stone-100 outline-none focus:border-pink-500 transition-colors"
+                            required
+                          />
+                          <p className="text-[11px] text-stone-500 dark:text-stone-400">
+                            Include upper &amp; lowercase letters, a number, and a special character.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Optional Fields Group */}
+                      <div className="grid grid-cols-2 gap-2.5 pt-2 border-t border-stone-100 dark:border-[#2e2a26]">
+                        <div className="space-y-1">
+                          <label htmlFor="signup-country" className="block text-xs font-medium text-stone-600 dark:text-stone-400">Country (optional)</label>
                           <input
                             id="signup-country"
                             type="text"
-                            placeholder="COUNTRY"
+                            placeholder="Country"
                             value={country}
                             onChange={(e) => setCountry(e.target.value)}
-                            className="w-full px-4 py-3 bg-white/80 border border-pink-200 rounded-xl text-xs font-semibold text-stone-900 outline-none focus:border-pink-400 transition-colors"
+                            className="w-full h-10 px-3 bg-white dark:bg-[#23201d] border border-stone-200 dark:border-[#342f2b] rounded-xl text-sm text-stone-900 dark:text-stone-100 outline-none focus:border-pink-500 transition-colors"
                           />
                         </div>
                         <div className="space-y-1">
-                          <label htmlFor="signup-timezone" className="text-[10px] font-bold text-stone-600 uppercase tracking-wider px-1">Time Zone</label>
+                          <label htmlFor="signup-timezone" className="block text-xs font-medium text-stone-600 dark:text-stone-400">Time zone (optional)</label>
                           <input
                             id="signup-timezone"
                             type="text"
                             placeholder="UTC"
                             value={timezone}
                             onChange={(e) => setTimezone(e.target.value)}
-                            className="w-full px-4 py-3 bg-white/80 border border-pink-200 rounded-xl text-xs font-semibold text-stone-900 outline-none focus:border-pink-400 transition-colors"
+                            className="w-full h-10 px-3 bg-white dark:bg-[#23201d] border border-stone-200 dark:border-[#342f2b] rounded-xl text-sm text-stone-900 dark:text-stone-100 outline-none focus:border-pink-500 transition-colors"
                           />
                         </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="px-1">
                     <label className="flex items-center gap-2 cursor-pointer select-none">
                       <input
                         type="checkbox"
                         checked={rememberMe}
                         onChange={(e) => setRememberMe(e.target.checked)}
-                        className="accent-pink-600 w-3.5 h-3.5 rounded border-pink-300"
+                        className="accent-pink-600 w-4 h-4 rounded border-stone-300"
                       />
-                      <span className="text-[10px] font-bold text-stone-600 uppercase tracking-wider leading-none">Enable Quick Biometric &amp; Remember Device</span>
+                      <span className="text-xs font-medium text-stone-600 dark:text-stone-300">Enable quick unlock &amp; remember device</span>
                     </label>
-                  </div>
 
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full py-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl font-bold text-xs tracking-[0.15em] shadow-md shadow-pink-100 hover:opacity-95 active:scale-95 transition-all text-center cursor-pointer"
-                  >
-                    {loading ? "INITIALIZING SANCTUARY..." : "CREATE SANCTUARY"}
-                  </button>
-                </form>
-              </div>
-            );
-          })()}
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="w-full h-11 px-4 bg-pink-600 hover:bg-pink-700 text-white rounded-xl font-semibold text-sm transition-colors text-center cursor-pointer disabled:opacity-60"
+                    >
+                      {loading ? 'Creating account...' : 'Create account'}
+                    </button>
+                  </form>
+                </div>
+              );
+            })()}
+          </div>
 
+          {/* Mobile / Compact Footer */}
+          <div className="pt-4 border-t border-stone-100 dark:border-[#2e2a26] flex items-center justify-center gap-2 text-xs text-stone-500 dark:text-stone-400 lg:justify-start">
+            <ShieldCheck size={14} className="text-pink-600 dark:text-pink-400 shrink-0" aria-hidden="true" />
+            <span>Device-encrypted health records · Strictly private</span>
+          </div>
         </div>
-
-        {/* Small Elegant Footer */}
-        <div className="text-center mt-3 border-t border-pink-100 pt-5 w-full">
-          <p className="text-[11px] text-pink-700 font-bold uppercase tracking-wider flex items-center justify-center gap-2">
-            <span>🛡️</span>
-            <span>Private &amp; Encrypted Vault</span>
-          </p>
-          <p className="text-[11px] text-stone-600 italic max-w-xs mx-auto mt-1 leading-relaxed">
-            Your metrics, journals, and health records remain device-encrypted and private.
-          </p>
-        </div>
-
       </div>
 
       {/* GENUINE BIOMETRIC / SECURITY PIN VERIFICATION MODAL */}
       {biometricScanning !== 'none' && (
-        <div className="fixed inset-0 bg-white/90 backdrop-blur-xl flex flex-col items-center justify-center z-50 p-6 animate-fadeIn">
-          <div className="bg-white p-8 rounded-[3rem] shadow-[0_24px_50px_rgba(244,114,182,0.12)] border border-pink-150/40 w-full max-w-sm flex flex-col items-center justify-center relative overflow-hidden min-h-[440px] animate-scaleIn">
-            
-            {/* Dismiss trigger */}
-            <button 
+        <div className="fixed inset-0 bg-stone-950/55 backdrop-blur-xs flex flex-col items-center justify-center z-50 p-4 animate-fadeIn">
+          <div className="bg-white dark:bg-[#1a1816] p-7 rounded-2xl shadow-xl border border-stone-200 dark:border-[#2e2a26] w-full max-w-sm flex flex-col items-center justify-center relative min-h-[400px]">
+            <button
               type="button"
               onClick={() => {
                 setBiometricScanning('none');
                 setTypedPin('');
                 setPasscodeError('');
               }}
-              className="absolute top-5 right-5 w-8 h-8 rounded-full bg-pink-50 hover:bg-pink-100 flex items-center justify-center text-pink-500 hover:text-pink-600 transition-colors cursor-pointer"
+              className="absolute top-4 right-4 w-8 h-8 rounded-lg bg-stone-100 dark:bg-[#23201d] hover:bg-stone-200 dark:hover:bg-[#2e2a26] flex items-center justify-center text-stone-600 dark:text-stone-300 transition-colors cursor-pointer"
               aria-label="Close verification"
             >
-              <X size={15} />
+              <X size={16} />
             </button>
 
             {(biometricScanning === 'face' || biometricScanning === 'touch') && (
-              <div className="flex flex-col items-center text-center space-y-6">
-                <div className="relative w-24 h-24 flex items-center justify-center">
-                  <span className={`absolute inset-0 rounded-full border-4 border-dashed animate-spin-slow ${biometricStatus === 'success' ? 'border-emerald-400' : 'border-pink-300'}`}></span>
-                  <div className={`w-18 h-18 rounded-full flex items-center justify-center transition-all duration-500 shadow-inner ${biometricStatus === 'success' ? 'bg-emerald-50 text-emerald-500' : 'bg-pink-50 text-pink-500'}`}>
-                    {biometricStatus === 'success' ? <Check size={32} /> : <Fingerprint size={32} className="animate-pulse" />}
+              <div className="flex flex-col items-center text-center space-y-5">
+                <div className="relative w-20 h-20 flex items-center justify-center">
+                  <div className={`w-16 h-16 rounded-2xl border flex items-center justify-center transition-colors ${biometricStatus === 'success' ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-900/50 text-emerald-600 dark:text-emerald-400' : 'bg-pink-50 dark:bg-pink-950/40 border-pink-200 dark:border-pink-900/50 text-pink-600 dark:text-pink-400'}`}>
+                    {biometricStatus === 'success' ? <Check size={28} /> : <Fingerprint size={28} />}
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <h3 className="text-pink-950 font-serif text-lg italic font-extrabold">{biometricLabel}</h3>
-                  <p className="text-[11px] text-stone-600 leading-relaxed font-serif max-w-[220px]">
+                  <h3 className="text-stone-900 dark:text-stone-100 font-serif text-xl font-semibold">{biometricLabel}</h3>
+                  <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed max-w-[230px]">
                     {biometricStatus === 'scanning' && 'Waiting for native device authentication prompt...'}
                     {biometricStatus === 'success' && 'Identity verified cleanly.'}
                   </p>
@@ -1845,38 +1913,38 @@ const Auth: React.FC<AuthProps> = ({
             {biometricScanning === 'passcode' && (
               <div className="flex flex-col items-center w-full space-y-5 animate-fadeIn">
                 <div className="text-center space-y-1">
-                  <div className={`mx-auto w-10 h-10 rounded-full flex items-center justify-center ${biometricStatus === 'success' ? 'bg-emerald-50 text-emerald-500' : 'bg-pink-50 text-pink-500'}`}>
-                    {biometricStatus === 'success' ? <Check size={18} /> : <Lock size={16} className="text-pink-500" />}
+                  <div className={`mx-auto w-10 h-10 rounded-xl flex items-center justify-center ${biometricStatus === 'success' ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400' : 'bg-pink-50 dark:bg-pink-950/40 text-pink-600 dark:text-pink-400'}`}>
+                    {biometricStatus === 'success' ? <Check size={18} /> : <Lock size={17} />}
                   </div>
-                  <h3 className="text-pink-950 font-serif text-md font-extrabold italic">Enter Security PIN</h3>
-                  <p className="text-[10px] text-stone-500 font-medium">Enter your private 4–6 digit PIN</p>
+                  <h3 className="text-stone-900 dark:text-stone-100 font-serif text-lg font-semibold">Enter security PIN</h3>
+                  <p className="text-xs text-stone-500 dark:text-stone-400">Enter your private 4–6 digit PIN</p>
                 </div>
 
-                <div className="flex gap-3.5 justify-center items-center h-6">
+                <div className="flex gap-3 justify-center items-center h-5">
                   {[0, 1, 2, 3, 4, 5].map((idx) => (
-                    <div 
-                      key={idx} 
-                      className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                    <div
+                      key={idx}
+                      className={`w-2.5 h-2.5 rounded-full transition-all duration-150 ${
                         passcodeError ? 'bg-rose-500' :
                         biometricStatus === 'success' ? 'bg-emerald-500 scale-110' :
-                        typedPin.length > idx ? 'bg-pink-500 scale-110 shadow-[0_4px_12px_rgba(244,114,182,0.4)]' : 'bg-pink-100'
+                        typedPin.length > idx ? 'bg-pink-600 scale-110' : 'bg-stone-200 dark:bg-[#342f2b]'
                       }`}
-                    ></div>
+                    />
                   ))}
                 </div>
 
                 <div className="min-h-4 text-center">
-                  {passcodeError && <p className="text-[10px] font-bold text-rose-600 animate-fadeIn">{passcodeError}</p>}
+                  {passcodeError && <p className="text-xs font-medium text-rose-600 dark:text-rose-400 animate-fadeIn">{passcodeError}</p>}
                 </div>
 
-                <div className="grid grid-cols-3 gap-y-3.5 gap-x-5 justify-items-center w-full max-w-[220px]">
+                <div className="grid grid-cols-3 gap-3 justify-items-center w-full max-w-[216px]">
                   {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => (
                     <button
                       key={digit}
                       type="button"
                       disabled={biometricStatus === 'success'}
                       onClick={() => handlePasscodeDigit(digit)}
-                      className="w-12 h-12 rounded-full bg-pink-50/30 border border-pink-100 hover:bg-pink-50 hover:border-pink-300 active:scale-90 transition-all text-xs font-bold text-pink-700 flex items-center justify-center shadow-xs cursor-pointer font-serif"
+                      className="w-14 h-12 rounded-xl bg-stone-50 dark:bg-[#23201d] border border-stone-200 dark:border-[#342f2b] hover:bg-stone-100 dark:hover:bg-[#2e2a26] active:scale-95 transition-all text-base font-semibold tabular-nums text-stone-900 dark:text-stone-100 flex items-center justify-center cursor-pointer"
                     >
                       {digit}
                     </button>
@@ -1888,7 +1956,7 @@ const Auth: React.FC<AuthProps> = ({
                       setTypedPin('');
                       setPasscodeError('');
                     }}
-                    className="w-12 h-12 text-[9px] font-bold uppercase tracking-wider text-pink-500 hover:text-pink-700 flex items-center justify-center cursor-pointer"
+                    className="w-14 h-12 text-xs font-medium text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200 flex items-center justify-center cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -1896,7 +1964,7 @@ const Auth: React.FC<AuthProps> = ({
                     type="button"
                     disabled={biometricStatus === 'success'}
                     onClick={() => handlePasscodeDigit('0')}
-                    className="w-12 h-12 rounded-full bg-pink-50/30 border border-pink-100 hover:bg-pink-50 hover:border-pink-300 active:scale-90 transition-all text-xs font-bold text-pink-700 flex items-center justify-center shadow-xs cursor-pointer font-serif"
+                    className="w-14 h-12 rounded-xl bg-stone-50 dark:bg-[#23201d] border border-stone-200 dark:border-[#342f2b] hover:bg-stone-100 dark:hover:bg-[#2e2a26] active:scale-95 transition-all text-base font-semibold tabular-nums text-stone-900 dark:text-stone-100 flex items-center justify-center cursor-pointer"
                   >
                     0
                   </button>
@@ -1905,9 +1973,9 @@ const Auth: React.FC<AuthProps> = ({
                     disabled={biometricStatus === 'success' || typedPin.length === 0}
                     onClick={handleBackspace}
                     aria-label="Backspace"
-                    className="w-12 h-12 text-pink-500 hover:text-pink-700 flex items-center justify-center active:scale-90 transition-all cursor-pointer"
+                    className="w-14 h-12 text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-stone-100 flex items-center justify-center active:scale-95 transition-all cursor-pointer disabled:opacity-40"
                   >
-                    <Delete size={15} />
+                    <Delete size={17} />
                   </button>
                 </div>
 
@@ -1915,16 +1983,15 @@ const Auth: React.FC<AuthProps> = ({
                   type="button"
                   disabled={typedPin.length < 4 || biometricStatus === 'success'}
                   onClick={() => handlePasscodeSubmit()}
-                  className="w-full max-w-[220px] py-3 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest disabled:opacity-40 cursor-pointer"
+                  className="w-full max-w-[216px] h-10 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-sm font-semibold disabled:opacity-40 cursor-pointer transition-colors"
                 >
-                  Unlock with PIN
+                  Unlock
                 </button>
               </div>
             )}
           </div>
         </div>
       )}
-
     </div>
   );
 };
