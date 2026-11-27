@@ -6,7 +6,7 @@ import App from './App';
 import ErrorBoundary from './components/ErrorBoundary';
 import './index.css';
 
-if (typeof window !== 'undefined' && !Capacitor.isNativePlatform()) {
+if (import.meta.env.PROD && typeof window !== 'undefined' && !Capacitor.isNativePlatform()) {
   try {
     registerSW({ immediate: true });
   } catch {

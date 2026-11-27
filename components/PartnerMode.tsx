@@ -518,7 +518,7 @@ const PartnerMode: React.FC<PartnerModeProps> = ({ user, reminders, setReminders
     if (envUrl && envUrl.trim().length > 0) {
       return envUrl.trim().replace(/\/$/, "");
     }
-    return window.location.origin;
+    return window.location.origin.replace('://ais-dev-', '://ais-pre-');
   };
 
   const inviteLink = `${getBaseUrl()}?invite=${user.partnerCode || ''}`;

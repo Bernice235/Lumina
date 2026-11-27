@@ -25,7 +25,7 @@ export const CommunityInvite: React.FC<CommunityInviteProps> = ({ user }) => {
     if (envUrl && envUrl.trim().length > 0) {
       return envUrl.trim().replace(/\/$/, "");
     }
-    return window.location.origin;
+    return window.location.origin.replace('://ais-dev-', '://ais-pre-');
   };
 
   const referralLink = `${getBaseUrl()}?ref=${user.id}`;

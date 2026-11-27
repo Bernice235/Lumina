@@ -5,7 +5,6 @@ import {
   Smartphone,
   Share,
   PlusSquare,
-  Compass,
   X,
   ChevronRight,
   Flower2,
@@ -21,17 +20,17 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({ variant = 'c
     isInstallable,
     isInstalled,
     isNative,
+    isWorkspacePreview,
     isIOS,
     isMobile,
-    isInAppBrowser,
     bannerDismissed,
     install,
     dismissBanner,
   } = usePWAInstall();
   const [showGuideModal, setShowGuideModal] = useState(false);
 
-  // Never show when already installed as standalone PWA or running natively in iOS/Android app
-  if (isInstalled || isNative) {
+  // Never show when already installed as standalone PWA, running natively, or inside a private dev preview
+  if (isInstalled || isNative || isWorkspacePreview) {
     return null;
   }
 
@@ -97,24 +96,9 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({ variant = 'c
 
               {isIOS ? (
                 <ol className="space-y-2.5">
-                  {(isInAppBrowser || true) && (
-                    <li className="p-3.5 rounded-xl bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] flex items-start gap-3">
-                      <span className="w-6 h-6 rounded-lg bg-pink-600 text-white text-xs font-semibold flex items-center justify-center shrink-0 tabular-nums">
-                        1
-                      </span>
-                      <div className="text-xs text-stone-700 dark:text-stone-300 leading-relaxed">
-                        If a browser link bar is showing, tap the{' '}
-                        <strong className="inline-flex items-center gap-1 text-stone-900 dark:text-white">
-                          <Compass className="w-3.5 h-3.5 text-pink-600 inline" />
-                          Safari
-                        </strong>{' '}
-                        icon at the bottom right to open Lumina directly in Safari.
-                      </div>
-                    </li>
-                  )}
                   <li className="p-3.5 rounded-xl bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] flex items-start gap-3">
                     <span className="w-6 h-6 rounded-lg bg-pink-600 text-white text-xs font-semibold flex items-center justify-center shrink-0 tabular-nums">
-                      2
+                      1
                     </span>
                     <div className="text-xs text-stone-700 dark:text-stone-300 leading-relaxed">
                       Tap the{' '}
@@ -122,12 +106,12 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({ variant = 'c
                         <Share className="w-3.5 h-3.5 text-pink-600 inline" />
                         Share
                       </strong>{' '}
-                      button in the Safari toolbar.
+                      button in Safari&apos;s toolbar.
                     </div>
                   </li>
                   <li className="p-3.5 rounded-xl bg-[#faf8f6] dark:bg-[#23201d] border border-stone-200/80 dark:border-[#342f2b] flex items-start gap-3">
                     <span className="w-6 h-6 rounded-lg bg-pink-600 text-white text-xs font-semibold flex items-center justify-center shrink-0 tabular-nums">
-                      3
+                      2
                     </span>
                     <div className="text-xs text-stone-700 dark:text-stone-300 leading-relaxed">
                       Scroll down and select{' '}

@@ -21,9 +21,23 @@ export function isRunningAsApp(): boolean {
   return Boolean(standaloneQuery || iosStandalone || androidAppRef);
 }
 
+export function isWorkspaceDevPreview(): boolean {
+  if (typeof window === 'undefined') return false;
+  const host = window.location.hostname || '';
+  const isDevRunApp = /^ais-dev-/i.test(host);
+  let inIframe = false;
+  try {
+    inIframe = window.self !== window.top;
+  } catch {
+    inIframe = true;
+  }
+  return isDevRunApp || inIframe;
+}
+
 export function usePWAInstall() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState<boolean>(() => isRunningAsApp());
+  const [isWorkspacePreview] = useState<boolean>(() => isWorkspaceDevPreview());
   const [isNative] = useState<boolean>(() => {
     try {
       return Capacitor.isNativePlatform();
@@ -33,7 +47,6 @@ export function usePWAInstall() {
   });
   const [isIOS, setIsIOS] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [isInAppBrowser, setIsInAppBrowser] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState<boolean>(() => {
     try {
       return localStorage.getItem(BANNER_DISMISS_KEY) === 'true';
@@ -51,13 +64,9 @@ export function usePWAInstall() {
       /iphone|ipad|ipod/.test(lowerUa) ||
       (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     const mobileDevice = iosDevice || /android|mobile/i.test(lowerUa);
-    const inApp =
-      /instagram|fban|fbav|line\/|twitter|micromessenger|gsa\/|crios.*edge|snapchat/i.test(lowerUa) ||
-      (iosDevice && !/safari/i.test(lowerUa));
 
     setIsIOS(iosDevice);
     setIsMobile(mobileDevice);
-    setIsInAppBrowser(inApp);
 
     const mediaQuery = window.matchMedia?.('(display-mode: standalone)');
     const handleDisplayChange = () => setIsInstalled(isRunningAsApp());
@@ -112,9 +121,9 @@ export function usePWAInstall() {
     isInstallable: Boolean(deferredPrompt),
     isInstalled,
     isNative,
+    isWorkspacePreview,
     isIOS,
     isMobile,
-    isInAppBrowser,
     bannerDismissed,
     install,
     dismissBanner,
