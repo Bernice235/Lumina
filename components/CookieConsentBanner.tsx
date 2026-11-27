@@ -5,6 +5,7 @@ import {
   getCookieConsent,
   setCookieConsent,
 } from '../services/analyticsService';
+import { isRunningAsApp } from '../hooks/usePWAInstall';
 
 interface CookieConsentBannerProps {
   onConsentUpdated?: (state: CookieConsentState) => void;
@@ -14,7 +15,9 @@ export const CookieConsentBanner: React.FC<CookieConsentBannerProps> = ({
   onConsentUpdated,
 }) => {
   const [consent, setConsent] = useState<CookieConsentState>(() => getCookieConsent());
-  const [isVisible, setIsVisible] = useState<boolean>(() => !getCookieConsent().decided);
+  const [isVisible, setIsVisible] = useState<boolean>(
+    () => !getCookieConsent().decided && !isRunningAsApp()
+  );
   const [showCustomize, setShowCustomize] = useState<boolean>(false);
 
   const [analyticsOptIn, setAnalyticsOptIn] = useState<boolean>(consent.analytics);
@@ -61,19 +64,19 @@ export const CookieConsentBanner: React.FC<CookieConsentBannerProps> = ({
       role="dialog"
       aria-modal={showCustomize ? 'true' : 'false'}
       aria-label="Cookie and Privacy Preferences"
-      className="fixed bottom-4 inset-x-3 sm:inset-x-auto sm:right-5 sm:max-w-md z-[130] animate-fadeIn"
+      className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] md:bottom-4 inset-x-3 sm:inset-x-auto sm:right-5 sm:max-w-md z-[130] animate-fadeIn"
     >
       {!showCustomize ? (
-        <div className="bg-white/95 backdrop-blur-xl border border-pink-200 rounded-3xl p-5 shadow-[0_20px_50px_rgba(219,39,119,0.16)] space-y-4">
+        <div className="bg-white/95 dark:bg-[#1a1816]/95 backdrop-blur-xl border border-stone-200/80 dark:border-[#2e2a26] rounded-2xl p-5 shadow-xl space-y-4">
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-pink-50 border border-pink-100 flex items-center justify-center text-pink-600 shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-pink-50 dark:bg-pink-950/40 border border-pink-100 dark:border-pink-900/40 flex items-center justify-center text-pink-600 dark:text-pink-400 shrink-0">
               <Cookie size={20} aria-hidden="true" />
             </div>
             <div className="space-y-1 flex-1">
-              <h2 className="text-sm font-serif font-bold text-stone-900">
-                Your Privacy & Cookie Choices
+              <h2 className="text-sm font-serif font-bold text-stone-900 dark:text-stone-100">
+                Your Privacy &amp; Storage Choices
               </h2>
-              <p className="text-xs text-stone-600 leading-relaxed">
+              <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
                 Lumina uses strictly essential storage to keep your cycle sanctuary secure. Optional analytics and performance checks only run if you choose to enable them.
               </p>
             </div>
@@ -85,7 +88,7 @@ export const CookieConsentBanner: React.FC<CookieConsentBannerProps> = ({
               onClick={() =>
                 applyConsent({ analytics: true, performance: true, personalization: true })
               }
-              className="flex-1 py-2.5 px-4 rounded-2xl bg-gradient-to-r from-pink-500 to-rose-500 text-white text-xs font-bold tracking-wide shadow-sm hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-pink-400 cursor-pointer transition-all"
+              className="flex-1 py-2.5 px-4 rounded-xl bg-pink-600 hover:bg-pink-700 text-white text-xs font-semibold shadow-xs focus:outline-none cursor-pointer transition-colors"
             >
               Accept All
             </button>
@@ -94,14 +97,14 @@ export const CookieConsentBanner: React.FC<CookieConsentBannerProps> = ({
               onClick={() =>
                 applyConsent({ analytics: false, performance: false, personalization: false })
               }
-              className="flex-1 py-2.5 px-4 rounded-2xl bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-bold tracking-wide focus:outline-none focus:ring-2 focus:ring-stone-400 cursor-pointer transition-all"
+              className="flex-1 py-2.5 px-4 rounded-xl bg-stone-100 dark:bg-[#23201d] hover:bg-stone-200 dark:hover:bg-[#2c2824] text-stone-800 dark:text-stone-200 text-xs font-semibold focus:outline-none cursor-pointer transition-colors"
             >
-              Reject Non-Essential
+              Essential Only
             </button>
             <button
               type="button"
               onClick={() => setShowCustomize(true)}
-              className="py-2.5 px-3.5 rounded-2xl border border-pink-200 text-pink-700 hover:bg-pink-50 text-xs font-bold flex items-center justify-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-pink-300 cursor-pointer transition-all"
+              className="py-2.5 px-3.5 rounded-xl border border-stone-200 dark:border-[#2e2a26] text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-[#23201d] text-xs font-semibold flex items-center justify-center gap-1.5 focus:outline-none cursor-pointer transition-colors"
             >
               <Sliders size={14} aria-hidden="true" />
               <span>Customize</span>
@@ -109,7 +112,7 @@ export const CookieConsentBanner: React.FC<CookieConsentBannerProps> = ({
           </div>
         </div>
       ) : (
-        <div className="bg-white border border-pink-200 rounded-3xl p-5 sm:p-6 shadow-[0_24px_60px_rgba(15,23,42,0.18)] space-y-4">
+        <div className="bg-white dark:bg-[#1a1816] border border-stone-200/80 dark:border-[#2e2a26] rounded-2xl p-5 sm:p-6 shadow-2xl space-y-4">
           <div className="flex items-center justify-between border-b border-pink-100 pb-3">
             <div className="flex items-center gap-2">
               <ShieldCheck size={18} className="text-pink-600" aria-hidden="true" />

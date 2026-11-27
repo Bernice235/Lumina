@@ -1,9 +1,18 @@
-
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { Capacitor } from '@capacitor/core';
+import { registerSW } from 'virtual:pwa-register';
 import App from './App';
 import ErrorBoundary from './components/ErrorBoundary';
 import './index.css';
+
+if (typeof window !== 'undefined' && !Capacitor.isNativePlatform()) {
+  try {
+    registerSW({ immediate: true });
+  } catch {
+    // Service worker registration skipped if unsupported
+  }
+}
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {

@@ -70,6 +70,7 @@ import {
 } from '../services/welcomeVoiceService';
 import { syncUser, blockPartner, unblockPartner } from '../services/firebaseService';
 import { DeleteAccountModal } from './DeleteAccountModal';
+import { PWAInstallButton } from './PWAInstallButton';
 import { 
   applyPeriodDurationChange, 
   applyCycleLengthChange, 
@@ -893,6 +894,8 @@ const Settings: React.FC<SettingsProps> = ({
               <span>{user.name ? user.name.split(' ')[0] : 'My Profile'}</span>
             </button>
           </div>
+
+          <PWAInstallButton variant="settings" />
 
           {/* Group 1: Cycle & Body */}
           <div className="space-y-2">

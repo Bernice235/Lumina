@@ -14,6 +14,7 @@ import {
 } from 'firebase/auth';
 import { ForgotPasswordScreen } from './ForgotPasswordScreen';
 import { ResetPasswordConfirmScreen } from './ResetPasswordConfirmScreen';
+import { PWAInstallButton } from './PWAInstallButton';
 import { syncUser, getInvite, getCleanName } from '../services/firebaseService';
 import { trackSignUp, trackLogin, setUserProperties, logCrashReport } from '../services/analyticsService';
 import {
@@ -973,7 +974,7 @@ const Auth: React.FC<AuthProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-[#faf8f6] dark:bg-[#11100f] flex items-center justify-center p-4 sm:p-6 lg:p-8 select-none transition-colors">
+    <div className="min-h-screen bg-[#faf8f6] dark:bg-[#11100f] flex items-center justify-center p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6 lg:p-8 select-none transition-colors">
       <div className="w-full max-w-4xl bg-white dark:bg-[#1a1816] rounded-2xl border border-stone-200/80 dark:border-[#2e2a26] shadow-[0_12px_40px_rgba(24,20,18,0.06)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.4)] overflow-hidden grid grid-cols-1 lg:grid-cols-12 animate-fadeIn">
         {/* Desktop Editorial Brand Column */}
         <aside className="hidden lg:flex lg:col-span-5 bg-[#faf8f6] dark:bg-[#151311] border-r border-stone-200/70 dark:border-[#2e2a26] p-10 flex-col justify-between">
@@ -1041,7 +1042,7 @@ const Auth: React.FC<AuthProps> = ({
         {/* Auth Interaction Column */}
         <div className="lg:col-span-7 px-6 py-8 sm:p-10 flex flex-col justify-between min-h-[560px]">
           {/* Compact Mobile Header (hidden on desktop where aside renders brand) */}
-          <div className="flex items-center justify-between lg:hidden pb-4 border-b border-stone-100 dark:border-[#2e2a26]">
+          <div className="flex items-center justify-between lg:hidden pb-4 border-b border-stone-100 dark:border-[#2e2a26] gap-2">
             <div className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-xl bg-pink-600 text-white flex items-center justify-center">
                 <Flower2 size={18} strokeWidth={1.75} aria-hidden="true" />
@@ -1051,6 +1052,7 @@ const Auth: React.FC<AuthProps> = ({
                 <p className="text-[11px] text-stone-500 dark:text-stone-400 font-medium mt-0.5">Bloom &amp; Balance</p>
               </div>
             </div>
+            <PWAInstallButton variant="compact" />
           </div>
 
           {/* Dynamic view switcher */}

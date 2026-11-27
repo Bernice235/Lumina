@@ -55,6 +55,9 @@ import { CompanionChat } from './components/CompanionChat';
 import { CookieConsentBanner } from './components/CookieConsentBanner';
 import { DeleteAccountPage } from './components/DeleteAccountPage';
 import { DeleteAccountModal } from './components/DeleteAccountModal';
+import { PWAInstallButton } from './components/PWAInstallButton';
+import { OfflineIndicator } from './components/OfflineIndicator';
+import { isRunningAsApp } from './hooks/usePWAInstall';
 import { getOrCreateUserAvatar } from './services/avatarService';
 import { playWelcomeVoice } from './services/gemini';
 import { 
@@ -449,7 +452,7 @@ const App: React.FC = () => {
     }
   }, [user?.id]);
 
-  // Synchronize CSS custom properties with the selected theme color palette
+  // Synchronize CSS custom properties and system bar theme-color with active theme
   useEffect(() => {
     const selectedTheme = user?.theme || 'rose';
     const palette = THEME_PALETTES[selectedTheme];
@@ -459,7 +462,15 @@ const App: React.FC = () => {
         root.style.setProperty(`--brand-${shade}`, hex as string);
       });
     }
-  }, [user?.theme]);
+    const isDark =
+      document.documentElement.classList.contains('dark') ||
+      document.documentElement.classList.contains('dark-mode') ||
+      document.body.classList.contains('dark-mode');
+    const themeMeta = document.querySelector('meta[name="theme-color"]:not([media])');
+    if (themeMeta) {
+      themeMeta.setAttribute('content', isDark ? '#11100f' : '#faf8f6');
+    }
+  }, [user?.theme, user?.wallpaper]);
 
   const triggerFullNotification = (title: string, body: string, emoji: string = '🔔') => {
     const currentUser = userRef.current;
@@ -2168,8 +2179,8 @@ const App: React.FC = () => {
     // Main authenticated application screen inside container
     return (
       <div className="flex flex-col h-full w-full relative">
-        <header className="px-4 sm:px-6 h-14 bg-white/95 dark:bg-[#1a1816]/95 backdrop-blur-md sticky top-0 z-[60] border-b border-stone-200/80 dark:border-[#2e2a26] flex items-center">
-          <div className="w-full max-w-6xl mx-auto flex justify-between items-center gap-3">
+        <header className="pt-[env(safe-area-inset-top)] px-4 sm:px-6 bg-white/95 dark:bg-[#1a1816]/95 backdrop-blur-md sticky top-0 z-[60] border-b border-stone-200/80 dark:border-[#2e2a26]">
+          <div className="w-full max-w-6xl mx-auto h-14 flex justify-between items-center gap-3">
             <button
               type="button"
               className="flex items-center gap-2 cursor-pointer shrink-0 text-left"
@@ -2603,7 +2614,7 @@ const App: React.FC = () => {
   const pendingPartnerRequestCount = partnerRequests.filter(r => r.status === 'pending').length;
 
   return (
-    <div className={`min-h-screen w-full overflow-x-hidden pb-24 md:pb-10 ${getAppBackgroundClass()} selection:bg-pink-100 transition-colors duration-200`}>
+    <div className={`min-h-screen w-full overflow-x-clip pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-10 ${getAppBackgroundClass()} selection:bg-pink-100 transition-colors duration-200`}>
       <audio 
         ref={audioRef}
         src={currentTrack?.source === 'internal' ? currentTrack.url : undefined} 
@@ -2612,7 +2623,7 @@ const App: React.FC = () => {
       />
       
       {!user.isPartner && (
-        <header className="sticky top-0 z-[60] bg-white/95 dark:bg-[#1a1816]/95 backdrop-blur-md border-b border-stone-200/80 dark:border-[#2e2a26]">
+        <header className="pt-[env(safe-area-inset-top)] sticky top-0 z-[60] bg-white/95 dark:bg-[#1a1816]/95 backdrop-blur-md border-b border-stone-200/80 dark:border-[#2e2a26]">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-14 md:h-16 flex items-center justify-between gap-3">
             {/* Zone 1: Menu + Brand */}
             <div className="flex items-center gap-2.5 shrink-0">
@@ -2759,6 +2770,11 @@ const App: React.FC = () => {
                 )}
               </button>
 
+              {/* Desktop/Mobile Browser Standalone Install Shortcut (hidden once installed/native) */}
+              <div className="hidden sm:flex">
+                <PWAInstallButton variant="compact" />
+              </div>
+
               {/* Primary Log Today CTA (Tablet & Desktop) */}
               <button
                 type="button"
@@ -2773,7 +2789,9 @@ const App: React.FC = () => {
         </header>
       )}
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 md:pt-7 pb-12">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 md:pt-7 pb-12">
+        <PWAInstallButton variant="banner" />
+
         <ErrorBoundary onReset={() => setActiveTab('dashboard')}>
           <Suspense
             fallback={
@@ -2787,43 +2805,45 @@ const App: React.FC = () => {
           </Suspense>
         </ErrorBoundary>
 
-        {/* Accessible Privacy & Cookie Footer */}
-        <footer className="mt-12 pt-6 border-t border-stone-200/80 dark:border-[#2e2a26] flex flex-wrap items-center justify-between gap-3 text-xs text-stone-500 dark:text-stone-400">
-          <span>Lumina: Bloom &amp; Balance — Your health data remains private to you.</span>
-          <div className="flex flex-wrap items-center gap-5 font-medium">
-            <button
-              type="button"
-              onClick={() => setActiveTab('privacy')}
-              className="text-stone-700 dark:text-stone-300 hover:text-pink-700 dark:hover:text-pink-300 cursor-pointer transition-colors"
-            >
-              Privacy Dashboard
-            </button>
-            <button
-              type="button"
-              onClick={() => window.dispatchEvent(new CustomEvent('lumina:open-cookie-settings'))}
-              className="text-stone-700 dark:text-stone-300 hover:text-pink-700 dark:hover:text-pink-300 cursor-pointer transition-colors"
-            >
-              Cookie Preferences
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setSettingsSubTab('backup_sync');
-                setActiveTab('settings');
-              }}
-              className="text-stone-700 dark:text-stone-300 hover:text-pink-700 dark:hover:text-pink-300 cursor-pointer transition-colors"
-            >
-              Backups &amp; Recovery
-            </button>
-            <button
-              type="button"
-              onClick={openExternalDeletionPage}
-              className="text-rose-700 dark:text-rose-400 hover:underline cursor-pointer"
-            >
-              Delete Account
-            </button>
-          </div>
-        </footer>
+        {/* Web Privacy Footer (hidden on mobile and standalone/native app mode) */}
+        {!isRunningAsApp() && (
+          <footer className="hidden md:flex mt-12 pt-6 border-t border-stone-200/80 dark:border-[#2e2a26] flex-wrap items-center justify-between gap-3 text-xs text-stone-500 dark:text-stone-400">
+            <span>Lumina: Bloom &amp; Balance — Your health data remains private to you.</span>
+            <div className="flex flex-wrap items-center gap-5 font-medium">
+              <button
+                type="button"
+                onClick={() => setActiveTab('privacy')}
+                className="text-stone-700 dark:text-stone-300 hover:text-pink-700 dark:hover:text-pink-300 cursor-pointer transition-colors"
+              >
+                Privacy Dashboard
+              </button>
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent('lumina:open-cookie-settings'))}
+                className="text-stone-700 dark:text-stone-300 hover:text-pink-700 dark:hover:text-pink-300 cursor-pointer transition-colors"
+              >
+                Cookie Preferences
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSettingsSubTab('backup_sync');
+                  setActiveTab('settings');
+                }}
+                className="text-stone-700 dark:text-stone-300 hover:text-pink-700 dark:hover:text-pink-300 cursor-pointer transition-colors"
+              >
+                Backups &amp; Recovery
+              </button>
+              <button
+                type="button"
+                onClick={openExternalDeletionPage}
+                className="text-rose-700 dark:text-rose-400 hover:underline cursor-pointer"
+              >
+                Delete Account
+              </button>
+            </div>
+          </footer>
+        )}
       </main>
 
       <LogModal 
@@ -2849,7 +2869,7 @@ const App: React.FC = () => {
 
       {/* Floating Mini Player (Global) */}
       {isMusicActive && (
-        <div className="fixed bottom-20 md:bottom-6 left-4 right-4 md:left-auto md:right-6 md:w-[420px] bg-white/95 dark:bg-[#1a1816]/95 backdrop-blur-xl border border-stone-200/80 dark:border-[#2e2a26] rounded-2xl p-3.5 shadow-lg z-[60] flex items-center justify-between gap-3">
+        <div className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] md:bottom-6 left-4 right-4 md:left-auto md:right-6 md:w-[420px] bg-white/95 dark:bg-[#1a1816]/95 backdrop-blur-xl border border-stone-200/80 dark:border-[#2e2a26] rounded-2xl p-3.5 shadow-lg z-[60] flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <div className="w-10 h-10 rounded-xl bg-pink-50 dark:bg-pink-950/40 text-pink-600 dark:text-pink-400 border border-pink-100 dark:border-pink-900/40 flex items-center justify-center shrink-0">
               <Disc3 className={`w-5 h-5 ${isMusicPlaying ? 'animate-[spin_10s_linear_infinite]' : ''}`} />
@@ -2950,7 +2970,7 @@ const App: React.FC = () => {
       {!user.isPartner && (
         <nav
           aria-label="Mobile Navigation"
-          className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white/95 dark:bg-[#1a1816]/95 backdrop-blur-xl border-t border-stone-200/80 dark:border-[#2e2a26] grid grid-cols-7 items-center px-1 z-50"
+          className="md:hidden fixed bottom-0 left-0 right-0 h-[calc(4rem+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)] bg-white/95 dark:bg-[#1a1816]/95 backdrop-blur-xl border-t border-stone-200/80 dark:border-[#2e2a26] grid grid-cols-7 items-center px-1 z-50"
         >
           <NavItem icon={<Home className="w-4 h-4" />} label="Home" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} theme={user.theme} />
           <NavItem icon={<Calendar className="w-4 h-4" />} label="Calendar" active={activeTab === 'cycle'} onClick={() => setActiveTab('cycle')} theme={user.theme} />
@@ -3070,7 +3090,7 @@ const App: React.FC = () => {
 
       {/* Pre-Permission Notification Privacy Consent Card */}
       {showNotifPrePrompt && (
-        <div className="fixed bottom-20 md:bottom-6 left-4 right-4 max-w-md mx-auto bg-white/95 dark:bg-[#1a1816]/95 backdrop-blur-xl border border-stone-200/80 dark:border-[#2e2a26] rounded-2xl p-4 shadow-xl z-[180] flex flex-col gap-3">
+        <div className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] md:bottom-6 left-4 right-4 max-w-md mx-auto bg-white/95 dark:bg-[#1a1816]/95 backdrop-blur-xl border border-stone-200/80 dark:border-[#2e2a26] rounded-2xl p-4 shadow-xl z-[180] flex flex-col gap-3">
           <div className="flex items-start gap-3">
             <div className="w-9 h-9 rounded-xl bg-pink-50 dark:bg-pink-950/40 text-pink-600 dark:text-pink-400 border border-pink-100 dark:border-pink-900/40 flex items-center justify-center shrink-0">
               <Bell className="w-4 h-4" />
@@ -3121,6 +3141,7 @@ const App: React.FC = () => {
         onOpenExternalPage={openExternalDeletionPage}
       />
 
+      <OfflineIndicator />
       <CookieConsentBanner />
     </div>
   );
